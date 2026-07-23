@@ -6,7 +6,7 @@ from .routes import auth, usuarios, empresas, setores, tarefas
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Gestor Contábil API",
+    title="Gestor de Tarefas API",
     description="API para gestão de tarefas contábeis",
     version="1.0.0"
 )
@@ -27,7 +27,7 @@ app.include_router(tarefas.router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"message": "Gestor Contábil API - Status: Online"}
+    return {"message": "Gestor de Tarefas API - Status: Online"}
 
 @app.get("/health")
 def health():

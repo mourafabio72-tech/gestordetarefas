@@ -33,7 +33,7 @@ export default function Layout() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between p-4 border-b border-primary-700">
-          <h1 className="text-xl font-bold">Gestor Contábil</h1>
+          <h1 className="text-xl font-bold">Gestor de Tarefas</h1>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
             <X size={24} />
           </button>
@@ -86,7 +86,7 @@ export default function Layout() {
           <button onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h1 className="text-lg font-semibold">Gestor Contábil</h1>
+          <h1 className="text-lg font-semibold">Gestor de Tarefas</h1>
         </header>
 
         <main className="flex-1 overflow-auto p-6">

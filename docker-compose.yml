@@ -5,7 +5,7 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_DB: gestor_contabil
+      POSTGRES_DB: gestor_tarefas
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
@@ -17,7 +17,7 @@ services:
     build: ./backend
     restart: always
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/gestor_contabil
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/gestor_tarefas
       SECRET_KEY: ${SECRET_KEY:-sua-chave-secreta-mude-em-producao}
     depends_on:
       - db

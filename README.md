@@ -1,4 +1,4 @@
-# Gestor Contábil
+# Gestor de Tarefas
 
 Sistema de gestão de tarefas para empresas de contabilidade.
 
@@ -28,8 +28,8 @@ Sistema de gestão de tarefas para empresas de contabilidade.
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/gestor-contabil.git
-cd gestor-contabil
+git clone https://github.com/seu-usuario/gestor-de-tarefas.git
+cd gestor-de-tarefas
 ```
 
 2. Copie o arquivo de exemplo de variáveis de ambiente:
@@ -77,7 +77,7 @@ npm run dev
 ## Estrutura do Projeto
 
 ```
-gestor-contabil/
+gestor-de-tarefas/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
