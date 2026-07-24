@@ -2,7 +2,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from ..database import SessionLocal
 from .whatsapp import check_and_send_alerts
-from .teams import send_teams_alerts
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,13 +12,8 @@ async def scheduled_check():
     db = SessionLocal()
     try:
         logger.info("Iniciando verificação agendada de tarefas...")
-
         whatsapp_alerts = await check_and_send_alerts(db)
         logger.info(f"WhatsApp: {len(whatsapp_alerts)} alertas processados.")
-
-        teams_alerts = await send_teams_alerts(db)
-        logger.info(f"Teams: {len(teams_alerts)} alertas processados.")
-
     except Exception as e:
         logger.error(f"Erro na verificação agendada: {e}")
     finally:

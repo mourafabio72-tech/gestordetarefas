@@ -22,7 +22,6 @@ class UsuarioBase(BaseModel):
     email: str
     cargo: Optional[str] = None
     telefone: Optional[str] = None
-    teams_webhook: Optional[str] = None
 
 class UsuarioCreate(UsuarioBase):
     senha: str
@@ -33,7 +32,6 @@ class UsuarioUpdate(BaseModel):
     senha: Optional[str] = None
     cargo: Optional[str] = None
     telefone: Optional[str] = None
-    teams_webhook: Optional[str] = None
 
 class UsuarioResponse(UsuarioBase):
     id: int

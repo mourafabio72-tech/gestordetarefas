@@ -12,8 +12,7 @@ export default function Usuarios() {
     email: '',
     senha: '',
     cargo: '',
-    telefone: '',
-    teams_webhook: ''
+    telefone: ''
   });
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function Usuarios() {
       }
       setShowModal(false);
       setEditingUsuario(null);
-      setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', teams_webhook: '' });
+      setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '' });
       loadUsuarios();
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao salvar usuário');
@@ -57,8 +56,7 @@ export default function Usuarios() {
       email: usuario.email,
       senha: '',
       cargo: usuario.cargo || '',
-      telefone: usuario.telefone || '',
-      teams_webhook: usuario.teams_webhook || ''
+      telefone: usuario.telefone || ''
     });
     setShowModal(true);
   };
@@ -85,7 +83,7 @@ export default function Usuarios() {
         <button
           onClick={() => {
             setEditingUsuario(null);
-            setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', teams_webhook: '' });
+            setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '' });
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -109,7 +107,6 @@ export default function Usuarios() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Cargo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Teams</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
@@ -127,13 +124,6 @@ export default function Usuarios() {
                     </td>
                     <td className="py-3 px-4 text-gray-500">{usuario.email}</td>
                     <td className="py-3 px-4">{usuario.cargo || '-'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        usuario.teams_webhook ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {usuario.teams_webhook ? 'Configurado' : 'Não configurado'}
-                      </span>
-                    </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         usuario.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -226,19 +216,6 @@ export default function Usuarios() {
                   placeholder="Ex: 11999998888"
                 />
                 <p className="text-xs text-gray-500 mt-1">Formato: DDD + Número</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL do Teams</label>
-                <input
-                  type="url"
-                  value={formData.teams_webhook}
-                  onChange={(e) => setFormData({ ...formData, teams_webhook: e.target.value })}
-                  className="input-field"
-                  placeholder="https://prod-XX.centralus.logic.azure.com..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Cada usuário cria seu próprio webhook no Teams
-                </p>
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">

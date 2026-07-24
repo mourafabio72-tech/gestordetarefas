@@ -41,8 +41,7 @@ def create_usuario(
         email=usuario.email,
         senha_hash=get_password_hash(usuario.senha),
         cargo=usuario.cargo,
-        telefone=usuario.telefone,
-        teams_webhook=usuario.teams_webhook
+        telefone=usuario.telefone
     )
     db.add(db_usuario)
     db.commit()
@@ -68,8 +67,6 @@ def update_usuario(
         db_usuario.cargo = usuario.cargo
     if usuario.telefone is not None:
         db_usuario.telefone = usuario.telefone
-    if usuario.teams_webhook is not None:
-        db_usuario.teams_webhook = usuario.teams_webhook
     if usuario.senha:
         db_usuario.senha_hash = get_password_hash(usuario.senha)
         db_usuario.senha_hash = get_password_hash(usuario.senha)

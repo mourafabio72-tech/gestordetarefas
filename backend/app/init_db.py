@@ -4,7 +4,6 @@ from .database import engine
 def migrate():
     migrations = [
         ("telefone", "ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"),
-        ("teams_webhook", "ALTER TABLE usuarios ADD COLUMN teams_webhook TEXT"),
     ]
 
     for col_name, sql in migrations:
