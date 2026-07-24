@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -34,40 +34,40 @@ export const authAPI = {
 
 export const empresasAPI = {
   list: () => api.get('/empresas/'),
-  get: (id) => api.get(`/empresas/${id}/`),
+  get: (id) => api.get(`/empresas/${id}`),
   create: (data) => api.post('/empresas/', data),
-  update: (id, data) => api.put(`/empresas/${id}/`, data),
-  delete: (id) => api.delete(`/empresas/${id}/`),
+  update: (id, data) => api.put(`/empresas/${id}`, data),
+  delete: (id) => api.delete(`/empresas/${id}`),
 };
 
 export const setoresAPI = {
   list: (empresaId) => api.get('/setores/', { params: empresaId ? { empresa_id: empresaId } : {} }),
-  get: (id) => api.get(`/setores/${id}/`),
+  get: (id) => api.get(`/setores/${id}`),
   create: (data) => api.post('/setores/', data),
-  update: (id, data) => api.put(`/setores/${id}/`, data),
-  delete: (id) => api.delete(`/setores/${id}/`),
+  update: (id, data) => api.put(`/setores/${id}`, data),
+  delete: (id) => api.delete(`/setores/${id}`),
 };
 
 export const usuariosAPI = {
   list: () => api.get('/usuarios/'),
-  get: (id) => api.get(`/usuarios/${id}/`),
+  get: (id) => api.get(`/usuarios/${id}`),
   create: (data) => api.post('/usuarios/', data),
-  update: (id, data) => api.put(`/usuarios/${id}/`, data),
-  delete: (id) => api.delete(`/usuarios/${id}/`),
+  update: (id, data) => api.put(`/usuarios/${id}`, data),
+  delete: (id) => api.delete(`/usuarios/${id}`),
 };
 
 export const tarefasAPI = {
   list: (params) => api.get('/tarefas/', { params }),
-  get: (id) => api.get(`/tarefas/${id}/`),
+  get: (id) => api.get(`/tarefas/${id}`),
   create: (data) => api.post('/tarefas/', data),
-  update: (id, data) => api.put(`/tarefas/${id}/`, data),
-  delete: (id) => api.delete(`/tarefas/${id}/`),
-  dashboard: (empresaId) => api.get('/tarefas/dashboard/stats/', { params: empresaId ? { empresa_id: empresaId } : {} }),
+  update: (id, data) => api.put(`/tarefas/${id}`, data),
+  delete: (id) => api.delete(`/tarefas/${id}`),
+  dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),
 };
 
 export const alertasAPI = {
   verificar: () => api.post('/alertas/verificar/'),
-  enviar: (usuarioId) => api.post(`/alertas/enviar/${usuarioId}/`),
+  enviar: (usuarioId) => api.post(`/alertas/enviar/${usuarioId}`),
 };
 
 export default api;

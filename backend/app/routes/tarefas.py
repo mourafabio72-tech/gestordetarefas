@@ -10,6 +10,55 @@ from ..auth import get_current_user
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
+@router.get("/dashboard/stats")
+def get_dashboard_stats(
+    empresa_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = today_start + timedelta(days=7)
+
+    query = db.query(Tarefa)
+    if empresa_id:
+        query = query.filter(Tarefa.empresa_id == empresa_id)
+
+    total = query.count()
+    pendentes = query.filter(Tarefa.status == StatusTarefa.PENDENTE).count()
+    em_andamento = query.filter(Tarefa.status == StatusTarefa.EM_ANDAMENTO).count()
+    concluidas = query.filter(Tarefa.status == StatusTarefa.CONCLUIDA).count()
+    atrasadas = query.filter(
+        and_(
+            Tarefa.data_prazo < now,
+            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
+        )
+    ).count()
+    vencendo_hoje = query.filter(
+        and_(
+            Tarefa.data_prazo >= today_start,
+            Tarefa.data_prazo <= today_start + timedelta(days=1),
+            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
+        )
+    ).count()
+    vencendo_semana = query.filter(
+        and_(
+            Tarefa.data_prazo >= today_start,
+            Tarefa.data_prazo <= week_end,
+            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
+        )
+    ).count()
+
+    return {
+        "total_tarefas": total,
+        "pendentes": pendentes,
+        "em_andamento": em_andamento,
+        "concluidas": concluidas,
+        "atrasadas": atrasadas,
+        "vencendo_hoje": vencendo_hoje,
+        "vencendo_semana": vencendo_semana
+    }
+
 @router.get("/", response_model=List[TarefaResponse])
 def list_tarefas(
     empresa_id: int = None,
@@ -105,52 +154,3 @@ def delete_tarefa(
     db_tarefa.status = StatusTarefa.CANCELADA
     db.commit()
     return {"message": "Tarefa cancelada com sucesso"}
-
-@router.get("/dashboard/stats")
-def get_dashboard_stats(
-    empresa_id: int = None,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_end = today_start + timedelta(days=7)
-
-    query = db.query(Tarefa)
-    if empresa_id:
-        query = query.filter(Tarefa.empresa_id == empresa_id)
-
-    total = query.count()
-    pendentes = query.filter(Tarefa.status == StatusTarefa.PENDENTE).count()
-    em_andamento = query.filter(Tarefa.status == StatusTarefa.EM_ANDAMENTO).count()
-    concluidas = query.filter(Tarefa.status == StatusTarefa.CONCLUIDA).count()
-    atrasadas = query.filter(
-        and_(
-            Tarefa.data_prazo < now,
-            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
-        )
-    ).count()
-    vencendo_hoje = query.filter(
-        and_(
-            Tarefa.data_prazo >= today_start,
-            Tarefa.data_prazo <= today_start + timedelta(days=1),
-            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
-        )
-    ).count()
-    vencendo_semana = query.filter(
-        and_(
-            Tarefa.data_prazo >= today_start,
-            Tarefa.data_prazo <= week_end,
-            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
-        )
-    ).count()
-
-    return {
-        "total_tarefas": total,
-        "pendentes": pendentes,
-        "em_andamento": em_andamento,
-        "concluidas": concluidas,
-        "atrasadas": atrasadas,
-        "vencendo_hoje": vencendo_hoje,
-        "vencendo_semana": vencendo_semana
-    }
