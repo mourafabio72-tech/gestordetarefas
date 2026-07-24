@@ -22,6 +22,7 @@ services:
       ZAP_CONNECTION_FROM: ${ZAP_CONNECTION_FROM:-0}
       ZAP_PHONE: ${ZAP_PHONE:-5521971985815}
       ALERT_DAYS_BEFORE: ${ALERT_DAYS_BEFORE:-3}
+      TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
     depends_on:
       - db
     ports:

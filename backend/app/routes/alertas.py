@@ -4,6 +4,7 @@ from ..database import get_db
 from ..models import Usuario
 from ..auth import get_current_user
 from ..services.whatsapp import check_and_send_alerts
+from ..services.teams import send_teams_alerts, send_teams_message
 
 router = APIRouter(prefix="/alertas", tags=["alertas"])
 
@@ -13,10 +14,13 @@ async def verificar_tarefas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    alerts = await check_and_send_alerts(db)
+    whatsapp_alerts = await check_and_send_alerts(db)
+    teams_alerts = await send_teams_alerts(db)
+
     return {
-        "message": f"{len(alerts)} alertas processados",
-        "alerts": alerts
+        "message": f"WhatsApp: {len(whatsapp_alerts)} alertas | Teams: {len(teams_alerts)} alertas",
+        "whatsapp": whatsapp_alerts,
+        "teams": teams_alerts
     }
 
 
@@ -27,15 +31,12 @@ async def enviar_alerta_usuario(
     current_user: Usuario = Depends(get_current_user)
 ):
     from ..models import Tarefa, StatusTarefa
-    from ..services.whatsapp import send_whatsapp_message, format_task_message
+    from ..services.whatsapp import send_whatsapp_message, format_task_message, ZAP_PHONE
     from datetime import datetime
 
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-
-    if not usuario.email:
-        raise HTTPException(status_code=400, detail="Usuário não possui email cadastrado")
 
     tarefas = db.query(Tarefa).filter(
         Tarefa.responsavel_id == usuario_id,
@@ -43,19 +44,37 @@ async def enviar_alerta_usuario(
     ).all()
 
     now = datetime.now()
-    alerts_sent = []
+    results = []
 
     for tarefa in tarefas:
         days_remaining = (tarefa.data_prazo.date() - now.date()).days
-        message = format_task_message(tarefa, days_remaining)
-        result = await send_whatsapp_message(usuario.email, message)
-        alerts_sent.append({
+
+        message_wa, _ = format_task_message(tarefa, days_remaining)
+        wa_result = await send_whatsapp_message(ZAP_PHONE, message_wa)
+
+        from ..services.teams import format_task_message_teams
+        message_teams, title_teams = format_task_message_teams(tarefa, days_remaining)
+        teams_result = await send_teams_message(message_teams, title_teams)
+
+        results.append({
             "tarefa_id": tarefa.id,
             "tarefa_titulo": tarefa.titulo,
-            "enviado": result.get("success", False)
+            "whatsapp_enviado": wa_result.get("success", False),
+            "teams_enviado": teams_result.get("success", False)
         })
 
     return {
-        "message": f"{len(alerts_sent)} alertas enviados para {usuario.nome}",
-        "alerts": alerts_sent
+        "message": f"{len(results)} alertas enviados para {usuario.nome}",
+        "results": results
     }
+
+
+@router.post("/testar-teams")
+async def testar_teams(
+    current_user: Usuario = Depends(get_current_user)
+):
+    result = await send_teams_message(
+        "✅ Teste de integração do Gestor de Tarefas com Microsoft Teams!",
+        "Teste Gestor de Tarefas"
+    )
+    return {"message": "Teste enviado", "success": result.get("success", False), "details": result}
