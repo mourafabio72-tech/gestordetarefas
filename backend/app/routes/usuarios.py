@@ -8,7 +8,7 @@ from ..auth import get_password_hash, get_current_user
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
-@router.get("/", response_model=List[UsuarioResponse])
+@router.get("", response_model=List[UsuarioResponse])
 def list_usuarios(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
@@ -26,7 +26,7 @@ def get_usuario(
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return usuario
 
-@router.post("/", response_model=UsuarioResponse, status_code=201)
+@router.post("", response_model=UsuarioResponse, status_code=201)
 def create_usuario(
     usuario: UsuarioCreate,
     db: Session = Depends(get_db),

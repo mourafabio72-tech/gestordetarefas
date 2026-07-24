@@ -8,7 +8,7 @@ from ..auth import get_current_user
 
 router = APIRouter(prefix="/empresas", tags=["empresas"])
 
-@router.get("/", response_model=List[EmpresaResponse])
+@router.get("", response_model=List[EmpresaResponse])
 def list_empresas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
@@ -26,7 +26,7 @@ def get_empresa(
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
     return empresa
 
-@router.post("/", response_model=EmpresaResponse, status_code=201)
+@router.post("", response_model=EmpresaResponse, status_code=201)
 def create_empresa(
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),

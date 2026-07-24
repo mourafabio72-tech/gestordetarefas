@@ -9,7 +9,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Gestor de Tarefas API",
     description="API para gestão de tarefas contábeis",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False
 )
 
 app.add_middleware(

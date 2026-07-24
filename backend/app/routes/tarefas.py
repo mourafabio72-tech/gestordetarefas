@@ -59,7 +59,7 @@ def get_dashboard_stats(
         "vencendo_semana": vencendo_semana
     }
 
-@router.get("/", response_model=List[TarefaResponse])
+@router.get("", response_model=List[TarefaResponse])
 def list_tarefas(
     empresa_id: int = None,
     setor_id: int = None,
@@ -92,7 +92,7 @@ def get_tarefa(
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     return tarefa
 
-@router.post("/", response_model=TarefaResponse, status_code=201)
+@router.post("", response_model=TarefaResponse, status_code=201)
 def create_tarefa(
     tarefa: TarefaCreate,
     db: Session = Depends(get_db),

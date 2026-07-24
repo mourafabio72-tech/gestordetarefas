@@ -8,7 +8,7 @@ from ..auth import get_current_user
 
 router = APIRouter(prefix="/setores", tags=["setores"])
 
-@router.get("/", response_model=List[SetorResponse])
+@router.get("", response_model=List[SetorResponse])
 def list_setores(
     empresa_id: int = None,
     db: Session = Depends(get_db),
@@ -30,7 +30,7 @@ def get_setor(
         raise HTTPException(status_code=404, detail="Setor não encontrado")
     return setor
 
-@router.post("/", response_model=SetorResponse, status_code=201)
+@router.post("", response_model=SetorResponse, status_code=201)
 def create_setor(
     setor: SetorCreate,
     db: Session = Depends(get_db),
