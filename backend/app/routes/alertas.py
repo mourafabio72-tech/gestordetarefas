@@ -34,8 +34,8 @@ async def enviar_alerta_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    if not usuario.telefone:
-        raise HTTPException(status_code=400, detail="Usuário não possui telefone cadastrado")
+    if not usuario.email:
+        raise HTTPException(status_code=400, detail="Usuário não possui email cadastrado")
 
     tarefas = db.query(Tarefa).filter(
         Tarefa.responsavel_id == usuario_id,
@@ -48,7 +48,7 @@ async def enviar_alerta_usuario(
     for tarefa in tarefas:
         days_remaining = (tarefa.data_prazo.date() - now.date()).days
         message = format_task_message(tarefa, days_remaining)
-        result = await send_whatsapp_message(usuario.telefone, message)
+        result = await send_whatsapp_message(usuario.email, message)
         alerts_sent.append({
             "tarefa_id": tarefa.id,
             "tarefa_titulo": tarefa.titulo,

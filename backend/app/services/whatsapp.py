@@ -1,6 +1,6 @@
 import httpx
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session
 from ..models import Tarefa, Usuario, StatusTarefa
 
@@ -10,11 +10,9 @@ ZAP_CONNECTION_FROM = int(os.getenv("ZAP_CONNECTION_FROM", "0"))
 ALERT_DAYS_BEFORE = int(os.getenv("ALERT_DAYS_BEFORE", "3"))
 
 
-async def send_whatsapp_message(phone: str, message: str) -> dict:
+async def send_whatsapp_message(identifier: str, message: str) -> dict:
     if not ZAP_API_KEY:
         return {"success": False, "error": "ZAP_API_KEY não configurada"}
-
-    clean_phone = phone.replace("-", "").replace("(", "").replace(")", "").replace(" ", "")
 
     headers = {
         "Authorization": f"Bearer {ZAP_API_KEY}",
@@ -27,7 +25,7 @@ async def send_whatsapp_message(phone: str, message: str) -> dict:
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{ZAP_API_URL}/api/send/{clean_phone}",
+            f"{ZAP_API_URL}/api/send/{identifier}",
             json=payload,
             headers=headers,
             timeout=30.0
@@ -81,15 +79,15 @@ async def check_and_send_alerts(db: Session) -> list:
         if days_remaining <= ALERT_DAYS_BEFORE:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
-            if responsavel and responsavel.telefone:
+            if responsavel and responsavel.email:
                 message = format_task_message(tarefa, days_remaining)
-                result = await send_whatsapp_message(responsavel.telefone, message)
+                result = await send_whatsapp_message(responsavel.email, message)
 
                 alerts_sent.append({
                     "tarefa_id": tarefa.id,
                     "tarefa_titulo": tarefa.titulo,
                     "responsavel": responsavel.nome,
-                    "telefone": responsavel.telefone,
+                    "email": responsavel.email,
                     "dias_restantes": days_remaining,
                     "enviado": result.get("success", False)
                 })

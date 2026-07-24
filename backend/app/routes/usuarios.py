@@ -40,8 +40,7 @@ def create_usuario(
         nome=usuario.nome,
         email=usuario.email,
         senha_hash=get_password_hash(usuario.senha),
-        cargo=usuario.cargo,
-        telefone=usuario.telefone
+        cargo=usuario.cargo
     )
     db.add(db_usuario)
     db.commit()
@@ -65,8 +64,6 @@ def update_usuario(
         db_usuario.email = usuario.email
     if usuario.cargo is not None:
         db_usuario.cargo = usuario.cargo
-    if usuario.telefone is not None:
-        db_usuario.telefone = usuario.telefone
     if usuario.senha:
         db_usuario.senha_hash = get_password_hash(usuario.senha)
 
