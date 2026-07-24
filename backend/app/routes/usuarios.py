@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from ..database import get_db
 from ..models import Usuario
-from ..schemas import UsuarioCreate, UsuarioResponse
+from ..schemas import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from ..auth import get_password_hash, get_current_user
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -40,7 +40,8 @@ def create_usuario(
         nome=usuario.nome,
         email=usuario.email,
         senha_hash=get_password_hash(usuario.senha),
-        cargo=usuario.cargo
+        cargo=usuario.cargo,
+        telefone=usuario.telefone
     )
     db.add(db_usuario)
     db.commit()
@@ -50,7 +51,7 @@ def create_usuario(
 @router.put("/{usuario_id}", response_model=UsuarioResponse)
 def update_usuario(
     usuario_id: int,
-    usuario: UsuarioCreate,
+    usuario: UsuarioUpdate,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -58,9 +59,14 @@ def update_usuario(
     if not db_usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
-    db_usuario.nome = usuario.nome
-    db_usuario.email = usuario.email
-    db_usuario.cargo = usuario.cargo
+    if usuario.nome is not None:
+        db_usuario.nome = usuario.nome
+    if usuario.email is not None:
+        db_usuario.email = usuario.email
+    if usuario.cargo is not None:
+        db_usuario.cargo = usuario.cargo
+    if usuario.telefone is not None:
+        db_usuario.telefone = usuario.telefone
     if usuario.senha:
         db_usuario.senha_hash = get_password_hash(usuario.senha)
 
