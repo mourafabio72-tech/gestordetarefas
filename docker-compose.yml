@@ -14,7 +14,11 @@ services:
     build: ./backend
     restart: always
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/gestor_tarefas
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: gestor_tarefas
       SECRET_KEY: ${SECRET_KEY:-sua-chave-secreta-mude-em-producao}
       ZAP_API_URL: ${ZAP_API_URL:-https://api-bps4.zapcontabil.chat}
       ZAP_API_KEY: ${ZAP_API_KEY:-}
