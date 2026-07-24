@@ -32,8 +32,8 @@ services:
   frontend:
     build: ./frontend
     restart: always
-    ports:
-      - "80:80"   # EasyPanel roteia o domínio gestordetarefas.zoaria.com.br para cá
+    expose:
+      - "80"   # EasyPanel/Traefik roteia o domínio para a porta 80 do container (sem publicar no host)
     depends_on:
       - backend
 
