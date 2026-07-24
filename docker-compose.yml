@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     # Sem 'ports': o Postgres fica acessível só na rede interna (não exposto à internet).
 
   backend:
@@ -42,4 +42,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  pgdata:
