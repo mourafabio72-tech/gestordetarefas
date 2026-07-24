@@ -25,6 +25,7 @@ class Usuario(Base):
     email = Column(String(100), unique=True, nullable=False, index=True)
     senha_hash = Column(String(255), nullable=False)
     cargo = Column(String(50))
+    telefone = Column(String(20))
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

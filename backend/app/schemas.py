@@ -21,6 +21,7 @@ class UsuarioBase(BaseModel):
     nome: str
     email: str
     cargo: Optional[str] = None
+    telefone: Optional[str] = None
 
 class UsuarioCreate(UsuarioBase):
     senha: str
@@ -30,6 +31,7 @@ class UsuarioUpdate(BaseModel):
     email: Optional[str] = None
     senha: Optional[str] = None
     cargo: Optional[str] = None
+    telefone: Optional[str] = None
 
 class UsuarioResponse(UsuarioBase):
     id: int

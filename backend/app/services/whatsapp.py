@@ -7,10 +7,11 @@ from ..models import Tarefa, Usuario, StatusTarefa
 ZAP_API_URL = os.getenv("ZAP_API_URL", "https://api-bps4.zapcontabil.chat")
 ZAP_API_KEY = os.getenv("ZAP_API_KEY", "")
 ZAP_CONNECTION_FROM = int(os.getenv("ZAP_CONNECTION_FROM", "0"))
+ZAP_PHONE = os.getenv("ZAP_PHONE", "5521971985815")
 ALERT_DAYS_BEFORE = int(os.getenv("ALERT_DAYS_BEFORE", "3"))
 
 
-async def send_whatsapp_message(identifier: str, message: str) -> dict:
+async def send_whatsapp_message(phone: str, message: str) -> dict:
     if not ZAP_API_KEY:
         return {"success": False, "error": "ZAP_API_KEY não configurada"}
 
@@ -25,12 +26,12 @@ async def send_whatsapp_message(identifier: str, message: str) -> dict:
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{ZAP_API_URL}/api/send/{identifier}",
+            f"{ZAP_API_URL}/api/send/{phone}",
             json=payload,
             headers=headers,
             timeout=30.0
         )
-        return {"success": response.status_code == 200, "status_code": response.status_code}
+        return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}
 
 
 def format_task_message(tarefa: Tarefa, days_remaining: int) -> str:
@@ -79,9 +80,9 @@ async def check_and_send_alerts(db: Session) -> list:
         if days_remaining <= ALERT_DAYS_BEFORE:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
-            if responsavel and responsavel.email:
+            if responsavel:
                 message = format_task_message(tarefa, days_remaining)
-                result = await send_whatsapp_message(responsavel.email, message)
+                result = await send_whatsapp_message(ZAP_PHONE, message)
 
                 alerts_sent.append({
                     "tarefa_id": tarefa.id,
@@ -89,7 +90,8 @@ async def check_and_send_alerts(db: Session) -> list:
                     "responsavel": responsavel.nome,
                     "email": responsavel.email,
                     "dias_restantes": days_remaining,
-                    "enviado": result.get("success", False)
+                    "enviado": result.get("success", False),
+                    "detalhes": result
                 })
 
     return alerts_sent
