@@ -7,6 +7,9 @@ from .auth import get_password_hash
 def migrate():
     migrations = [
         ("telefone", "ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"),
+        ("gestor_id", "ALTER TABLE usuarios ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
+        ("data_vencimento", "ALTER TABLE tarefas ADD COLUMN data_vencimento TIMESTAMP"),
+        ("gera_multa", "ALTER TABLE tarefas ADD COLUMN gera_multa BOOLEAN DEFAULT FALSE"),
     ]
 
     for col_name, sql in migrations:

@@ -22,6 +22,7 @@ class UsuarioBase(BaseModel):
     email: str
     cargo: Optional[str] = None
     telefone: Optional[str] = None
+    gestor_id: Optional[int] = None
 
 class UsuarioCreate(UsuarioBase):
     senha: str
@@ -32,6 +33,7 @@ class UsuarioUpdate(BaseModel):
     senha: Optional[str] = None
     cargo: Optional[str] = None
     telefone: Optional[str] = None
+    gestor_id: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
     id: int
@@ -87,7 +89,9 @@ class TarefaBase(BaseModel):
     responsavel_id: Optional[int] = None
     prioridade: PrioridadeTarefa = PrioridadeTarefa.MEDIA
     data_inicio: Optional[datetime] = None
-    data_prazo: datetime
+    data_prazo: datetime                    # prazo interno (limite da equipe) — comanda os alertas
+    data_vencimento: Optional[datetime] = None  # vencimento fiscal/legal
+    gera_multa: bool = False
     observacoes: Optional[str] = None
 
 class TarefaCreate(TarefaBase):
@@ -101,6 +105,8 @@ class TarefaUpdate(BaseModel):
     status: Optional[StatusTarefa] = None
     prioridade: Optional[PrioridadeTarefa] = None
     data_prazo: Optional[datetime] = None
+    data_vencimento: Optional[datetime] = None
+    gera_multa: Optional[bool] = None
     data_conclusao: Optional[datetime] = None
     observacoes: Optional[str] = None
 

@@ -1,43 +1,45 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from ..database import SessionLocal
 from .whatsapp import check_and_send_alerts
 import logging
+
+try:
+    from zoneinfo import ZoneInfo
+    TZ = ZoneInfo("America/Sao_Paulo")
+except Exception:  # pragma: no cover
+    TZ = None
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 
-async def scheduled_check():
+async def scheduled_check(slot: str):
+    # importa aqui para evitar dependência de import no carregamento do módulo
+    from ..database import SessionLocal
     db = SessionLocal()
     try:
-        logger.info("Iniciando verificação agendada de tarefas...")
-        whatsapp_alerts = await check_and_send_alerts(db)
-        logger.info(f"WhatsApp: {len(whatsapp_alerts)} alertas processados.")
+        logger.info(f"[{slot}] verificando tarefas...")
+        alerts = await check_and_send_alerts(db, slot=slot)
+        logger.info(f"[{slot}] {len(alerts)} tarefa(s) notificada(s).")
     except Exception as e:
-        logger.error(f"Erro na verificação agendada: {e}")
+        logger.error(f"Erro na verificação [{slot}]: {e}")
     finally:
         db.close()
 
 
+def _cron(hour: int, minute: int) -> CronTrigger:
+    if TZ:
+        return CronTrigger(hour=hour, minute=minute, timezone=TZ)
+    return CronTrigger(hour=hour, minute=minute)
+
+
 def start_scheduler():
-    scheduler.add_job(
-        scheduled_check,
-        CronTrigger(hour=8, minute=0),
-        id="check_tarefas_manha",
-        name="Verificação matinal de tarefas"
-    )
-    scheduler.add_job(
-        scheduled_check,
-        CronTrigger(hour=14, minute=0),
-        id="check_tarefas_tarde",
-        name="Verificação vespertina de tarefas"
-    )
-    scheduler.add_job(
-        scheduled_check,
-        CronTrigger(hour=18, minute=0),
-        id="check_tarefas_noite",
-        name="Verificação noturna de tarefas"
-    )
+    # Horários em America/Sao_Paulo.
+    # Principais (9:30 e 17:45): avisam 3 dias antes, 1 dia antes, no dia e atrasadas.
+    scheduler.add_job(scheduled_check, _cron(9, 30), args=["principal"], id="alerta_0930", replace_existing=True)
+    scheduler.add_job(scheduled_check, _cron(17, 45), args=["principal"], id="alerta_1745", replace_existing=True)
+    # Extras (14:30 e 16:00): avisam só no dia do prazo e atrasadas.
+    scheduler.add_job(scheduled_check, _cron(14, 30), args=["extra"], id="alerta_1430", replace_existing=True)
+    scheduler.add_job(scheduled_check, _cron(16, 0), args=["extra"], id="alerta_1600", replace_existing=True)
     scheduler.start()
-    logger.info("Scheduler iniciado com 3 verificações diárias (8h, 14h, 18h)")
+    logger.info("Scheduler iniciado (America/Sao_Paulo): 9:30 e 17:45 (principal); 14:30 e 16:00 (extra).")

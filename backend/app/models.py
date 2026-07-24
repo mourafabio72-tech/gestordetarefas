@@ -26,11 +26,13 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     cargo = Column(String(50))
     telefone = Column(String(20))
+    gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    tarefas = relationship("Tarefa", back_populates="responsavel")
+    gestor = relationship("Usuario", remote_side=[id], foreign_keys=[gestor_id])
+    tarefas = relationship("Tarefa", back_populates="responsavel", foreign_keys="Tarefa.responsavel_id")
 
 class Empresa(Base):
     __tablename__ = "empresas"
@@ -75,7 +77,9 @@ class Tarefa(Base):
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
-    data_prazo = Column(DateTime(timezone=True), nullable=False)
+    data_prazo = Column(DateTime(timezone=True), nullable=False)  # prazo interno — comanda alertas
+    data_vencimento = Column(DateTime(timezone=True))             # vencimento fiscal/legal
+    gera_multa = Column(Boolean, default=False)
     data_conclusao = Column(DateTime(timezone=True))
     observacoes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

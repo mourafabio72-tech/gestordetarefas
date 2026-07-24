@@ -3,12 +3,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from typing import List
 from datetime import datetime, timedelta
+from pydantic import BaseModel
 from ..database import get_db
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import get_current_user
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
+
+
+class TransferirRequest(BaseModel):
+    responsavel_id: int
 
 @router.get("/dashboard/stats")
 def get_dashboard_stats(
@@ -140,6 +145,27 @@ def update_tarefa(
     db.commit()
     db.refresh(db_tarefa)
     return db_tarefa
+
+@router.post("/{tarefa_id}/transferir", response_model=TarefaResponse)
+def transferir_tarefa(
+    tarefa_id: int,
+    body: TransferirRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
+    if not db_tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+
+    novo_resp = db.query(Usuario).filter(Usuario.id == body.responsavel_id, Usuario.ativo == True).first()
+    if not novo_resp:
+        raise HTTPException(status_code=404, detail="Novo responsável não encontrado")
+
+    db_tarefa.responsavel_id = body.responsavel_id
+    db.commit()
+    db.refresh(db_tarefa)
+    return db_tarefa
+
 
 @router.delete("/{tarefa_id}")
 def delete_tarefa(

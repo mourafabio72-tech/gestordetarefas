@@ -27,7 +27,7 @@ async def enviar_alerta_usuario(
     current_user: Usuario = Depends(get_current_user)
 ):
     from ..models import Tarefa, StatusTarefa
-    from ..services.whatsapp import send_whatsapp_message, format_task_message, ZAP_PHONE
+    from ..services.whatsapp import send_whatsapp_message, format_task_message, ZAP_PHONE, _base_date
     from datetime import datetime
 
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
@@ -43,8 +43,9 @@ async def enviar_alerta_usuario(
     results = []
 
     for tarefa in tarefas:
-        days_remaining = (tarefa.data_prazo.date() - now.date()).days
-        message_wa, _ = format_task_message(tarefa, days_remaining)
+        base = _base_date(tarefa)
+        days_remaining = (base.date() - now.date()).days if base else 0
+        message_wa = format_task_message(tarefa, days_remaining, usuario)
         wa_result = await send_whatsapp_message(ZAP_PHONE, message_wa)
 
         results.append({
