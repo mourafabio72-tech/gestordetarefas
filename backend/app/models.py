@@ -36,7 +36,7 @@ class Empresa(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     razao_social = Column(String(200), nullable=False)
-    cnpj = Column(String(18), unique=True, index=True)
+    cnpj = Column(String(20), unique=True, index=True)
     nome_fantasia = Column(String(100))
     email = Column(String(100))
     telefone = Column(String(20))

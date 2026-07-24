@@ -44,7 +44,8 @@ export default function Empresas() {
       setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '' });
       loadEmpresas();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar empresa');
+      console.error('Erro empresa:', error.response?.data || error.message);
+      alert(error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data) || 'Erro ao salvar empresa');
     }
   };
 
