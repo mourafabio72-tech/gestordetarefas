@@ -26,6 +26,7 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     cargo = Column(String(50))
     telefone = Column(String(20))
+    teams_webhook = Column(Text)
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

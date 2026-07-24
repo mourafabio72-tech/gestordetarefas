@@ -12,3 +12,13 @@ def migrate():
                 print("Coluna 'telefone' já existe.")
             else:
                 print(f"Erro: {e}")
+
+        try:
+            conn.execute(text("ALTER TABLE usuarios ADD COLUMN teams_webhook TEXT"))
+            conn.commit()
+            print("Coluna 'teams_webhook' adicionada com sucesso!")
+        except Exception as e:
+            if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
+                print("Coluna 'teams_webhook' já existe.")
+            else:
+                print(f"Erro: {e}")

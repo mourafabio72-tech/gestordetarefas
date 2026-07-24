@@ -52,9 +52,11 @@ async def enviar_alerta_usuario(
         message_wa, _ = format_task_message(tarefa, days_remaining)
         wa_result = await send_whatsapp_message(ZAP_PHONE, message_wa)
 
-        from ..services.teams import format_task_message_teams
-        message_teams, title_teams = format_task_message_teams(tarefa, days_remaining)
-        teams_result = await send_teams_message(message_teams, title_teams)
+        teams_result = {"success": False, "error": "Webhook não configurado"}
+        if usuario.teams_webhook:
+            from ..services.teams import format_task_message_teams
+            message_teams, title_teams = format_task_message_teams(tarefa, days_remaining)
+            teams_result = await send_teams_message(usuario.teams_webhook, message_teams, title_teams)
 
         results.append({
             "tarefa_id": tarefa.id,
@@ -73,7 +75,11 @@ async def enviar_alerta_usuario(
 async def testar_teams(
     current_user: Usuario = Depends(get_current_user)
 ):
+    if not current_user.teams_webhook:
+        raise HTTPException(status_code=400, detail="Configure sua webhook URL do Teams primeiro")
+
     result = await send_teams_message(
+        current_user.teams_webhook,
         "✅ Teste de integração do Gestor de Tarefas com Microsoft Teams!",
         "Teste Gestor de Tarefas"
     )

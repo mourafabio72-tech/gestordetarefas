@@ -1,16 +1,14 @@
 import httpx
 import os
-import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from ..models import Tarefa, Usuario, StatusTarefa
+from .whatsapp import ALERT_DAYS_BEFORE
 
-TEAMS_WEBHOOK_URL = os.getenv("TEAMS_WEBHOOK_URL", "")
 
-
-async def send_teams_message(message: str, title: str = "Gestor de Tarefas") -> dict:
-    if not TEAMS_WEBHOOK_URL:
-        return {"success": False, "error": "TEAMS_WEBHOOK_URL não configurada"}
+async def send_teams_message(webhook_url: str, message: str, title: str = "Gestor de Tarefas") -> dict:
+    if not webhook_url:
+        return {"success": False, "error": "Webhook URL não configurada"}
 
     payload = {
         "title": title,
@@ -20,7 +18,7 @@ async def send_teams_message(message: str, title: str = "Gestor de Tarefas") -> 
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            TEAMS_WEBHOOK_URL,
+            webhook_url,
             json=payload,
             headers={"Content-Type": "application/json"},
             timeout=30.0
@@ -75,14 +73,12 @@ async def send_teams_alerts(db: Session) -> list:
 
         days_remaining = (tarefa.data_prazo.date() - now.date()).days
 
-        from .whatsapp import ALERT_DAYS_BEFORE
-
         if days_remaining <= ALERT_DAYS_BEFORE:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
-            if responsavel:
+            if responsavel and responsavel.teams_webhook:
                 message, title = format_task_message_teams(tarefa, days_remaining)
-                result = await send_teams_message(message, title)
+                result = await send_teams_message(responsavel.teams_webhook, message, title)
 
                 alerts_sent.append({
                     "tarefa_id": tarefa.id,
