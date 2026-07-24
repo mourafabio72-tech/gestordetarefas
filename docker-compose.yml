@@ -8,8 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Sem 'ports': o Postgres fica acessível só na rede interna (não exposto à internet).
 
   backend:
     build: ./backend
@@ -23,16 +22,18 @@ services:
       ZAP_PHONE: ${ZAP_PHONE:-5521971985815}
       ALERT_DAYS_BEFORE: ${ALERT_DAYS_BEFORE:-3}
       TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NOME: ${ADMIN_NOME:-Administrador}
     depends_on:
       - db
-    ports:
-      - "8000:8000"
+    # Sem 'ports': o backend é acessado internamente pelo nginx do frontend (proxy /api).
 
   frontend:
     build: ./frontend
     restart: always
     ports:
-      - "3001:80"
+      - "80:80"   # EasyPanel roteia o domínio gestordetarefas.zoaria.com.br para cá
     depends_on:
       - backend
 

@@ -20,7 +20,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register", response_model=UsuarioResponse, status_code=201)
-def register(usuario: UsuarioCreate, db: Session = Depends(get_db)):
+def register(
+    usuario: UsuarioCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
     existing = db.query(Usuario).filter(Usuario.email == usuario.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
