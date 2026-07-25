@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ..database import get_db
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
-from ..auth import get_current_user
+from ..auth import get_current_user, require_gestor_ou_admin
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
@@ -101,7 +101,7 @@ def get_tarefa(
 def create_tarefa(
     tarefa: TarefaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     empresa = db.query(Empresa).filter(Empresa.id == tarefa.empresa_id).first()
     if not empresa:
@@ -151,7 +151,7 @@ def transferir_tarefa(
     tarefa_id: int,
     body: TransferirRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:
@@ -171,7 +171,7 @@ def transferir_tarefa(
 def delete_tarefa(
     tarefa_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:

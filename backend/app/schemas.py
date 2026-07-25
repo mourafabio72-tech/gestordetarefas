@@ -22,6 +22,7 @@ class UsuarioBase(BaseModel):
     email: str
     cargo: Optional[str] = None
     telefone: Optional[str] = None
+    grupo: Optional[str] = "usuario"   # admin | gestor | usuario
     gestor_id: Optional[int] = None
 
 class UsuarioCreate(UsuarioBase):
@@ -33,6 +34,7 @@ class UsuarioUpdate(BaseModel):
     senha: Optional[str] = None
     cargo: Optional[str] = None
     telefone: Optional[str] = None
+    grupo: Optional[str] = None
     gestor_id: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):

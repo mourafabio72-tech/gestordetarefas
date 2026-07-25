@@ -26,6 +26,7 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     cargo = Column(String(50))
     telefone = Column(String(20))
+    grupo = Column(String(20), default="usuario")  # admin | gestor | usuario
     gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

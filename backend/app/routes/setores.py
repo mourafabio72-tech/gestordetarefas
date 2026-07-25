@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..models import Setor, Empresa, Usuario
 from ..schemas import SetorCreate, SetorResponse
-from ..auth import get_current_user
+from ..auth import get_current_user, require_gestor_ou_admin
 
 router = APIRouter(prefix="/setores", tags=["setores"])
 
@@ -34,7 +34,7 @@ def get_setor(
 def create_setor(
     setor: SetorCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     empresa = db.query(Empresa).filter(Empresa.id == setor.empresa_id).first()
     if not empresa:
@@ -51,7 +51,7 @@ def update_setor(
     setor_id: int,
     setor: SetorCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_setor = db.query(Setor).filter(Setor.id == setor_id).first()
     if not db_setor:
@@ -68,7 +68,7 @@ def update_setor(
 def delete_setor(
     setor_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_setor = db.query(Setor).filter(Setor.id == setor_id).first()
     if not db_setor:

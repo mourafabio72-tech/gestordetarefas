@@ -4,7 +4,7 @@ from typing import List
 from ..database import get_db
 from ..models import Empresa, Usuario
 from ..schemas import EmpresaCreate, EmpresaResponse
-from ..auth import get_current_user
+from ..auth import get_current_user, require_gestor_ou_admin
 
 router = APIRouter(prefix="/empresas", tags=["empresas"])
 
@@ -30,7 +30,7 @@ def get_empresa(
 def create_empresa(
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     if empresa.cnpj:
         existing = db.query(Empresa).filter(Empresa.cnpj == empresa.cnpj).first()
@@ -48,7 +48,7 @@ def update_empresa(
     empresa_id: int,
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
     if not db_empresa:
@@ -65,7 +65,7 @@ def update_empresa(
 def delete_empresa(
     empresa_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
     db_empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
     if not db_empresa:

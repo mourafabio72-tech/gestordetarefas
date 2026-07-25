@@ -3,11 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .routes import auth, usuarios, empresas, setores, tarefas, alertas
 from .services.scheduler import start_scheduler
-from .init_db import migrate, seed_admin
+from .init_db import migrate, seed_admin, ensure_admin_grupo
 
 Base.metadata.create_all(bind=engine)
 migrate()
 seed_admin()
+ensure_admin_grupo()
 
 app = FastAPI(
     title="Gestor de Tarefas API",

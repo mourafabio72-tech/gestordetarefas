@@ -8,6 +8,7 @@ def migrate():
     migrations = [
         ("telefone", "ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"),
         ("gestor_id", "ALTER TABLE usuarios ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
+        ("grupo", "ALTER TABLE usuarios ADD COLUMN grupo VARCHAR(20) DEFAULT 'usuario'"),
         ("data_vencimento", "ALTER TABLE tarefas ADD COLUMN data_vencimento TIMESTAMP"),
         ("gera_multa", "ALTER TABLE tarefas ADD COLUMN gera_multa BOOLEAN DEFAULT FALSE"),
     ]
@@ -39,8 +40,30 @@ def seed_admin():
                 email=email,
                 senha_hash=get_password_hash(senha),
                 cargo="admin",
+                grupo="admin",
             ))
             db.commit()
             print(f"Admin inicial criado: {email}")
+    finally:
+        db.close()
+
+
+def ensure_admin_grupo():
+    """Garante que o admin (por cargo ou pelo ADMIN_EMAIL) fique no grupo 'admin'.
+    Necessário porque a coluna 'grupo' nasce com default 'usuario' para linhas antigas."""
+    email = os.getenv("ADMIN_EMAIL")
+    db = SessionLocal()
+    try:
+        cond = Usuario.cargo == "admin"
+        if email:
+            cond = cond | (Usuario.email == email)
+        promovidos = 0
+        for u in db.query(Usuario).filter(cond).all():
+            if u.grupo != "admin":
+                u.grupo = "admin"
+                promovidos += 1
+        if promovidos:
+            db.commit()
+            print(f"{promovidos} usuário(s) promovido(s) ao grupo admin.")
     finally:
         db.close()

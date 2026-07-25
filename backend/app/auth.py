@@ -48,3 +48,16 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def require_grupos(*grupos):
+    """Dependência: exige que o usuário logado pertença a um dos grupos."""
+    def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+        if current_user.grupo not in grupos:
+            raise HTTPException(status_code=403, detail="Você não tem permissão para esta ação")
+        return current_user
+    return _dep
+
+
+require_admin = require_grupos("admin")
+require_gestor_ou_admin = require_grupos("admin", "gestor")
