@@ -45,6 +45,8 @@ class Empresa(Base):
     email = Column(String(100))
     telefone = Column(String(20))
     endereco = Column(Text)
+    regime_tributario = Column(String(30), default="indefinido")  # indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor
+    segmento = Column(String(30))  # comercio|servico|comercio_servico|industria
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

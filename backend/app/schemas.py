@@ -53,6 +53,8 @@ class EmpresaBase(BaseModel):
     email: Optional[str] = None
     telefone: Optional[str] = None
     endereco: Optional[str] = None
+    regime_tributario: Optional[str] = "indefinido"
+    segmento: Optional[str] = None
 
 class EmpresaCreate(EmpresaBase):
     pass

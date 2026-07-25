@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { empresasAPI } from '../services/api';
 import { Plus, Edit2, Trash2, Building2 } from 'lucide-react';
 
+const REGIMES = [
+  { value: 'indefinido', label: 'Indefinido' },
+  { value: 'lucro_real', label: 'Lucro Real' },
+  { value: 'lucro_presumido', label: 'Lucro Presumido' },
+  { value: 'mei', label: 'MEI' },
+  { value: 'simples_nacional', label: 'Simples Nacional' },
+  { value: 'terceiro_setor', label: 'Terceiro Setor' },
+];
+
+const SEGMENTOS = [
+  { value: '', label: '—' },
+  { value: 'comercio', label: 'Comércio' },
+  { value: 'servico', label: 'Serviço' },
+  { value: 'comercio_servico', label: 'Comércio & Serviço' },
+  { value: 'industria', label: 'Indústria' },
+];
+
+const labelDe = (lista, val) => lista.find((o) => o.value === val)?.label || '-';
+
 export default function Empresas() {
   const [empresas, setEmpresas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +32,9 @@ export default function Empresas() {
     nome_fantasia: '',
     email: '',
     telefone: '',
-    endereco: ''
+    endereco: '',
+    regime_tributario: 'indefinido',
+    segmento: ''
   });
 
   useEffect(() => {
@@ -41,7 +62,7 @@ export default function Empresas() {
       }
       setShowModal(false);
       setEditingEmpresa(null);
-      setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '' });
+      setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '', regime_tributario: 'indefinido', segmento: '' });
       loadEmpresas();
     } catch (error) {
       console.error('Erro empresa:', error.response?.data || error.message);
@@ -57,7 +78,9 @@ export default function Empresas() {
       nome_fantasia: empresa.nome_fantasia || '',
       email: empresa.email || '',
       telefone: empresa.telefone || '',
-      endereco: empresa.endereco || ''
+      endereco: empresa.endereco || '',
+      regime_tributario: empresa.regime_tributario || 'indefinido',
+      segmento: empresa.segmento || ''
     });
     setShowModal(true);
   };
@@ -93,7 +116,7 @@ export default function Empresas() {
         <button
           onClick={() => {
             setEditingEmpresa(null);
-            setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '' });
+            setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '', regime_tributario: 'indefinido', segmento: '' });
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -114,10 +137,11 @@ export default function Empresas() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Código</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Razão Social</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">CNPJ</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome Fantasia</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Regime</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Grupo</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Telefone</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
@@ -125,10 +149,11 @@ export default function Empresas() {
               <tbody>
                 {empresas.map((empresa) => (
                   <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-gray-500 font-mono">#{empresa.id}</td>
                     <td className="py-3 px-4">{empresa.razao_social}</td>
                     <td className="py-3 px-4">{empresa.cnpj || '-'}</td>
-                    <td className="py-3 px-4">{empresa.nome_fantasia || '-'}</td>
-                    <td className="py-3 px-4">{empresa.email || '-'}</td>
+                    <td className="py-3 px-4">{labelDe(REGIMES, empresa.regime_tributario)}</td>
+                    <td className="py-3 px-4">{empresa.segmento ? labelDe(SEGMENTOS, empresa.segmento) : '-'}</td>
                     <td className="py-3 px-4">{empresa.telefone || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
@@ -209,6 +234,32 @@ export default function Empresas() {
                   onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                   className="input-field"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Regime tributário</label>
+                  <select
+                    value={formData.regime_tributario}
+                    onChange={(e) => setFormData({ ...formData, regime_tributario: e.target.value })}
+                    className="input-field"
+                  >
+                    {REGIMES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de empresas</label>
+                  <select
+                    value={formData.segmento}
+                    onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}
+                    className="input-field"
+                  >
+                    {SEGMENTOS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
