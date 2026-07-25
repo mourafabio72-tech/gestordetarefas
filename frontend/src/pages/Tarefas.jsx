@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft } from 'lucide-react';
 
 const statusColors = {
   pendente: 'bg-yellow-100 text-yellow-700',
@@ -43,6 +43,8 @@ export default function Tarefas() {
   const [showModal, setShowModal] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState(null);
   const [filtros, setFiltros] = useState({ empresa_id: '', status: '' });
+  const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
+  const [transferResp, setTransferResp] = useState('');
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
@@ -51,6 +53,8 @@ export default function Tarefas() {
     responsavel_id: '',
     prioridade: 'media',
     data_prazo: '',
+    data_vencimento: '',
+    gera_multa: false,
     observacoes: ''
   });
 
@@ -91,7 +95,9 @@ export default function Tarefas() {
         empresa_id: parseInt(formData.empresa_id),
         setor_id: formData.setor_id ? parseInt(formData.setor_id) : null,
         responsavel_id: formData.responsavel_id ? parseInt(formData.responsavel_id) : null,
-        data_prazo: new Date(formData.data_prazo).toISOString()
+        data_prazo: new Date(formData.data_prazo).toISOString(),
+        data_vencimento: formData.data_vencimento ? new Date(formData.data_vencimento).toISOString() : null,
+        gera_multa: !!formData.gera_multa
       };
 
       if (editingTarefa) {
@@ -118,6 +124,8 @@ export default function Tarefas() {
       responsavel_id: tarefa.responsavel_id || '',
       prioridade: tarefa.prioridade,
       data_prazo: format(new Date(tarefa.data_prazo), "yyyy-MM-dd'T'HH:mm"),
+      data_vencimento: tarefa.data_vencimento ? format(new Date(tarefa.data_vencimento), "yyyy-MM-dd'T'HH:mm") : '',
+      gera_multa: !!tarefa.gera_multa,
       observacoes: tarefa.observacoes || ''
     });
     setShowModal(true);
@@ -152,8 +160,22 @@ export default function Tarefas() {
       responsavel_id: '',
       prioridade: 'media',
       data_prazo: '',
+      data_vencimento: '',
+      gera_multa: false,
       observacoes: ''
     });
+  };
+
+  const handleTransfer = async () => {
+    if (!transferResp) return;
+    try {
+      await tarefasAPI.transferir(showTransfer.id, parseInt(transferResp));
+      setShowTransfer(null);
+      setTransferResp('');
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao transferir tarefa');
+    }
   };
 
   const getEmpresaNome = (id) => empresas.find(e => e.id === id)?.razao_social || '-';
@@ -249,8 +271,16 @@ export default function Tarefas() {
                         </span>
                         <span className="flex items-center gap-1 text-gray-500">
                           <Clock size={14} />
-                          {format(prazoDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          Prazo: {format(prazoDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </span>
+                        {tarefa.data_vencimento && (
+                          <span className="text-gray-500">
+                            • Venc.: {format(new Date(tarefa.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
+                        {tarefa.gera_multa && (
+                          <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700">⚠️ Gera multa</span>
+                        )}
                       </div>
                     </div>
 
@@ -265,6 +295,15 @@ export default function Tarefas() {
                           <option value="em_andamento">Em Andamento</option>
                           <option value="concluida">Concluída</option>
                         </select>
+                      )}
+                      {tarefa.status !== 'concluida' && tarefa.status !== 'cancelada' && (
+                        <button
+                          onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }}
+                          title="Transferir responsável"
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        >
+                          <ArrowRightLeft size={16} />
+                        </button>
                       )}
                       <button
                         onClick={() => handleEdit(tarefa)}
@@ -286,6 +325,40 @@ export default function Tarefas() {
           </div>
         )}
       </div>
+
+      {showTransfer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Transferir tarefa</h2>
+              <p className="text-sm text-gray-500 mt-1">{showTransfer.titulo}</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Novo responsável *</label>
+                <select
+                  value={transferResp}
+                  onChange={(e) => setTransferResp(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Selecione</option>
+                  {usuarios.filter(u => u.id !== showTransfer.responsavel_id).map(u => (
+                    <option key={u.id} value={u.id}>{u.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowTransfer(null)} className="btn-secondary flex-1">
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleTransfer} disabled={!transferResp} className="btn-primary flex-1">
+                  Transferir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -371,15 +444,39 @@ export default function Tarefas() {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Prazo interno *</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.data_prazo}
+                    onChange={(e) => setFormData({ ...formData, data_prazo: e.target.value })}
+                    className="input-field"
+                    required
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Limite da equipe — comanda os alertas.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.data_vencimento}
+                    onChange={(e) => setFormData({ ...formData, data_vencimento: e.target.value })}
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Data fiscal/legal.</p>
+                </div>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data Prazo *</label>
-                <input
-                  type="datetime-local"
-                  value={formData.data_prazo}
-                  onChange={(e) => setFormData({ ...formData, data_prazo: e.target.value })}
-                  className="input-field"
-                  required
-                />
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={formData.gera_multa}
+                    onChange={(e) => setFormData({ ...formData, gera_multa: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  Esta tarefa gera multa se o vencimento for perdido
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>

@@ -12,7 +12,8 @@ export default function Usuarios() {
     email: '',
     senha: '',
     cargo: '',
-    telefone: ''
+    telefone: '',
+    gestor_id: ''
   });
 
   useEffect(() => {
@@ -33,16 +34,19 @@ export default function Usuarios() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        gestor_id: formData.cargo === 'admin' ? null : (formData.gestor_id ? parseInt(formData.gestor_id) : null)
+      };
       if (editingUsuario) {
-        const data = { ...formData };
-        if (!data.senha) delete data.senha;
-        await usuariosAPI.update(editingUsuario.id, data);
+        if (!payload.senha) delete payload.senha;
+        await usuariosAPI.update(editingUsuario.id, payload);
       } else {
-        await usuariosAPI.create(formData);
+        await usuariosAPI.create(payload);
       }
       setShowModal(false);
       setEditingUsuario(null);
-      setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '' });
+      setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', gestor_id: '' });
       loadUsuarios();
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao salvar usuário');
@@ -56,7 +60,8 @@ export default function Usuarios() {
       email: usuario.email,
       senha: '',
       cargo: usuario.cargo || '',
-      telefone: usuario.telefone || ''
+      telefone: usuario.telefone || '',
+      gestor_id: usuario.gestor_id || ''
     });
     setShowModal(true);
   };
@@ -83,7 +88,7 @@ export default function Usuarios() {
         <button
           onClick={() => {
             setEditingUsuario(null);
-            setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '' });
+            setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', gestor_id: '' });
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -217,6 +222,24 @@ export default function Usuarios() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Formato: DDD + Número</p>
               </div>
+              {formData.cargo !== 'admin' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gestor</label>
+                  <select
+                    value={formData.gestor_id}
+                    onChange={(e) => setFormData({ ...formData, gestor_id: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Sem gestor</option>
+                    {usuarios
+                      .filter(u => u.id !== editingUsuario?.id && u.cargo !== 'admin')
+                      .map(u => (
+                        <option key={u.id} value={u.id}>{u.nome}</option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Aparece nas notificações das tarefas deste colaborador.</p>
+                </div>
+              )}
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                   Cancelar
