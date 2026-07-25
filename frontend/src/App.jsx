@@ -6,6 +6,9 @@ import Empresas from './pages/Empresas';
 import Setores from './pages/Setores';
 import Usuarios from './pages/Usuarios';
 import Tarefas from './pages/Tarefas';
+import Grupos from './pages/Grupos';
+import Relatorios from './pages/Relatorios';
+import EValidador from './pages/EValidador';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -37,6 +40,9 @@ function AppRoutes() {
         <Route path="setores" element={<Setores />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="tarefas" element={<Tarefas />} />
+        <Route path="grupos" element={<Grupos />} />
+        <Route path="relatorios" element={<Relatorios />} />
+        <Route path="evalidador" element={<EValidador />} />
       </Route>
     </Routes>
   );

@@ -6,30 +6,47 @@ import {
   Users,
   FolderOpen,
   ListTodo,
+  BarChart3,
+  FileCheck2,
+  ShieldCheck,
   LogOut,
   Menu,
   X
 } from 'lucide-react';
 import { useState } from 'react';
 
-const menuItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/empresas', label: 'Empresas', icon: Building2 },
-  { path: '/setores', label: 'Setores', icon: FolderOpen },
-  { path: '/usuarios', label: 'Usuários', icon: Users },
-  { path: '/tarefas', label: 'Tarefas', icon: ListTodo },
+const menuGroups = [
+  {
+    label: 'Operacional',
+    items: [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'gestor', 'usuario'] },
+      { path: '/tarefas', label: 'Tarefas', icon: ListTodo, roles: ['admin', 'gestor', 'usuario'] },
+      { path: '/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['admin', 'gestor'] },
+      { path: '/evalidador', label: 'e-validador', icon: FileCheck2, roles: ['admin', 'gestor'] },
+    ],
+  },
+  {
+    label: 'Cadastro',
+    items: [
+      { path: '/setores', label: 'Setores', icon: FolderOpen, roles: ['admin', 'gestor'] },
+      { path: '/empresas', label: 'Empresas', icon: Building2, roles: ['admin', 'gestor'] },
+      { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['admin', 'gestor'] },
+      { path: '/grupos', label: 'Grupo de usuários', icon: ShieldCheck, roles: ['admin'] },
+    ],
+  },
 ];
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const grupo = user?.grupo || 'usuario';
 
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-primary-800 text-white transform transition-transform duration-200 ease-in-out
-        lg:relative lg:translate-x-0
+        lg:relative lg:translate-x-0 flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between p-4 border-b border-primary-700">
@@ -39,36 +56,47 @@ export default function Layout() {
           </button>
         </div>
 
-        <nav className="p-4">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+        <nav className="p-4 flex-1 overflow-y-auto">
+          {menuGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => item.roles.includes(grupo));
+            if (visibleItems.length === 0) return null;
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
-                  isActive
-                    ? 'bg-primary-600 text-white'
-                    : 'text-primary-200 hover:bg-primary-700'
-                }`}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </Link>
+              <div key={group.label} className="mb-4">
+                <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-wider text-primary-400">
+                  {group.label}
+                </p>
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
+                        isActive
+                          ? 'bg-primary-600 text-white'
+                          : 'text-primary-200 hover:bg-primary-700'
+                      }`}
+                    >
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 w-full p-4 border-t border-primary-700">
+        <div className="w-full p-4 border-t border-primary-700">
           <div className="flex items-center gap-3 mb-3 px-4">
             <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
               {user?.nome?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user?.nome}</p>
-              <p className="text-xs text-primary-300 truncate">{user?.email}</p>
+              <p className="text-xs text-primary-300 truncate capitalize">{grupo}</p>
             </div>
           </div>
           <button
