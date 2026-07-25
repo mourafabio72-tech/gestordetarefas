@@ -15,6 +15,11 @@ router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 class TransferirRequest(BaseModel):
     responsavel_id: int
 
+
+class CopiarTarefasRequest(BaseModel):
+    origem_empresa_id: int
+    destino_empresa_id: int
+
 @router.get("/dashboard/stats")
 def get_dashboard_stats(
     empresa_id: int = None,
@@ -145,6 +150,46 @@ def update_tarefa(
     db.commit()
     db.refresh(db_tarefa)
     return db_tarefa
+
+@router.post("/copiar")
+def copiar_tarefas(
+    body: CopiarTarefasRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_gestor_ou_admin)
+):
+    if body.origem_empresa_id == body.destino_empresa_id:
+        raise HTTPException(status_code=400, detail="Origem e destino devem ser empresas diferentes")
+
+    destino = db.query(Empresa).filter(Empresa.id == body.destino_empresa_id).first()
+    if not destino:
+        raise HTTPException(status_code=404, detail="Empresa de destino não encontrada")
+
+    origem_tarefas = db.query(Tarefa).filter(
+        Tarefa.empresa_id == body.origem_empresa_id,
+        Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
+    ).all()
+
+    copiadas = 0
+    for t in origem_tarefas:
+        # Copia como modelo: sem datas; setor não é copiado (é específico da empresa).
+        db.add(Tarefa(
+            titulo=t.titulo,
+            descricao=t.descricao,
+            empresa_id=body.destino_empresa_id,
+            setor_id=None,
+            responsavel_id=t.responsavel_id,
+            prioridade=t.prioridade,
+            gera_multa=t.gera_multa,
+            observacoes=t.observacoes,
+            status=StatusTarefa.PENDENTE,
+            data_prazo=None,
+            data_vencimento=None,
+        ))
+        copiadas += 1
+
+    db.commit()
+    return {"message": f"{copiadas} tarefa(s) copiada(s) como modelo (defina os prazos depois).", "copiadas": copiadas}
+
 
 @router.post("/{tarefa_id}/transferir", response_model=TarefaResponse)
 def transferir_tarefa(

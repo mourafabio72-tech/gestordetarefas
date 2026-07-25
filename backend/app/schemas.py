@@ -93,7 +93,7 @@ class TarefaBase(BaseModel):
     responsavel_id: Optional[int] = None
     prioridade: PrioridadeTarefa = PrioridadeTarefa.MEDIA
     data_inicio: Optional[datetime] = None
-    data_prazo: datetime                    # prazo interno (limite da equipe) — comanda os alertas
+    data_prazo: Optional[datetime] = None   # prazo interno (limite da equipe) — comanda os alertas
     data_vencimento: Optional[datetime] = None  # vencimento fiscal/legal
     gera_multa: bool = False
     observacoes: Optional[str] = None

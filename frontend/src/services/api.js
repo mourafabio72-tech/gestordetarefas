@@ -64,6 +64,7 @@ export const tarefasAPI = {
   delete: (id) => api.delete(`/tarefas/${id}`),
   dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),
   transferir: (id, responsavel_id) => api.post(`/tarefas/${id}/transferir`, { responsavel_id }),
+  copiar: (origem_empresa_id, destino_empresa_id) => api.post('/tarefas/copiar', { origem_empresa_id, destino_empresa_id }),
 };
 
 export const alertasAPI = {

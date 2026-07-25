@@ -13,6 +13,7 @@ def migrate():
         ("gera_multa", "ALTER TABLE tarefas ADD COLUMN gera_multa BOOLEAN DEFAULT FALSE"),
         ("regime_tributario", "ALTER TABLE empresas ADD COLUMN regime_tributario VARCHAR(30) DEFAULT 'indefinido'"),
         ("segmento", "ALTER TABLE empresas ADD COLUMN segmento VARCHAR(30)"),
+        ("data_prazo_nullable", "ALTER TABLE tarefas ALTER COLUMN data_prazo DROP NOT NULL"),
     ]
 
     for col_name, sql in migrations:

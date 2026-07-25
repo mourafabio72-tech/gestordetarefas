@@ -80,7 +80,7 @@ class Tarefa(Base):
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
-    data_prazo = Column(DateTime(timezone=True), nullable=False)  # prazo interno — comanda alertas
+    data_prazo = Column(DateTime(timezone=True))  # prazo interno — comanda alertas (nulo em tarefa-modelo copiada)
     data_vencimento = Column(DateTime(timezone=True))             # vencimento fiscal/legal
     gera_multa = Column(Boolean, default=False)
     data_conclusao = Column(DateTime(timezone=True))

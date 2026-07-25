@@ -2,7 +2,24 @@ import { useState, useEffect } from 'react';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy } from 'lucide-react';
+
+const REGIMES_COPY = [
+  { value: '', label: 'Todos os regimes' },
+  { value: 'indefinido', label: 'Indefinido' },
+  { value: 'lucro_real', label: 'Lucro Real' },
+  { value: 'lucro_presumido', label: 'Lucro Presumido' },
+  { value: 'mei', label: 'MEI' },
+  { value: 'simples_nacional', label: 'Simples Nacional' },
+  { value: 'terceiro_setor', label: 'Terceiro Setor' },
+];
+const SEGMENTOS_COPY = [
+  { value: '', label: 'Todos os grupos' },
+  { value: 'comercio', label: 'Comércio' },
+  { value: 'servico', label: 'Serviço' },
+  { value: 'comercio_servico', label: 'Comércio & Serviço' },
+  { value: 'industria', label: 'Indústria' },
+];
 
 const statusColors = {
   pendente: 'bg-yellow-100 text-yellow-700',
@@ -45,6 +62,11 @@ export default function Tarefas() {
   const [filtros, setFiltros] = useState({ empresa_id: '', status: '' });
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
   const [transferResp, setTransferResp] = useState('');
+  const [showCopy, setShowCopy] = useState(false);
+  const [copyOrigem, setCopyOrigem] = useState('');
+  const [copyDestino, setCopyDestino] = useState('');
+  const [copyRegime, setCopyRegime] = useState('');
+  const [copyGrupo, setCopyGrupo] = useState('');
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
@@ -166,6 +188,19 @@ export default function Tarefas() {
     });
   };
 
+  const handleCopiar = async () => {
+    if (!copyOrigem || !copyDestino) return;
+    try {
+      const res = await tarefasAPI.copiar(parseInt(copyOrigem), parseInt(copyDestino));
+      alert(res.data?.message || 'Tarefas copiadas.');
+      setShowCopy(false);
+      setCopyOrigem(''); setCopyDestino(''); setCopyRegime(''); setCopyGrupo('');
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao copiar tarefas');
+    }
+  };
+
   const handleTransfer = async () => {
     if (!transferResp) return;
     try {
@@ -190,17 +225,26 @@ export default function Tarefas() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tarefas</h1>
-        <button
-          onClick={() => {
-            setEditingTarefa(null);
-            resetForm();
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Nova Tarefa
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setShowCopy(true); }}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Copy size={18} />
+            Copiar tarefas
+          </button>
+          <button
+            onClick={() => {
+              setEditingTarefa(null);
+              resetForm();
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Nova Tarefa
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -235,8 +279,8 @@ export default function Tarefas() {
         ) : (
           <div className="space-y-4">
             {filteredTarefas.map((tarefa) => {
-              const prazoDate = new Date(tarefa.data_prazo);
-              const atrasada = isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+              const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
+              const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
 
               return (
                 <div
@@ -271,7 +315,7 @@ export default function Tarefas() {
                         </span>
                         <span className="flex items-center gap-1 text-gray-500">
                           <Clock size={14} />
-                          Prazo: {format(prazoDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          Prazo: {prazoDate ? format(prazoDate, "dd/MM/yyyy HH:mm", { locale: ptBR }) : 'sem prazo'}
                         </span>
                         {tarefa.data_vencimento && (
                           <span className="text-gray-500">
@@ -325,6 +369,61 @@ export default function Tarefas() {
           </div>
         )}
       </div>
+
+      {showCopy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Copiar tarefas</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Copia as tarefas em aberto de uma empresa para outra, como modelo (sem datas).
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por regime</label>
+                  <select value={copyRegime} onChange={(e) => { setCopyRegime(e.target.value); setCopyOrigem(''); }} className="input-field">
+                    {REGIMES_COPY.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por grupo</label>
+                  <select value={copyGrupo} onChange={(e) => { setCopyGrupo(e.target.value); setCopyOrigem(''); }} className="input-field">
+                    {SEGMENTOS_COPY.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de origem *</label>
+                <select value={copyOrigem} onChange={(e) => setCopyOrigem(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas
+                    .filter((e) => (!copyRegime || e.regime_tributario === copyRegime) && (!copyGrupo || e.segmento === copyGrupo))
+                    .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de destino *</label>
+                <select value={copyDestino} onChange={(e) => setCopyDestino(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas
+                    .filter((e) => String(e.id) !== copyOrigem)
+                    .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCopy(false)} className="btn-secondary flex-1">
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleCopiar} disabled={!copyOrigem || !copyDestino} className="btn-primary flex-1">
+                  Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTransfer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
