@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, List
 from pydantic import BaseModel
 from ..database import get_db
 from ..models import Usuario, Modelo
 from ..auth import require_perm
-from ..services.validador import analisar_para_repositorio, salvar_modelo
+from ..services.validador import analisar_para_repositorio, salvar_modelo, _norm
 
 router = APIRouter(prefix="/modelos", tags=["modelos"])
 
@@ -56,6 +56,73 @@ async def analisar(
         return analisar_para_repositorio(db, arquivo.filename, conteudo)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Falha ao ler o arquivo: {e}")
+
+
+@router.post("/lote")
+async def lote(
+    arquivos: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("evalidador", "editar")),
+):
+    """Analisa vários documentos: salva sozinho os 100% reconhecidos (empresa casada
+    por CNPJ + obrigação sugerida + identificador livre de colisão) e devolve os demais
+    para revisão manual. Não salva automático se o identificador colidir — nem com os
+    existentes, nem com outro arquivo do mesmo lote (evita bagunçar o matcher)."""
+    salvos, revisar = [], []
+    usados = {}  # identificador_normalizado -> obrigacao_id já escolhido neste lote
+
+    for arq in arquivos:
+        conteudo = await arq.read()
+        try:
+            a = analisar_para_repositorio(db, arq.filename, conteudo)
+        except Exception as e:
+            revisar.append({"nome_arquivo": arq.filename, "erro": f"Falha ao ler: {e}",
+                            "cnpj": None, "candidatos": []})
+            continue
+
+        # candidato livre de colisão com os identificadores já cadastrados
+        livre = next((c for c in a.get("candidatos", []) if not c.get("colide_com")), None)
+        ident_norm = _norm(livre["texto"]) if livre else None
+
+        pode_auto = (
+            a.get("empresa_id")
+            and a.get("obrigacao_sugerida_id")
+            and livre
+            and not (ident_norm in usados and usados[ident_norm] != a["obrigacao_sugerida_id"])
+        )
+
+        if pode_auto:
+            m = salvar_modelo(db, {
+                "nome_arquivo": a["nome_arquivo"],
+                "cnpj": a["cnpj"],
+                "razao_social_extraida": a["razao_social_extraida"],
+                "empresa_id": a["empresa_id"],
+                "obrigacao_id": a["obrigacao_sugerida_id"],
+                "tipo_documento": a["tipo_documento"],
+                "identificador": livre["texto"],
+                "competencia_exemplo": a["competencia_exemplo"],
+                "protocolo_exemplo": a["protocolo_exemplo"],
+                "texto_extraido": a["texto_extraido"],
+            })
+            usados[ident_norm] = a["obrigacao_sugerida_id"]
+            salvos.append(_serializar(m))
+        else:
+            # motivo curto para a UI
+            if not a.get("empresa_id"):
+                a["motivo"] = "Empresa não reconhecida (CNPJ não cadastrado)"
+            elif not a.get("obrigacao_sugerida_id"):
+                a["motivo"] = "Obrigação não reconhecida — escolha e defina o identificador"
+            elif not livre:
+                a["motivo"] = "Identificador candidato colide com obrigação existente"
+            else:
+                a["motivo"] = "Identificador repetido no lote para outra obrigação"
+            revisar.append(a)
+
+    return {
+        "resumo": {"total": len(arquivos), "salvos": len(salvos), "revisar": len(revisar)},
+        "salvos": salvos,
+        "revisar": revisar,
+    }
 
 
 @router.post("")

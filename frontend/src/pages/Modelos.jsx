@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
-import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2 } from 'lucide-react';
+import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 
 const TIPOS = {
   recibo_entrega: 'Recibo de entrega',
@@ -15,66 +15,77 @@ const TIPO_CLS = {
   outro: 'bg-gray-100 text-gray-600',
 };
 
+// campos editáveis a partir de uma análise
+const formDe = (a) => ({
+  nome_arquivo: a.nome_arquivo,
+  cnpj: a.cnpj || '',
+  razao_social_extraida: a.razao_social_extraida || '',
+  empresa_id: a.empresa_id || '',
+  obrigacao_id: a.obrigacao_sugerida_id || '',
+  tipo_documento: a.tipo_documento || 'outro',
+  identificador: a.candidatos?.find((c) => !c.colide_com?.length)?.texto || a.candidatos?.[0]?.texto || '',
+  competencia_exemplo: a.competencia_exemplo || '',
+  protocolo_exemplo: a.protocolo_exemplo || '',
+  texto_extraido: a.texto_extraido || '',
+});
+
 export default function Modelos() {
   const [modelos, setModelos] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [obrigacoes, setObrigacoes] = useState([]);
-  const [analise, setAnalise] = useState(null);   // pré-visualização a revisar
-  const [form, setForm] = useState(null);          // campos editáveis do modelo
+  const [fila, setFila] = useState([]);        // análises aguardando revisão (fila[0] = atual)
+  const [form, setForm] = useState(null);       // campos editáveis do item atual
+  const [resumo, setResumo] = useState(null);   // resultado do último lote
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
   const carregar = async () => {
     const [m, e, o] = await Promise.all([modelosAPI.list(), empresasAPI.list(), obrigacoesAPI.list()]);
-    setModelos(m.data);
-    setEmpresas(e.data);
-    setObrigacoes(o.data);
+    setModelos(m.data); setEmpresas(e.data); setObrigacoes(o.data);
   };
   useEffect(() => { carregar(); }, []);
 
-  const analisar = async (file) => {
-    if (!file) return;
-    setBusy(true); setAnalise(null); setForm(null);
+  // sempre que o topo da fila muda, reinicializa o formulário
+  const atual = fila[0] || null;
+  useEffect(() => { setForm(atual ? formDe(atual) : null); }, [atual]);
+
+  const processar = async (fileList) => {
+    const files = Array.from(fileList || []).filter((f) => /\.(pdf|xlsx|xls)$/i.test(f.name));
+    if (!files.length) return;
+    setBusy(true); setResumo(null);
     try {
-      const { data } = await modelosAPI.analisar(file);
-      setAnalise(data);
-      setForm({
-        nome_arquivo: data.nome_arquivo,
-        cnpj: data.cnpj || '',
-        razao_social_extraida: data.razao_social_extraida || '',
-        empresa_id: data.empresa_id || '',
-        obrigacao_id: data.obrigacao_sugerida_id || '',
-        tipo_documento: data.tipo_documento || 'outro',
-        identificador: data.candidatos?.[0]?.texto || '',
-        competencia_exemplo: data.competencia_exemplo || '',
-        protocolo_exemplo: data.protocolo_exemplo || '',
-        texto_extraido: data.texto_extraido || '',
-      });
+      if (files.length === 1) {
+        const { data } = await modelosAPI.analisar(files[0]);
+        setFila([data]);
+      } else {
+        const { data } = await modelosAPI.lote(files);
+        setResumo(data);
+        setFila(data.revisar || []);
+        if (data.resumo.salvos) await carregar();  // já mostra os salvos automaticamente
+      }
     } catch (err) {
-      alert(err.response?.data?.detail || 'Não consegui ler o arquivo.');
+      alert(err.response?.data?.detail || 'Não consegui ler os arquivos.');
     } finally { setBusy(false); }
   };
 
-  const onDrop = (ev) => {
-    ev.preventDefault(); setDragOver(false);
-    analisar(ev.dataTransfer.files?.[0]);
-  };
+  const onDrop = (ev) => { ev.preventDefault(); setDragOver(false); processar(ev.dataTransfer.files); };
 
   const salvar = async () => {
     setBusy(true);
     try {
       await modelosAPI.create({ ...form, empresa_id: form.empresa_id || null, obrigacao_id: form.obrigacao_id || null });
-      setAnalise(null); setForm(null);
+      setFila((f) => f.slice(1));
       await carregar();
     } catch (err) {
       alert(err.response?.data?.detail || 'Erro ao salvar o modelo.');
     } finally { setBusy(false); }
   };
 
+  const pular = () => setFila((f) => f.slice(1));
+
   const excluir = async (id) => {
     if (!confirm('Remover este modelo do repositório?')) return;
-    await modelosAPI.delete(id);
-    await carregar();
+    await modelosAPI.delete(id); await carregar();
   };
 
   return (
@@ -84,9 +95,10 @@ export default function Modelos() {
         <h1 className="text-2xl font-bold text-gray-800">Modelos</h1>
       </div>
       <p className="text-sm text-gray-600 mb-6 max-w-3xl">
-        Suba um <strong>recibo, comprovante ou relatório</strong> de exemplo. O sistema lê o documento,
+        Suba um ou <strong>vários</strong> recibos/comprovantes/relatórios de exemplo. O sistema lê,
         identifica a <strong>empresa</strong> (pelo CNPJ) e o <strong>tipo</strong>, e liga a uma
-        <strong> obrigação</strong>. Ao salvar, o identificador escolhido passa a treinar o e-validador.
+        <strong> obrigação</strong>. Em lote, os 100% reconhecidos são <strong>salvos sozinhos</strong> e
+        só os pendentes entram na fila de revisão. Ao salvar, o identificador treina o e-validador.
       </p>
 
       {/* Upload */}
@@ -100,21 +112,62 @@ export default function Modelos() {
         >
           <Upload size={28} className="mx-auto text-gray-400 mb-2" />
           <span className="text-sm text-gray-600 block">
-            {busy ? 'Lendo o documento…' : 'Arraste um arquivo aqui ou clique para selecionar'}
+            {busy ? 'Lendo os documentos…' : 'Arraste os arquivos aqui ou clique para selecionar'}
           </span>
-          <span className="text-xs text-gray-400">Aceita PDF, XLSX e XLS · um por vez</span>
-          <input type="file" accept=".pdf,.xlsx,.xls" className="hidden"
-            onChange={(e) => analisar(e.target.files?.[0])} />
+          <span className="text-xs text-gray-400">Aceita PDF, XLSX e XLS · vários de uma vez</span>
+          <input type="file" accept=".pdf,.xlsx,.xls" multiple className="hidden"
+            onChange={(e) => processar(e.target.files)} />
         </label>
       </div>
 
-      {/* Revisão da análise */}
-      {form && (
+      {/* Resumo do lote */}
+      {resumo && (
         <div className="card mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 size={18} className="text-green-600" />
-            <h2 className="font-semibold text-gray-800">Revisar e salvar — {analise.nome_arquivo}</h2>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+              Salvos automaticamente: {resumo.resumo.salvos}
+            </span>
+            <span className="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700">
+              Para revisar: {resumo.resumo.revisar}
+            </span>
+            <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
+              Total: {resumo.resumo.total}
+            </span>
           </div>
+          {resumo.salvos?.length > 0 && (
+            <ul className="text-xs text-gray-500 space-y-0.5">
+              {resumo.salvos.map((s) => (
+                <li key={s.id} className="flex items-center gap-1">
+                  <CheckCircle2 size={12} className="text-green-600" />
+                  <span className="truncate">{s.nome_arquivo} → {s.empresa_nome} · {s.obrigacao_nome}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Fila de revisão (item atual) */}
+      {form && atual && (
+        <div className="card mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-green-600" />
+              <h2 className="font-semibold text-gray-800 truncate">Revisar — {atual.nome_arquivo}</h2>
+            </div>
+            {fila.length > 1 && (
+              <span className="text-xs text-gray-400 whitespace-nowrap">{fila.length} na fila</span>
+            )}
+          </div>
+
+          {atual.motivo && (
+            <div className="mb-4 text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 flex items-center gap-1">
+              <AlertTriangle size={13} /> {atual.motivo}
+            </div>
+          )}
+          {atual.erro && (
+            <div className="mb-4 text-xs bg-red-50 text-red-600 rounded-lg px-3 py-2">{atual.erro}</div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -122,19 +175,17 @@ export default function Modelos() {
               <select className="input-field" value={form.empresa_id}
                 onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}>
                 <option value="">— não vinculada —</option>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>{e.razao_social}</option>
-                ))}
+                {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
               </select>
               <p className="text-xs text-gray-400 mt-1">
-                {analise.cnpj
-                  ? (analise.empresa_id
-                      ? <span className="text-green-600">CNPJ {analise.cnpj} reconhecido automaticamente.</span>
-                      : <span className="text-amber-600 flex items-center gap-1"><AlertTriangle size={12} />CNPJ {analise.cnpj} não está cadastrado — selecione ou cadastre a empresa.</span>)
+                {atual.cnpj
+                  ? (atual.empresa_id
+                      ? <span className="text-green-600">CNPJ {atual.cnpj} reconhecido automaticamente.</span>
+                      : <span className="text-amber-600">CNPJ {atual.cnpj} não cadastrado — selecione ou cadastre a empresa.</span>)
                   : 'CNPJ não encontrado no documento.'}
               </p>
-              {analise.razao_social_extraida && (
-                <p className="text-xs text-gray-500 mt-1">Lido no documento: <em>{analise.razao_social_extraida}</em></p>
+              {atual.razao_social_extraida && (
+                <p className="text-xs text-gray-500 mt-1">Lido no documento: <em>{atual.razao_social_extraida}</em></p>
               )}
             </div>
 
@@ -153,8 +204,8 @@ export default function Modelos() {
                 <option value="">— não vinculada —</option>
                 {obrigacoes.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
               </select>
-              {analise.obrigacao_sugerida_id && (
-                <p className="text-xs text-green-600 mt-1">Sugerida: {analise.obrigacao_sugerida_nome}</p>
+              {atual.obrigacao_sugerida_id && (
+                <p className="text-xs text-green-600 mt-1">Sugerida: {atual.obrigacao_sugerida_nome}</p>
               )}
             </div>
 
@@ -165,9 +216,9 @@ export default function Modelos() {
               <input className="input-field" value={form.identificador}
                 onChange={(e) => setForm({ ...form, identificador: e.target.value })}
                 placeholder="trecho único do documento" />
-              {analise.candidatos?.length > 0 && (
+              {atual.candidatos?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {analise.candidatos.map((c, i) => (
+                  {atual.candidatos.map((c, i) => (
                     <button key={i} type="button"
                       onClick={() => setForm({ ...form, identificador: c.texto })}
                       className={`text-xs rounded-full px-2 py-1 border ${
@@ -187,15 +238,9 @@ export default function Modelos() {
             <button onClick={salvar} disabled={busy} className="btn-primary">
               {busy ? 'Salvando…' : 'Salvar modelo'}
             </button>
-            <button onClick={() => { setForm(null); setAnalise(null); }} className="btn-secondary">
-              Cancelar
+            <button onClick={pular} className="btn-secondary flex items-center gap-1">
+              <SkipForward size={15} /> Pular
             </button>
-            {(form.competencia_exemplo || form.protocolo_exemplo) && (
-              <span className="text-xs text-gray-400">
-                {form.competencia_exemplo && <>Competência exemplo {form.competencia_exemplo}. </>}
-                {form.protocolo_exemplo && <>Protocolo {String(form.protocolo_exemplo).slice(0, 14)}…</>}
-              </span>
-            )}
           </div>
         </div>
       )}

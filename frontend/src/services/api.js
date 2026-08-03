@@ -100,6 +100,11 @@ export const modelosAPI = {
     fd.append('arquivo', file);
     return api.post('/modelos/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  lote: (files) => {
+    const fd = new FormData();
+    Array.from(files).forEach((f) => fd.append('arquivos', f));
+    return api.post('/modelos/lote', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   create: (data) => api.post('/modelos', data),
   delete: (id) => api.delete(`/modelos/${id}`),
 };

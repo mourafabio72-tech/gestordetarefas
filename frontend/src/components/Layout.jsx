@@ -15,9 +15,12 @@ import {
   UserCog,
   Bell,
   LogOut,
+  LayoutGrid,
   Menu,
   X
 } from 'lucide-react';
+
+const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
 import { useState } from 'react';
 
 const menuGroups = [
@@ -113,6 +116,13 @@ export default function Layout() {
               <p className="text-xs text-primary-300 truncate capitalize">{grupo}</p>
             </div>
           </div>
+          <a
+            href={HUB_URL}
+            className="flex items-center gap-2 w-full px-4 py-2 mb-1 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors"
+          >
+            <LayoutGrid size={18} />
+            <span>Voltar ao Hub</span>
+          </a>
           <button
             onClick={logout}
             className="flex items-center gap-2 w-full px-4 py-2 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors"
