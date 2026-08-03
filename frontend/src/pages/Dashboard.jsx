@@ -3,31 +3,82 @@ import { tarefasAPI } from '../services/api';
 import { format, isPast, isToday, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Calendar,
-  TrendingUp
+  AlertTriangle, CheckCircle, Clock, AlertCircle, Calendar, TrendingUp,
 } from 'lucide-react';
+
+// Cores de STATUS (validadas): amarelo/azul/verde/vermelho. Ordem do donut deixa
+// verde (concluídas) e vermelho (atrasadas) separados — nunca adjacentes.
+const STATUS_DONUT = [
+  { key: 'concluidas',   label: 'Concluídas',   color: '#4d8a3f', Icon: CheckCircle },
+  { key: 'pendentes',    label: 'Pendentes',    color: '#b0813f', Icon: Clock },
+  { key: 'em_andamento', label: 'Em Andamento', color: '#2f6fb0', Icon: AlertCircle },
+  { key: 'atrasadas',    label: 'Atrasadas',    color: '#a24a3a', Icon: AlertTriangle },
+];
+
+function Donut({ stats }) {
+  const dados = STATUS_DONUT.map((s) => ({ ...s, value: stats?.[s.key] || 0 }));
+  const total = dados.reduce((acc, d) => acc + d.value, 0);
+  const R = 52, C = 2 * Math.PI * R, GAP = total > 1 ? 4 : 0;
+
+  let acumulado = 0;
+  const segmentos = dados
+    .filter((d) => d.value > 0)
+    .map((d) => {
+      const frac = d.value / total;
+      const seg = { ...d, len: Math.max(frac * C - GAP, 0), offset: acumulado * C };
+      acumulado += frac;
+      return seg;
+    });
+
+  return (
+    <div className="flex items-center gap-6">
+      <svg viewBox="0 0 120 120" className="w-40 h-40 shrink-0">
+        <circle cx="60" cy="60" r={R} fill="none" stroke="#efe7d8" strokeWidth="16" />
+        {segmentos.map((s) => (
+          <circle key={s.key} cx="60" cy="60" r={R} fill="none"
+            stroke={s.color} strokeWidth="16" strokeLinecap="butt"
+            strokeDasharray={`${s.len} ${C - s.len}`}
+            strokeDashoffset={-s.offset}
+            transform="rotate(-90 60 60)" />
+        ))}
+        <text x="60" y="55" textAnchor="middle" className="fill-gray-800"
+          style={{ fontSize: 22, fontWeight: 700 }}>{stats?.total_tarefas || 0}</text>
+        <text x="60" y="72" textAnchor="middle" className="fill-gray-400" style={{ fontSize: 9 }}>tarefas</text>
+      </svg>
+
+      <ul className="flex-1 space-y-2">
+        {dados.map((d) => {
+          const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+          const Icon = d.Icon;
+          return (
+            <li key={d.key} className="flex items-center gap-2 text-sm">
+              <Icon size={14} style={{ color: d.color }} />
+              <span className="text-gray-600 flex-1">{d.label}</span>
+              <span className="font-semibold text-gray-800 tabular-nums">{d.value}</span>
+              <span className="text-gray-400 text-xs w-9 text-right tabular-nums">{pct}%</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [tarefasProximas, setTarefasProximas] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  useEffect(() => { loadDashboard(); }, []);
 
   const loadDashboard = async () => {
     try {
       const [statsRes, tarefasRes] = await Promise.all([
         tarefasAPI.dashboard(),
-        tarefasAPI.list({ status: 'pendente' })
+        tarefasAPI.list({ status: 'pendente' }),
       ]);
       setStats(statsRes.data);
-      setTarefasProximas(tarefasRes.data.slice(0, 10));
+      setTarefasProximas(tarefasRes.data.slice(0, 8));
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
     } finally {
@@ -35,116 +86,75 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64">Carregando...</div>;
-  }
+  if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
 
-  const statCards = [
-    { label: 'Total de Tarefas', value: stats?.total_tarefas || 0, icon: TrendingUp, color: 'bg-primary-500' },
-    { label: 'Pendentes', value: stats?.pendentes || 0, icon: Clock, color: 'bg-[#b0813f]' },
-    { label: 'Em Andamento', value: stats?.em_andamento || 0, icon: AlertCircle, color: 'bg-[#3a7d76]' },
-    { label: 'Concluídas', value: stats?.concluidas || 0, icon: CheckCircle, color: 'bg-[#4d8a3f]' },
-    { label: 'Atrasadas', value: stats?.atrasadas || 0, icon: AlertTriangle, color: 'bg-[#a24a3a]' },
-    { label: 'Vencendo Hoje', value: stats?.vencendo_hoje || 0, icon: Calendar, color: 'bg-[#c58a3a]' },
+  const tiles = [
+    { label: 'Total', value: stats?.total_tarefas || 0, icon: TrendingUp, cor: '#566450' },
+    { label: 'Pendentes', value: stats?.pendentes || 0, icon: Clock, cor: '#b0813f' },
+    { label: 'Em Andamento', value: stats?.em_andamento || 0, icon: AlertCircle, cor: '#2f6fb0' },
+    { label: 'Concluídas', value: stats?.concluidas || 0, icon: CheckCircle, cor: '#4d8a3f' },
+    { label: 'Atrasadas', value: stats?.atrasadas || 0, icon: AlertTriangle, cor: '#a24a3a' },
+    { label: 'Vencendo Hoje', value: stats?.vencendo_hoje || 0, icon: Calendar, cor: '#c58a3a' },
   ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+      <h1 className="text-xl font-bold text-gray-800 mb-4">Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {statCards.map((card) => {
-          const Icon = card.icon;
+      {/* Cards compactos, uma linha só */}
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
+        {tiles.map((t) => {
+          const Icon = t.icon;
           return (
-            <div key={card.label} className="card flex items-center gap-4">
-              <div className={`${card.color} p-3 rounded-lg`}>
-                <Icon size={24} className="text-white" />
+            <div key={t.label} className="rounded-lg border border-gray-200 bg-white px-3 py-2 flex flex-col"
+              style={{ borderLeft: `3px solid ${t.cor}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-500 leading-tight">{t.label}</span>
+                <Icon size={13} style={{ color: t.cor }} />
               </div>
-              <div>
-                <p className="text-sm text-gray-500">{card.label}</p>
-                <p className="text-2xl font-bold text-gray-800">{card.value}</p>
-              </div>
+              <span className="text-xl font-bold text-gray-800 tabular-nums leading-tight">{t.value}</span>
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Tarefas Próximas do Vencimento</h2>
+          <h2 className="text-base font-semibold text-gray-800 mb-4">Distribuição por status</h2>
+          <Donut stats={stats} />
+        </div>
+
+        <div className="card">
+          <h2 className="text-base font-semibold text-gray-800 mb-3">Próximas do vencimento</h2>
           {tarefasProximas.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">Nenhuma tarefa pendente</p>
+            <p className="text-gray-500 text-center py-4 text-sm">Nenhuma tarefa pendente</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {tarefasProximas.map((tarefa) => {
                 const prazoDate = new Date(tarefa.data_prazo);
                 const atrasada = isPast(prazoDate) && !isToday(prazoDate);
                 const venceHoje = isToday(prazoDate);
-                const venceEmBreve = !isPast(prazoDate) && isToday(addDays(prazoDate, -1));
-
                 return (
-                  <div
-                    key={tarefa.id}
-                    className={`p-3 rounded-lg border-l-4 ${
-                      atrasada
-                        ? 'border-red-500 bg-red-50'
-                        : venceHoje
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-blue-500 bg-blue-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-800">{tarefa.titulo}</p>
-                        <p className="text-sm text-gray-500">
-                          {format(prazoDate, "dd/MM/yyyy", { locale: ptBR })}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          atrasada
-                            ? 'bg-red-100 text-red-700'
-                            : venceHoje
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}
-                      >
-                        {atrasada ? 'Atrasada' : venceHoje ? 'Vence Hoje' : 'Próximo'}
-                      </span>
+                  <div key={tarefa.id}
+                    className={`px-3 py-2 rounded-lg border-l-4 flex justify-between items-center ${
+                      atrasada ? 'border-red-500 bg-red-50'
+                        : venceHoje ? 'border-orange-500 bg-orange-50'
+                        : 'border-blue-500 bg-blue-50'}`}>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 text-sm truncate">{tarefa.titulo}</p>
+                      <p className="text-xs text-gray-500">{format(prazoDate, 'dd/MM/yyyy', { locale: ptBR })}</p>
                     </div>
+                    <span className={`px-2 py-0.5 text-xs rounded-full whitespace-nowrap ${
+                      atrasada ? 'bg-red-100 text-red-700'
+                        : venceHoje ? 'bg-orange-100 text-orange-700'
+                        : 'bg-blue-100 text-blue-700'}`}>
+                      {atrasada ? 'Atrasada' : venceHoje ? 'Vence hoje' : 'Próximo'}
+                    </span>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
-
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Resumo por Status</h2>
-          <div className="space-y-4">
-            {[
-              { label: 'Pendentes', value: stats?.pendentes || 0, total: stats?.total_tarefas || 0, color: 'bg-[#b0813f]' },
-              { label: 'Em Andamento', value: stats?.em_andamento || 0, total: stats?.total_tarefas || 0, color: 'bg-[#3a7d76]' },
-              { label: 'Concluídas', value: stats?.concluidas || 0, total: stats?.total_tarefas || 0, color: 'bg-[#4d8a3f]' },
-              { label: 'Atrasadas', value: stats?.atrasadas || 0, total: stats?.total_tarefas || 0, color: 'bg-[#a24a3a]' },
-            ].map((item) => {
-              const percentual = item.total > 0 ? (item.value / item.total) * 100 : 0;
-              return (
-                <div key={item.label}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-gray-600">{item.label}</span>
-                    <span className="text-sm font-medium text-gray-800">{item.value}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`${item.color} h-2 rounded-full`}
-                      style={{ width: `${percentual}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>
