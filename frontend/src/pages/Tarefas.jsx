@@ -67,6 +67,15 @@ const prioSage = {
   urgente: { bg: '#f7e7e3', fg: '#a24a3a' },
 };
 
+// Cor de acento por setor (borda esquerda do card)
+const setorCores = [
+  { re: /contab|cont[áa]b/i, cor: '#3a7d76' },   // Contabilidade -> teal
+  { re: /fiscal/i,           cor: '#6e7f63' },   // Fiscal -> oliva
+  { re: /financ/i,           cor: '#8a6a2e' },   // Financeiro -> tan/dourado
+  { re: /\bdp\b|pessoal/i,   cor: '#a24a3a' },   // DP -> terracota
+];
+const corDoSetor = (nome) => (setorCores.find((s) => s.re.test(nome || ''))?.cor) || '#c9bfa8';
+
 export default function Tarefas() {
   const [tarefas, setTarefas] = useState([]);
   const [empresas, setEmpresas] = useState([]);
@@ -323,15 +332,21 @@ export default function Tarefas() {
             const st = statusSage[tarefa.status] || statusSage.pendente;
             const pr = prioSage[tarefa.prioridade] || prioSage.media;
             const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+            const setorNome = tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null;
+            const corSet = corDoSetor(setorNome);
             return (
               <div key={tarefa.id} className="rounded-lg border p-2.5 flex flex-col"
-                style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border }}>
+                style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border, borderLeft: `4px solid ${corSet}` }}>
                 <div className="flex items-start gap-1 mb-1">
                   {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
                   <h3 className="text-[13px] font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
                     {tarefa.titulo}
                   </h3>
                 </div>
+                {setorNome && (
+                  <span className="self-start px-1.5 py-0.5 rounded text-[10px] font-medium mb-1"
+                    style={{ background: corSet + '22', color: corSet }}>{setorNome}</span>
+                )}
                 <div className="text-[11px] leading-snug space-y-0.5 mb-1.5" style={{ color: SAGE.txt3 }}>
                   <p className="truncate" title={getEmpresaNome(tarefa.empresa_id)}>{getEmpresaNome(tarefa.empresa_id)}</p>
                   {tarefa.responsaveis?.length > 0 && (

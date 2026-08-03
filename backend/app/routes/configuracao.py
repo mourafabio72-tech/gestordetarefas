@@ -47,8 +47,8 @@ def testar_email(
     cfg = cfgmod.carregar(db)
     return send_email(
         body.para,
-        "[Gestor de Tarefas] E-mail de teste",
-        "Este é um e-mail de teste do Gestor de Tarefas.\n\n"
+        "[Tareffas] E-mail de teste",
+        "Este é um e-mail de teste do Tareffas.\n\n"
         "Se você recebeu esta mensagem, o envio de e-mail está funcionando.",
         cfg,
     )
@@ -69,6 +69,6 @@ async def testar_whatsapp(
     numero = "".join(ch for ch in (body.para or "") if ch.isdigit())
     return await send_whatsapp_message(
         numero,
-        "🔔 *Teste do Gestor de Tarefas*\n\nSe você recebeu esta mensagem, o envio por WhatsApp está funcionando.",
+        "🔔 *Teste do Tareffas*\n\nSe você recebeu esta mensagem, o envio por WhatsApp está funcionando.",
         cfg,
     )

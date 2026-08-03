@@ -179,7 +179,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal") -> list:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
         message = format_task_message(tarefa, days_remaining, responsavel)
-        assunto = f"[Gestor de Tarefas] {tarefa.titulo} — {tarefa.empresa.razao_social}"
+        assunto = f"[Tareffas] {tarefa.titulo} — {tarefa.empresa.razao_social}"
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis):

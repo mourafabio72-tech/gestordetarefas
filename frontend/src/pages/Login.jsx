@@ -27,8 +27,8 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Gestor de Tarefas</h1>
-          <p className="text-gray-500 mt-2">Sistema de Gestão de Tarefas</p>
+          <h1 className="text-3xl font-bold text-gray-800">Tareffas</h1>
+          <p className="text-gray-500 mt-2">Gestão de tarefas e obrigações</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,7 +82,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-gray-500 text-sm mt-6">
-          Gestor de Tarefas v1.0.0
+          Tareffas v1.0.0
         </p>
       </div>
     </div>
