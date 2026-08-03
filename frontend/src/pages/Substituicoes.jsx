@@ -135,11 +135,11 @@ export default function Substituicoes() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">Nova Substituição</h2>
             </div>
-            <form onSubmit={salvar} className="p-6 space-y-4">
+            <form onSubmit={salvar} className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Pessoa ausente *</label>
                 <select value={form.usuario_id} onChange={(e) => set('usuario_id', e.target.value)} className="input-field" required>

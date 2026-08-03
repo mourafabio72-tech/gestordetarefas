@@ -408,14 +408,14 @@ export default function Tarefas() {
 
       {showCopy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">Copiar tarefas</h2>
               <p className="text-sm text-gray-500 mt-1">
                 Copia as tarefas em aberto de uma empresa para outra, como modelo (sem datas).
               </p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por regime</label>
@@ -463,12 +463,12 @@ export default function Tarefas() {
 
       {showTransfer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">Transferir tarefa</h2>
               <p className="text-sm text-gray-500 mt-1">{showTransfer.titulo}</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Novo responsável *</label>
                 <select
@@ -497,13 +497,13 @@ export default function Tarefas() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl w-full max-w-lg">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">
                 {editingTarefa ? 'Editar Tarefa' : 'Nova Tarefa'}
               </h2>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
                 <input

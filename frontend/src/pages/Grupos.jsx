@@ -170,7 +170,7 @@ export default function Grupos() {
       {modalUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">Permissões de {modalUser.nome}</h2>
               <p className="text-sm text-gray-500 mt-1">
                 A matriz parte do preset do papel. O que ficar igual ao preset não é salvo
@@ -178,7 +178,7 @@ export default function Grupos() {
               </p>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Papel (preset base)</label>
                 <select
@@ -239,7 +239,7 @@ export default function Grupos() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex items-center gap-3">
+            <div className="p-4 border-t border-gray-200 flex items-center gap-3">
               <span className="text-xs text-gray-500 mr-auto">
                 {qtdOverrides === 0 ? 'Igual ao preset' : `${qtdOverrides} ajuste(s) sobre o preset`}
               </span>
