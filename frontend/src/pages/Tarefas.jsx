@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -85,7 +86,10 @@ export default function Tarefas() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState(null);
-  const [filtros, setFiltros] = useState({ empresa_id: '', status: '' });
+  const [searchParams] = useSearchParams();
+  const [filtros, setFiltros] = useState({
+    empresa_id: '', status: '', setor_id: searchParams.get('setor') || '',
+  });
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
@@ -136,6 +140,7 @@ export default function Tarefas() {
   const filteredTarefas = tarefas.filter(t => {
     if (filtros.empresa_id && t.empresa_id !== parseInt(filtros.empresa_id)) return false;
     if (filtros.status && t.status !== filtros.status) return false;
+    if (filtros.setor_id && t.setor_id !== parseInt(filtros.setor_id)) return false;
     return true;
   });
 
@@ -305,6 +310,16 @@ export default function Tarefas() {
           <option value="">Todas as empresas</option>
           {empresas.map(e => (
             <option key={e.id} value={e.id}>{e.razao_social}</option>
+          ))}
+        </select>
+        <select
+          value={filtros.setor_id}
+          onChange={(e) => setFiltros({ ...filtros, setor_id: e.target.value })}
+          className="input-field w-auto"
+        >
+          <option value="">Todos os setores</option>
+          {setores.map(s => (
+            <option key={s.id} value={s.id}>{s.nome}</option>
           ))}
         </select>
         <select

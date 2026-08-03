@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { tarefasAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -72,7 +73,8 @@ function Donut({ stats }) {
 function DonutSetor({ setor }) {
   const { dados, total, C, R, segmentos } = useSegmentos(setor);
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <Link to={`/tarefas?setor=${setor.setor_id}`}
+      className="block rounded-xl border border-gray-200 bg-white p-4 hover:border-primary-400 hover:shadow-sm transition-colors">
       <h3 className="text-sm font-semibold text-gray-800 mb-2 truncate">{setor.setor_nome}</h3>
       <div className="flex justify-center">
         <Anel segmentos={segmentos} C={C} R={R} centro={total} sub="tarefas" className="w-28 h-28" />
@@ -86,7 +88,7 @@ function DonutSetor({ setor }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Link>
   );
 }
 
