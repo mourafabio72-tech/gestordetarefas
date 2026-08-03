@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { tarefasAPI } from '../services/api';
-import { format, isPast, isToday, addDays } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   AlertTriangle, CheckCircle, Clock, AlertCircle, Calendar, TrendingUp,
@@ -15,37 +15,42 @@ const STATUS_DONUT = [
   { key: 'atrasadas',    label: 'Atrasadas',    color: '#a24a3a', Icon: AlertTriangle },
 ];
 
-function Donut({ stats }) {
+// Geometria do donut a partir de um objeto de stats (mesmas chaves de status).
+function useSegmentos(stats) {
   const dados = STATUS_DONUT.map((s) => ({ ...s, value: stats?.[s.key] || 0 }));
   const total = dados.reduce((acc, d) => acc + d.value, 0);
   const R = 52, C = 2 * Math.PI * R, GAP = total > 1 ? 4 : 0;
-
   let acumulado = 0;
-  const segmentos = dados
-    .filter((d) => d.value > 0)
-    .map((d) => {
-      const frac = d.value / total;
-      const seg = { ...d, len: Math.max(frac * C - GAP, 0), offset: acumulado * C };
-      acumulado += frac;
-      return seg;
-    });
+  const segmentos = dados.filter((d) => d.value > 0).map((d) => {
+    const frac = d.value / total;
+    const seg = { ...d, len: Math.max(frac * C - GAP, 0), offset: acumulado * C };
+    acumulado += frac;
+    return seg;
+  });
+  return { dados, total, C, R, segmentos };
+}
 
+function Anel({ segmentos, C, R, centro, sub, className }) {
+  return (
+    <svg viewBox="0 0 120 120" className={className}>
+      <circle cx="60" cy="60" r={R} fill="none" stroke="#efe7d8" strokeWidth="16" />
+      {segmentos.map((s) => (
+        <circle key={s.key} cx="60" cy="60" r={R} fill="none"
+          stroke={s.color} strokeWidth="16" strokeLinecap="butt"
+          strokeDasharray={`${s.len} ${C - s.len}`} strokeDashoffset={-s.offset}
+          transform="rotate(-90 60 60)" />
+      ))}
+      <text x="60" y="56" textAnchor="middle" className="fill-gray-800" style={{ fontSize: 22, fontWeight: 700 }}>{centro}</text>
+      <text x="60" y="72" textAnchor="middle" className="fill-gray-400" style={{ fontSize: 9 }}>{sub}</text>
+    </svg>
+  );
+}
+
+function Donut({ stats }) {
+  const { dados, total, C, R, segmentos } = useSegmentos(stats);
   return (
     <div className="flex items-center gap-6">
-      <svg viewBox="0 0 120 120" className="w-40 h-40 shrink-0">
-        <circle cx="60" cy="60" r={R} fill="none" stroke="#efe7d8" strokeWidth="16" />
-        {segmentos.map((s) => (
-          <circle key={s.key} cx="60" cy="60" r={R} fill="none"
-            stroke={s.color} strokeWidth="16" strokeLinecap="butt"
-            strokeDasharray={`${s.len} ${C - s.len}`}
-            strokeDashoffset={-s.offset}
-            transform="rotate(-90 60 60)" />
-        ))}
-        <text x="60" y="55" textAnchor="middle" className="fill-gray-800"
-          style={{ fontSize: 22, fontWeight: 700 }}>{stats?.total_tarefas || 0}</text>
-        <text x="60" y="72" textAnchor="middle" className="fill-gray-400" style={{ fontSize: 9 }}>tarefas</text>
-      </svg>
-
+      <Anel segmentos={segmentos} C={C} R={R} centro={stats?.total_tarefas || 0} sub="tarefas" className="w-40 h-40 shrink-0" />
       <ul className="flex-1 space-y-2">
         {dados.map((d) => {
           const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
@@ -64,8 +69,30 @@ function Donut({ stats }) {
   );
 }
 
+function DonutSetor({ setor }) {
+  const { dados, total, C, R, segmentos } = useSegmentos(setor);
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <h3 className="text-sm font-semibold text-gray-800 mb-2 truncate">{setor.setor_nome}</h3>
+      <div className="flex justify-center">
+        <Anel segmentos={segmentos} C={C} R={R} centro={total} sub="tarefas" className="w-28 h-28" />
+      </div>
+      <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+        {dados.map((d) => (
+          <li key={d.key} className="flex items-center gap-1.5 text-xs">
+            <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: d.color }} />
+            <span className="text-gray-500 flex-1 truncate">{d.label}</span>
+            <span className="font-semibold text-gray-800 tabular-nums">{d.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
+  const [porSetor, setPorSetor] = useState([]);
   const [tarefasProximas, setTarefasProximas] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,11 +100,13 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const [statsRes, tarefasRes] = await Promise.all([
+      const [statsRes, setorRes, tarefasRes] = await Promise.all([
         tarefasAPI.dashboard(),
+        tarefasAPI.dashboardPorSetor(),
         tarefasAPI.list({ status: 'pendente' }),
       ]);
       setStats(statsRes.data);
+      setPorSetor(setorRes.data);
       setTarefasProximas(tarefasRes.data.slice(0, 8));
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
@@ -118,7 +147,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="card">
           <h2 className="text-base font-semibold text-gray-800 mb-4">Distribuição por status</h2>
           <Donut stats={stats} />
@@ -157,6 +186,16 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Um donut por setor */}
+      {porSetor.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold text-gray-800 mb-3">Por setor</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {porSetor.map((s) => <DonutSetor key={s.setor_id} setor={s} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

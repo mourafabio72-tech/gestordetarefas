@@ -118,6 +118,35 @@ def get_dashboard_stats(
         "vencendo_semana": vencendo_semana
     }
 
+
+@router.get("/dashboard/stats-por-setor")
+def get_dashboard_stats_por_setor(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Distribuição de status por setor — um bloco por setor para os donuts."""
+    now = datetime.utcnow()
+    resultado = []
+    for setor in db.query(Setor).order_by(Setor.nome).all():
+        base = _aplicar_escopo(db.query(Tarefa), db, current_user).filter(Tarefa.setor_id == setor.id)
+        total = base.count()
+        if total == 0:
+            continue  # setor sem tarefas não vira donut
+        atrasadas = base.filter(and_(
+            Tarefa.data_prazo < now,
+            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO]),
+        )).count()
+        resultado.append({
+            "setor_id": setor.id,
+            "setor_nome": setor.nome,
+            "total_tarefas": total,
+            "pendentes": base.filter(Tarefa.status == StatusTarefa.PENDENTE).count(),
+            "em_andamento": base.filter(Tarefa.status == StatusTarefa.EM_ANDAMENTO).count(),
+            "concluidas": base.filter(Tarefa.status == StatusTarefa.CONCLUIDA).count(),
+            "atrasadas": atrasadas,
+        })
+    return resultado
+
 @router.get("", response_model=List[TarefaResponse])
 def list_tarefas(
     empresa_id: int = None,
