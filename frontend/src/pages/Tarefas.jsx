@@ -94,7 +94,8 @@ export default function Tarefas() {
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
-  const [copyDestino, setCopyDestino] = useState('');
+  const [copyDestinos, setCopyDestinos] = useState([]);
+  const [copyBusca, setCopyBusca] = useState('');
   const [copyRegime, setCopyRegime] = useState('');
   const [copyGrupo, setCopyGrupo] = useState('');
   const [formData, setFormData] = useState({
@@ -243,12 +244,14 @@ export default function Tarefas() {
   };
 
   const handleCopiar = async () => {
-    if (!copyOrigem || !copyDestino) return;
+    if (!copyOrigem || copyDestinos.length === 0) return;
     try {
-      const res = await tarefasAPI.copiar(parseInt(copyOrigem), parseInt(copyDestino));
-      alert(res.data?.message || 'Tarefas copiadas.');
+      for (const dest of copyDestinos) {
+        await tarefasAPI.copiar(parseInt(copyOrigem), parseInt(dest));
+      }
+      alert(`Tarefas copiadas para ${copyDestinos.length} empresa(s).`);
       setShowCopy(false);
-      setCopyOrigem(''); setCopyDestino(''); setCopyRegime(''); setCopyGrupo('');
+      setCopyOrigem(''); setCopyDestinos([]); setCopyBusca(''); setCopyRegime(''); setCopyGrupo('');
       loadData();
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao copiar tarefas');
@@ -432,7 +435,9 @@ export default function Tarefas() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de origem *</label>
-                <select value={copyOrigem} onChange={(e) => setCopyOrigem(e.target.value)} className="input-field">
+                <select value={copyOrigem}
+                  onChange={(e) => { setCopyOrigem(e.target.value); setCopyDestinos((ds) => ds.filter((x) => String(x) !== e.target.value)); }}
+                  className="input-field">
                   <option value="">Selecione</option>
                   {empresas
                     .filter((e) => (!copyRegime || e.regime_tributario === copyRegime) && (!copyGrupo || e.segmento === copyGrupo))
@@ -440,19 +445,52 @@ export default function Tarefas() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de destino *</label>
-                <select value={copyDestino} onChange={(e) => setCopyDestino(e.target.value)} className="input-field">
-                  <option value="">Selecione</option>
-                  {empresas
-                    .filter((e) => String(e.id) !== copyOrigem)
-                    .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresas de destino *</label>
+                {(() => {
+                  const termo = copyBusca.trim().toLowerCase();
+                  const destinos = empresas.filter((e) => String(e.id) !== copyOrigem);
+                  const filtradas = termo
+                    ? destinos.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
+                    : destinos;
+                  const idsFiltrados = filtradas.map((e) => e.id);
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-xs text-gray-400 flex-1">{copyDestinos.length} selecionada(s)</p>
+                        <button type="button" onClick={() => setCopyDestinos([...new Set([...copyDestinos, ...idsFiltrados])])}
+                          className="text-xs text-primary-600 hover:underline">
+                          {termo ? 'Selecionar filtradas' : 'Selecionar todas'}
+                        </button>
+                        <span className="text-gray-300">·</span>
+                        <button type="button" onClick={() => setCopyDestinos([])} className="text-xs text-gray-500 hover:underline">Limpar</button>
+                      </div>
+                      <input type="text" value={copyBusca} onChange={(e) => setCopyBusca(e.target.value)}
+                        placeholder="Buscar empresa ou grupo…" className="input-field mb-2 text-sm" />
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1">
+                        {filtradas.length === 0 ? (
+                          <p className="text-xs text-gray-400">Nenhuma empresa encontrada.</p>
+                        ) : filtradas.map((e) => (
+                          <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox"
+                              checked={copyDestinos.includes(e.id)}
+                              onChange={() => setCopyDestinos(copyDestinos.includes(e.id)
+                                ? copyDestinos.filter((x) => x !== e.id)
+                                : [...copyDestinos, e.id])}
+                              className="h-4 w-4" />
+                            {e.razao_social}
+                            {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCopy(false)} className="btn-secondary flex-1">
                   Cancelar
                 </button>
-                <button type="button" onClick={handleCopiar} disabled={!copyOrigem || !copyDestino} className="btn-primary flex-1">
+                <button type="button" onClick={handleCopiar} disabled={!copyOrigem || copyDestinos.length === 0} className="btn-primary flex-1">
                   Copiar
                 </button>
               </div>
