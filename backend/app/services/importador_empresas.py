@@ -153,9 +153,9 @@ def gerar_modelo() -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Empresas"
-    ws.append(["Razão Social", "CNPJ", "Regime Tributário", "Grupo de Empresas"])
-    ws.append(["MARKBUILDING CONSTRUCOES LTDA", "12.345.678/0001-90", "Lucro Real", "Markbuilding"])
-    ws.append(["GNILEB PARTICIPACOES SA", "98.765.432/0001-10", "Lucro Presumido", "Markbuilding"])
+    ws.append(["Razão Social", "CNPJ", "Regime Tributário", "Grupo de Empresas", "Segmento"])
+    ws.append(["MARKBUILDING CONSTRUCOES LTDA", "12.345.678/0001-90", "Lucro Real", "Markbuilding", "Serviço"])
+    ws.append(["GNILEB PARTICIPACOES SA", "98.765.432/0001-10", "Lucro Presumido", "Markbuilding", "Serviço"])
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
