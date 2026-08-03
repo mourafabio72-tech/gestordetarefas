@@ -20,6 +20,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
@@ -71,21 +72,40 @@ export default function Layout() {
     return novo;
   });
 
+  const [colapsado, setColapsado] = useState(() => localStorage.getItem('menuColapsado') === '1');
+  const toggleColapsado = () => setColapsado((c) => {
+    localStorage.setItem('menuColapsado', c ? '0' : '1');
+    return !c;
+  });
+
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-primary-800 text-white transform transition-transform duration-200 ease-in-out
-        lg:relative lg:translate-x-0 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-64 bg-primary-800 text-white transform transition-all duration-200 ease-in-out
+        lg:relative lg:translate-x-0 flex flex-col ${colapsado ? 'lg:w-16' : ''}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex items-center justify-between p-4 border-b border-primary-700">
-          <h1 className="text-xl font-bold">Tareffas</h1>
+        <div className="flex items-center justify-between border-b border-primary-700 p-4">
+          <h1 className={`text-xl font-bold ${colapsado ? 'lg:hidden' : ''}`}>Tareffas</h1>
+          {colapsado && <span className="hidden lg:block text-xl font-bold mx-auto">T</span>}
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
             <X size={24} />
           </button>
+          {/* recolher/expandir barra — só desktop */}
+          <button onClick={toggleColapsado}
+            className={`hidden lg:block text-primary-300 hover:text-white ${colapsado ? 'lg:hidden' : ''}`}
+            title="Recolher menu">
+            <ChevronLeft size={18} />
+          </button>
         </div>
+        {colapsado && (
+          <button onClick={toggleColapsado} title="Expandir menu"
+            className="hidden lg:flex justify-center py-2 text-primary-300 hover:text-white border-b border-primary-700">
+            <ChevronRight size={18} />
+          </button>
+        )}
 
-        <nav className="px-3 py-3 flex-1 overflow-y-auto">
+        <nav className="px-2 py-3 flex-1 overflow-y-auto">
           {menuGroups.map((group) => {
             const visibleItems = group.items.filter((item) => item.roles.includes(grupo));
             if (visibleItems.length === 0) return null;
@@ -94,38 +114,42 @@ export default function Layout() {
               <div key={group.label} className="mb-2">
                 <button
                   onClick={() => toggleGrupo(group.label)}
-                  className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-400 hover:text-primary-200 transition-colors"
+                  className={`w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-400 hover:text-primary-200 transition-colors ${colapsado ? 'lg:hidden' : ''}`}
                 >
                   {recolhido ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                   <span>{group.label}</span>
                 </button>
-                {!recolhido && visibleItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg mb-0.5 text-sm transition-colors ${
-                        isActive
-                          ? 'bg-primary-600 text-white'
-                          : 'text-primary-200 hover:bg-primary-700'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
+                <div className={`mx-2 my-1 border-t border-primary-700/60 ${colapsado ? 'hidden lg:block' : 'hidden'}`} />
+                <div className={`${recolhido ? 'hidden' : ''} ${colapsado ? 'lg:block' : ''}`}>
+                  {visibleItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        title={item.label}
+                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg mb-0.5 text-sm transition-colors ${
+                          colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''
+                        } ${
+                          isActive ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-700'
+                        }`}
+                      >
+                        <Icon size={16} />
+                        <span className={colapsado ? 'lg:hidden' : ''}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </nav>
 
-        <div className="w-full p-4 border-t border-primary-700">
-          <div className="flex items-center gap-3 mb-3 px-4">
-            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
+        <div className="w-full border-t border-primary-700 p-3">
+          <div className={`flex items-center gap-3 mb-3 px-2 ${colapsado ? 'lg:hidden' : ''}`}>
+            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shrink-0">
               {user?.nome?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -135,17 +159,21 @@ export default function Layout() {
           </div>
           <a
             href={HUB_URL}
-            className="flex items-center gap-2 w-full px-4 py-2 mb-1 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors"
+            title="Voltar ao Hub"
+            className={`flex items-center gap-2 px-3 py-2 mb-1 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors ${
+              colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
             <LayoutGrid size={18} />
-            <span>Voltar ao Hub</span>
+            <span className={colapsado ? 'lg:hidden' : ''}>Voltar ao Hub</span>
           </a>
           <button
             onClick={logout}
-            className="flex items-center gap-2 w-full px-4 py-2 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors"
+            title="Sair"
+            className={`flex items-center w-full gap-2 px-3 py-2 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors ${
+              colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
             <LogOut size={18} />
-            <span>Sair</span>
+            <span className={colapsado ? 'lg:hidden' : ''}>Sair</span>
           </button>
         </div>
       </aside>
