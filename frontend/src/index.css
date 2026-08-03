@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fonte base menor -> como o Tailwind usa rem, encolhe também paddings/espaços.
+   Progressivo: quanto menor a tela do notebook, mais compacto (evita cortar). */
+html { font-size: 15px; }
+@media (max-width: 1440px) { html { font-size: 14px; } }
+@media (max-width: 1280px) { html { font-size: 13px; } }
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   color: #2f3b2f;              /* texto padrão sage escuro */
