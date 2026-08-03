@@ -7,9 +7,58 @@ from pydantic import BaseModel
 from ..database import get_db
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
-from ..auth import get_current_user, require_gestor_ou_admin
+from ..auth import (get_current_user, require_perm, require_flag,
+                    permissao_efetiva)
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
+
+
+def _escopo_ids(db: Session, user: Usuario):
+    """Ids de responsáveis visíveis ao usuário conforme escopo_tarefas.
+    Retorna None quando o escopo é 'todas' (sem filtro)."""
+    from ..services.substituicao import originais_cobertos
+    escopo = permissao_efetiva(user).get("escopo_tarefas", "todas")
+    if escopo == "todas":
+        return None
+    ids = {user.id}
+    if escopo == "setor":
+        # 'setor' = própria equipe (subordinados diretos via gestor_id)
+        for (sid,) in db.query(Usuario.id).filter(Usuario.gestor_id == user.id).all():
+            ids.add(sid)
+    # quem este usuário está cobrindo agora (substituição temporária) também entra no escopo
+    ids |= originais_cobertos(db, user.id)
+    return ids
+
+
+def _aplicar_escopo(query, db: Session, user: Usuario):
+    # Bloqueados somem: tarefas de empresa bloqueada ou de responsável bloqueado não aparecem.
+    query = query.filter(~Tarefa.empresa.has(Empresa.bloqueado == True))
+    query = query.filter(~Tarefa.responsavel.has(Usuario.bloqueado == True))
+    ids = _escopo_ids(db, user)
+    if ids is not None:
+        query = query.filter(or_(
+            Tarefa.responsavel_id.in_(ids),
+            Tarefa.supervisor_id.in_(ids),
+            Tarefa.responsaveis.any(Usuario.id.in_(ids)),
+        ))
+    return query
+
+
+def _no_escopo(tarefa: Tarefa, db: Session, user: Usuario) -> bool:
+    ids = _escopo_ids(db, user)
+    if ids is None:
+        return True
+    return (tarefa.responsavel_id in ids
+            or tarefa.supervisor_id in ids
+            or any(u.id in ids for u in tarefa.responsaveis))
+
+
+def _aplicar_responsaveis(db: Session, db_tarefa: Tarefa, responsavel_ids):
+    """Define os responsáveis (M2M) e sincroniza o principal (responsavel_id)."""
+    users = (db.query(Usuario).filter(Usuario.id.in_(responsavel_ids)).all()
+             if responsavel_ids else [])
+    db_tarefa.responsaveis = users
+    db_tarefa.responsavel_id = users[0].id if users else None
 
 
 class TransferirRequest(BaseModel):
@@ -30,7 +79,7 @@ def get_dashboard_stats(
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_end = today_start + timedelta(days=7)
 
-    query = db.query(Tarefa)
+    query = _aplicar_escopo(db.query(Tarefa), db, current_user)
     if empresa_id:
         query = query.filter(Tarefa.empresa_id == empresa_id)
 
@@ -78,7 +127,7 @@ def list_tarefas(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    query = db.query(Tarefa)
+    query = _aplicar_escopo(db.query(Tarefa), db, current_user)
 
     if empresa_id:
         query = query.filter(Tarefa.empresa_id == empresa_id)
@@ -98,7 +147,7 @@ def get_tarefa(
     current_user: Usuario = Depends(get_current_user)
 ):
     tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    if not tarefa:
+    if not tarefa or not _no_escopo(tarefa, db, current_user):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     return tarefa
 
@@ -106,7 +155,7 @@ def get_tarefa(
 def create_tarefa(
     tarefa: TarefaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
 ):
     empresa = db.query(Empresa).filter(Empresa.id == tarefa.empresa_id).first()
     if not empresa:
@@ -117,12 +166,9 @@ def create_tarefa(
         if not setor:
             raise HTTPException(status_code=404, detail="Setor não encontrado")
 
-    if tarefa.responsavel_id:
-        resp = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
-        if not resp:
-            raise HTTPException(status_code=404, detail="Responsável não encontrado")
-
-    db_tarefa = Tarefa(**tarefa.model_dump())
+    dados = tarefa.model_dump(exclude={"responsavel_ids"})
+    db_tarefa = Tarefa(**dados)
+    _aplicar_responsaveis(db, db_tarefa, tarefa.responsavel_ids)
     db.add(db_tarefa)
     db.commit()
     db.refresh(db_tarefa)
@@ -133,16 +179,36 @@ def update_tarefa(
     tarefa_id: int,
     tarefa: TarefaUpdate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    if not db_tarefa:
+    # Fora do escopo → 404 (não vaza existência de tarefa de outro).
+    if not db_tarefa or not _no_escopo(db_tarefa, db, current_user):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
+    perm = permissao_efetiva(current_user)
     update_data = tarefa.model_dump(exclude_unset=True)
+
+    # Flags de ação sensível — só barram quando o valor de fato muda.
+    if ("data_vencimento" in update_data
+            and update_data["data_vencimento"] != db_tarefa.data_vencimento
+            and not perm.get("alterar_prazo_legal")):
+        raise HTTPException(status_code=403, detail="Sem permissão para alterar o prazo legal (vencimento)")
+    if ("data_prazo" in update_data
+            and update_data["data_prazo"] != db_tarefa.data_prazo
+            and not perm.get("alterar_prazo_tecnico")):
+        raise HTTPException(status_code=403, detail="Sem permissão para alterar o prazo técnico")
+    if (update_data.get("status") == StatusTarefa.CANCELADA
+            and db_tarefa.status != StatusTarefa.CANCELADA
+            and not perm.get("dispensar_demanda")):
+        raise HTTPException(status_code=403, detail="Sem permissão para dispensar/cancelar a demanda")
 
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()
+
+    # responsaveis (M2M) tratado à parte
+    if "responsavel_ids" in update_data:
+        _aplicar_responsaveis(db, db_tarefa, update_data.pop("responsavel_ids"))
 
     for key, value in update_data.items():
         setattr(db_tarefa, key, value)
@@ -155,7 +221,7 @@ def update_tarefa(
 def copiar_tarefas(
     body: CopiarTarefasRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_flag("alocar_obrigacao"))
 ):
     if body.origem_empresa_id == body.destino_empresa_id:
         raise HTTPException(status_code=400, detail="Origem e destino devem ser empresas diferentes")
@@ -171,20 +237,23 @@ def copiar_tarefas(
 
     copiadas = 0
     for t in origem_tarefas:
-        # Copia como modelo: sem datas; setor não é copiado (é específico da empresa).
-        db.add(Tarefa(
+        # Copia como modelo: sem datas; setor interno é mantido.
+        nova = Tarefa(
             titulo=t.titulo,
             descricao=t.descricao,
             empresa_id=body.destino_empresa_id,
-            setor_id=None,
+            setor_id=t.setor_id,
             responsavel_id=t.responsavel_id,
+            supervisor_id=t.supervisor_id,
             prioridade=t.prioridade,
             gera_multa=t.gera_multa,
             observacoes=t.observacoes,
             status=StatusTarefa.PENDENTE,
             data_prazo=None,
             data_vencimento=None,
-        ))
+        )
+        nova.responsaveis = list(t.responsaveis)
+        db.add(nova)
         copiadas += 1
 
     db.commit()
@@ -196,7 +265,7 @@ def transferir_tarefa(
     tarefa_id: int,
     body: TransferirRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:
@@ -206,7 +275,8 @@ def transferir_tarefa(
     if not novo_resp:
         raise HTTPException(status_code=404, detail="Novo responsável não encontrado")
 
-    db_tarefa.responsavel_id = body.responsavel_id
+    db_tarefa.responsaveis = [novo_resp]
+    db_tarefa.responsavel_id = novo_resp.id
     db.commit()
     db.refresh(db_tarefa)
     return db_tarefa
@@ -216,10 +286,10 @@ def transferir_tarefa(
 def delete_tarefa(
     tarefa_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_flag("dispensar_demanda"))
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    if not db_tarefa:
+    if not db_tarefa or not _no_escopo(db_tarefa, db, current_user):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
     db_tarefa.status = StatusTarefa.CANCELADA

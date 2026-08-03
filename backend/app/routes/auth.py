@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Usuario
-from ..schemas import LoginRequest, Token, UsuarioCreate, UsuarioResponse
-from ..auth import verify_password, create_access_token, get_password_hash, get_current_user
+from ..schemas import LoginRequest, Token, UsuarioCreate, UsuarioResponse, MeResponse
+from ..auth import (verify_password, create_access_token, get_password_hash,
+                    get_current_user, permissao_efetiva)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -15,6 +16,8 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha inválidos"
         )
+    if getattr(user, "bloqueado", False) or not user.ativo:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário bloqueado")
 
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
@@ -40,6 +43,13 @@ def register(
     db.refresh(db_usuario)
     return db_usuario
 
-@router.get("/me", response_model=UsuarioResponse)
+@router.get("/me", response_model=MeResponse)
 def get_me(current_user: Usuario = Depends(get_current_user)):
-    return current_user
+    return MeResponse(
+        id=current_user.id,
+        nome=current_user.nome,
+        email=current_user.email,
+        cargo=current_user.cargo,
+        grupo=current_user.grupo,
+        permissoes_efetivas=permissao_efetiva(current_user),
+    )

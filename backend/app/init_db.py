@@ -14,6 +14,23 @@ def migrate():
         ("regime_tributario", "ALTER TABLE empresas ADD COLUMN regime_tributario VARCHAR(30) DEFAULT 'indefinido'"),
         ("segmento", "ALTER TABLE empresas ADD COLUMN segmento VARCHAR(30)"),
         ("data_prazo_nullable", "ALTER TABLE tarefas ALTER COLUMN data_prazo DROP NOT NULL"),
+        ("permissoes", "ALTER TABLE usuarios ADD COLUMN permissoes TEXT"),
+        ("obrigacao_id", "ALTER TABLE tarefas ADD COLUMN obrigacao_id INTEGER REFERENCES obrigacoes(id)"),
+        ("competencia", "ALTER TABLE tarefas ADD COLUMN competencia VARCHAR(7)"),
+        ("identificadores", "ALTER TABLE obrigacoes ADD COLUMN identificadores VARCHAR(200)"),
+        ("protocolo_entrega", "ALTER TABLE tarefas ADD COLUMN protocolo_entrega VARCHAR(120)"),
+        ("data_entrega", "ALTER TABLE tarefas ADD COLUMN data_entrega TIMESTAMP"),
+        ("anexo_nome", "ALTER TABLE tarefas ADD COLUMN anexo_nome VARCHAR(200)"),
+        ("usuario_tipo", "ALTER TABLE usuarios ADD COLUMN tipo VARCHAR(20) DEFAULT 'colaborador'"),
+        ("usuario_empresa_id", "ALTER TABLE usuarios ADD COLUMN empresa_id INTEGER REFERENCES empresas(id)"),
+        ("tarefa_supervisor_id", "ALTER TABLE tarefas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+        ("obrigacao_supervisor_id", "ALTER TABLE obrigacoes ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+        ("empresa_responsavel_id", "ALTER TABLE empresas ADD COLUMN responsavel_id INTEGER REFERENCES usuarios(id)"),
+        ("empresa_supervisor_id", "ALTER TABLE empresas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+        ("empresa_bloqueado", "ALTER TABLE empresas ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
+        ("usuario_bloqueado", "ALTER TABLE usuarios ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
+        # setor virou interno/global: relaxa o NOT NULL antigo em produção
+        ("setor_empresa_nullable", "ALTER TABLE setores ALTER COLUMN empresa_id DROP NOT NULL"),
     ]
 
     for col_name, sql in migrations:

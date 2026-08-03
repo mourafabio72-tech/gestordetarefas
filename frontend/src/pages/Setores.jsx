@@ -1,32 +1,20 @@
 import { useState, useEffect } from 'react';
-import { setoresAPI, empresasAPI } from '../services/api';
+import { setoresAPI } from '../services/api';
 import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react';
 
 export default function Setores() {
   const [setores, setSetores] = useState([]);
-  const [empresas, setEmpresas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSetor, setEditingSetor] = useState(null);
-  const [filtroEmpresa, setFiltroEmpresa] = useState('');
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    empresa_id: ''
-  });
+  const [formData, setFormData] = useState({ nome: '', descricao: '' });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
-      const [setoresRes, empresasRes] = await Promise.all([
-        setoresAPI.list(),
-        empresasAPI.list()
-      ]);
-      setSetores(setoresRes.data);
-      setEmpresas(empresasRes.data);
+      const res = await setoresAPI.list();
+      setSetores(res.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -34,22 +22,17 @@ export default function Setores() {
     }
   };
 
-  const filteredSetores = filtroEmpresa
-    ? setores.filter(s => s.empresa_id === parseInt(filtroEmpresa))
-    : setores;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = { ...formData, empresa_id: parseInt(formData.empresa_id) };
       if (editingSetor) {
-        await setoresAPI.update(editingSetor.id, data);
+        await setoresAPI.update(editingSetor.id, formData);
       } else {
-        await setoresAPI.create(data);
+        await setoresAPI.create(formData);
       }
       setShowModal(false);
       setEditingSetor(null);
-      setFormData({ nome: '', descricao: '', empresa_id: '' });
+      setFormData({ nome: '', descricao: '' });
       loadData();
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao salvar setor');
@@ -58,11 +41,7 @@ export default function Setores() {
 
   const handleEdit = (setor) => {
     setEditingSetor(setor);
-    setFormData({
-      nome: setor.nome,
-      descricao: setor.descricao || '',
-      empresa_id: setor.empresa_id
-    });
+    setFormData({ nome: setor.nome, descricao: setor.descricao || '' });
     setShowModal(true);
   };
 
@@ -77,11 +56,6 @@ export default function Setores() {
     }
   };
 
-  const getEmpresaNome = (empresaId) => {
-    const empresa = empresas.find(e => e.id === empresaId);
-    return empresa?.razao_social || '-';
-  };
-
   if (loading) {
     return <div className="flex items-center justify-center h-64">Carregando...</div>;
   }
@@ -89,11 +63,14 @@ export default function Setores() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Setores</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Setores</h1>
+          <p className="text-sm text-gray-500">Departamentos internos do escritório (Fiscal, Contábil, DP…).</p>
+        </div>
         <button
           onClick={() => {
             setEditingSetor(null);
-            setFormData({ nome: '', descricao: '', empresa_id: '' });
+            setFormData({ nome: '', descricao: '' });
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -103,23 +80,8 @@ export default function Setores() {
         </button>
       </div>
 
-      <div className="mb-4">
-        <select
-          value={filtroEmpresa}
-          onChange={(e) => setFiltroEmpresa(e.target.value)}
-          className="input-field w-auto"
-        >
-          <option value="">Todas as empresas</option>
-          {empresas.map((empresa) => (
-            <option key={empresa.id} value={empresa.id}>
-              {empresa.razao_social}
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="card">
-        {filteredSetores.length === 0 ? (
+        {setores.length === 0 ? (
           <div className="text-center py-12">
             <FolderOpen size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500">Nenhum setor cadastrado</p>
@@ -130,16 +92,14 @@ export default function Setores() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Empresa</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Descrição</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredSetores.map((setor) => (
+                {setores.map((setor) => (
                   <tr key={setor.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{setor.nome}</td>
-                    <td className="py-3 px-4">{getEmpresaNome(setor.empresa_id)}</td>
                     <td className="py-3 px-4 text-gray-500">{setor.descricao || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
@@ -175,28 +135,13 @@ export default function Setores() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
-                <select
-                  value={formData.empresa_id}
-                  onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Selecione uma empresa</option>
-                  {empresas.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.razao_social}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                 <input
                   type="text"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   className="input-field"
+                  placeholder="Ex: Fiscal, Contábil, DP"
                   required
                 />
               </div>

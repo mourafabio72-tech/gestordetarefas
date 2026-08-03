@@ -7,19 +7,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        }
-      }
+        // Padrão Sage & Creme (Zoaria/BPS4)
+        white: '#fffdf9',           // "branco" dos cards vira creme quente
+        primary: {                  // acento verde-oliva
+          50: '#eef1ea',
+          100: '#dbe3d4',
+          200: '#c3cfb9',
+          300: '#a7b89a',
+          400: '#86977a',
+          500: '#6e7f63',
+          600: '#5f7057',
+          700: '#566450',
+          800: '#45503f',
+          900: '#333c2f',
+        },
+        gray: {                     // "cinza" vira sage/creme quente
+          50: '#faf7f0',
+          100: '#ede2d1',
+          200: '#dccdb6',
+          300: '#cbb99b',
+          400: '#a99e88',
+          500: '#808a74',
+          600: '#55614e',
+          700: '#3f4a3c',
+          800: '#2f3b2f',
+          900: '#232c22',
+        },
+      },
     },
   },
   plugins: [],

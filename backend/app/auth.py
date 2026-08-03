@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Usuario
+from . import permissoes
 import os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "sua-chave-secreta-aqui-mude-em-producao")
@@ -61,3 +62,32 @@ def require_grupos(*grupos):
 
 require_admin = require_grupos("admin")
 require_gestor_ou_admin = require_grupos("admin", "gestor")
+
+
+def permissao_efetiva(user: Usuario) -> dict:
+    """Resolve a permissão do usuário: preset do papel + overrides do JSON."""
+    return permissoes.resolver(user.grupo, getattr(user, "permissoes", None))
+
+
+def require_perm(recurso: str, nivel: str = "ver"):
+    """Dependência: exige `nivel` (ver|editar) no `recurso` da matriz."""
+    def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+        if not permissoes.pode(permissao_efetiva(current_user), recurso, nivel):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Sem permissão de '{nivel}' em '{recurso}'",
+            )
+        return current_user
+    return _dep
+
+
+def require_flag(flag: str):
+    """Dependência: exige que a flag de ação sensível esteja ligada."""
+    def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+        if not permissoes.tem_flag(permissao_efetiva(current_user), flag):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Sem permissão para a ação '{flag}'",
+            )
+        return current_user
+    return _dep

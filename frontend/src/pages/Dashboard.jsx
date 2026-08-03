@@ -40,12 +40,12 @@ export default function Dashboard() {
   }
 
   const statCards = [
-    { label: 'Total de Tarefas', value: stats?.total_tarefas || 0, icon: TrendingUp, color: 'bg-blue-500' },
-    { label: 'Pendentes', value: stats?.pendentes || 0, icon: Clock, color: 'bg-yellow-500' },
-    { label: 'Em Andamento', value: stats?.em_andamento || 0, icon: AlertCircle, color: 'bg-indigo-500' },
-    { label: 'Concluídas', value: stats?.concluidas || 0, icon: CheckCircle, color: 'bg-green-500' },
-    { label: 'Atrasadas', value: stats?.atrasadas || 0, icon: AlertTriangle, color: 'bg-red-500' },
-    { label: 'Vencendo Hoje', value: stats?.vencendo_hoje || 0, icon: Calendar, color: 'bg-orange-500' },
+    { label: 'Total de Tarefas', value: stats?.total_tarefas || 0, icon: TrendingUp, color: 'bg-primary-500' },
+    { label: 'Pendentes', value: stats?.pendentes || 0, icon: Clock, color: 'bg-[#b0813f]' },
+    { label: 'Em Andamento', value: stats?.em_andamento || 0, icon: AlertCircle, color: 'bg-[#3a7d76]' },
+    { label: 'Concluídas', value: stats?.concluidas || 0, icon: CheckCircle, color: 'bg-[#4d8a3f]' },
+    { label: 'Atrasadas', value: stats?.atrasadas || 0, icon: AlertTriangle, color: 'bg-[#a24a3a]' },
+    { label: 'Vencendo Hoje', value: stats?.vencendo_hoje || 0, icon: Calendar, color: 'bg-[#c58a3a]' },
   ];
 
   return (
@@ -123,10 +123,10 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Resumo por Status</h2>
           <div className="space-y-4">
             {[
-              { label: 'Pendentes', value: stats?.pendentes || 0, total: stats?.total_tarefas || 0, color: 'bg-yellow-500' },
-              { label: 'Em Andamento', value: stats?.em_andamento || 0, total: stats?.total_tarefas || 0, color: 'bg-indigo-500' },
-              { label: 'Concluídas', value: stats?.concluidas || 0, total: stats?.total_tarefas || 0, color: 'bg-green-500' },
-              { label: 'Atrasadas', value: stats?.atrasadas || 0, total: stats?.total_tarefas || 0, color: 'bg-red-500' },
+              { label: 'Pendentes', value: stats?.pendentes || 0, total: stats?.total_tarefas || 0, color: 'bg-[#b0813f]' },
+              { label: 'Em Andamento', value: stats?.em_andamento || 0, total: stats?.total_tarefas || 0, color: 'bg-[#3a7d76]' },
+              { label: 'Concluídas', value: stats?.concluidas || 0, total: stats?.total_tarefas || 0, color: 'bg-[#4d8a3f]' },
+              { label: 'Atrasadas', value: stats?.atrasadas || 0, total: stats?.total_tarefas || 0, color: 'bg-[#a24a3a]' },
             ].map((item) => {
               const percentual = item.total > 0 ? (item.value / item.total) * 100 : 0;
               return (

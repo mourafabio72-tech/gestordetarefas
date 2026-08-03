@@ -9,6 +9,10 @@ build/
 venv/
 .env
 
+# Banco local de dev (SQLite) — nunca versionar
+*.db
+*.sqlite3
+
 # Node
 node_modules/
 frontend/dist/

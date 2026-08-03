@@ -6,9 +6,13 @@ import {
   Users,
   FolderOpen,
   ListTodo,
+  FileStack,
   BarChart3,
   FileCheck2,
   ShieldCheck,
+  Settings,
+  UserCog,
+  Bell,
   LogOut,
   Menu,
   X
@@ -28,10 +32,18 @@ const menuGroups = [
   {
     label: 'Cadastro',
     items: [
+      { path: '/obrigacoes', label: 'Obrigações', icon: FileStack, roles: ['admin', 'gestor'] },
       { path: '/setores', label: 'Setores', icon: FolderOpen, roles: ['admin', 'gestor'] },
       { path: '/empresas', label: 'Empresas', icon: Building2, roles: ['admin', 'gestor'] },
       { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['admin', 'gestor'] },
       { path: '/grupos', label: 'Grupo de usuários', icon: ShieldCheck, roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Configuração',
+    items: [
+      { path: '/substituicoes', label: 'Substituições', icon: UserCog, roles: ['admin', 'gestor'] },
+      { path: '/notificacoes', label: 'Notificações', icon: Bell, roles: ['admin'] },
     ],
   },
 ];

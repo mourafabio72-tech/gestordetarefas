@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { empresasAPI } from '../services/api';
-import { Plus, Edit2, Trash2, Building2 } from 'lucide-react';
+import { empresasAPI, usuariosAPI } from '../services/api';
+import { Plus, Edit2, Trash2, Building2, Lock, Unlock } from 'lucide-react';
+
+const EMPRESA_VAZIA = {
+  razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
+  endereco: '', regime_tributario: 'indefinido', segmento: '',
+  responsavel_id: '', supervisor_id: '',
+};
 
 const REGIMES = [
   { value: 'indefinido', label: 'Indefinido' },
@@ -23,19 +29,11 @@ const labelDe = (lista, val) => lista.find((o) => o.value === val)?.label || '-'
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState(null);
-  const [formData, setFormData] = useState({
-    razao_social: '',
-    cnpj: '',
-    nome_fantasia: '',
-    email: '',
-    telefone: '',
-    endereco: '',
-    regime_tributario: 'indefinido',
-    segmento: ''
-  });
+  const [formData, setFormData] = useState(EMPRESA_VAZIA);
 
   useEffect(() => {
     loadEmpresas();
@@ -43,8 +41,9 @@ export default function Empresas() {
 
   const loadEmpresas = async () => {
     try {
-      const response = await empresasAPI.list();
-      setEmpresas(response.data);
+      const [emp, us] = await Promise.all([empresasAPI.list(), usuariosAPI.list()]);
+      setEmpresas(emp.data);
+      setUsuarios(us.data);
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
     } finally {
@@ -55,14 +54,19 @@ export default function Empresas() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        responsavel_id: formData.responsavel_id ? parseInt(formData.responsavel_id) : null,
+        supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : null,
+      };
       if (editingEmpresa) {
-        await empresasAPI.update(editingEmpresa.id, formData);
+        await empresasAPI.update(editingEmpresa.id, payload);
       } else {
-        await empresasAPI.create(formData);
+        await empresasAPI.create(payload);
       }
       setShowModal(false);
       setEditingEmpresa(null);
-      setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '', regime_tributario: 'indefinido', segmento: '' });
+      setFormData(EMPRESA_VAZIA);
       loadEmpresas();
     } catch (error) {
       console.error('Erro empresa:', error.response?.data || error.message);
@@ -80,7 +84,9 @@ export default function Empresas() {
       telefone: empresa.telefone || '',
       endereco: empresa.endereco || '',
       regime_tributario: empresa.regime_tributario || 'indefinido',
-      segmento: empresa.segmento || ''
+      segmento: empresa.segmento || '',
+      responsavel_id: empresa.responsavel_id || '',
+      supervisor_id: empresa.supervisor_id || '',
     });
     setShowModal(true);
   };
@@ -93,6 +99,20 @@ export default function Empresas() {
       } catch (error) {
         alert('Erro ao desativar empresa');
       }
+    }
+  };
+
+  const handleBloquear = async (empresa) => {
+    const nova = !empresa.bloqueado;
+    const msg = nova
+      ? 'Bloquear esta empresa? As tarefas/demandas dela vão sumir das listas e o gerador vai ignorá-la.'
+      : 'Desbloquear esta empresa? As tarefas dela voltam a aparecer.';
+    if (!confirm(msg)) return;
+    try {
+      await empresasAPI.bloquear(empresa.id, nova);
+      loadEmpresas();
+    } catch (error) {
+      alert('Erro ao bloquear empresa');
     }
   };
 
@@ -116,7 +136,7 @@ export default function Empresas() {
         <button
           onClick={() => {
             setEditingEmpresa(null);
-            setFormData({ razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '', endereco: '', regime_tributario: 'indefinido', segmento: '' });
+            setFormData(EMPRESA_VAZIA);
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -150,13 +170,25 @@ export default function Empresas() {
                 {empresas.map((empresa) => (
                   <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-500 font-mono">#{empresa.id}</td>
-                    <td className="py-3 px-4">{empresa.razao_social}</td>
+                    <td className="py-3 px-4">
+                      {empresa.razao_social}
+                      {empresa.bloqueado && (
+                        <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Bloqueada</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">{empresa.cnpj || '-'}</td>
                     <td className="py-3 px-4">{labelDe(REGIMES, empresa.regime_tributario)}</td>
                     <td className="py-3 px-4">{empresa.segmento ? labelDe(SEGMENTOS, empresa.segmento) : '-'}</td>
                     <td className="py-3 px-4">{empresa.telefone || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleBloquear(empresa)}
+                          title={empresa.bloqueado ? 'Desbloquear' : 'Bloquear'}
+                          className={`p-2 rounded-lg transition-colors ${empresa.bloqueado ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'}`}
+                        >
+                          {empresa.bloqueado ? <Unlock size={16} /> : <Lock size={16} />}
+                        </button>
                         <button
                           onClick={() => handleEdit(empresa)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -261,6 +293,35 @@ export default function Empresas() {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
+                  <select
+                    value={formData.responsavel_id}
+                    onChange={(e) => setFormData({ ...formData, responsavel_id: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">—</option>
+                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
+                      <option key={u.id} value={u.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
+                  <select
+                    value={formData.supervisor_id}
+                    onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">—</option>
+                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
+                      <option key={u.id} value={u.id}>{u.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 -mt-2">As tarefas geradas para este cliente nascem com este responsável e supervisor.</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <textarea

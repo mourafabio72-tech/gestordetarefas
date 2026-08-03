@@ -1,0 +1,486 @@
+import { useState, useEffect } from 'react';
+import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
+import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
+
+const AJUDA_IDENTIFICADORES =
+  'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
+  'É o que o e-validador procura no PDF para achar e baixar a tarefa. NÃO use o título inteiro do recibo (ele se repete entre tipos e causa "Ambíguo"). ' +
+  'Separe por vírgula para aceitar mais de um termo.';
+
+const REGIMES = [
+  ['lucro_real', 'Lucro Real'],
+  ['lucro_presumido', 'Lucro Presumido'],
+  ['simples_nacional', 'Simples Nacional'],
+  ['mei', 'MEI'],
+  ['terceiro_setor', 'Terceiro Setor'],
+];
+const SEGMENTOS = [
+  ['comercio', 'Comércio'],
+  ['industria', 'Indústria'],
+  ['servico', 'Serviço'],
+  ['terceiro_setor', 'Terceiro Setor'],
+];
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+const emptyForm = {
+  nome: '', mininome: '', identificadores: '',
+  setor_id: '', responsavel_id: '', supervisor_id: '', tempo_previsto_min: '',
+  regra_prazo_tipo: 'ultimo_dia_util', regra_prazo_dia: '',
+  meses_ativos: '1,2,3,4,5,6,7,8,9,10,11,12',
+  lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
+  sabado_util: false, competencia_ref: 'mes_anterior',
+  exige_robo: false, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
+  comentario_padrao: '', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
+};
+
+const csvToSet = (s) => new Set((s || '').split(',').map((x) => x.trim()).filter(Boolean));
+const toggleCsv = (csv, val) => {
+  const set = csvToSet(csv);
+  set.has(val) ? set.delete(val) : set.add(val);
+  return [...set].join(',');
+};
+
+export default function Obrigacoes() {
+  const [obrigacoes, setObrigacoes] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [showCopy, setShowCopy] = useState(false);
+  const [copyOrigem, setCopyOrigem] = useState('');
+  const [copyDestino, setCopyDestino] = useState('');
+  const [modelo, setModelo] = useState(null);       // resultado da análise do comprovante
+  const [analisando, setAnalisando] = useState(false);
+
+  const analisarModelo = async (file) => {
+    if (!file) return;
+    setAnalisando(true); setModelo(null);
+    try {
+      const { data } = await obrigacoesAPI.analisarModelo(file);
+      setModelo(data);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Não consegui ler o PDF modelo');
+    } finally { setAnalisando(false); }
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    try {
+      const [o, e, s, u] = await Promise.all([
+        obrigacoesAPI.list(), empresasAPI.list(), setoresAPI.list(), usuariosAPI.list(),
+      ]);
+      setObrigacoes(o.data); setEmpresas(e.data); setSetores(s.data); setUsuarios(u.data);
+    } catch (err) {
+      console.error('Erro ao carregar:', err);
+    } finally { setLoading(false); }
+  };
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setShowModal(true); };
+  const abrirEdicao = (o) => {
+    setEditing(o);
+    setForm({
+      ...emptyForm, ...o,
+      setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
+      tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
+      aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
+      empresa_ids: o.empresa_ids || [],
+    });
+    setModelo(null);
+    setShowModal(true);
+  };
+
+  const salvar = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...form,
+        setor_id: form.setor_id ? parseInt(form.setor_id) : null,
+        responsavel_id: form.responsavel_id ? parseInt(form.responsavel_id) : null,
+        supervisor_id: form.supervisor_id ? parseInt(form.supervisor_id) : null,
+        tempo_previsto_min: form.tempo_previsto_min ? parseInt(form.tempo_previsto_min) : null,
+        regra_prazo_dia: form.regra_prazo_tipo === 'dia_fixo' && form.regra_prazo_dia
+          ? parseInt(form.regra_prazo_dia) : null,
+        lembrar_dias_antes: parseInt(form.lembrar_dias_antes) || 0,
+      };
+      if (editing) await obrigacoesAPI.update(editing.id, payload);
+      else await obrigacoesAPI.create(payload);
+      setShowModal(false); loadData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao salvar obrigação');
+    }
+  };
+
+  const excluir = async (o) => {
+    if (!confirm(`Desativar a obrigação "${o.nome}"?`)) return;
+    try { await obrigacoesAPI.delete(o.id); loadData(); }
+    catch { alert('Erro ao desativar'); }
+  };
+
+  const copiar = async () => {
+    if (!copyOrigem || !copyDestino) return;
+    try {
+      const r = await obrigacoesAPI.copiarEmpresa(parseInt(copyOrigem), parseInt(copyDestino));
+      alert(r.data?.message || 'Copiado.');
+      setShowCopy(false); setCopyOrigem(''); setCopyDestino(''); loadData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao copiar');
+    }
+  };
+
+  const nomeEmpresa = (id) => empresas.find((e) => e.id === id)?.razao_social || `#${id}`;
+
+  if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Obrigações</h1>
+        <div className="flex gap-2">
+          <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
+            <Copy size={18} /> Copiar de outra empresa
+          </button>
+          <button onClick={abrirNovo} className="btn-primary flex items-center gap-2">
+            <Plus size={18} /> Nova Obrigação
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        {obrigacoes.length === 0 ? (
+          <div className="text-center py-12">
+            <FileStack size={48} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500">Nenhuma obrigação cadastrada</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Obrigação</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Mininome</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Alvo</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Empresas</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Ativa</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {obrigacoes.map((o) => (
+                  <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 font-medium">{o.nome}</td>
+                    <td className="py-3 px-4 text-gray-500">{o.mininome || '-'}</td>
+                    <td className="py-3 px-4 text-xs text-gray-500">
+                      {[o.aplica_regimes, o.aplica_segmentos].filter(Boolean).join(' · ') || 'Todos'}
+                    </td>
+                    <td className="py-3 px-4 text-gray-500">{(o.empresa_ids || []).length}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {o.ativa ? 'Ativa' : 'Inativa'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => abrirEdicao(o)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => excluir(o)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {showCopy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Copiar obrigações de outra empresa</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Vincula a empresa destino a todas as obrigações que a empresa origem já tem.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de origem *</label>
+                <select value={copyOrigem} onChange={(e) => setCopyOrigem(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de destino *</label>
+                <select value={copyDestino} onChange={(e) => setCopyDestino(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas.filter((e) => String(e.id) !== copyOrigem).map((e) => (
+                    <option key={e.id} value={e.id}>{e.razao_social}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowCopy(false)} className="btn-secondary flex-1">Cancelar</button>
+                <button onClick={copiar} disabled={!copyOrigem || !copyDestino} className="btn-primary flex-1">Copiar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-2xl my-8 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">{editing ? 'Editar Obrigação' : 'Nova Obrigação'}</h2>
+            </div>
+            <form onSubmit={salvar} className="p-6 space-y-5">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome da obrigação *</label>
+                  <input value={form.nome} onChange={(e) => set('nome', e.target.value)} className="input-field" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mininome</label>
+                  <input value={form.mininome} onChange={(e) => set('mininome', e.target.value)} className="input-field" placeholder="DARF 0220" />
+                </div>
+              </div>
+              <div>
+                <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+                  Identificadores (e-validador)
+                  <span title={AJUDA_IDENTIFICADORES} className="text-gray-400 cursor-help">
+                    <Info size={14} />
+                  </span>
+                </label>
+                <input value={form.identificadores} onChange={(e) => set('identificadores', e.target.value)} className="input-field" placeholder="Ex.: EFD-Contribuições, 0220  (separados por vírgula)" />
+                <p className="text-xs text-gray-400 mt-1">Palavra única que o e-validador procura no comprovante. Passe o mouse no ⓘ para a regra.</p>
+
+                {/* Subir modelo -> sugerir identificador */}
+                <div className="mt-2 border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50/50">
+                  <label className="flex items-center gap-2 text-sm text-primary-700 cursor-pointer w-fit">
+                    <Upload size={15} />
+                    {analisando ? 'Lendo o modelo...' : 'Subir modelo de comprovante (PDF) e sugerir'}
+                    <input type="file" accept="application/pdf" className="hidden"
+                      onChange={(e) => analisarModelo(e.target.files?.[0])} />
+                  </label>
+
+                  {modelo && (
+                    <div className="mt-3 text-sm">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-xs">
+                        <span className={modelo.cnpj ? 'text-green-700' : 'text-red-600'}>
+                          {modelo.cnpj ? `✓ CNPJ ${modelo.cnpj}` : '✗ CNPJ não encontrado'}
+                        </span>
+                        <span className={modelo.competencia ? 'text-green-700' : 'text-red-600'}>
+                          {modelo.competencia ? `✓ Competência ${modelo.competencia}` : '✗ Competência não encontrada'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-1">Sugestões de identificador (clique para usar):</p>
+                      <div className="space-y-1">
+                        {modelo.candidatos.map((cnd, i) => (
+                          <button type="button" key={i} onClick={() => set('identificadores', cnd.texto)}
+                            className="w-full text-left flex items-center justify-between gap-2 px-2 py-1 rounded border border-gray-200 hover:bg-primary-50">
+                            <span className="truncate">{cnd.texto}</span>
+                            {cnd.colide_com.length > 0 ? (
+                              <span className="flex items-center gap-1 text-amber-600 text-xs whitespace-nowrap">
+                                <AlertTriangle size={12} /> colide: {cnd.colide_com.join(', ')}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-green-600 text-xs whitespace-nowrap">
+                                <CheckCircle2 size={12} /> livre
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">Prefira uma opção "livre" e curta. "Colide" = já usada em outra obrigação (daria Ambíguo).</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+                  <select value={form.setor_id} onChange={(e) => set('setor_id', e.target.value)} className="input-field">
+                    <option value="">-</option>
+                    {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
+                  <select value={form.responsavel_id} onChange={(e) => set('responsavel_id', e.target.value)} className="input-field">
+                    <option value="">-</option>
+                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
+                  <select value={form.supervisor_id} onChange={(e) => set('supervisor_id', e.target.value)} className="input-field">
+                    <option value="">-</option>
+                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tempo previsto (min)</label>
+                  <input type="number" value={form.tempo_previsto_min} onChange={(e) => set('tempo_previsto_min', e.target.value)} className="input-field" />
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Recorrência e prazo</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo</label>
+                    <select value={form.regra_prazo_tipo} onChange={(e) => set('regra_prazo_tipo', e.target.value)} className="input-field">
+                      <option value="ultimo_dia_util">Último dia útil</option>
+                      <option value="primeiro_dia_util">Primeiro dia útil</option>
+                      <option value="dia_fixo">Dia fixo</option>
+                    </select>
+                  </div>
+                  {form.regra_prazo_tipo === 'dia_fixo' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Dia do mês</label>
+                      <input type="number" min="1" max="31" value={form.regra_prazo_dia} onChange={(e) => set('regra_prazo_dia', e.target.value)} className="input-field" placeholder="20" />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
+                    <select value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
+                      <option value="mes_anterior">Mês anterior</option>
+                      <option value="mesmo_mes">Mesmo mês</option>
+                      <option value="mes_seguinte">Mês seguinte</option>
+                      <option value="ano_anterior">Ano anterior</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Meses ativos</label>
+                  <div className="flex flex-wrap gap-2">
+                    {MESES.map((m, i) => {
+                      const num = String(i + 1);
+                      const on = csvToSet(form.meses_ativos).has(num);
+                      return (
+                        <button type="button" key={num}
+                          onClick={() => set('meses_ativos', toggleCsv(form.meses_ativos, num))}
+                          className={`px-2 py-1 rounded text-xs border ${on ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lembrar (dias antes)</label>
+                    <input type="number" value={form.lembrar_dias_antes} onChange={(e) => set('lembrar_dias_antes', e.target.value)} className="input-field" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo dos dias</label>
+                    <select value={form.tipo_dias} onChange={(e) => set('tipo_dias', e.target.value)} className="input-field">
+                      <option value="corridos">Corridos</option>
+                      <option value="uteis">Úteis</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dia não-útil</label>
+                    <select value={form.ajuste_nao_util} onChange={(e) => set('ajuste_nao_util', e.target.value)} className="input-field">
+                      <option value="antecipar">Antecipar</option>
+                      <option value="postergar">Postergar</option>
+                      <option value="nenhum">Nenhum</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input type="checkbox" checked={form.sabado_util} onChange={(e) => set('sabado_util', e.target.checked)} className="h-4 w-4" />
+                      Sábado é útil
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Público-alvo</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Regimes <span className="text-gray-400">(vazio = todos)</span></p>
+                    <div className="space-y-1">
+                      {REGIMES.map(([v, l]) => (
+                        <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input type="checkbox" checked={csvToSet(form.aplica_regimes).has(v)} onChange={() => set('aplica_regimes', toggleCsv(form.aplica_regimes, v))} className="h-4 w-4" />
+                          {l}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Segmentos <span className="text-gray-400">(vazio = todos)</span></p>
+                    <div className="space-y-1">
+                      {SEGMENTOS.map(([v, l]) => (
+                        <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input type="checkbox" checked={csvToSet(form.aplica_segmentos).has(v)} onChange={() => set('aplica_segmentos', toggleCsv(form.aplica_segmentos, v))} className="h-4 w-4" />
+                          {l}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Empresas vinculadas <span className="text-gray-400 font-normal">(exceções/inclusões diretas)</span></h3>
+                <p className="text-xs text-gray-400 mb-2">{form.empresa_ids.length} selecionada(s)</p>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1">
+                  {empresas.map((e) => (
+                    <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox"
+                        checked={form.empresa_ids.includes(e.id)}
+                        onChange={() => set('empresa_ids', form.empresa_ids.includes(e.id)
+                          ? form.empresa_ids.filter((x) => x !== e.id)
+                          : [...form.empresa_ids, e.id])}
+                        className="h-4 w-4" />
+                      {e.razao_social}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.passivel_multa} onChange={(e) => set('passivel_multa', e.target.checked)} className="h-4 w-4" /> Passível de multa
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.alerta_guia_nao_lida} onChange={(e) => set('alerta_guia_nao_lida', e.target.checked)} className="h-4 w-4" /> Alerta guia não-lida
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.ativa} onChange={(e) => set('ativa', e.target.checked)} className="h-4 w-4" /> Ativa
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comentário padrão</label>
+                <textarea value={form.comentario_padrao} onChange={(e) => set('comentario_padrao', e.target.value)} className="input-field" rows={2} />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancelar</button>
+                <button type="submit" className="btn-primary flex-1">{editing ? 'Salvar' : 'Cadastrar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

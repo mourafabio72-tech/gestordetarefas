@@ -1,20 +1,34 @@
 import { useState, useEffect } from 'react';
-import { usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, Users as UsersIcon } from 'lucide-react';
+import { usuariosAPI, empresasAPI } from '../services/api';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock } from 'lucide-react';
+import { CARGOS } from '../permissoes';
+import { useAuth } from '../contexts/AuthContext';
+
+const FORM_VAZIO = {
+  nome: '', email: '', senha: '', cargo: 'Analista', grupo: 'analista', telefone: '',
+  tipo: 'colaborador', empresa_id: '', gestor_id: '',
+};
+
+const cargoInfo = (cargo) => CARGOS.find((c) => c.value === cargo) || CARGOS[2]; // fallback Analista
+const grupoParaCargo = (grupo) => (CARGOS.find((c) => c.grupo === grupo)?.value) || 'Analista';
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    cargo: '',
-    telefone: '',
-    gestor_id: ''
-  });
+  const [formData, setFormData] = useState(FORM_VAZIO);
+  const [bloqModal, setBloqModal] = useState(null);      // { usuario, carga }
+  const [bloqSubstituto, setBloqSubstituto] = useState('');
+  const { user } = useAuth();
+
+  // Bloquear/desbloquear a partir do modal de edição (fecha o modal e roda o fluxo padrão).
+  const bloquearDoModal = () => {
+    const u = editingUsuario;
+    setShowModal(false);
+    handleBloquear(u);
+  };
 
   useEffect(() => {
     loadUsuarios();
@@ -22,8 +36,9 @@ export default function Usuarios() {
 
   const loadUsuarios = async () => {
     try {
-      const response = await usuariosAPI.list();
-      setUsuarios(response.data);
+      const [u, e] = await Promise.all([usuariosAPI.list(), empresasAPI.list()]);
+      setUsuarios(u.data);
+      setEmpresas(e.data);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     } finally {
@@ -34,9 +49,11 @@ export default function Usuarios() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const cliente = formData.tipo === 'cliente';
       const payload = {
         ...formData,
-        gestor_id: formData.cargo === 'admin' ? null : (formData.gestor_id ? parseInt(formData.gestor_id) : null)
+        empresa_id: cliente && formData.empresa_id ? parseInt(formData.empresa_id) : null,
+        gestor_id: (cliente || !formData.gestor_id) ? null : parseInt(formData.gestor_id),
       };
       if (editingUsuario) {
         if (!payload.senha) delete payload.senha;
@@ -46,7 +63,7 @@ export default function Usuarios() {
       }
       setShowModal(false);
       setEditingUsuario(null);
-      setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', gestor_id: '' });
+      setFormData(FORM_VAZIO);
       loadUsuarios();
     } catch (error) {
       alert(error.response?.data?.detail || 'Erro ao salvar usuário');
@@ -59,11 +76,49 @@ export default function Usuarios() {
       nome: usuario.nome,
       email: usuario.email,
       senha: '',
-      cargo: usuario.cargo || '',
+      cargo: usuario.cargo || grupoParaCargo(usuario.grupo),
+      grupo: usuario.grupo || 'analista',
       telefone: usuario.telefone || '',
-      gestor_id: usuario.gestor_id || ''
+      tipo: usuario.tipo || 'colaborador',
+      empresa_id: usuario.empresa_id || '',
+      gestor_id: usuario.gestor_id || '',
     });
     setShowModal(true);
+  };
+
+  const handleBloquear = async (usuario) => {
+    if (usuario.bloqueado) {
+      if (!confirm('Desbloquear este usuário?')) return;
+      try { await usuariosAPI.bloquear(usuario.id, false); loadUsuarios(); }
+      catch (error) { alert(error.response?.data?.detail || 'Erro ao desbloquear'); }
+      return;
+    }
+    // Bloqueando: verifica se há carga em aberto para oferecer transferência.
+    try {
+      const { data } = await usuariosAPI.carga(usuario.id);
+      if (data.abertas > 0) {
+        setBloqSubstituto('');
+        setBloqModal({ usuario, carga: data.abertas });
+      } else {
+        if (!confirm('Bloquear este usuário? Ele não conseguirá logar e sai das seleções.')) return;
+        await usuariosAPI.bloquear(usuario.id, true);
+        loadUsuarios();
+      }
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao verificar carga do usuário');
+    }
+  };
+
+  const confirmarBloqueio = async (comTransferencia) => {
+    const sub = comTransferencia ? parseInt(bloqSubstituto) : null;
+    if (comTransferencia && !sub) return;
+    try {
+      await usuariosAPI.bloquear(bloqModal.usuario.id, true, sub);
+      setBloqModal(null);
+      loadUsuarios();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao bloquear usuário');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -88,7 +143,7 @@ export default function Usuarios() {
         <button
           onClick={() => {
             setEditingUsuario(null);
-            setFormData({ nome: '', email: '', senha: '', cargo: '', telefone: '', gestor_id: '' });
+            setFormData(FORM_VAZIO);
             setShowModal(true);
           }}
           className="btn-primary flex items-center gap-2"
@@ -130,14 +185,25 @@ export default function Usuarios() {
                     <td className="py-3 px-4 text-gray-500">{usuario.email}</td>
                     <td className="py-3 px-4">{usuario.cargo || '-'}</td>
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        usuario.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {usuario.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
+                      {usuario.bloqueado ? (
+                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Bloqueado</span>
+                      ) : (
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          usuario.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {usuario.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleBloquear(usuario)}
+                          title={usuario.bloqueado ? 'Desbloquear' : 'Bloquear'}
+                          className={`p-2 rounded-lg transition-colors ${usuario.bloqueado ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'}`}
+                        >
+                          {usuario.bloqueado ? <Unlock size={16} /> : <Lock size={16} />}
+                        </button>
                         <button
                           onClick={() => handleEdit(usuario)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -203,14 +269,42 @@ export default function Usuarios() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                <input
-                  type="text"
+                <select
                   value={formData.cargo}
-                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                  onChange={(e) => {
+                    const info = cargoInfo(e.target.value);
+                    setFormData({
+                      ...formData, cargo: info.value, grupo: info.grupo, tipo: info.tipo,
+                      empresa_id: info.tipo === 'cliente' ? formData.empresa_id : '',
+                    });
+                  }}
                   className="input-field"
-                  placeholder="Ex: Contador, Assistente"
-                />
+                >
+                  {CARGOS.map((c) => <option key={c.value} value={c.value}>{c.value}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.tipo === 'cliente'
+                    ? 'Cliente — alerta por WhatsApp + e-mail (contatos da empresa).'
+                    : 'Colaborador — alerta por e-mail. O cargo define o papel/permissões.'}
+                </p>
               </div>
+              {formData.tipo === 'cliente' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Empresa do cliente *</label>
+                  <select
+                    value={formData.empresa_id}
+                    onChange={(e) => setFormData({ ...formData, empresa_id: e.target.value })}
+                    className="input-field"
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    {empresas.map((e) => (
+                      <option key={e.id} value={e.id}>{e.razao_social}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Os alertas usam o WhatsApp e o e-mail cadastrados nesta empresa.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Telefone WhatsApp</label>
                 <input
@@ -222,9 +316,9 @@ export default function Usuarios() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Formato: DDD + Número</p>
               </div>
-              {formData.cargo !== 'admin' && (
+              {formData.tipo !== 'cliente' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gestor</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Gestor direto</label>
                   <select
                     value={formData.gestor_id}
                     onChange={(e) => setFormData({ ...formData, gestor_id: e.target.value })}
@@ -232,12 +326,37 @@ export default function Usuarios() {
                   >
                     <option value="">Sem gestor</option>
                     {usuarios
-                      .filter(u => u.id !== editingUsuario?.id && u.cargo !== 'admin')
+                      .filter(u => u.id !== editingUsuario?.id && u.tipo !== 'cliente' && !u.bloqueado)
                       .map(u => (
-                        <option key={u.id} value={u.id}>{u.nome}</option>
+                        <option key={u.id} value={u.id}>{u.nome}{u.cargo ? ` (${u.cargo})` : ''}</option>
                       ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Aparece nas notificações das tarefas deste colaborador.</p>
+                  <p className="text-xs text-gray-500 mt-1">Recebe cópia dos alertas. O gestor do gestor (2º nível) também é avisado.</p>
+                </div>
+              )}
+              {editingUsuario && editingUsuario.id !== user?.id && (
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Situação do acesso</p>
+                      <p className="text-xs text-gray-500">
+                        {editingUsuario.bloqueado
+                          ? 'Bloqueado — não loga e as tarefas dele somem.'
+                          : 'Ativo — pode logar e receber tarefas.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={bloquearDoModal}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                        editingUsuario.bloqueado
+                          ? 'text-green-700 bg-green-50 hover:bg-green-100'
+                          : 'text-red-700 bg-red-50 hover:bg-red-100'}`}
+                    >
+                      {editingUsuario.bloqueado ? <Unlock size={16} /> : <Lock size={16} />}
+                      {editingUsuario.bloqueado ? 'Desbloquear' : 'Bloquear'}
+                    </button>
+                  </div>
                 </div>
               )}
               <div className="flex gap-3 pt-4">
@@ -249,6 +368,42 @@ export default function Usuarios() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {bloqModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Bloquear {bloqModal.usuario.nome}</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Esta pessoa tem <strong>{bloqModal.carga} tarefa(s) em aberto</strong>. Transferir para quem antes de bloquear?
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transferir carga para</label>
+                <select value={bloqSubstituto} onChange={(e) => setBloqSubstituto(e.target.value)} className="input-field">
+                  <option value="">Selecione o substituto</option>
+                  {usuarios
+                    .filter((u) => u.id !== bloqModal.usuario.id && u.tipo !== 'cliente' && !u.bloqueado)
+                    .map((u) => <option key={u.id} value={u.id}>{u.nome}{u.cargo ? ` (${u.cargo})` : ''}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Reatribui as tarefas em aberto + o padrão de empresas/obrigações (substituição definitiva).</p>
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <button type="button" onClick={() => confirmarBloqueio(true)} disabled={!bloqSubstituto} className="btn-primary">
+                  Transferir e bloquear
+                </button>
+                <button type="button" onClick={() => confirmarBloqueio(false)} className="btn-secondary text-red-600">
+                  Bloquear sem transferir (as tarefas somem)
+                </button>
+                <button type="button" onClick={() => setBloqModal(null)} className="btn-secondary">
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

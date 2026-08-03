@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 from ..database import get_db
 from ..models import Empresa, Usuario
 from ..schemas import EmpresaCreate, EmpresaResponse
-from ..auth import get_current_user, require_gestor_ou_admin
+from ..auth import get_current_user, require_perm
 
 router = APIRouter(prefix="/empresas", tags=["empresas"])
+
+
+class BloquearRequest(BaseModel):
+    bloqueado: bool = True
 
 @router.get("", response_model=List[EmpresaResponse])
 def list_empresas(
@@ -30,7 +35,7 @@ def get_empresa(
 def create_empresa(
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_perm("empresas", "editar"))
 ):
     if empresa.cnpj:
         existing = db.query(Empresa).filter(Empresa.cnpj == empresa.cnpj).first()
@@ -48,7 +53,7 @@ def update_empresa(
     empresa_id: int,
     empresa: EmpresaCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_perm("empresas", "editar"))
 ):
     db_empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
     if not db_empresa:
@@ -61,11 +66,27 @@ def update_empresa(
     db.refresh(db_empresa)
     return db_empresa
 
+@router.post("/{empresa_id}/bloquear", response_model=EmpresaResponse)
+def bloquear_empresa(
+    empresa_id: int,
+    body: BloquearRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("empresas", "editar"))
+):
+    emp = db.query(Empresa).filter(Empresa.id == empresa_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Empresa não encontrada")
+    emp.bloqueado = body.bloqueado
+    db.commit()
+    db.refresh(emp)
+    return emp
+
+
 @router.delete("/{empresa_id}")
 def delete_empresa(
     empresa_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_gestor_ou_admin)
+    current_user: Usuario = Depends(require_perm("empresas", "editar"))
 ):
     db_empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
     if not db_empresa:

@@ -38,10 +38,11 @@ export const empresasAPI = {
   create: (data) => api.post('/empresas', data),
   update: (id, data) => api.put(`/empresas/${id}`, data),
   delete: (id) => api.delete(`/empresas/${id}`),
+  bloquear: (id, bloqueado) => api.post(`/empresas/${id}/bloquear`, { bloqueado }),
 };
 
 export const setoresAPI = {
-  list: (empresaId) => api.get('/setores', { params: empresaId ? { empresa_id: empresaId } : {} }),
+  list: () => api.get('/setores'),
   get: (id) => api.get(`/setores/${id}`),
   create: (data) => api.post('/setores', data),
   update: (id, data) => api.put(`/setores/${id}`, data),
@@ -54,6 +55,8 @@ export const usuariosAPI = {
   create: (data) => api.post('/usuarios', data),
   update: (id, data) => api.put(`/usuarios/${id}`, data),
   delete: (id) => api.delete(`/usuarios/${id}`),
+  carga: (id) => api.get(`/usuarios/${id}/carga`),
+  bloquear: (id, bloqueado, substituto_id) => api.post(`/usuarios/${id}/bloquear`, { bloqueado, substituto_id }),
 };
 
 export const tarefasAPI = {
@@ -65,6 +68,42 @@ export const tarefasAPI = {
   dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),
   transferir: (id, responsavel_id) => api.post(`/tarefas/${id}/transferir`, { responsavel_id }),
   copiar: (origem_empresa_id, destino_empresa_id) => api.post('/tarefas/copiar', { origem_empresa_id, destino_empresa_id }),
+};
+
+export const obrigacoesAPI = {
+  list: () => api.get('/obrigacoes'),
+  get: (id) => api.get(`/obrigacoes/${id}`),
+  create: (data) => api.post('/obrigacoes', data),
+  update: (id, data) => api.put(`/obrigacoes/${id}`, data),
+  delete: (id) => api.delete(`/obrigacoes/${id}`),
+  copiarEmpresa: (origem_empresa_id, destino_empresa_id) =>
+    api.post('/obrigacoes/copiar-empresa', { origem_empresa_id, destino_empresa_id }),
+  analisarModelo: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/obrigacoes/analisar-modelo', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+};
+
+export const evalidadorAPI = {
+  processar: (files) => {
+    const fd = new FormData();
+    Array.from(files).forEach((f) => fd.append('arquivos', f));
+    return api.post('/evalidador/processar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+};
+
+export const substituicoesAPI = {
+  list: () => api.get('/substituicoes'),
+  create: (data) => api.post('/substituicoes', data),
+  encerrar: (id) => api.delete(`/substituicoes/${id}`),
+};
+
+export const configuracaoAPI = {
+  getNotificacoes: () => api.get('/configuracao/notificacoes'),
+  putNotificacoes: (data) => api.put('/configuracao/notificacoes', data),
+  testarEmail: (para) => api.post('/configuracao/notificacoes/testar-email', { para }),
+  testarWhatsapp: (para) => api.post('/configuracao/notificacoes/testar-whatsapp', { para }),
 };
 
 export const alertasAPI = {

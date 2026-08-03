@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
+import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy } from 'lucide-react';
@@ -51,11 +51,28 @@ const prioridadeLabels = {
   urgente: 'Urgente'
 };
 
+// Paleta Sage & Creme (padrão Zoaria/BPS4)
+const SAGE = { cardBg: '#fffdf9', border: '#dccdb6', atrasBorder: '#d9b3aa', txt: '#2f3b2f', txt3: '#808a74' };
+const statusSage = {
+  pendente:     { bg: '#f6efdd', fg: '#8a6a2e' },
+  em_andamento: { bg: '#dcefed', fg: '#3a7d76' },
+  concluida:    { bg: '#e2ebde', fg: '#4d8a3f' },
+  atrasada:     { bg: '#f7e7e3', fg: '#a24a3a' },
+  cancelada:    { bg: '#eee7da', fg: '#808a74' },
+};
+const prioSage = {
+  baixa:   { bg: '#eee7da', fg: '#808a74' },
+  media:   { bg: '#e2ebde', fg: '#566450' },
+  alta:    { bg: '#f6efdd', fg: '#8a6a2e' },
+  urgente: { bg: '#f7e7e3', fg: '#a24a3a' },
+};
+
 export default function Tarefas() {
   const [tarefas, setTarefas] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  const [obrigacoes, setObrigacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState(null);
@@ -72,7 +89,9 @@ export default function Tarefas() {
     descricao: '',
     empresa_id: '',
     setor_id: '',
-    responsavel_id: '',
+    obrigacao_id: '',
+    responsavel_ids: [],
+    supervisor_id: '',
     prioridade: 'media',
     data_prazo: '',
     data_vencimento: '',
@@ -86,16 +105,18 @@ export default function Tarefas() {
 
   const loadData = async () => {
     try {
-      const [tarefasRes, empresasRes, setoresRes, usuariosRes] = await Promise.all([
+      const [tarefasRes, empresasRes, setoresRes, usuariosRes, obrigacoesRes] = await Promise.all([
         tarefasAPI.list(),
         empresasAPI.list(),
         setoresAPI.list(),
-        usuariosAPI.list()
+        usuariosAPI.list(),
+        obrigacoesAPI.list()
       ]);
       setTarefas(tarefasRes.data);
       setEmpresas(empresasRes.data);
       setSetores(setoresRes.data);
       setUsuarios(usuariosRes.data);
+      setObrigacoes(obrigacoesRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -116,7 +137,9 @@ export default function Tarefas() {
         ...formData,
         empresa_id: parseInt(formData.empresa_id),
         setor_id: formData.setor_id ? parseInt(formData.setor_id) : null,
-        responsavel_id: formData.responsavel_id ? parseInt(formData.responsavel_id) : null,
+        obrigacao_id: formData.obrigacao_id ? parseInt(formData.obrigacao_id) : null,
+        responsavel_ids: (formData.responsavel_ids || []).map(Number),
+        supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : null,
         data_prazo: new Date(formData.data_prazo).toISOString(),
         data_vencimento: formData.data_vencimento ? new Date(formData.data_vencimento).toISOString() : null,
         gera_multa: !!formData.gera_multa
@@ -143,9 +166,11 @@ export default function Tarefas() {
       descricao: tarefa.descricao || '',
       empresa_id: tarefa.empresa_id,
       setor_id: tarefa.setor_id || '',
-      responsavel_id: tarefa.responsavel_id || '',
+      obrigacao_id: tarefa.obrigacao_id || '',
+      responsavel_ids: (tarefa.responsaveis || []).map((r) => r.id),
+      supervisor_id: tarefa.supervisor?.id || '',
       prioridade: tarefa.prioridade,
-      data_prazo: format(new Date(tarefa.data_prazo), "yyyy-MM-dd'T'HH:mm"),
+      data_prazo: tarefa.data_prazo ? format(new Date(tarefa.data_prazo), "yyyy-MM-dd'T'HH:mm") : '',
       data_vencimento: tarefa.data_vencimento ? format(new Date(tarefa.data_vencimento), "yyyy-MM-dd'T'HH:mm") : '',
       gera_multa: !!tarefa.gera_multa,
       observacoes: tarefa.observacoes || ''
@@ -179,13 +204,28 @@ export default function Tarefas() {
       descricao: '',
       empresa_id: '',
       setor_id: '',
-      responsavel_id: '',
+      obrigacao_id: '',
+      responsavel_ids: [],
+      supervisor_id: '',
       prioridade: 'media',
       data_prazo: '',
       data_vencimento: '',
       gera_multa: false,
       observacoes: ''
     });
+  };
+
+  // Ao escolher uma obrigação, puxa setor/responsável/supervisor dela.
+  const aoEscolherObrigacao = (id) => {
+    const o = obrigacoes.find((x) => String(x.id) === String(id));
+    setFormData((f) => ({
+      ...f,
+      obrigacao_id: id,
+      titulo: f.titulo || (o?.nome ?? ''),
+      setor_id: o?.setor_id || f.setor_id,
+      responsavel_ids: o?.responsavel_id ? [o.responsavel_id] : f.responsavel_ids,
+      supervisor_id: o?.supervisor_id || f.supervisor_id,
+    }));
   };
 
   const handleCopiar = async () => {
@@ -270,105 +310,71 @@ export default function Tarefas() {
         </select>
       </div>
 
-      <div className="card">
-        {filteredTarefas.length === 0 ? (
-          <div className="text-center py-12">
-            <ListTodo size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">Nenhuma tarefa encontrada</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredTarefas.map((tarefa) => {
-              const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
-              const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
-
-              return (
-                <div
-                  key={tarefa.id}
-                  className={`p-4 rounded-lg border ${
-                    atrasada ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        {atrasada && <AlertTriangle size={16} className="text-red-500" />}
-                        <h3 className="font-semibold text-gray-800">{tarefa.titulo}</h3>
-                      </div>
-
-                      {tarefa.descricao && (
-                        <p className="text-sm text-gray-600 mb-2">{tarefa.descricao}</p>
-                      )}
-
-                      <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                        <span>Empresa: {getEmpresaNome(tarefa.empresa_id)}</span>
-                        {tarefa.setor_id && <span>• Setor: {getSetorNome(tarefa.setor_id)}</span>}
-                        {tarefa.responsavel_id && <span>• Responsável: {getUsuarioNome(tarefa.responsavel_id)}</span>}
-                      </div>
-
-                      <div className="flex items-center gap-4 mt-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${statusColors[tarefa.status]}`}>
-                          {statusLabels[tarefa.status]}
-                        </span>
-                        <span className={`px-2 py-1 rounded-full text-xs ${prioridadeColors[tarefa.prioridade]}`}>
-                          {prioridadeLabels[tarefa.prioridade]}
-                        </span>
-                        <span className="flex items-center gap-1 text-gray-500">
-                          <Clock size={14} />
-                          Prazo: {prazoDate ? format(prazoDate, "dd/MM/yyyy HH:mm", { locale: ptBR }) : 'sem prazo'}
-                        </span>
-                        {tarefa.data_vencimento && (
-                          <span className="text-gray-500">
-                            • Venc.: {format(new Date(tarefa.data_vencimento), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                        )}
-                        {tarefa.gera_multa && (
-                          <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-700">⚠️ Gera multa</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {tarefa.status !== 'concluida' && tarefa.status !== 'cancelada' && (
-                        <select
-                          value={tarefa.status}
-                          onChange={(e) => handleStatusChange(tarefa, e.target.value)}
-                          className="text-sm border border-gray-300 rounded-lg px-2 py-1"
-                        >
-                          <option value="pendente">Pendente</option>
-                          <option value="em_andamento">Em Andamento</option>
-                          <option value="concluida">Concluída</option>
-                        </select>
-                      )}
-                      {tarefa.status !== 'concluida' && tarefa.status !== 'cancelada' && (
-                        <button
-                          onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }}
-                          title="Transferir responsável"
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                        >
-                          <ArrowRightLeft size={16} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEdit(tarefa)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(tarefa.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
+      {filteredTarefas.length === 0 ? (
+        <div className="card text-center py-12">
+          <ListTodo size={48} className="mx-auto text-gray-300 mb-4" />
+          <p className="text-gray-500">Nenhuma tarefa encontrada</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {filteredTarefas.map((tarefa) => {
+            const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
+            const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+            const st = statusSage[tarefa.status] || statusSage.pendente;
+            const pr = prioSage[tarefa.prioridade] || prioSage.media;
+            const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+            return (
+              <div key={tarefa.id} className="rounded-lg border p-2.5 flex flex-col"
+                style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border }}>
+                <div className="flex items-start gap-1 mb-1">
+                  {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
+                  <h3 className="text-[13px] font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
+                    {tarefa.titulo}
+                  </h3>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div className="text-[11px] leading-snug space-y-0.5 mb-1.5" style={{ color: SAGE.txt3 }}>
+                  <p className="truncate" title={getEmpresaNome(tarefa.empresa_id)}>{getEmpresaNome(tarefa.empresa_id)}</p>
+                  {tarefa.responsaveis?.length > 0 && (
+                    <p className="truncate" title={tarefa.responsaveis.map(r => r.nome).join(', ')}>
+                      Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
+                    </p>
+                  )}
+                  <p className="flex items-center gap-1">
+                    <Clock size={11} />
+                    {prazoDate ? format(prazoDate, "dd/MM/yy", { locale: ptBR }) : 'sem prazo'}
+                    {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
+                </div>
+                <div className="mt-auto flex items-center gap-1">
+                  {ativa && (
+                    <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
+                      className="flex-1 text-[11px] border rounded px-1 py-1 bg-white" style={{ borderColor: SAGE.border, color: '#55614e' }}>
+                      <option value="pendente">Pendente</option>
+                      <option value="em_andamento">Em Andamento</option>
+                      <option value="concluida">Concluída</option>
+                    </select>
+                  )}
+                  {ativa && (
+                    <button onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }} title="Transferir" className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: '#8a6a2e' }}>
+                      <ArrowRightLeft size={14} />
+                    </button>
+                  )}
+                  <button onClick={() => handleEdit(tarefa)} title="Editar" className="p-1 rounded hover:bg-[#dcefed]" style={{ color: '#3a7d76' }}>
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleDelete(tarefa.id)} title="Cancelar" className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showCopy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -516,16 +522,52 @@ export default function Tarefas() {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Obrigação (opcional)</label>
+                <select
+                  value={formData.obrigacao_id}
+                  onChange={(e) => aoEscolherObrigacao(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Nenhuma (tarefa avulsa)</option>
+                  {obrigacoes.map(o => (
+                    <option key={o.id} value={o.id}>{o.nome}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Vincula à obrigação e puxa setor/responsáveis/supervisor dela.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>
+                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {usuarios.filter(u => !u.bloqueado && (u.tipo !== 'cliente' || String(u.empresa_id) === String(formData.empresa_id))).map(u => (
+                    <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.responsavel_ids.includes(u.id)}
+                        onChange={() => setFormData(f => ({
+                          ...f,
+                          responsavel_ids: f.responsavel_ids.includes(u.id)
+                            ? f.responsavel_ids.filter(x => x !== u.id)
+                            : [...f.responsavel_ids, u.id],
+                        }))}
+                        className="h-4 w-4"
+                      />
+                      {u.nome}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{formData.responsavel_ids.length} selecionado(s)</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Responsável</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor</label>
                   <select
-                    value={formData.responsavel_id}
-                    onChange={(e) => setFormData({ ...formData, responsavel_id: e.target.value })}
+                    value={formData.supervisor_id}
+                    onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
                     className="input-field"
                   >
-                    <option value="">Selecione</option>
-                    {usuarios.map(u => (
+                    <option value="">Sem supervisor</option>
+                    {usuarios.filter(u => u.tipo !== 'cliente' && !u.bloqueado).map(u => (
                       <option key={u.id} value={u.id}>{u.nome}</option>
                     ))}
                   </select>
