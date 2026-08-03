@@ -12,6 +12,7 @@ import Notificacoes from './pages/Notificacoes';
 import Grupos from './pages/Grupos';
 import Relatorios from './pages/Relatorios';
 import EValidador from './pages/EValidador';
+import Modelos from './pages/Modelos';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="grupos" element={<Grupos />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="evalidador" element={<EValidador />} />
+        <Route path="modelos" element={<Modelos />} />
       </Route>
     </Routes>
   );

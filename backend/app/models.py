@@ -198,3 +198,29 @@ class Configuracao(Base):
 
     chave = Column(String(60), primary_key=True)
     valor = Column(Text)
+
+
+class Modelo(Base):
+    """Repositório de documentos-modelo do e-validador.
+    Você sobe um comprovante/recibo/relatório, o sistema lê e guarda a
+    'impressão digital' (texto + campos identificados). Cada modelo casa com
+    uma Empresa (via CNPJ) e uma Obrigação (via identificador), e alimenta o
+    reconhecimento automático do e-validador. Só a leitura é guardada — não o
+    arquivo original (sem necessidade de volume em produção)."""
+    __tablename__ = "modelos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome_arquivo = Column(String(200))
+    cnpj = Column(String(14))                       # só dígitos (extraído do texto)
+    razao_social_extraida = Column(String(200))     # nome lido no documento
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)
+    obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=True)
+    tipo_documento = Column(String(30))             # recibo_entrega|comprovante_pagamento|relatorio|outro
+    identificador = Column(String(120))             # trecho distintivo escolhido
+    competencia_exemplo = Column(String(7))         # ex.: "05/2026"
+    protocolo_exemplo = Column(String(120))
+    texto_extraido = Column(Text)                   # fingerprint (texto lido)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    empresa = relationship("Empresa")
+    obrigacao = relationship("Obrigacao")

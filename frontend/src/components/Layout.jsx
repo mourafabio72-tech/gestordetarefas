@@ -7,6 +7,7 @@ import {
   FolderOpen,
   ListTodo,
   FileStack,
+  Library,
   BarChart3,
   FileCheck2,
   ShieldCheck,
@@ -33,6 +34,7 @@ const menuGroups = [
     label: 'Cadastro',
     items: [
       { path: '/obrigacoes', label: 'Obrigações', icon: FileStack, roles: ['admin', 'gestor'] },
+      { path: '/modelos', label: 'Modelos', icon: Library, roles: ['admin', 'gestor'] },
       { path: '/setores', label: 'Setores', icon: FolderOpen, roles: ['admin', 'gestor'] },
       { path: '/empresas', label: 'Empresas', icon: Building2, roles: ['admin', 'gestor'] },
       { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['admin', 'gestor'] },

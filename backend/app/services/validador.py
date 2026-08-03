@@ -88,6 +88,45 @@ def extrair_dados(texto: str) -> dict:
     return d
 
 
+def extrair_razao_social(texto: str) -> str:
+    """Tenta ler o nome da empresa no documento (por rótulo ou linha vizinha ao CNPJ)."""
+    # 1) por rótulo explícito
+    m = re.search(
+        r"(?:Raz[aã]o\s+Social|Nome\s+Empresarial|Contribuinte|Nome/Nome\s+Empresarial|Empresa)\s*:?\s*"
+        r"([^\n]{4,120})",
+        texto, re.IGNORECASE)
+    if m:
+        nome = m.group(1).strip(" .:-\t")
+        # corta se vier "CNPJ:" grudado na mesma linha
+        nome = re.split(r"\s+CNPJ", nome, flags=re.IGNORECASE)[0].strip()
+        if 4 <= len(nome) <= 120:
+            return nome
+    # 2) linha imediatamente antes/depois do CNPJ, se parecer nome de empresa
+    linhas = texto.split("\n")
+    for i, l in enumerate(linhas):
+        if re.search(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", l):
+            for j in (i, i - 1, i + 1):
+                if 0 <= j < len(linhas):
+                    cand = re.sub(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", "", linhas[j]).strip(" .:-\t")
+                    if 4 <= len(cand) <= 120 and re.search(r"[A-Za-zÀ-ÿ]{4}", cand) and "R$" not in cand:
+                        return cand
+            break
+    return None
+
+
+def classificar_tipo(texto: str) -> str:
+    """Classifica grosseiramente o documento: recibo de entrega, comprovante de
+    pagamento, relatório — para organização do repositório."""
+    t = _norm(texto)
+    if re.search(r"comprovante de pagamento|comprovante de arrecada|darf|documento de arrecada|autenticacao banc", t):
+        return "comprovante_pagamento"
+    if re.search(r"recibo de entrega|comprovante de entrega|recibo de transmiss|protocolo de entrega|recibo|transmiss", t):
+        return "recibo_entrega"
+    if re.search(r"relatorio|demonstrativo|balancete|extrato", t):
+        return "relatorio"
+    return "outro"
+
+
 def _casa_chave(chave: str, texto_norm: str) -> bool:
     """Match por limite de palavra (evita substring, ex.: 'DAS' em 'apuração DAS')."""
     k = _norm(chave)
@@ -149,6 +188,97 @@ def identificar_obrigacao(db: Session, texto: str):
         if any(_casa_chave(k, alvo) for k in chaves):
             candidatas.append(o)
     return candidatas
+
+
+def casar_empresa_por_cnpj(db: Session, cnpj: str):
+    """Empresa cadastrada cujo CNPJ (só dígitos) bate com o informado."""
+    if not cnpj:
+        return None
+    for e in db.query(Empresa).filter(Empresa.cnpj != None).all():
+        if _so_digitos(e.cnpj) == _so_digitos(cnpj):
+            return e
+    return None
+
+
+def analisar_para_repositorio(db: Session, nome: str, conteudo: bytes) -> dict:
+    """Lê um documento-modelo e devolve tudo que o repositório precisa mostrar
+    para revisão antes de salvar: empresa (casada por CNPJ), tipo, candidatos a
+    identificador e a obrigação já reconhecida (se algum identificador atual casar)."""
+    texto = ler_arquivo(nome, conteudo)
+    dados = extrair_dados(texto)
+    empresa = casar_empresa_por_cnpj(db, dados["cnpj"])
+    razao = extrair_razao_social(texto)
+
+    # colisão dos candidatos com identificadores já existentes
+    existentes = []
+    for o in db.query(Obrigacao).all():
+        for k in (o.identificadores or "").split(","):
+            k = k.strip()
+            if k:
+                existentes.append((o.nome, _norm(k)))
+    candidatos = []
+    for cnd in candidatos_identificador(texto):
+        nc = _norm(cnd)
+        colide = sorted({nome for (nome, ek) in existentes if ek and (ek in nc or nc in ek)})
+        candidatos.append({"texto": cnd, "colide_com": colide})
+
+    # obrigação sugerida: se algum identificador atual já casa com este texto
+    sugeridas = identificar_obrigacao(db, texto)
+    obrig_sugerida = sugeridas[0] if len(sugeridas) == 1 else None
+
+    return {
+        "nome_arquivo": nome,
+        "cnpj": dados["cnpj"],
+        "razao_social_extraida": razao,
+        "empresa_id": empresa.id if empresa else None,
+        "empresa_nome": empresa.razao_social if empresa else None,
+        "tipo_documento": classificar_tipo(texto),
+        "competencia_exemplo": dados["competencia"],
+        "protocolo_exemplo": dados["protocolo"],
+        "candidatos": candidatos,
+        "obrigacao_sugerida_id": obrig_sugerida.id if obrig_sugerida else None,
+        "obrigacao_sugerida_nome": obrig_sugerida.nome if obrig_sugerida else None,
+        "texto_extraido": texto,
+    }
+
+
+def _treinar_obrigacao(db: Session, obrigacao_id: int, identificador: str) -> bool:
+    """Acrescenta o identificador do modelo à lista da obrigação (dedup por forma
+    normalizada). É assim que o modelo 'treina' o e-validador."""
+    ident = (identificador or "").strip()
+    if not obrigacao_id or not ident:
+        return False
+    o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
+    if not o:
+        return False
+    atuais = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
+    if any(_norm(k) == _norm(ident) for k in atuais):
+        return False
+    atuais.append(ident)
+    o.identificadores = ",".join(atuais)
+    return True
+
+
+def salvar_modelo(db: Session, dados: dict) -> "object":
+    """Grava um Modelo no repositório e treina a obrigação vinculada (se houver)."""
+    from ..models import Modelo
+    m = Modelo(
+        nome_arquivo=dados.get("nome_arquivo"),
+        cnpj=_so_digitos(dados.get("cnpj") or "") or None,
+        razao_social_extraida=dados.get("razao_social_extraida"),
+        empresa_id=dados.get("empresa_id"),
+        obrigacao_id=dados.get("obrigacao_id"),
+        tipo_documento=dados.get("tipo_documento") or "outro",
+        identificador=(dados.get("identificador") or "").strip() or None,
+        competencia_exemplo=dados.get("competencia_exemplo"),
+        protocolo_exemplo=dados.get("protocolo_exemplo"),
+        texto_extraido=dados.get("texto_extraido"),
+    )
+    db.add(m)
+    _treinar_obrigacao(db, m.obrigacao_id, m.identificador)
+    db.commit()
+    db.refresh(m)
+    return m
 
 
 def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:

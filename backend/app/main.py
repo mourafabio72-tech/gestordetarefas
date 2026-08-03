@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao
+from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos
 from .services.scheduler import start_scheduler
 from .init_db import migrate, seed_admin, ensure_admin_grupo
 
@@ -35,6 +35,7 @@ app.include_router(obrigacoes.router, prefix="/api")
 app.include_router(evalidador.router, prefix="/api")
 app.include_router(substituicoes.router, prefix="/api")
 app.include_router(configuracao.router, prefix="/api")
+app.include_router(modelos.router, prefix="/api")
 
 
 @app.on_event("startup")

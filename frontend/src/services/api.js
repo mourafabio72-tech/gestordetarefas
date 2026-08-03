@@ -93,6 +93,17 @@ export const evalidadorAPI = {
   },
 };
 
+export const modelosAPI = {
+  list: () => api.get('/modelos'),
+  analisar: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/modelos/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  create: (data) => api.post('/modelos', data),
+  delete: (id) => api.delete(`/modelos/${id}`),
+};
+
 export const substituicoesAPI = {
   list: () => api.get('/substituicoes'),
   create: (data) => api.post('/substituicoes', data),
