@@ -49,6 +49,7 @@ export default function Obrigacoes() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [buscaEmp, setBuscaEmp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
@@ -437,20 +438,46 @@ export default function Obrigacoes() {
 
               <div className="border-t border-gray-100 pt-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-1">Empresas vinculadas <span className="text-gray-400 font-normal">(exceções/inclusões diretas)</span></h3>
-                <p className="text-xs text-gray-400 mb-2">{form.empresa_ids.length} selecionada(s)</p>
-                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1">
-                  {empresas.map((e) => (
-                    <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox"
-                        checked={form.empresa_ids.includes(e.id)}
-                        onChange={() => set('empresa_ids', form.empresa_ids.includes(e.id)
-                          ? form.empresa_ids.filter((x) => x !== e.id)
-                          : [...form.empresa_ids, e.id])}
-                        className="h-4 w-4" />
-                      {e.razao_social}
-                    </label>
-                  ))}
-                </div>
+                {(() => {
+                  const termo = buscaEmp.trim().toLowerCase();
+                  const filtradas = termo
+                    ? empresas.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
+                    : empresas;
+                  const idsFiltrados = filtradas.map((e) => e.id);
+                  const marcarTodas = () => set('empresa_ids', [...new Set([...form.empresa_ids, ...idsFiltrados])]);
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-xs text-gray-400 flex-1">{form.empresa_ids.length} selecionada(s)</p>
+                        <button type="button" onClick={marcarTodas}
+                          className="text-xs text-primary-600 hover:underline">
+                          {termo ? 'Selecionar filtradas' : 'Selecionar todas'}
+                        </button>
+                        <span className="text-gray-300">·</span>
+                        <button type="button" onClick={() => set('empresa_ids', [])}
+                          className="text-xs text-gray-500 hover:underline">Limpar</button>
+                      </div>
+                      <input type="text" value={buscaEmp} onChange={(e) => setBuscaEmp(e.target.value)}
+                        placeholder="Buscar empresa ou grupo…" className="input-field mb-2 text-sm" />
+                      <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1">
+                        {filtradas.length === 0 ? (
+                          <p className="text-xs text-gray-400">Nenhuma empresa encontrada.</p>
+                        ) : filtradas.map((e) => (
+                          <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox"
+                              checked={form.empresa_ids.includes(e.id)}
+                              onChange={() => set('empresa_ids', form.empresa_ids.includes(e.id)
+                                ? form.empresa_ids.filter((x) => x !== e.id)
+                                : [...form.empresa_ids, e.id])}
+                              className="h-4 w-4" />
+                            {e.razao_social}
+                            {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-4">
