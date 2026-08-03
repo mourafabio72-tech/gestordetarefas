@@ -93,6 +93,7 @@ class EmpresaBase(BaseModel):
     endereco: Optional[str] = None
     regime_tributario: Optional[str] = "indefinido"
     segmento: Optional[str] = None
+    grupo: Optional[str] = None
     responsavel_id: Optional[int] = None
     supervisor_id: Optional[int] = None
 

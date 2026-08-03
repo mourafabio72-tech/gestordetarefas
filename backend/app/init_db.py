@@ -31,6 +31,7 @@ def migrate():
         ("usuario_bloqueado", "ALTER TABLE usuarios ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
         # setor virou interno/global: relaxa o NOT NULL antigo em produção
         ("setor_empresa_nullable", "ALTER TABLE setores ALTER COLUMN empresa_id DROP NOT NULL"),
+        ("empresa_grupo", "ALTER TABLE empresas ADD COLUMN grupo VARCHAR(80)"),
     ]
 
     for col_name, sql in migrations:

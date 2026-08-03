@@ -39,6 +39,20 @@ export const empresasAPI = {
   update: (id, data) => api.put(`/empresas/${id}`, data),
   delete: (id) => api.delete(`/empresas/${id}`),
   bloquear: (id, bloqueado) => api.post(`/empresas/${id}/bloquear`, { bloqueado }),
+  importar: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/empresas/importar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  baixarModelo: async () => {
+    const { data } = await api.get('/empresas/modelo-importacao', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modelo_importacao_empresas.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 export const setoresAPI = {

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { empresasAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, Building2, Lock, Unlock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
 
 const EMPRESA_VAZIA = {
   razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
-  endereco: '', regime_tributario: 'indefinido', segmento: '',
+  endereco: '', regime_tributario: 'indefinido', segmento: '', grupo: '',
   responsavel_id: '', supervisor_id: '',
 };
 
@@ -34,6 +34,24 @@ export default function Empresas() {
   const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState(null);
   const [formData, setFormData] = useState(EMPRESA_VAZIA);
+  const [importResult, setImportResult] = useState(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';  // permite reimportar o mesmo arquivo
+    if (!file) return;
+    setImporting(true); setImportResult(null);
+    try {
+      const { data } = await empresasAPI.importar(file);
+      setImportResult(data);
+      loadEmpresas();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao importar a planilha.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   useEffect(() => {
     loadEmpresas();
@@ -85,6 +103,7 @@ export default function Empresas() {
       endereco: empresa.endereco || '',
       regime_tributario: empresa.regime_tributario || 'indefinido',
       segmento: empresa.segmento || '',
+      grupo: empresa.grupo || '',
       responsavel_id: empresa.responsavel_id || '',
       supervisor_id: empresa.supervisor_id || '',
     });
@@ -133,18 +152,53 @@ export default function Empresas() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Empresas</h1>
-        <button
-          onClick={() => {
-            setEditingEmpresa(null);
-            setFormData(EMPRESA_VAZIA);
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Nova Empresa
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => empresasAPI.baixarModelo()} className="btn-secondary flex items-center gap-2">
+            <Download size={16} />
+            Baixar modelo
+          </button>
+          <label className="btn-secondary flex items-center gap-2 cursor-pointer">
+            <Upload size={16} />
+            {importing ? 'Importando…' : 'Importar Excel'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+          <button
+            onClick={() => {
+              setEditingEmpresa(null);
+              setFormData(EMPRESA_VAZIA);
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Nova Empresa
+          </button>
+        </div>
       </div>
+
+      {importResult && (
+        <div className="card mb-4">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">Criadas: {importResult.resumo?.criadas ?? 0}</span>
+              <span className="px-3 py-1 rounded-full text-sm bg-sky-100 text-sky-700">Atualizadas: {importResult.resumo?.atualizadas ?? 0}</span>
+              {importResult.resumo?.erros > 0 && (
+                <span className="px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">Erros: {importResult.resumo.erros}</span>
+              )}
+              <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">Total: {importResult.resumo?.total ?? 0}</span>
+            </div>
+            <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          </div>
+          {importResult.erro && <p className="text-sm text-red-600 mt-2">{importResult.erro}</p>}
+          {importResult.detalhes?.some((d) => d.status === 'erro') && (
+            <ul className="text-xs text-red-600 mt-3 space-y-0.5">
+              {importResult.detalhes.filter((d) => d.status === 'erro').map((d, i) => (
+                <li key={i}>{d.linha}: {d.detalhe}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="card">
         {empresas.length === 0 ? (
@@ -178,7 +232,7 @@ export default function Empresas() {
                     </td>
                     <td className="py-3 px-4">{empresa.cnpj || '-'}</td>
                     <td className="py-3 px-4">{labelDe(REGIMES, empresa.regime_tributario)}</td>
-                    <td className="py-3 px-4">{empresa.segmento ? labelDe(SEGMENTOS, empresa.segmento) : '-'}</td>
+                    <td className="py-3 px-4">{empresa.grupo || '-'}</td>
                     <td className="py-3 px-4">{empresa.telefone || '-'}</td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
@@ -282,6 +336,16 @@ export default function Empresas() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de empresas</label>
+                  <input
+                    type="text"
+                    value={formData.grupo}
+                    onChange={(e) => setFormData({ ...formData, grupo: e.target.value })}
+                    className="input-field"
+                    placeholder="ex.: Markbuilding"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Segmento</label>
                   <select
                     value={formData.segmento}
                     onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
@@ -6,12 +7,36 @@ from ..database import get_db
 from ..models import Empresa, Usuario
 from ..schemas import EmpresaCreate, EmpresaResponse
 from ..auth import get_current_user, require_perm
+from ..services import importador_empresas as imp
 
 router = APIRouter(prefix="/empresas", tags=["empresas"])
 
 
 class BloquearRequest(BaseModel):
     bloqueado: bool = True
+
+
+@router.get("/modelo-importacao")
+def modelo_importacao(current_user: Usuario = Depends(require_perm("empresas", "editar"))):
+    conteudo = imp.gerar_modelo()
+    return Response(
+        content=conteudo,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modelo_importacao_empresas.xlsx"},
+    )
+
+
+@router.post("/importar")
+async def importar_empresas(
+    arquivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("empresas", "editar")),
+):
+    conteudo = await arquivo.read()
+    try:
+        return imp.importar(db, arquivo.filename, conteudo)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
 
 @router.get("", response_model=List[EmpresaResponse])
 def list_empresas(
