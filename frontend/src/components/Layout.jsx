@@ -17,7 +17,9 @@ import {
   LogOut,
   LayoutGrid,
   Menu,
-  X
+  X,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
@@ -57,7 +59,17 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recolhidos, setRecolhidos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('menuRecolhidos') || '{}'); }
+    catch { return {}; }
+  });
   const grupo = user?.grupo || 'usuario';
+
+  const toggleGrupo = (label) => setRecolhidos((r) => {
+    const novo = { ...r, [label]: !r[label] };
+    localStorage.setItem('menuRecolhidos', JSON.stringify(novo));
+    return novo;
+  });
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -73,16 +85,21 @@ export default function Layout() {
           </button>
         </div>
 
-        <nav className="p-4 flex-1 overflow-y-auto">
+        <nav className="px-3 py-3 flex-1 overflow-y-auto">
           {menuGroups.map((group) => {
             const visibleItems = group.items.filter((item) => item.roles.includes(grupo));
             if (visibleItems.length === 0) return null;
+            const recolhido = recolhidos[group.label];
             return (
-              <div key={group.label} className="mb-4">
-                <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-wider text-primary-400">
-                  {group.label}
-                </p>
-                {visibleItems.map((item) => {
+              <div key={group.label} className="mb-2">
+                <button
+                  onClick={() => toggleGrupo(group.label)}
+                  className="w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-400 hover:text-primary-200 transition-colors"
+                >
+                  {recolhido ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                  <span>{group.label}</span>
+                </button>
+                {!recolhido && visibleItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
                   return (
@@ -90,13 +107,13 @@ export default function Layout() {
                       key={item.path}
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg mb-0.5 text-sm transition-colors ${
                         isActive
                           ? 'bg-primary-600 text-white'
                           : 'text-primary-200 hover:bg-primary-700'
                       }`}
                     >
-                      <Icon size={20} />
+                      <Icon size={16} />
                       <span>{item.label}</span>
                     </Link>
                   );
