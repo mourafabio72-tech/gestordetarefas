@@ -13,6 +13,8 @@ const REGIMES_COPY = [
   { value: 'mei', label: 'MEI' },
   { value: 'simples_nacional', label: 'Simples Nacional' },
   { value: 'terceiro_setor', label: 'Terceiro Setor' },
+  { value: 'imune', label: 'Imune' },
+  { value: 'isento', label: 'Isento' },
 ];
 const SEGMENTOS_COPY = [
   { value: '', label: 'Todos os grupos' },
@@ -20,6 +22,9 @@ const SEGMENTOS_COPY = [
   { value: 'servico', label: 'Serviço' },
   { value: 'comercio_servico', label: 'Comércio & Serviço' },
   { value: 'industria', label: 'Indústria' },
+  { value: 'holding', label: 'Holding' },
+  { value: 'imune', label: 'Imune' },
+  { value: 'igreja', label: 'Igreja' },
 ];
 
 const statusColors = {

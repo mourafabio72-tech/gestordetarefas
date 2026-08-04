@@ -13,12 +13,17 @@ const REGIMES = [
   ['simples_nacional', 'Simples Nacional'],
   ['mei', 'MEI'],
   ['terceiro_setor', 'Terceiro Setor'],
+  ['imune', 'Imune'],
+  ['isento', 'Isento'],
 ];
 const SEGMENTOS = [
   ['comercio', 'Comércio'],
   ['industria', 'Indústria'],
   ['servico', 'Serviço'],
-  ['terceiro_setor', 'Terceiro Setor'],
+  ['comercio_servico', 'Comércio & Serviço'],
+  ['holding', 'Holding'],
+  ['imune', 'Imune'],
+  ['igreja', 'Igreja'],
 ];
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 

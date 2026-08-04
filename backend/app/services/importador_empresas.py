@@ -37,13 +37,18 @@ REGIMES = {
     "presumido": "lucro_presumido", "lucro presumido": "lucro_presumido", "lp": "lucro_presumido",
     "real": "lucro_real", "lucro real": "lucro_real", "lr": "lucro_real",
     "mei": "mei",
-    "terceiro setor": "terceiro_setor", "imune": "terceiro_setor", "isenta": "terceiro_setor",
+    "terceiro setor": "terceiro_setor",
+    "imune": "imune",
+    "isento": "isento", "isenta": "isento",
 }
 
 SEGMENTOS = {
     "comercio": "comercio", "servico": "servico", "servicos": "servico",
     "comercio e servico": "comercio_servico", "comercio servico": "comercio_servico",
     "industria": "industria",
+    "holding": "holding",
+    "imune": "imune",
+    "igreja": "igreja",
 }
 
 

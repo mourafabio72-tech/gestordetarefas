@@ -15,6 +15,8 @@ const REGIMES = [
   { value: 'mei', label: 'MEI' },
   { value: 'simples_nacional', label: 'Simples Nacional' },
   { value: 'terceiro_setor', label: 'Terceiro Setor' },
+  { value: 'imune', label: 'Imune' },
+  { value: 'isento', label: 'Isento' },
 ];
 
 const SEGMENTOS = [
@@ -23,6 +25,9 @@ const SEGMENTOS = [
   { value: 'servico', label: 'Serviço' },
   { value: 'comercio_servico', label: 'Comércio & Serviço' },
   { value: 'industria', label: 'Indústria' },
+  { value: 'holding', label: 'Holding' },
+  { value: 'imune', label: 'Imune' },
+  { value: 'igreja', label: 'Igreja' },
 ];
 
 const labelDe = (lista, val) => lista.find((o) => o.value === val)?.label || '-';
@@ -267,14 +272,14 @@ export default function Empresas() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">
                 {editingEmpresa ? 'Editar Empresa' : 'Nova Empresa'}
               </h2>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-3">
-              <div>
+            <form onSubmit={handleSubmit} className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
                 <input
                   type="text"
@@ -321,72 +326,68 @@ export default function Empresas() {
                   className="input-field"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Regime tributário</label>
-                  <select
-                    value={formData.regime_tributario}
-                    onChange={(e) => setFormData({ ...formData, regime_tributario: e.target.value })}
-                    className="input-field"
-                  >
-                    {REGIMES.map((r) => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de empresas</label>
-                  <input
-                    type="text"
-                    value={formData.grupo}
-                    onChange={(e) => setFormData({ ...formData, grupo: e.target.value })}
-                    className="input-field"
-                    placeholder="ex.: Markbuilding"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Segmento</label>
-                  <select
-                    value={formData.segmento}
-                    onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}
-                    className="input-field"
-                  >
-                    {SEGMENTOS.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
-                  <select
-                    value={formData.responsavel_id}
-                    onChange={(e) => setFormData({ ...formData, responsavel_id: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">—</option>
-                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
-                      <option key={u.id} value={u.id}>{u.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
-                  <select
-                    value={formData.supervisor_id}
-                    onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">—</option>
-                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
-                      <option key={u.id} value={u.id}>{u.nome}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 -mt-2">As tarefas geradas para este cliente nascem com este responsável e supervisor.</p>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Regime tributário</label>
+                <select
+                  value={formData.regime_tributario}
+                  onChange={(e) => setFormData({ ...formData, regime_tributario: e.target.value })}
+                  className="input-field"
+                >
+                  {REGIMES.map((r) => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Segmento</label>
+                <select
+                  value={formData.segmento}
+                  onChange={(e) => setFormData({ ...formData, segmento: e.target.value })}
+                  className="input-field"
+                >
+                  {SEGMENTOS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de empresas</label>
+                <input
+                  type="text"
+                  value={formData.grupo}
+                  onChange={(e) => setFormData({ ...formData, grupo: e.target.value })}
+                  className="input-field"
+                  placeholder="ex.: Markbuilding"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
+                <select
+                  value={formData.responsavel_id}
+                  onChange={(e) => setFormData({ ...formData, responsavel_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">—</option>
+                  {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
+                    <option key={u.id} value={u.id}>{u.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
+                <select
+                  value={formData.supervisor_id}
+                  onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">—</option>
+                  {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
+                    <option key={u.id} value={u.id}>{u.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 sm:col-span-2 -mt-1">As tarefas geradas para este cliente nascem com este responsável e supervisor.</p>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <textarea
                   value={formData.endereco}
@@ -395,7 +396,7 @@ export default function Empresas() {
                   rows={2}
                 />
               </div>
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2 sm:col-span-2">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                   Cancelar
                 </button>
