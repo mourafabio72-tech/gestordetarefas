@@ -32,6 +32,7 @@ def migrate():
         # setor virou interno/global: relaxa o NOT NULL antigo em produção
         ("setor_empresa_nullable", "ALTER TABLE setores ALTER COLUMN empresa_id DROP NOT NULL"),
         ("empresa_grupo", "ALTER TABLE empresas ADD COLUMN grupo VARCHAR(80)"),
+        ("tarefa_upload_token", "ALTER TABLE tarefas ADD COLUMN upload_token VARCHAR(64)"),
     ]
 
     for col_name, sql in migrations:

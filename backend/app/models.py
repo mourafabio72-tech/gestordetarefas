@@ -111,6 +111,7 @@ class Tarefa(Base):
     protocolo_entrega = Column(String(120))
     data_entrega = Column(DateTime(timezone=True))
     anexo_nome = Column(String(200))
+    upload_token = Column(String(64), unique=True, index=True)  # link público de envio do comprovante
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))

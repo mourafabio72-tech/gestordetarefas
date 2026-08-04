@@ -179,6 +179,12 @@ async def check_and_send_alerts(db: Session, slot: str = "principal") -> list:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
         message = format_task_message(tarefa, days_remaining, responsavel)
+        try:
+            from .upload import link_publico
+            link = link_publico(cfg, tarefa, db)
+            message += f"\n\n📎 Enviar o comprovante: {link}"
+        except Exception:
+            pass
         assunto = f"[Tareffas] {tarefa.titulo} — {tarefa.empresa.razao_social}"
 
         despachos = []

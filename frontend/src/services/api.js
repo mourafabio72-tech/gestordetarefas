@@ -26,6 +26,17 @@ api.interceptors.response.use(
   }
 );
 
+// instância pública (sem token, sem redirect em 401) para a página de envio do cliente
+const apiPublico = axios.create({ baseURL: '/api' });
+export const publicoAPI = {
+  contexto: (token) => apiPublico.get(`/publico/tarefa/${token}`),
+  enviar: (token, file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return apiPublico.post(`/publico/tarefa/${token}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+};
+
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   register: (data) => api.post('/auth/register', data),

@@ -13,6 +13,7 @@ import Grupos from './pages/Grupos';
 import Relatorios from './pages/Relatorios';
 import EValidador from './pages/EValidador';
 import Modelos from './pages/Modelos';
+import EnviarComprovante from './pages/EnviarComprovante';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -31,6 +32,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+      <Route path="/enviar/:token" element={<EnviarComprovante />} />
       <Route
         path="/"
         element={

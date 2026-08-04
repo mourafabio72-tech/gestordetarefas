@@ -20,6 +20,7 @@ DEFAULTS = {
     "alert_gestor_niveis": os.getenv("ALERT_GESTOR_NIVEIS", "2"),
     "horarios_principal": "09:30,17:45",
     "horarios_extra": "14:30,16:00",
+    "public_url": os.getenv("PUBLIC_URL", "https://gestordetarefas.zoaria.com.br"),
 }
 SEGREDOS = {"smtp_pass", "zap_api_key"}
 
