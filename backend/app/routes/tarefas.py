@@ -147,6 +147,20 @@ def get_dashboard_stats_por_setor(
         })
     return resultado
 
+@router.get("/{tarefa_id}/link-envio")
+def link_envio(
+    tarefa_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Link público (com token) para o cliente enviar o comprovante desta tarefa."""
+    t = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    from ..services import upload as up, config as cfgmod
+    return {"link": up.link_publico(cfgmod.carregar(db), t, db)}
+
+
 @router.get("", response_model=List[TarefaResponse])
 def list_tarefas(
     empresa_id: int = None,

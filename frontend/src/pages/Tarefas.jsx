@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2 } from 'lucide-react';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -258,6 +258,20 @@ export default function Tarefas() {
     }
   };
 
+  const handleCopiarLink = async (tarefa) => {
+    try {
+      const { data } = await tarefasAPI.linkEnvio(tarefa.id);
+      try {
+        await navigator.clipboard.writeText(data.link);
+        alert('Link de envio copiado:\n\n' + data.link);
+      } catch {
+        prompt('Copie o link de envio do comprovante:', data.link);
+      }
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao gerar o link');
+    }
+  };
+
   const handleTransfer = async () => {
     if (!transferResp) return;
     try {
@@ -390,6 +404,11 @@ export default function Tarefas() {
                       <option value="em_andamento">Em Andamento</option>
                       <option value="concluida">Concluída</option>
                     </select>
+                  )}
+                  {ativa && (
+                    <button onClick={() => handleCopiarLink(tarefa)} title="Copiar link de envio do comprovante" className="p-1 rounded hover:bg-[#e7eef6]" style={{ color: '#2f6fb0' }}>
+                      <Link2 size={14} />
+                    </button>
                   )}
                   {ativa && (
                     <button onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }} title="Transferir" className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: '#8a6a2e' }}>
