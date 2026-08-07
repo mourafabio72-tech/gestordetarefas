@@ -81,11 +81,11 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-primary-800 text-white transform transition-all duration-200 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 bg-[#2f3b2f] text-white transform transition-all duration-200 ease-in-out
         lg:relative lg:translate-x-0 flex flex-col ${colapsado ? 'lg:w-16' : ''}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex items-center justify-between border-b border-primary-700 p-4">
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
           <h1 className={`text-xl font-bold ${colapsado ? 'lg:hidden' : ''}`}>Tareffas</h1>
           {colapsado && <span className="hidden lg:block text-xl font-bold mx-auto">T</span>}
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
@@ -93,14 +93,14 @@ export default function Layout() {
           </button>
           {/* recolher/expandir barra — só desktop */}
           <button onClick={toggleColapsado}
-            className={`hidden lg:block text-primary-300 hover:text-white ${colapsado ? 'lg:hidden' : ''}`}
+            className={`hidden lg:block text-white/50 hover:text-white ${colapsado ? 'lg:hidden' : ''}`}
             title="Recolher menu">
             <ChevronLeft size={18} />
           </button>
         </div>
         {colapsado && (
           <button onClick={toggleColapsado} title="Expandir menu"
-            className="hidden lg:flex justify-center py-2 text-primary-300 hover:text-white border-b border-primary-700">
+            className="hidden lg:flex justify-center py-2 text-white/50 hover:text-white border-b border-white/10">
             <ChevronRight size={18} />
           </button>
         )}
@@ -114,12 +114,12 @@ export default function Layout() {
               <div key={group.label} className="mb-2">
                 <button
                   onClick={() => toggleGrupo(group.label)}
-                  className={`w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-400 hover:text-primary-200 transition-colors ${colapsado ? 'lg:hidden' : ''}`}
+                  className={`w-full flex items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors ${colapsado ? 'lg:hidden' : ''}`}
                 >
                   {recolhido ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
                   <span>{group.label}</span>
                 </button>
-                <div className={`mx-2 my-1 border-t border-primary-700/60 ${colapsado ? 'hidden lg:block' : 'hidden'}`} />
+                <div className={`mx-2 my-1 border-t border-white/10 ${colapsado ? 'hidden lg:block' : 'hidden'}`} />
                 <div className={`${recolhido ? 'hidden' : ''} ${colapsado ? 'lg:block' : ''}`}>
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
@@ -133,7 +133,7 @@ export default function Layout() {
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg mb-0.5 text-sm transition-colors ${
                           colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''
                         } ${
-                          isActive ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-700'
+                          isActive ? 'bg-white/[0.14] text-white' : 'text-white/70 hover:bg-white/10'
                         }`}
                       >
                         <Icon size={16} />
@@ -147,7 +147,7 @@ export default function Layout() {
           })}
         </nav>
 
-        <div className="w-full border-t border-primary-700 p-3">
+        <div className="w-full border-t border-white/10 p-3">
           <div className={`flex items-center gap-3 mb-3 px-2 ${colapsado ? 'lg:hidden' : ''}`}>
             <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shrink-0">
               {user?.nome?.charAt(0).toUpperCase()}
@@ -160,7 +160,7 @@ export default function Layout() {
           <a
             href={HUB_URL}
             title="Voltar ao Hub"
-            className={`flex items-center gap-2 px-3 py-2 mb-1 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 mb-1 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${
               colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
             <LayoutGrid size={18} />
@@ -169,7 +169,7 @@ export default function Layout() {
           <button
             onClick={logout}
             title="Sair"
-            className={`flex items-center w-full gap-2 px-3 py-2 text-primary-200 hover:bg-primary-700 rounded-lg transition-colors ${
+            className={`flex items-center w-full gap-2 px-3 py-2 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${
               colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
             <LogOut size={18} />
