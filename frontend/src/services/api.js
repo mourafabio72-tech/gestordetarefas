@@ -102,7 +102,8 @@ export const obrigacoesAPI = {
   get: (id) => api.get(`/obrigacoes/${id}`),
   create: (data) => api.post('/obrigacoes', data),
   update: (id, data) => api.put(`/obrigacoes/${id}`, data),
-  delete: (id) => api.delete(`/obrigacoes/${id}`),
+  delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
+  setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
   copiarEmpresa: (origem_empresa_id, destino_empresa_id) =>
     api.post('/obrigacoes/copiar-empresa', { origem_empresa_id, destino_empresa_id }),
   analisarModelo: (file) => {

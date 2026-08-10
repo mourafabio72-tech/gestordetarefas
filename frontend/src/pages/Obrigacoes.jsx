@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -125,9 +125,14 @@ export default function Obrigacoes() {
   };
 
   const excluir = async (o) => {
-    if (!confirm(`Desativar a obrigação "${o.nome}"?`)) return;
-    try { await obrigacoesAPI.delete(o.id); loadData(); }
-    catch { alert('Erro ao desativar'); }
+    if (!confirm(`Excluir DEFINITIVAMENTE a obrigação "${o.nome}"?\n\nRemove a obrigação e solta as tarefas já geradas. Não dá para desfazer.`)) return;
+    try { await obrigacoesAPI.delete(o.id, true); loadData(); }
+    catch { alert('Erro ao excluir'); }
+  };
+
+  const alternarStatus = async (o) => {
+    try { await obrigacoesAPI.setAtiva(o.id, !o.ativa); loadData(); }
+    catch { alert('Erro ao mudar o status'); }
   };
 
   const copiar = async () => {
@@ -174,7 +179,7 @@ export default function Obrigacoes() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Mininome</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Alvo</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Empresas</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Ativa</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
@@ -194,10 +199,14 @@ export default function Obrigacoes() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => abrirEdicao(o)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                        <button onClick={() => abrirEdicao(o)} title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => excluir(o)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                        <button onClick={() => alternarStatus(o)} title={o.ativa ? 'Inativar' : 'Ativar'}
+                          className={`p-2 rounded-lg ${o.ativa ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}>
+                          {o.ativa ? <Ban size={16} /> : <CheckCircle2 size={16} />}
+                        </button>
+                        <button onClick={() => excluir(o)} title="Excluir definitivamente" className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
                           <Trash2 size={16} />
                         </button>
                       </div>

@@ -140,13 +140,41 @@ def update_obrigacao(
 @router.delete("/{obrigacao_id}")
 def delete_obrigacao(
     obrigacao_id: int,
+    definitivo: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+):
+    """Sem flag: inativa (mantém histórico). Com `?definitivo=true`: exclui de vez
+    (desvincula empresas e solta as tarefas já geradas)."""
+    from ..models import Tarefa
+    o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
+    if not o:
+        raise HTTPException(status_code=404, detail="Obrigação não encontrada")
+    if definitivo:
+        db.query(Tarefa).filter(Tarefa.obrigacao_id == o.id).update({Tarefa.obrigacao_id: None})
+        o.empresas = []
+        db.delete(o)
+        db.commit()
+        return {"message": "Obrigação excluída"}
+    o.ativa = False
+    db.commit()
+    return {"message": "Obrigação desativada"}
+
+
+class StatusBody(BaseModel):
+    ativa: bool
+
+
+@router.post("/{obrigacao_id}/status")
+def status_obrigacao(
+    obrigacao_id: int,
+    body: StatusBody,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
 ):
     o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Obrigação não encontrada")
-    # Desativa (mantém histórico e o vínculo das tarefas já geradas).
-    o.ativa = False
+    o.ativa = body.ativa
     db.commit()
-    return {"message": "Obrigação desativada"}
+    return {"message": "Ativada" if body.ativa else "Inativada"}
