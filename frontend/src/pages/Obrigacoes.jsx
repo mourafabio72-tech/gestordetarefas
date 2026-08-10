@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -55,6 +55,8 @@ export default function Obrigacoes() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [buscaEmp, setBuscaEmp] = useState('');
+  const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false });
+  const toggleSecao = (k) => setSecoes((s) => ({ ...s, [k]: !s[k] }));
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
@@ -341,8 +343,11 @@ export default function Obrigacoes() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Recorrência e prazo</h3>
+              <div className="border-t border-gray-100 pt-3">
+                <button type="button" onClick={() => toggleSecao('recorrencia')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                  {secoes.recorrencia ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Recorrência e prazo
+                </button>
+                {secoes.recorrencia && (<div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo</label>
@@ -411,10 +416,14 @@ export default function Obrigacoes() {
                     </label>
                   </div>
                 </div>
+                </div>)}
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Público-alvo</h3>
+              <div className="border-t border-gray-100 pt-3">
+                <button type="button" onClick={() => toggleSecao('publico')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
+                  {secoes.publico ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Público-alvo
+                </button>
+                {secoes.publico && (
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Regimes <span className="text-gray-400">(vazio = todos)</span></p>
@@ -439,11 +448,14 @@ export default function Obrigacoes() {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-1">Empresas vinculadas <span className="text-gray-400 font-normal">(exceções/inclusões diretas)</span></h3>
-                {(() => {
+              <div className="border-t border-gray-100 pt-3">
+                <button type="button" onClick={() => toggleSecao('empresas')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-1">
+                  {secoes.empresas ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Empresas vinculadas <span className="text-gray-400 font-normal ml-1">(exceções/inclusões diretas)</span>
+                </button>
+                {secoes.empresas && (() => {
                   const termo = buscaEmp.trim().toLowerCase();
                   const filtradas = termo
                     ? empresas.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
