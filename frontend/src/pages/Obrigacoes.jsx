@@ -67,6 +67,18 @@ export default function Obrigacoes() {
     if (filtros.status === 'inativa' && o.ativa) return false;
     return true;
   });
+
+  const [selecionados, setSelecionados] = useState([]);
+  const toggleSel = (id) => setSelecionados((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  const idsFiltrados = obrigacoesFiltradas.map((o) => o.id);
+  const todasMarcadas = idsFiltrados.length > 0 && idsFiltrados.every((id) => selecionados.includes(id));
+  const toggleTodas = () => setSelecionados(todasMarcadas ? [] : idsFiltrados);
+  const excluirSelecionadas = async () => {
+    if (!selecionados.length) return;
+    if (!confirm(`Excluir DEFINITIVAMENTE ${selecionados.length} obrigação(ões)?\n\nRemove as obrigações e solta as tarefas já geradas. Não dá para desfazer.`)) return;
+    try { await obrigacoesAPI.excluirLote(selecionados, true); setSelecionados([]); loadData(); }
+    catch { alert('Erro ao excluir em lote'); }
+  };
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
@@ -165,6 +177,11 @@ export default function Obrigacoes() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Obrigações</h1>
         <div className="flex gap-2">
+          {selecionados.length > 0 && (
+            <button onClick={excluirSelecionadas} className="btn-danger flex items-center gap-2">
+              <Trash2 size={18} /> Excluir {selecionados.length}
+            </button>
+          )}
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
           </button>
@@ -201,6 +218,9 @@ export default function Obrigacoes() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
+                  <th className="py-3 px-4 w-8">
+                    <input type="checkbox" className="h-4 w-4" checked={todasMarcadas} onChange={toggleTodas} title="Marcar todas (filtradas)" />
+                  </th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Obrigação</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Mininome</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Alvo</th>
@@ -212,6 +232,9 @@ export default function Obrigacoes() {
               <tbody>
                 {obrigacoesFiltradas.map((o) => (
                   <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      <input type="checkbox" className="h-4 w-4" checked={selecionados.includes(o.id)} onChange={() => toggleSel(o.id)} />
+                    </td>
                     <td className="py-3 px-4 font-medium">{o.nome}</td>
                     <td className="py-3 px-4 text-gray-500">{o.mininome || '-'}</td>
                     <td className="py-3 px-4 text-xs text-gray-500">

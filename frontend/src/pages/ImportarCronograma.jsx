@@ -163,6 +163,12 @@ export default function ImportarCronograma() {
                   <AlertTriangle size={13} /> {semEmpresa} sem empresa
                 </span>
               )}
+              <select value="" title="Aplicar um setor a todas as linhas"
+                onChange={(e) => { if (e.target.value) setItens((arr) => arr.map((it) => ({ ...it, setor: e.target.value }))); e.target.value = ''; }}
+                className="input-field py-1 text-xs w-auto">
+                <option value="">Setor de todas…</option>
+                {setorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setItens(null)} className="btn-secondary">Cancelar</button>

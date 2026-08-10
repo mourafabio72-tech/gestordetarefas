@@ -161,6 +161,35 @@ def delete_obrigacao(
     return {"message": "Obrigação desativada"}
 
 
+class LoteBody(BaseModel):
+    ids: List[int]
+    definitivo: bool = True
+
+
+@router.post("/excluir-lote")
+def excluir_lote(
+    body: LoteBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+):
+    """Exclui (ou inativa) várias obrigações de uma vez."""
+    from ..models import Tarefa
+    n = 0
+    for oid in body.ids:
+        o = db.query(Obrigacao).filter(Obrigacao.id == oid).first()
+        if not o:
+            continue
+        if body.definitivo:
+            db.query(Tarefa).filter(Tarefa.obrigacao_id == o.id).update({Tarefa.obrigacao_id: None})
+            o.empresas = []
+            db.delete(o)
+        else:
+            o.ativa = False
+        n += 1
+    db.commit()
+    return {"processadas": n}
+
+
 class StatusBody(BaseModel):
     ativa: bool
 

@@ -104,6 +104,7 @@ export const obrigacoesAPI = {
   update: (id, data) => api.put(`/obrigacoes/${id}`, data),
   delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
+  excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
   copiarEmpresa: (origem_empresa_id, destino_empresa_id) =>
     api.post('/obrigacoes/copiar-empresa', { origem_empresa_id, destino_empresa_id }),
   analisarModelo: (file) => {
