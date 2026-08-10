@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from pydantic import BaseModel
@@ -8,6 +9,15 @@ from ..auth import require_perm
 from ..services import importador_cronograma as cron
 
 router = APIRouter(prefix="/cronograma", tags=["cronograma"])
+
+
+@router.get("/modelo-importacao")
+def modelo_importacao(current_user: Usuario = Depends(require_perm("obrigacoes", "editar"))):
+    return Response(
+        content=cron.gerar_modelo(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modelo_importacao_obrigacoes.xlsx"},
+    )
 
 
 @router.post("/analisar")

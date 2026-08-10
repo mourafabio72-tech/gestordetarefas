@@ -4,6 +4,7 @@ import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react
 
 const SETORES = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
 const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
+const baseCnpj = (s) => (s || '').replace(/\D/g, '').slice(0, 8);  // raiz do CNPJ (matriz + filiais)
 const fmtCnpj = (c) => {
   const d = (c || '').replace(/\D/g, '');
   return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (c || '');
@@ -38,16 +39,20 @@ export default function ImportarCronograma() {
     try {
       const { data } = await cronogramaAPI.analisar(file);
       if (data.erro) { alert(data.erro); return; }
-      // pré-preenche empresas por linha: casa o código do arquivo (FOS/SL/SLS)
-      // com a empresa cujo 1º termo da razão social é igual (ex.: "FOS - FAST ONE...").
-      const idsPorCodigo = {};
-      (data.entidades || []).forEach((cod) => {
-        idsPorCodigo[cod] = empresas.filter((e) => primeiroToken(e.razao_social) === cod).map((e) => e.id);
+      // Pré-preenche empresas por linha:
+      //  1) pelo CNPJ -> casa a base (raiz), pegando matriz + todas as filiais cadastradas;
+      //  2) pelo código/nome da coluna Empresa (1º termo da razão social).
+      const pre = (data.itens || []).map((it) => {
+        const ids = new Set();
+        (it.cnpjs || []).forEach((cn) => {
+          const raiz = baseCnpj(cn);
+          if (raiz.length === 8) empresas.forEach((e) => { if (baseCnpj(e.cnpj) === raiz) ids.add(e.id); });
+        });
+        (it.entidades || []).forEach((cod) => {
+          empresas.forEach((e) => { if (primeiroToken(e.razao_social) === cod) ids.add(e.id); });
+        });
+        return { ...it, empresa_ids: [...ids] };
       });
-      const pre = (data.itens || []).map((it) => ({
-        ...it,
-        empresa_ids: [...new Set((it.entidades || []).flatMap((c) => idsPorCodigo[c] || []))],
-      }));
       setItens(pre);
       setEntidades(data.entidades || []);
     } catch (e) {
@@ -101,10 +106,13 @@ export default function ImportarCronograma() {
 
       {!itens && (
         <div className="card">
-          <div className="mb-4 max-w-xs">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Grupo econômico</label>
-            <input className="input-field" value={grupo} onChange={(e) => setGrupo(e.target.value)}
-              placeholder="ex.: GRABER" />
+          <div className="flex items-end justify-between gap-3 mb-4 flex-wrap">
+            <div className="max-w-xs flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Grupo econômico</label>
+              <input className="input-field" value={grupo} onChange={(e) => setGrupo(e.target.value)}
+                placeholder="ex.: GRABER" />
+            </div>
+            <button onClick={() => cronogramaAPI.baixarModelo()} className="btn-secondary">Baixar modelo</button>
           </div>
           <label
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -117,7 +125,7 @@ export default function ImportarCronograma() {
             <span className="text-sm text-gray-600 block">
               {busy ? 'Lendo o cronograma…' : 'Arraste a planilha aqui ou clique para selecionar'}
             </span>
-            <span className="text-xs text-gray-400">Excel (.xlsx/.xls) · colunas Atividade, Empresa, Prazo</span>
+            <span className="text-xs text-gray-400">Excel (.xlsx/.xls) · colunas: Descrição da tarefa, Competência, Vencimento, Empresa, CNPJ, Gera multa, Setor</span>
             <input type="file" accept=".xlsx,.xls" className="hidden"
               onChange={(e) => analisar(e.target.files?.[0])} />
           </label>
@@ -157,6 +165,7 @@ export default function ImportarCronograma() {
                   <th className="py-2 pr-3 font-medium w-[20rem]">Empresas</th>
                   <th className="py-2 pr-3 font-medium">Prazo</th>
                   <th className="py-2 pr-3 font-medium">Competência</th>
+                  <th className="py-2 pr-3 font-medium text-center">Multa</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,6 +199,10 @@ export default function ImportarCronograma() {
                     <td className="py-1.5 pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
                     <td className="py-1.5 pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {it.competencia_ref === 'mes_anterior' ? 'mês anterior' : 'mesmo mês'}
+                    </td>
+                    <td className="py-1.5 pr-3 text-center">
+                      <input type="checkbox" className="h-4 w-4" checked={!!it.gera_multa}
+                        onChange={(e) => patch(idx, 'gera_multa', e.target.checked)} />
                     </td>
                   </tr>
                 ))}

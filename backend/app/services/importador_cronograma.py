@@ -53,22 +53,87 @@ def chute_setor(nome: str) -> str:
     return ""  # sem chute -> usuário escolhe
 
 
-def parse_entidades(cel: str) -> list:
-    """Extrai as entidades do grupo da coluna 'Empresa' (FOS, SL, SLS, TODAS...)."""
-    c = _norm(cel)
+def parse_entidades(cel) -> list:
+    """Divide a coluna Empresa em códigos/nomes (ex.: 'FOS, SL' -> ['FOS','SL'])."""
+    c = str(cel or "").strip()
     if not c:
         return []
-    if "toda" in c:
-        return ["FOS", "SL", "SLS"]
-    out = set()
-    for tok in re.split(r"[\s/,;]+", c):
-        if tok.startswith("fos"):
-            out.add("FOS")
-        elif tok.startswith("sls"):
-            out.add("SLS")
-        elif tok.startswith("sl"):
-            out.add("SL")
-    return sorted(out)
+    return sorted({t.strip().upper() for t in re.split(r"[/,;]+", c) if t.strip()})
+
+
+# ---- Layout único: Descrição da tarefa · Competência · Vencimento · Empresa · Gera multa · Setor ----
+FIELD_ALIASES = {
+    "nome": ["descricao da tarefa", "descricao das tarefas", "descricao das tarefa",
+             "descricao", "descrição", "tarefa", "atividade", "obrigacao", "obrigação"],
+    "competencia": ["competencia", "competência"],
+    "vencimento": ["vencimento", "prazo", "transicao", "transição", "meta", "data prevista", "data"],
+    "empresa": ["empresa", "empresas", "entidade", "entidades"],
+    "cnpj": ["cnpj", "cnpj/cpf", "cnpj cpf"],
+    "multa": ["gera multa", "multa", "passivel de multa", "passível de multa"],
+    "setor": ["setor", "departamento", "area", "área", "responsavel", "responsável"],
+}
+
+COMPETENCIAS = {
+    "mes anterior": "mes_anterior", "mesmo mes": "mesmo_mes",
+    "ano anterior": "ano_anterior", "mes seguinte": "mes_seguinte", "subsequente": "mes_seguinte",
+}
+
+
+def _mapear_colunas(header) -> dict:
+    m = {}
+    norm = [_norm(c) for c in header]
+    for field, aliases in FIELD_ALIASES.items():
+        for j, h in enumerate(norm):
+            if h and h in aliases and field not in m:
+                m[field] = j
+    return m
+
+
+def map_competencia(cel) -> str:
+    t = _norm(cel)
+    for k, v in COMPETENCIAS.items():
+        if k in t:
+            return v
+    return "mes_anterior"
+
+
+def parse_vencimento(cel):
+    """Devolve (regra_prazo_tipo, regra_prazo_dia, label) de uma data OU de texto
+    ('5º dia útil', 'último dia útil')."""
+    if isinstance(cel, datetime):
+        n = nth_dia_util(cel.date())
+        return "dia_util", n, f"{n}º dia útil"
+    t = _norm(cel)
+    m = re.search(r"(\d+)\s*[ºo°]?\s*dia\s*util", t)
+    if m:
+        n = int(m.group(1))
+        return "dia_util", n, f"{n}º dia útil"
+    if "ultimo dia" in t:
+        return "ultimo_dia_util", None, "último dia útil"
+    if "primeiro dia" in t:
+        return "primeiro_dia_util", None, "primeiro dia útil"
+    return "ultimo_dia_util", None, "—"
+
+
+def mapear_setor(cel) -> str:
+    """Mapeia o texto da coluna Setor/Responsável para um dos 4 setores padrão."""
+    t = _norm(cel)
+    if not t:
+        return ""
+    if "fiscal" in t:
+        return "Fiscal"
+    if re.search(r"\bdp\b", t) or "pessoal" in t:
+        return "DP"
+    if "contab" in t or "controlad" in t:
+        return "Contabilidade"
+    if any(k in t for k in ["pagar", "receber", "tesouraria", "faturamento", "financ", "caixa"]):
+        return "Financeiro"
+    return ""
+
+
+def parse_multa(cel) -> bool:
+    t = _norm(cel)
+    return t in ("sim", "s", "x", "1", "true", "verdadeiro") or "sim" in t
 
 
 def _ler(conteudo: bytes):
@@ -78,59 +143,62 @@ def _ler(conteudo: bytes):
 
 
 def _achar_cabecalho(rows):
-    """Acha a linha do cabeçalho (que tem 'Atividade' e 'Prazo')."""
+    """Cabeçalho = 1ª linha com a coluna de descrição/atividade."""
     for i, r in enumerate(rows):
-        vals = [_norm(c) for c in r]
-        if "atividade" in vals and "prazo" in vals:
-            return i, {v: j for j, v in enumerate(vals) if v}
+        m = _mapear_colunas(r)
+        if "nome" in m:
+            return i, m
     return None, {}
 
 
 def analisar(conteudo: bytes) -> dict:
-    """Lê o cronograma e devolve as obrigações candidatas (agrupadas por atividade)."""
+    """Lê a planilha (layout único) e devolve as obrigações candidatas, agrupadas por descrição."""
     rows = _ler(conteudo)
-    i_cab, cols = _achar_cabecalho(rows)
+    i_cab, c = _achar_cabecalho(rows)
     if i_cab is None:
-        return {"erro": "Não encontrei o cabeçalho (colunas 'Atividade' e 'Prazo').", "itens": []}
+        return {"erro": "Não encontrei o cabeçalho (precisa da coluna 'Descrição da tarefa').", "itens": []}
 
-    c_ativ = cols.get("atividade")
-    c_emp = cols.get("empresa")
-    c_prazo = cols.get("prazo")
+    def cel(r, campo):
+        j = c.get(campo)
+        return r[j] if (j is not None and j < len(r)) else None
 
-    grupos = defaultdict(lambda: {"ents": set(), "datas": []})
+    grupos, ordem = {}, []
     for r in rows[i_cab + 1:]:
-        if not r or c_ativ is None or not r[c_ativ]:
+        nome_cel = cel(r, "nome")
+        if not nome_cel or not str(nome_cel).strip():
             continue
-        nome = str(r[c_ativ]).strip()
+        nome = str(nome_cel).strip()
+        if nome not in grupos:
+            grupos[nome] = {"ents": set(), "cnpjs": set(), "setor": None, "comp": None,
+                            "tipo": None, "dia": None, "label": None, "multa": False}
+            ordem.append(nome)
         g = grupos[nome]
-        if c_emp is not None:
-            g["ents"].update(parse_entidades(r[c_emp]))
-        if c_prazo is not None and isinstance(r[c_prazo], datetime):
-            g["datas"].append(r[c_prazo].date())
+        g["ents"].update(parse_entidades(cel(r, "empresa")))
+        cnpj = re.sub(r"\D", "", str(cel(r, "cnpj") or ""))
+        if cnpj:
+            g["cnpjs"].add(cnpj)
+        if g["setor"] is None:
+            g["setor"] = mapear_setor(cel(r, "setor")) or chute_setor(nome)
+        if g["comp"] is None and cel(r, "competencia") is not None:
+            g["comp"] = map_competencia(cel(r, "competencia"))
+        v = cel(r, "vencimento")
+        if g["tipo"] is None and v not in (None, ""):
+            g["tipo"], g["dia"], g["label"] = parse_vencimento(v)
+        if parse_multa(cel(r, "multa")):
+            g["multa"] = True
 
-    # mês de fechamento = mês mais comum entre as datas
-    todas_datas = [d for g in grupos.values() for d in g["datas"]]
-    mes_fech = Counter(d.month for d in todas_datas).most_common(1)[0][0] if todas_datas else None
-
-    itens = []
-    entidades = set()
-    for nome, g in grupos.items():
-        ents = sorted(g["ents"]) or ["FOS"]
+    itens, entidades = [], set()
+    for nome in ordem:
+        g = grupos[nome]
+        ents = sorted(g["ents"])
         entidades.update(ents)
-        rep = Counter(g["datas"]).most_common(1)[0][0] if g["datas"] else None
-        if rep and rep.month == mes_fech:
-            comp, tipo, dia = "mes_anterior", "dia_util", nth_dia_util(rep)
-            label = f"{dia}º dia útil"
-        elif rep:
-            comp, tipo, dia = "mesmo_mes", "dia_util", nth_dia_util(rep)
-            label = f"{dia}º dia útil (mesmo mês)"
-        else:
-            comp, tipo, dia = "mesmo_mes", "ultimo_dia_util", None
-            label = "durante o mês"
         itens.append({
-            "nome": nome, "setor": chute_setor(nome), "entidades": ents,
-            "competencia_ref": comp, "regra_prazo_tipo": tipo, "regra_prazo_dia": dia,
-            "prazo_label": label,
+            "nome": nome, "setor": g["setor"] or "", "entidades": ents,
+            "cnpjs": sorted(g["cnpjs"]),
+            "competencia_ref": g["comp"] or "mes_anterior",
+            "regra_prazo_tipo": g["tipo"] or "ultimo_dia_util",
+            "regra_prazo_dia": g["dia"], "prazo_label": g["label"] or "—",
+            "gera_multa": g["multa"],
         })
     itens.sort(key=lambda x: (x["regra_prazo_dia"] or 99, x["nome"]))
     return {"itens": itens, "entidades": sorted(entidades), "total": len(itens)}
@@ -207,6 +275,7 @@ def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
                 regra_prazo_tipo=it.get("regra_prazo_tipo") or "ultimo_dia_util",
                 regra_prazo_dia=it.get("regra_prazo_dia"),
                 meses_ativos=MESES_TODOS,
+                passivel_multa=bool(it.get("gera_multa")),
                 ativa=True,
             )
             o.empresas = emps
@@ -215,3 +284,18 @@ def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
     db.commit()
     return {"grupo": grupo, "criadas": criadas, "atualizadas": atualizadas,
             "empresas": sorted(usadas)}
+
+
+def gerar_modelo() -> bytes:
+    """XLSX-modelo do layout único de importação de obrigações."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Obrigações"
+    ws.append(["Descrição da tarefa", "Competência", "Vencimento", "Empresa", "CNPJ", "Gera multa", "Setor"])
+    ws.append(["Apuração do ICMS", "Mês anterior", "5º dia útil", "FOS", "12.345.678/0001-90", "Sim", "Fiscal"])
+    ws.append(["Conciliação bancária", "Mês anterior", "6º dia útil", "FOS", "12.345.678/0001-90", "Não", "Financeiro"])
+    ws.append(["Fechamento da folha", "Mês anterior", "Último dia útil", "EDS", "98.765.432/0001-10", "Não", "DP"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

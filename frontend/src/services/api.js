@@ -143,6 +143,13 @@ export const cronogramaAPI = {
     return api.post('/cronograma/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   importar: (grupo, itens, mapa) => api.post('/cronograma/importar', { grupo, itens, mapa }),
+  baixarModelo: async () => {
+    const { data } = await api.get('/cronograma/modelo-importacao', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'modelo_importacao_obrigacoes.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 export const substituicoesAPI = {
