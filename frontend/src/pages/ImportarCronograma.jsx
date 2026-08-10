@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { cronogramaAPI, empresasAPI } from '../services/api';
+import { cronogramaAPI, empresasAPI, setoresAPI } from '../services/api';
 import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 
-const SETORES = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
+const SETORES_PADRAO = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
 const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
 const baseCnpj = (s) => (s || '').replace(/\D/g, '').slice(0, 8);  // raiz do CNPJ (matriz + filiais)
 const fmtCnpj = (c) => {
@@ -22,11 +22,22 @@ export default function ImportarCronograma() {
   const [itens, setItens] = useState(null);
   const [entidades, setEntidades] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [setores, setSetores] = useState([]);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [resultado, setResultado] = useState(null);
 
-  useEffect(() => { empresasAPI.list().then((r) => setEmpresas(r.data)).catch(() => {}); }, []);
+  useEffect(() => {
+    empresasAPI.list().then((r) => setEmpresas(r.data)).catch(() => {});
+    setoresAPI.list().then((r) => setSetores(r.data)).catch(() => {});
+  }, []);
+
+  // opções do dropdown de setor: os 4 padrão + os setores cadastrados (inclui novos)
+  const setorOptions = useMemo(() => {
+    const nomes = new Set(SETORES_PADRAO);
+    setores.forEach((s) => s?.nome && nomes.add(s.nome));
+    return [...nomes].sort((a, b) => a.localeCompare(b, 'pt'));
+  }, [setores]);
 
   const empresasOrdenadas = useMemo(
     () => [...empresas].sort((a, b) => (a.razao_social || '').localeCompare(b.razao_social || '', 'pt')),
@@ -176,7 +187,7 @@ export default function ImportarCronograma() {
                       <select value={it.setor} onChange={(e) => patch(idx, 'setor', e.target.value)}
                         className={`input-field py-1 text-xs ${!it.setor ? 'border-amber-400' : ''}`}>
                         <option value="">— escolher —</option>
-                        {SETORES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {setorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td className="py-1.5 pr-3">
