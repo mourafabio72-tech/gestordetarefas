@@ -79,6 +79,15 @@ export default function Obrigacoes() {
     try { await obrigacoesAPI.excluirLote(selecionados, true); setSelecionados([]); loadData(); }
     catch { alert('Erro ao excluir em lote'); }
   };
+
+  const limparTudo = async () => {
+    const ids = obrigacoes.map((o) => o.id);
+    if (!ids.length) return alert('Não há obrigações para limpar.');
+    if (!confirm(`Excluir TODAS as ${ids.length} obrigações e as tarefas geradas delas?\n\nApaga tudo. Não dá para desfazer.`)) return;
+    if (!confirm('Tem certeza? Esta ação é definitiva.')) return;
+    try { await obrigacoesAPI.excluirLote(ids, true); setSelecionados([]); loadData(); alert(`${ids.length} obrigações excluídas.`); }
+    catch { alert('Erro ao limpar'); }
+  };
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
@@ -182,6 +191,9 @@ export default function Obrigacoes() {
               <Trash2 size={18} /> Excluir {selecionados.length}
             </button>
           )}
+          <button onClick={limparTudo} className="text-sm text-red-600 hover:underline self-center px-2" title="Excluir todas as obrigações">
+            Limpar todas
+          </button>
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
           </button>
