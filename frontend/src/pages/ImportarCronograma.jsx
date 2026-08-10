@@ -78,7 +78,7 @@ export default function ImportarCronograma() {
     <div>
       <div className="flex items-center gap-2 mb-2">
         <CalendarClock className="text-primary-700" />
-        <h1 className="text-2xl font-bold text-gray-800">Importar cronograma</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Importar obrigações</h1>
       </div>
       <p className="text-sm text-gray-600 mb-6 max-w-3xl">
         Suba a planilha do <strong>cronograma de fechamento</strong>. Cada atividade vira uma
