@@ -105,6 +105,13 @@ export const obrigacoesAPI = {
   delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
+  baixarRelatorio: async () => {
+    const { data } = await api.get('/obrigacoes/relatorio', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'relacao_obrigacoes.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
   copiarEmpresa: (origem_empresa_id, destino_empresa_id) =>
     api.post('/obrigacoes/copiar-empresa', { origem_empresa_id, destino_empresa_id }),
   analisarModelo: (file) => {

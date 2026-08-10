@@ -1,14 +1,38 @@
+import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Obrigacao, Empresa, Usuario
+from ..models import Obrigacao, Empresa, Setor, Usuario
 from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
 from ..auth import get_current_user, require_perm, require_flag
 from ..services.gerador import gerar_tarefas
 
 router = APIRouter(prefix="/obrigacoes", tags=["obrigacoes"])
+
+_COMP = {"mes_anterior": "Mês anterior", "mesmo_mes": "Mesmo mês",
+         "mes_seguinte": "Mês seguinte", "ano_anterior": "Ano anterior"}
+_MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+
+def _prazo_label(o: Obrigacao) -> str:
+    t = o.regra_prazo_tipo or "ultimo_dia_util"
+    if t == "dia_util":
+        return f"{o.regra_prazo_dia or 1}º dia útil"
+    if t == "primeiro_dia_util":
+        return "Primeiro dia útil"
+    if t == "dia_fixo":
+        return f"Dia {o.regra_prazo_dia or '?'}"
+    return "Último dia útil"
+
+
+def _meses_label(csv: str) -> str:
+    nums = [int(x) for x in (csv or "").split(",") if x.strip().isdigit()]
+    if len(nums) >= 12:
+        return "Todos"
+    return ", ".join(_MESES[n - 1] for n in sorted(nums) if 1 <= n <= 12) or "—"
 
 
 class CopiarModeloRequest(BaseModel):
@@ -34,6 +58,35 @@ def list_obrigacoes(
     current_user: Usuario = Depends(require_perm("obrigacoes", "ver")),
 ):
     return db.query(Obrigacao).order_by(Obrigacao.nome.asc()).all()
+
+
+@router.get("/relatorio")
+def relatorio_obrigacoes(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "ver")),
+):
+    """Relação de obrigações em Excel (nome, setor, empresas, prazo, etc.)."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Obrigações"
+    ws.append(["Obrigação", "Mininome", "Setor", "Empresas", "Prazo", "Competência",
+               "Meses ativos", "Multa", "Status"])
+    for o in db.query(Obrigacao).order_by(Obrigacao.nome.asc()).all():
+        empresas = ", ".join(sorted(e.razao_social for e in o.empresas))
+        ws.append([
+            o.nome, o.mininome or "", o.setor.nome if o.setor else "",
+            empresas, _prazo_label(o), _COMP.get(o.competencia_ref, o.competencia_ref or ""),
+            _meses_label(o.meses_ativos), "Sim" if o.passivel_multa else "Não",
+            "Ativa" if o.ativa else "Inativa",
+        ])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=relacao_obrigacoes.xlsx"},
+    )
 
 
 @router.get("/{obrigacao_id}", response_model=ObrigacaoResponse)

@@ -1,0 +1,130 @@
+import { useState, useEffect, useMemo } from 'react';
+import { obrigacoesAPI, empresasAPI, setoresAPI } from '../services/api';
+import { FileStack, Download } from 'lucide-react';
+
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const COMP = { mes_anterior: 'Mês anterior', mesmo_mes: 'Mesmo mês', mes_seguinte: 'Mês seguinte', ano_anterior: 'Ano anterior' };
+const prazoLabel = (o) => {
+  const t = o.regra_prazo_tipo;
+  if (t === 'dia_util') return `${o.regra_prazo_dia || 1}º dia útil`;
+  if (t === 'primeiro_dia_util') return 'Primeiro dia útil';
+  if (t === 'dia_fixo') return `Dia ${o.regra_prazo_dia || '?'}`;
+  return 'Último dia útil';
+};
+const mesesLabel = (csv) => {
+  const n = (csv || '').split(',').map((x) => parseInt(x)).filter((x) => x >= 1 && x <= 12);
+  return n.length >= 12 ? 'Todos' : n.sort((a, b) => a - b).map((x) => MESES[x - 1]).join(', ') || '—';
+};
+
+export default function RelacaoObrigacoes() {
+  const [obrigacoes, setObrigacoes] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
+
+  useEffect(() => {
+    Promise.all([obrigacoesAPI.list(), empresasAPI.list(true), setoresAPI.list()])
+      .then(([o, e, s]) => { setObrigacoes(o.data); setEmpresas(e.data); setSetores(s.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const empresaById = useMemo(() => Object.fromEntries(empresas.map((e) => [e.id, e])), [empresas]);
+  const setorById = useMemo(() => Object.fromEntries(setores.map((s) => [s.id, s.nome])), [setores]);
+  const so = (s) => (s || '').toString().toLowerCase();
+
+  const lista = obrigacoes.filter((o) => {
+    if (filtros.obrigacao && !`${so(o.nome)} ${so(o.mininome)}`.includes(so(filtros.obrigacao))) return false;
+    if (filtros.empresa && !(o.empresa_ids || []).includes(parseInt(filtros.empresa))) return false;
+    if (filtros.setor && String(o.setor_id) !== filtros.setor) return false;
+    if (filtros.status === 'ativa' && !o.ativa) return false;
+    if (filtros.status === 'inativa' && o.ativa) return false;
+    return true;
+  });
+
+  const nomesEmpresas = (o) => (o.empresa_ids || []).map((id) => empresaById[id]?.razao_social).filter(Boolean);
+
+  if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <FileStack className="text-primary-700" />
+          <h1 className="text-2xl font-bold text-gray-800">Relação de obrigações</h1>
+        </div>
+        <button onClick={() => obrigacoesAPI.baixarRelatorio()} className="btn-primary flex items-center gap-2">
+          <Download size={18} /> Exportar Excel
+        </button>
+      </div>
+
+      <div className="card mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input className="input-field" placeholder="Obrigação (nome/mininome)"
+            value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
+          <select className="input-field" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
+            <option value="">Todas as empresas</option>
+            {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+          </select>
+          <select className="input-field" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
+            <option value="">Todos os setores</option>
+            {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+          </select>
+          <select className="input-field" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
+            <option value="todas">Todos os status</option>
+            <option value="ativa">Ativas</option>
+            <option value="inativa">Inativas</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="card">
+        <p className="text-sm text-gray-500 mb-3">{lista.length} obrigação(ões)</p>
+        {lista.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">Nenhuma obrigação com esses filtros.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="py-2 pr-3 font-medium">Obrigação</th>
+                  <th className="py-2 pr-3 font-medium">Setor</th>
+                  <th className="py-2 pr-3 font-medium">Empresas</th>
+                  <th className="py-2 pr-3 font-medium">Prazo</th>
+                  <th className="py-2 pr-3 font-medium">Competência</th>
+                  <th className="py-2 pr-3 font-medium">Meses</th>
+                  <th className="py-2 pr-3 font-medium text-center">Multa</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((o) => {
+                  const emps = nomesEmpresas(o);
+                  return (
+                    <tr key={o.id} className="border-b border-gray-100">
+                      <td className="py-2 pr-3 text-gray-800">{o.nome}{o.mininome ? <span className="text-gray-400"> · {o.mininome}</span> : null}</td>
+                      <td className="py-2 pr-3 text-gray-600">{setorById[o.setor_id] || '—'}</td>
+                      <td className="py-2 pr-3 text-gray-500 max-w-[16rem] truncate" title={emps.join(', ')}>
+                        {emps.length ? (emps.length <= 2 ? emps.join(', ') : `${emps.slice(0, 2).join(', ')} +${emps.length - 2}`) : '—'}
+                      </td>
+                      <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">{prazoLabel(o)}</td>
+                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{COMP[o.competencia_ref] || '—'}</td>
+                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{mesesLabel(o.meses_ativos)}</td>
+                      <td className="py-2 pr-3 text-center">{o.passivel_multa ? '⚠️' : ''}</td>
+                      <td className="py-2 pr-3">
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {o.ativa ? 'Ativa' : 'Inativa'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

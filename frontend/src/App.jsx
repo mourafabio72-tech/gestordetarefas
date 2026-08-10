@@ -15,6 +15,7 @@ import EValidador from './pages/EValidador';
 import Modelos from './pages/Modelos';
 import EnviarComprovante from './pages/EnviarComprovante';
 import ImportarCronograma from './pages/ImportarCronograma';
+import RelacaoObrigacoes from './pages/RelacaoObrigacoes';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="evalidador" element={<EValidador />} />
         <Route path="modelos" element={<Modelos />} />
         <Route path="importar-cronograma" element={<ImportarCronograma />} />
+        <Route path="relatorios/obrigacoes" element={<RelacaoObrigacoes />} />
       </Route>
     </Routes>
   );

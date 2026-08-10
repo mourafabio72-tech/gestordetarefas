@@ -33,7 +33,6 @@ const menuGroups = [
     items: [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'gestor', 'usuario'] },
       { path: '/tarefas', label: 'Tarefas', icon: ListTodo, roles: ['admin', 'gestor', 'usuario'] },
-      { path: '/relatorios', label: 'Relatórios', icon: BarChart3, roles: ['admin', 'gestor'] },
       { path: '/evalidador', label: 'e-validador', icon: FileCheck2, roles: ['admin', 'gestor'] },
     ],
   },
@@ -46,6 +45,12 @@ const menuGroups = [
       { path: '/empresas', label: 'Empresas', icon: Building2, roles: ['admin', 'gestor'] },
       { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['admin', 'gestor'] },
       { path: '/grupos', label: 'Grupo de usuários', icon: ShieldCheck, roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Relatórios',
+    items: [
+      { path: '/relatorios/obrigacoes', label: 'Relação de obrigações', icon: BarChart3, roles: ['admin', 'gestor'] },
     ],
   },
   {
