@@ -4,6 +4,17 @@ import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react
 
 const SETORES = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
 const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
+const fmtCnpj = (c) => {
+  const d = (c || '').replace(/\D/g, '');
+  return d.length === 14 ? d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : (c || '');
+};
+// rótulo sem razão social: nome curto (fantasia ou código) + CNPJ
+const rotuloEmpresa = (e) => {
+  if (!e) return '?';
+  const nome = (e.nome_fantasia || '').trim() || primeiroToken(e.razao_social);
+  const cnpj = fmtCnpj(e.cnpj);
+  return cnpj ? `${nome} · ${cnpj}` : nome;
+};
 
 export default function ImportarCronograma() {
   const [grupo, setGrupo] = useState('GRABER');
@@ -164,15 +175,15 @@ export default function ImportarCronograma() {
                         {(it.empresa_ids || []).map((id) => (
                           <span key={id} title={empresaById[id]?.razao_social}
                             className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5">
-                            {(empresaById[id]?.razao_social || '?').slice(0, 18)}
+                            {rotuloEmpresa(empresaById[id])}
                             <button type="button" onClick={() => remEmp(idx, id)} className="text-primary-400 hover:text-red-600">×</button>
                           </span>
                         ))}
                         <select value="" onChange={(e) => { addEmp(idx, e.target.value); e.target.value = ''; }}
-                          className={`input-field py-1 text-xs w-40 ${!(it.empresa_ids || []).length ? 'border-amber-400' : ''}`}>
+                          className={`input-field py-1 text-xs w-48 ${!(it.empresa_ids || []).length ? 'border-amber-400' : ''}`}>
                           <option value="">+ empresa</option>
                           {empresasOrdenadas.filter((e) => !(it.empresa_ids || []).includes(e.id))
-                            .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                            .map((e) => <option key={e.id} value={e.id}>{rotuloEmpresa(e)}</option>)}
                         </select>
                       </div>
                     </td>
