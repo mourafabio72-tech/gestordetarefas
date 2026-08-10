@@ -57,6 +57,16 @@ export default function Obrigacoes() {
   const [buscaEmp, setBuscaEmp] = useState('');
   const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false });
   const toggleSecao = (k) => setSecoes((s) => ({ ...s, [k]: !s[k] }));
+  const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', status: 'todas' });
+
+  const so = (s) => (s || '').toString().toLowerCase();
+  const obrigacoesFiltradas = obrigacoes.filter((o) => {
+    if (filtros.obrigacao && !`${so(o.nome)} ${so(o.mininome)}`.includes(so(filtros.obrigacao))) return false;
+    if (filtros.empresa && !(o.empresa_ids || []).includes(parseInt(filtros.empresa))) return false;
+    if (filtros.status === 'ativa' && !o.ativa) return false;
+    if (filtros.status === 'inativa' && o.ativa) return false;
+    return true;
+  });
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
@@ -164,11 +174,27 @@ export default function Obrigacoes() {
         </div>
       </div>
 
+      <div className="card mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <input className="input-field" placeholder="Obrigação (nome ou mininome)"
+            value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
+          <select className="input-field" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
+            <option value="">Todas as empresas</option>
+            {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+          </select>
+          <select className="input-field" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
+            <option value="todas">Todos os status</option>
+            <option value="ativa">Ativas</option>
+            <option value="inativa">Inativas</option>
+          </select>
+        </div>
+      </div>
+
       <div className="card">
-        {obrigacoes.length === 0 ? (
+        {obrigacoesFiltradas.length === 0 ? (
           <div className="text-center py-12">
             <FileStack size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">Nenhuma obrigação cadastrada</p>
+            <p className="text-gray-500">{obrigacoes.length === 0 ? 'Nenhuma obrigação cadastrada' : 'Nenhuma obrigação com esses filtros'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -184,7 +210,7 @@ export default function Obrigacoes() {
                 </tr>
               </thead>
               <tbody>
-                {obrigacoes.map((o) => (
+                {obrigacoesFiltradas.map((o) => (
                   <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{o.nome}</td>
                     <td className="py-3 px-4 text-gray-500">{o.mininome || '-'}</td>
