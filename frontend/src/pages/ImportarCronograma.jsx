@@ -4,6 +4,7 @@ import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react
 
 const SETORES_PADRAO = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
 const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
+const normTxt = (s) => (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const baseCnpj = (s) => (s || '').replace(/\D/g, '').slice(0, 8);  // raiz do CNPJ (matriz + filiais)
 const fmtCnpj = (c) => {
   const d = (c || '').replace(/\D/g, '');
@@ -62,7 +63,11 @@ export default function ImportarCronograma() {
         (it.entidades || []).forEach((cod) => {
           empresas.forEach((e) => { if (primeiroToken(e.razao_social) === cod) ids.add(e.id); });
         });
-        return { ...it, empresa_ids: [...ids] };
+        // setor: casa o texto do arquivo com um setor cadastrado; senão mantém o chute
+        const setorMatch = it.setor_raw
+          ? setores.find((s) => normTxt(s.nome) === normTxt(it.setor_raw))?.nome
+          : null;
+        return { ...it, setor: setorMatch || it.setor, empresa_ids: [...ids] };
       });
       setItens(pre);
       setEntidades(data.entidades || []);

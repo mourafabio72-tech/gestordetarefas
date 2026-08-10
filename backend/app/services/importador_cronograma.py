@@ -169,16 +169,19 @@ def analisar(conteudo: bytes) -> dict:
             continue
         nome = str(nome_cel).strip()
         if nome not in grupos:
-            grupos[nome] = {"ents": set(), "cnpjs": set(), "setor": None, "comp": None,
-                            "tipo": None, "dia": None, "label": None, "multa": False}
+            grupos[nome] = {"ents": set(), "cnpjs": set(), "setor": None, "setor_raw": None,
+                            "comp": None, "tipo": None, "dia": None, "label": None, "multa": False}
             ordem.append(nome)
         g = grupos[nome]
         g["ents"].update(parse_entidades(cel(r, "empresa")))
         cnpj = re.sub(r"\D", "", str(cel(r, "cnpj") or ""))
         if cnpj:
             g["cnpjs"].add(cnpj)
+        sc = cel(r, "setor")
+        if g["setor_raw"] is None and sc not in (None, ""):
+            g["setor_raw"] = str(sc).strip()
         if g["setor"] is None:
-            g["setor"] = mapear_setor(cel(r, "setor")) or chute_setor(nome)
+            g["setor"] = mapear_setor(sc) or chute_setor(nome)
         if g["comp"] is None and cel(r, "competencia") is not None:
             g["comp"] = map_competencia(cel(r, "competencia"))
         v = cel(r, "vencimento")
@@ -193,8 +196,8 @@ def analisar(conteudo: bytes) -> dict:
         ents = sorted(g["ents"])
         entidades.update(ents)
         itens.append({
-            "nome": nome, "setor": g["setor"] or "", "entidades": ents,
-            "cnpjs": sorted(g["cnpjs"]),
+            "nome": nome, "setor": g["setor"] or "", "setor_raw": g["setor_raw"] or "",
+            "entidades": ents, "cnpjs": sorted(g["cnpjs"]),
             "competencia_ref": g["comp"] or "mes_anterior",
             "regra_prazo_tipo": g["tipo"] or "ultimo_dia_util",
             "regra_prazo_dia": g["dia"], "prazo_label": g["label"] or "—",
