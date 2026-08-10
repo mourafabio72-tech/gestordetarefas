@@ -14,6 +14,7 @@ import {
   Settings,
   UserCog,
   Bell,
+  CalendarClock,
   LogOut,
   LayoutGrid,
   Menu,
@@ -51,6 +52,7 @@ const menuGroups = [
     label: 'Configuração',
     items: [
       { path: '/substituicoes', label: 'Substituições', icon: UserCog, roles: ['admin', 'gestor'] },
+      { path: '/importar-cronograma', label: 'Importar cronograma', icon: CalendarClock, roles: ['admin', 'gestor'] },
       { path: '/notificacoes', label: 'Notificações', icon: Bell, roles: ['admin'] },
     ],
   },

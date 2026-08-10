@@ -42,9 +42,27 @@ def _e_dia_util(d: date, sabado_util: bool) -> bool:
     return True
 
 
+def _nth_dia_util(ano: int, mes: int, n: int, sabado_util: bool) -> date:
+    """Data do N-ésimo dia útil do mês (1 = primeiro dia útil).
+    Se N passar da quantidade de dias úteis, devolve o último dia útil."""
+    ultimo = calendar.monthrange(ano, mes)[1]
+    conta, ultima_util = 0, date(ano, mes, 1)
+    for dia in range(1, ultimo + 1):
+        d = date(ano, mes, dia)
+        if _e_dia_util(d, sabado_util):
+            ultima_util = d
+            conta += 1
+            if conta >= max(int(n or 1), 1):
+                return d
+    return ultima_util
+
+
 def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util: bool) -> date:
     """Data-limite no mês de entrega, ajustada a dia útil conforme a regra."""
     ultimo = calendar.monthrange(ano, mes)[1]
+    if tipo == "dia_util":
+        # N-ésimo dia útil — já é dia útil, não precisa de ajuste
+        return _nth_dia_util(ano, mes, int(dia_fixo or 1), sabado_util)
     if tipo == "primeiro_dia_util":
         d = date(ano, mes, 1)
     elif tipo == "dia_fixo":

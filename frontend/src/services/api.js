@@ -136,6 +136,15 @@ export const modelosAPI = {
   delete: (id) => api.delete(`/modelos/${id}`),
 };
 
+export const cronogramaAPI = {
+  analisar: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/cronograma/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  importar: (grupo, itens) => api.post('/cronograma/importar', { grupo, itens }),
+};
+
 export const substituicoesAPI = {
   list: () => api.get('/substituicoes'),
   create: (data) => api.post('/substituicoes', data),
