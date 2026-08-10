@@ -44,7 +44,7 @@ export const authAPI = {
 };
 
 export const empresasAPI = {
-  list: () => api.get('/empresas'),
+  list: (todas) => api.get('/empresas', { params: todas ? { todas: true } : {} }),
   get: (id) => api.get(`/empresas/${id}`),
   create: (data) => api.post('/empresas', data),
   update: (id, data) => api.put(`/empresas/${id}`, data),

@@ -40,10 +40,16 @@ async def importar_empresas(
 
 @router.get("", response_model=List[EmpresaResponse])
 def list_empresas(
+    todas: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    return db.query(Empresa).filter(Empresa.ativo == True).all()
+    """Por padrão só as ativas (dropdowns pelo app). `todas=true` inclui inativas
+    (usado no cadastro de Empresas, que filtra por situação)."""
+    q = db.query(Empresa)
+    if not todas:
+        q = q.filter(Empresa.ativo == True)
+    return q.all()
 
 @router.get("/{empresa_id}", response_model=EmpresaResponse)
 def get_empresa(

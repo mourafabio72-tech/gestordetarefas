@@ -5,7 +5,7 @@ import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } fro
 const EMPRESA_VAZIA = {
   razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
   endereco: '', regime_tributario: 'indefinido', segmento: '', grupo: '',
-  responsavel_id: '', supervisor_id: '',
+  ativo: true, responsavel_id: '', supervisor_id: '',
 };
 
 const REGIMES = [
@@ -41,6 +41,18 @@ export default function Empresas() {
   const [formData, setFormData] = useState(EMPRESA_VAZIA);
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [filtros, setFiltros] = useState({ razao: '', cnpj: '', regime: '', grupo: '', situacao: 'ativa' });
+
+  const so = (s) => (s || '').toString().toLowerCase();
+  const empresasFiltradas = empresas.filter((e) => {
+    if (filtros.razao && !so(e.razao_social).includes(so(filtros.razao))) return false;
+    if (filtros.cnpj && !(e.cnpj || '').replace(/\D/g, '').includes(filtros.cnpj.replace(/\D/g, ''))) return false;
+    if (filtros.regime && e.regime_tributario !== filtros.regime) return false;
+    if (filtros.grupo && !so(e.grupo).includes(so(filtros.grupo))) return false;
+    if (filtros.situacao === 'ativa' && e.ativo === false) return false;
+    if (filtros.situacao === 'inativa' && e.ativo !== false) return false;
+    return true;
+  });
 
   const handleImport = async (e) => {
     const file = e.target.files?.[0];
@@ -64,7 +76,7 @@ export default function Empresas() {
 
   const loadEmpresas = async () => {
     try {
-      const [emp, us] = await Promise.all([empresasAPI.list(), usuariosAPI.list()]);
+      const [emp, us] = await Promise.all([empresasAPI.list(true), usuariosAPI.list()]);
       setEmpresas(emp.data);
       setUsuarios(us.data);
     } catch (error) {
@@ -109,6 +121,7 @@ export default function Empresas() {
       regime_tributario: empresa.regime_tributario || 'indefinido',
       segmento: empresa.segmento || '',
       grupo: empresa.grupo || '',
+      ativo: empresa.ativo !== false,
       responsavel_id: empresa.responsavel_id || '',
       supervisor_id: empresa.supervisor_id || '',
     });
@@ -205,11 +218,31 @@ export default function Empresas() {
         </div>
       )}
 
+      <div className="card mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <input className="input-field" placeholder="Razão social"
+            value={filtros.razao} onChange={(e) => setFiltros({ ...filtros, razao: e.target.value })} />
+          <input className="input-field" placeholder="CNPJ"
+            value={filtros.cnpj} onChange={(e) => setFiltros({ ...filtros, cnpj: e.target.value })} />
+          <select className="input-field" value={filtros.regime} onChange={(e) => setFiltros({ ...filtros, regime: e.target.value })}>
+            <option value="">Todos os regimes</option>
+            {REGIMES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+          <input className="input-field" placeholder="Grupo econômico"
+            value={filtros.grupo} onChange={(e) => setFiltros({ ...filtros, grupo: e.target.value })} />
+          <select className="input-field" value={filtros.situacao} onChange={(e) => setFiltros({ ...filtros, situacao: e.target.value })}>
+            <option value="ativa">Ativas</option>
+            <option value="inativa">Inativas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
+      </div>
+
       <div className="card">
-        {empresas.length === 0 ? (
+        {empresasFiltradas.length === 0 ? (
           <div className="text-center py-12">
             <Building2 size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">Nenhuma empresa cadastrada</p>
+            <p className="text-gray-500">{empresas.length === 0 ? 'Nenhuma empresa cadastrada' : 'Nenhuma empresa com esses filtros'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -221,12 +254,12 @@ export default function Empresas() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">CNPJ</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Regime</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Grupo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Telefone</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Situação</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {empresas.map((empresa) => (
+                {empresasFiltradas.map((empresa) => (
                   <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-500 font-mono">#{empresa.id}</td>
                     <td className="py-3 px-4">
@@ -238,7 +271,12 @@ export default function Empresas() {
                     <td className="py-3 px-4">{empresa.cnpj || '-'}</td>
                     <td className="py-3 px-4">{labelDe(REGIMES, empresa.regime_tributario)}</td>
                     <td className="py-3 px-4">{empresa.grupo || '-'}</td>
-                    <td className="py-3 px-4">{empresa.telefone || '-'}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        empresa.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                        {empresa.ativo === false ? 'Inativa' : 'Ativa'}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
                         <button
@@ -350,7 +388,7 @@ export default function Empresas() {
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de empresas</label>
                 <input
                   type="text"
@@ -359,6 +397,17 @@ export default function Empresas() {
                   className="input-field"
                   placeholder="ex.: Markbuilding"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Situação</label>
+                <select
+                  value={formData.ativo ? 'ativa' : 'inativa'}
+                  onChange={(e) => setFormData({ ...formData, ativo: e.target.value === 'ativa' })}
+                  className="input-field"
+                >
+                  <option value="ativa">Ativa</option>
+                  <option value="inativa">Inativa</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
