@@ -165,25 +165,32 @@ def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
     cria uma empresa pelo próprio código (fallback)."""
     grupo = (grupo or "").strip() or "GRUPO"
     mapa = mapa or {}
-    # 1) resolve empresa por código (mapeada > criada pelo código)
     codigos = sorted({c for it in itens for c in (it.get("entidades") or [])})
-    emp_por_codigo, empresas_usadas = {}, []
-    for c in codigos:
-        eid = mapa.get(c) or mapa.get(str(c))
-        e = db.query(Empresa).filter(Empresa.id == int(eid)).first() if eid else None
-        if not e:
-            e = _get_or_create_empresa(db, c, grupo)
-        emp_por_codigo[c] = e
-        empresas_usadas.append(e.razao_social)
+
+    def _resolver(it):
+        """Empresas do item: se veio a seleção por linha (`empresa_ids`, mesmo vazia),
+        respeita ela; senão, cai no antigo esquema por código (mapa/criação)."""
+        if "empresa_ids" in it:
+            emps = [db.query(Empresa).filter(Empresa.id == int(i)).first()
+                    for i in (it.get("empresa_ids") or [])]
+            return [e for e in emps if e]
+        out = []
+        for c in (it.get("entidades") or []):
+            eid = mapa.get(c) or mapa.get(str(c))
+            e = db.query(Empresa).filter(Empresa.id == int(eid)).first() if eid else None
+            out.append(e or _get_or_create_empresa(db, c, grupo))
+        return out
 
     criadas = atualizadas = 0
-    empresas_novas = empresas_usadas  # informativo
+    usadas = set()
     for it in itens:
         nome = (it.get("nome") or "").strip()
         if not nome:
             continue
         setor = _get_or_create_setor(db, it.get("setor"))
-        emps = [emp_por_codigo[c] for c in (it.get("entidades") or []) if c in emp_por_codigo]
+        emps = _resolver(it)
+        for e in emps:
+            usadas.add(e.razao_social)
 
         o = db.query(Obrigacao).filter(Obrigacao.nome == nome).first()
         if o:
@@ -207,4 +214,4 @@ def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
             criadas += 1
     db.commit()
     return {"grupo": grupo, "criadas": criadas, "atualizadas": atualizadas,
-            "empresas": empresas_novas}
+            "empresas": sorted(usadas)}

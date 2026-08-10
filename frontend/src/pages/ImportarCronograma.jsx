@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cronogramaAPI, empresasAPI } from '../services/api';
 import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const SETORES = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
+const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
 
 export default function ImportarCronograma() {
   const [grupo, setGrupo] = useState('GRABER');
   const [itens, setItens] = useState(null);
   const [entidades, setEntidades] = useState([]);
-  const [mapa, setMapa] = useState({});          // { codigo: empresa_id }
   const [empresas, setEmpresas] = useState([]);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -16,27 +16,43 @@ export default function ImportarCronograma() {
 
   useEffect(() => { empresasAPI.list().then((r) => setEmpresas(r.data)).catch(() => {}); }, []);
 
+  const empresasOrdenadas = useMemo(
+    () => [...empresas].sort((a, b) => (a.razao_social || '').localeCompare(b.razao_social || '', 'pt')),
+    [empresas]);
+  const empresaById = useMemo(() => Object.fromEntries(empresas.map((e) => [e.id, e])), [empresas]);
+
   const analisar = async (file) => {
     if (!file) return;
     setBusy(true); setResultado(null); setItens(null);
     try {
       const { data } = await cronogramaAPI.analisar(file);
       if (data.erro) { alert(data.erro); return; }
-      setItens(data.itens);
+      // pré-preenche empresas por linha: casa o código do arquivo (FOS/SL/SLS)
+      // com a empresa cujo 1º termo da razão social é igual (ex.: "FOS - FAST ONE...").
+      const idsPorCodigo = {};
+      (data.entidades || []).forEach((cod) => {
+        idsPorCodigo[cod] = empresas.filter((e) => primeiroToken(e.razao_social) === cod).map((e) => e.id);
+      });
+      const pre = (data.itens || []).map((it) => ({
+        ...it,
+        empresa_ids: [...new Set((it.entidades || []).flatMap((c) => idsPorCodigo[c] || []))],
+      }));
+      setItens(pre);
       setEntidades(data.entidades || []);
-      setMapa({});
     } catch (e) {
       alert(e.response?.data?.detail || 'Não consegui ler o cronograma.');
     } finally { setBusy(false); }
   };
 
   const onDrop = (e) => { e.preventDefault(); setDragOver(false); analisar(e.dataTransfer.files?.[0]); };
-  const setSetor = (idx, v) => setItens((arr) => arr.map((it, i) => i === idx ? { ...it, setor: v } : it));
+  const patch = (idx, campo, v) => setItens((arr) => arr.map((it, i) => i === idx ? { ...it, [campo]: v } : it));
+  const addEmp = (idx, id) => { if (id) patch(idx, 'empresa_ids', [...new Set([...(itens[idx].empresa_ids || []), Number(id)])]); };
+  const remEmp = (idx, id) => patch(idx, 'empresa_ids', (itens[idx].empresa_ids || []).filter((x) => x !== id));
 
   const importar = async () => {
     setBusy(true);
     try {
-      const { data } = await cronogramaAPI.importar(grupo, itens, mapa);
+      const { data } = await cronogramaAPI.importar(grupo, itens, {});
       setResultado(data);
       setItens(null);
     } catch (e) {
@@ -45,6 +61,7 @@ export default function ImportarCronograma() {
   };
 
   const semSetor = itens ? itens.filter((i) => !i.setor).length : 0;
+  const semEmpresa = itens ? itens.filter((i) => !(i.empresa_ids || []).length).length : 0;
 
   return (
     <div>
@@ -54,8 +71,8 @@ export default function ImportarCronograma() {
       </div>
       <p className="text-sm text-gray-600 mb-6 max-w-3xl">
         Suba a planilha do <strong>cronograma de fechamento</strong>. Cada atividade vira uma
-        <strong> obrigação recorrente</strong>, vinculada às empresas do grupo, com o
-        <strong> prazo em dia útil</strong> (convertido das datas). Revise o setor de cada uma antes de salvar.
+        <strong> obrigação recorrente</strong>, com <strong>prazo em dia útil</strong> (convertido das datas).
+        Revise o <strong>setor</strong> e as <strong>empresas</strong> de cada uma antes de salvar.
       </p>
 
       {resultado && (
@@ -77,7 +94,6 @@ export default function ImportarCronograma() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Grupo econômico</label>
             <input className="input-field" value={grupo} onChange={(e) => setGrupo(e.target.value)}
               placeholder="ex.: GRABER" />
-            <p className="text-xs text-gray-400 mt-1">As empresas (FOS, SL, SLS…) entram neste grupo.</p>
           </div>
           <label
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -102,10 +118,14 @@ export default function ImportarCronograma() {
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex flex-wrap gap-2">
               <span className="px-3 py-1 rounded-full text-sm bg-primary-100 text-primary-700">{itens.length} obrigações</span>
-              <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">Empresas: {entidades.join(', ')}</span>
               {semSetor > 0 && (
                 <span className="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700 flex items-center gap-1">
                   <AlertTriangle size={13} /> {semSetor} sem setor
+                </span>
+              )}
+              {semEmpresa > 0 && (
+                <span className="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700 flex items-center gap-1">
+                  <AlertTriangle size={13} /> {semEmpresa} sem empresa
                 </span>
               )}
             </div>
@@ -116,51 +136,46 @@ export default function ImportarCronograma() {
               </button>
             </div>
           </div>
-          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <p className="text-sm font-medium text-gray-700 mb-2">Vincular cada entidade do arquivo a uma empresa cadastrada</p>
-            <div className="flex flex-wrap gap-3">
-              {entidades.map((cod) => (
-                <div key={cod} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-600 w-10">{cod}</span>
-                  <select value={mapa[cod] || ''} onChange={(e) => setMapa((m) => ({ ...m, [cod]: e.target.value }))}
-                    className="input-field py-1 text-xs w-56">
-                    <option value="">— criar como “{cod}” —</option>
-                    {empresas.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.razao_social}{emp.grupo ? ` · ${emp.grupo}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 mt-2">
-              Deixe em “criar como…” só se ainda não cadastrou a empresa. O ideal é apontar para a empresa real (com CNPJ).
-            </p>
-          </div>
-          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+
+          <div className="overflow-x-auto max-h-[62vh] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white">
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-3 font-medium">Atividade</th>
                   <th className="py-2 pr-3 font-medium">Setor</th>
-                  <th className="py-2 pr-3 font-medium">Empresas</th>
+                  <th className="py-2 pr-3 font-medium w-[20rem]">Empresas</th>
                   <th className="py-2 pr-3 font-medium">Prazo</th>
                   <th className="py-2 pr-3 font-medium">Competência</th>
                 </tr>
               </thead>
               <tbody>
                 {itens.map((it, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-3 text-gray-700 max-w-[22rem]">{it.nome}</td>
+                  <tr key={idx} className="border-b border-gray-100 align-top">
+                    <td className="py-1.5 pr-3 text-gray-700 max-w-[20rem]">{it.nome}</td>
                     <td className="py-1.5 pr-3">
-                      <select value={it.setor} onChange={(e) => setSetor(idx, e.target.value)}
+                      <select value={it.setor} onChange={(e) => patch(idx, 'setor', e.target.value)}
                         className={`input-field py-1 text-xs ${!it.setor ? 'border-amber-400' : ''}`}>
                         <option value="">— escolher —</option>
                         {SETORES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td className="py-1.5 pr-3 text-gray-500 text-xs">{(it.entidades || []).join('+')}</td>
+                    <td className="py-1.5 pr-3">
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {(it.empresa_ids || []).map((id) => (
+                          <span key={id} title={empresaById[id]?.razao_social}
+                            className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5">
+                            {(empresaById[id]?.razao_social || '?').slice(0, 18)}
+                            <button type="button" onClick={() => remEmp(idx, id)} className="text-primary-400 hover:text-red-600">×</button>
+                          </span>
+                        ))}
+                        <select value="" onChange={(e) => { addEmp(idx, e.target.value); e.target.value = ''; }}
+                          className={`input-field py-1 text-xs w-40 ${!(it.empresa_ids || []).length ? 'border-amber-400' : ''}`}>
+                          <option value="">+ empresa</option>
+                          {empresasOrdenadas.filter((e) => !(it.empresa_ids || []).includes(e.id))
+                            .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                        </select>
+                      </div>
+                    </td>
                     <td className="py-1.5 pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
                     <td className="py-1.5 pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {it.competencia_ref === 'mes_anterior' ? 'mês anterior' : 'mesmo mês'}
