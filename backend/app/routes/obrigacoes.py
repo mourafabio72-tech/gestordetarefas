@@ -137,6 +137,16 @@ def update_obrigacao(
     return o
 
 
+def _excluir_definitivo(db: Session, o: Obrigacao):
+    """Apaga a obrigação, suas tarefas geradas e os vínculos."""
+    from ..models import Tarefa
+    for t in db.query(Tarefa).filter(Tarefa.obrigacao_id == o.id).all():
+        t.responsaveis = []
+        db.delete(t)
+    o.empresas = []
+    db.delete(o)
+
+
 @router.delete("/{obrigacao_id}")
 def delete_obrigacao(
     obrigacao_id: int,
@@ -145,15 +155,12 @@ def delete_obrigacao(
     current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
 ):
     """Sem flag: inativa (mantém histórico). Com `?definitivo=true`: exclui de vez
-    (desvincula empresas e solta as tarefas já geradas)."""
-    from ..models import Tarefa
+    (apaga a obrigação e as tarefas já geradas)."""
     o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Obrigação não encontrada")
     if definitivo:
-        db.query(Tarefa).filter(Tarefa.obrigacao_id == o.id).update({Tarefa.obrigacao_id: None})
-        o.empresas = []
-        db.delete(o)
+        _excluir_definitivo(db, o)
         db.commit()
         return {"message": "Obrigação excluída"}
     o.ativa = False
@@ -172,17 +179,14 @@ def excluir_lote(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
 ):
-    """Exclui (ou inativa) várias obrigações de uma vez."""
-    from ..models import Tarefa
+    """Exclui (apaga obrigação + tarefas geradas) ou inativa várias de uma vez."""
     n = 0
     for oid in body.ids:
         o = db.query(Obrigacao).filter(Obrigacao.id == oid).first()
         if not o:
             continue
         if body.definitivo:
-            db.query(Tarefa).filter(Tarefa.obrigacao_id == o.id).update({Tarefa.obrigacao_id: None})
-            o.empresas = []
-            db.delete(o)
+            _excluir_definitivo(db, o)
         else:
             o.ativa = False
         n += 1

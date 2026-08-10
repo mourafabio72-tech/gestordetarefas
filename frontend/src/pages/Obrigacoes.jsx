@@ -75,7 +75,7 @@ export default function Obrigacoes() {
   const toggleTodas = () => setSelecionados(todasMarcadas ? [] : idsFiltrados);
   const excluirSelecionadas = async () => {
     if (!selecionados.length) return;
-    if (!confirm(`Excluir DEFINITIVAMENTE ${selecionados.length} obrigação(ões)?\n\nRemove as obrigações e solta as tarefas já geradas. Não dá para desfazer.`)) return;
+    if (!confirm(`Excluir DEFINITIVAMENTE ${selecionados.length} obrigação(ões)?\n\nApaga as obrigações e TAMBÉM as tarefas já geradas delas. Não dá para desfazer.`)) return;
     try { await obrigacoesAPI.excluirLote(selecionados, true); setSelecionados([]); loadData(); }
     catch { alert('Erro ao excluir em lote'); }
   };
@@ -147,7 +147,7 @@ export default function Obrigacoes() {
   };
 
   const excluir = async (o) => {
-    if (!confirm(`Excluir DEFINITIVAMENTE a obrigação "${o.nome}"?\n\nRemove a obrigação e solta as tarefas já geradas. Não dá para desfazer.`)) return;
+    if (!confirm(`Excluir DEFINITIVAMENTE a obrigação "${o.nome}"?\n\nApaga a obrigação e TAMBÉM as tarefas já geradas dela. Não dá para desfazer.`)) return;
     try { await obrigacoesAPI.delete(o.id, true); loadData(); }
     catch { alert('Erro ao excluir'); }
   };
