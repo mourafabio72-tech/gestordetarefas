@@ -26,6 +26,7 @@ async def analisar(
 class ImportarBody(BaseModel):
     grupo: str
     itens: List[Dict[str, Any]]
+    mapa: Dict[str, Any] = {}   # {codigo_entidade: empresa_id}
 
 
 @router.post("/importar")
@@ -36,4 +37,4 @@ def importar(
 ):
     if not body.itens:
         raise HTTPException(status_code=422, detail="Nada para importar.")
-    return cron.importar(db, body.grupo, body.itens)
+    return cron.importar(db, body.grupo, body.itens, body.mapa)

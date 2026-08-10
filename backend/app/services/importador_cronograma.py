@@ -158,16 +158,26 @@ def _get_or_create_setor(db, nome: str):
     return s
 
 
-def importar(db, grupo: str, itens: list) -> dict:
-    """Cria empresas do grupo, setores e obrigações (dedupe por nome; se já existe,
-    apenas acrescenta as empresas ao vínculo)."""
+def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
+    """Cria setores e obrigações (dedupe por nome; se já existe, apenas acrescenta
+    as empresas ao vínculo). Cada código de entidade (FOS/SL/SLS) é resolvido para
+    uma empresa: se `mapa[codigo]` aponta uma empresa cadastrada, usa ela; senão,
+    cria uma empresa pelo próprio código (fallback)."""
     grupo = (grupo or "").strip() or "GRUPO"
-    # 1) empresas
+    mapa = mapa or {}
+    # 1) resolve empresa por código (mapeada > criada pelo código)
     codigos = sorted({c for it in itens for c in (it.get("entidades") or [])})
-    emp_por_codigo = {c: _get_or_create_empresa(db, c, grupo) for c in codigos}
+    emp_por_codigo, empresas_usadas = {}, []
+    for c in codigos:
+        eid = mapa.get(c) or mapa.get(str(c))
+        e = db.query(Empresa).filter(Empresa.id == int(eid)).first() if eid else None
+        if not e:
+            e = _get_or_create_empresa(db, c, grupo)
+        emp_por_codigo[c] = e
+        empresas_usadas.append(e.razao_social)
 
     criadas = atualizadas = 0
-    empresas_novas = [c for c in codigos]  # informativo
+    empresas_novas = empresas_usadas  # informativo
     for it in itens:
         nome = (it.get("nome") or "").strip()
         if not nome:

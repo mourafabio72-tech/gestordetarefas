@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { cronogramaAPI } from '../services/api';
+import { useState, useEffect } from 'react';
+import { cronogramaAPI, empresasAPI } from '../services/api';
 import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const SETORES = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
@@ -8,9 +8,13 @@ export default function ImportarCronograma() {
   const [grupo, setGrupo] = useState('GRABER');
   const [itens, setItens] = useState(null);
   const [entidades, setEntidades] = useState([]);
+  const [mapa, setMapa] = useState({});          // { codigo: empresa_id }
+  const [empresas, setEmpresas] = useState([]);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [resultado, setResultado] = useState(null);
+
+  useEffect(() => { empresasAPI.list().then((r) => setEmpresas(r.data)).catch(() => {}); }, []);
 
   const analisar = async (file) => {
     if (!file) return;
@@ -20,6 +24,7 @@ export default function ImportarCronograma() {
       if (data.erro) { alert(data.erro); return; }
       setItens(data.itens);
       setEntidades(data.entidades || []);
+      setMapa({});
     } catch (e) {
       alert(e.response?.data?.detail || 'Não consegui ler o cronograma.');
     } finally { setBusy(false); }
@@ -31,7 +36,7 @@ export default function ImportarCronograma() {
   const importar = async () => {
     setBusy(true);
     try {
-      const { data } = await cronogramaAPI.importar(grupo, itens);
+      const { data } = await cronogramaAPI.importar(grupo, itens, mapa);
       setResultado(data);
       setItens(null);
     } catch (e) {
@@ -110,6 +115,28 @@ export default function ImportarCronograma() {
                 {busy ? 'Importando…' : `Importar ${itens.length}`}
               </button>
             </div>
+          </div>
+          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-sm font-medium text-gray-700 mb-2">Vincular cada entidade do arquivo a uma empresa cadastrada</p>
+            <div className="flex flex-wrap gap-3">
+              {entidades.map((cod) => (
+                <div key={cod} className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-600 w-10">{cod}</span>
+                  <select value={mapa[cod] || ''} onChange={(e) => setMapa((m) => ({ ...m, [cod]: e.target.value }))}
+                    className="input-field py-1 text-xs w-56">
+                    <option value="">— criar como “{cod}” —</option>
+                    {empresas.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.razao_social}{emp.grupo ? ` · ${emp.grupo}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Deixe em “criar como…” só se ainda não cadastrou a empresa. O ideal é apontar para a empresa real (com CNPJ).
+            </p>
           </div>
           <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
             <table className="w-full text-sm">

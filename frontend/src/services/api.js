@@ -142,7 +142,7 @@ export const cronogramaAPI = {
     fd.append('arquivo', file);
     return api.post('/cronograma/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
-  importar: (grupo, itens) => api.post('/cronograma/importar', { grupo, itens }),
+  importar: (grupo, itens, mapa) => api.post('/cronograma/importar', { grupo, itens, mapa }),
 };
 
 export const substituicoesAPI = {
