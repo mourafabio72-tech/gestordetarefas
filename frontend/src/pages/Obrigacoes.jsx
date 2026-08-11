@@ -488,7 +488,7 @@ export default function Obrigacoes() {
 
               <div className="border-t border-gray-100 pt-3">
                 <button type="button" onClick={() => toggleSecao('publico')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
-                  {secoes.publico ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Público-alvo
+                  {secoes.publico ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Dados empresariais
                 </button>
                 {secoes.publico && (
                 <div className="grid grid-cols-2 gap-6">
