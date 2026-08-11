@@ -60,6 +60,7 @@ export default function Obrigacoes() {
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
+  const setorNome = (id) => setores.find((s) => s.id === id)?.nome || '—';
   const obrigacoesFiltradas = obrigacoes.filter((o) => {
     if (filtros.obrigacao && !`${so(o.nome)} ${so(o.mininome)}`.includes(so(filtros.obrigacao))) return false;
     if (filtros.empresa && !(o.empresa_ids || []).includes(parseInt(filtros.empresa))) return false;
@@ -227,48 +228,48 @@ export default function Obrigacoes() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-4 w-8">
+                <tr className="border-b border-gray-200 text-gray-500">
+                  <th className="py-2 px-2 w-8">
                     <input type="checkbox" className="h-4 w-4" checked={todasMarcadas} onChange={toggleTodas} title="Marcar todas (filtradas)" />
                   </th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Obrigação</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Mininome</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Alvo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Empresas</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                  <th className="text-left py-2 px-2 font-medium">Obrigação</th>
+                  <th className="text-left py-2 px-2 font-medium w-32">Setor</th>
+                  <th className="text-left py-2 px-2 font-medium w-32">Alvo</th>
+                  <th className="text-left py-2 px-2 font-medium w-20">Empresas</th>
+                  <th className="text-left py-2 px-2 font-medium w-20">Status</th>
+                  <th className="text-right py-2 px-2 font-medium w-24">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {obrigacoesFiltradas.map((o) => (
                   <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-2">
                       <input type="checkbox" className="h-4 w-4" checked={selecionados.includes(o.id)} onChange={() => toggleSel(o.id)} />
                     </td>
-                    <td className="py-3 px-4 font-medium">{o.nome}</td>
-                    <td className="py-3 px-4 text-gray-500">{o.mininome || '-'}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">
+                    <td className="py-1.5 px-2 font-medium text-gray-800">{o.nome}</td>
+                    <td className="py-1.5 px-2 text-gray-600">{setorNome(o.setor_id)}</td>
+                    <td className="py-1.5 px-2 text-xs text-gray-500">
                       {[o.aplica_regimes, o.aplica_segmentos].filter(Boolean).join(' · ') || 'Todos'}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{(o.empresa_ids || []).length}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <td className="py-1.5 px-2 text-gray-500">{(o.empresa_ids || []).length}</td>
+                    <td className="py-1.5 px-2">
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {o.ativa ? 'Ativa' : 'Inativa'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => abrirEdicao(o)} title="Editar" className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                          <Edit2 size={16} />
+                    <td className="py-1.5 px-2">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => abrirEdicao(o)} title="Editar" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                          <Edit2 size={15} />
                         </button>
                         <button onClick={() => alternarStatus(o)} title={o.ativa ? 'Inativar' : 'Ativar'}
-                          className={`p-2 rounded-lg ${o.ativa ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}>
-                          {o.ativa ? <Ban size={16} /> : <CheckCircle2 size={16} />}
+                          className={`p-1.5 rounded-lg ${o.ativa ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}>
+                          {o.ativa ? <Ban size={15} /> : <CheckCircle2 size={15} />}
                         </button>
-                        <button onClick={() => excluir(o)} title="Excluir definitivamente" className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 size={16} />
+                        <button onClick={() => excluir(o)} title="Excluir definitivamente" className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
