@@ -15,6 +15,27 @@ def disponivel(cfg: dict) -> bool:
     return cfgmod.ativo(cfg, "ia_ativo") and bool((cfg.get("openai_api_key") or "").strip())
 
 
+def testar(cfg: dict) -> dict:
+    """Ping rápido: confirma que a chave/modelo respondem (sem precisar de documento)."""
+    key = (cfg.get("openai_api_key") or "").strip()
+    if not key:
+        return {"ok": False, "erro": "Chave da OpenAI não configurada."}
+    modelo = cfg.get("openai_model") or "gpt-4o-mini"
+    url = cfg.get("openai_url") or "https://api.openai.com/v1/chat/completions"
+    payload = {"model": modelo, "temperature": 0, "max_tokens": 5,
+               "messages": [{"role": "user", "content": "Responda apenas: OK"}]}
+    try:
+        r = httpx.post(url, headers={"Authorization": f"Bearer {key}",
+                                     "Content-Type": "application/json"},
+                       json=payload, timeout=30.0)
+        if r.status_code != 200:
+            return {"ok": False, "erro": f"HTTP {r.status_code}: {r.text[:180]}"}
+        resp = r.json()["choices"][0]["message"]["content"].strip()
+        return {"ok": True, "modelo": modelo, "resposta": resp}
+    except Exception as e:
+        return {"ok": False, "erro": str(e)}
+
+
 def extrair(texto: str, obrigacoes: list, cfg: dict) -> dict:
     """Retorna {'cnpj', 'competencia', 'obrigacao_id'} (qualquer um pode vir None).
     `obrigacoes` = lista de Obrigacao ativas (para a IA escolher entre elas)."""

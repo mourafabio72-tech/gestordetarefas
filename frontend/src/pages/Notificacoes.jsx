@@ -64,6 +64,24 @@ export default function Notificacoes() {
     }
   };
 
+  const enviarTesteIA = async () => {
+    setMsg(null);
+    try {
+      const payload = { ...cfg };
+      if (!payload.smtp_pass) delete payload.smtp_pass;
+      if (!payload.zap_api_key) delete payload.zap_api_key;
+      if (!payload.openai_api_key) delete payload.openai_api_key;
+      const { data: salvo } = await configuracaoAPI.putNotificacoes(payload);
+      setCfg(salvo);
+      const { data } = await configuracaoAPI.testarIA();
+      setMsg(data.ok
+        ? { ok: true, txt: `IA respondeu (${data.modelo}): "${data.resposta}". Chave OK ✅` }
+        : { ok: false, txt: `IA não respondeu: ${data.erro || 'verifique a chave/modelo'}` });
+    } catch (e) {
+      setMsg({ ok: false, txt: e.response?.data?.detail || 'Erro ao testar IA' });
+    }
+  };
+
   const enviarTesteWhats = async () => {
     const numero = (document.getElementById('teste-whats')?.value || '').trim();
     if (!numero) {
@@ -204,6 +222,12 @@ export default function Notificacoes() {
                 placeholder={cfg.openai_api_key_set ? '•••••• (guardada — deixe vazio p/ manter)' : 'sk-...'} />
             </div>
             <Campo chave="openai_model" label="Modelo" ph="gpt-4o-mini" />
+          </div>
+          <div className="border-t border-gray-100 mt-4 pt-4 flex items-center gap-3">
+            <button onClick={enviarTesteIA} className="btn-secondary flex items-center gap-2">
+              <Sparkles size={16} /> Testar IA
+            </button>
+            <span className="text-xs text-gray-400">Salva a chave e faz um ping na OpenAI (sem precisar de documento).</span>
           </div>
         </div>
 

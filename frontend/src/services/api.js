@@ -173,6 +173,7 @@ export const configuracaoAPI = {
   putNotificacoes: (data) => api.put('/configuracao/notificacoes', data),
   testarEmail: (para) => api.post('/configuracao/notificacoes/testar-email', { para }),
   testarWhatsapp: (para) => api.post('/configuracao/notificacoes/testar-whatsapp', { para }),
+  testarIA: () => api.post('/configuracao/notificacoes/testar-ia'),
 };
 
 export const alertasAPI = {

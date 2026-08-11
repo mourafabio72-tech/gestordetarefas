@@ -72,3 +72,12 @@ async def testar_whatsapp(
         "🔔 *Teste do Tareffas*\n\nSe você recebeu esta mensagem, o envio por WhatsApp está funcionando.",
         cfg,
     )
+
+
+@router.post("/notificacoes/testar-ia")
+def testar_ia(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_admin),
+):
+    from ..services import ia as ia_mod
+    return ia_mod.testar(cfgmod.carregar(db))
