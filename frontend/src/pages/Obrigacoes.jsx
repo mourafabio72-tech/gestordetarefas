@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -88,6 +88,20 @@ export default function Obrigacoes() {
     if (!confirm('Tem certeza? Esta ação é definitiva.')) return;
     try { await obrigacoesAPI.excluirLote(ids, true); setSelecionados([]); loadData(); alert(`${ids.length} obrigações excluídas.`); }
     catch { alert('Erro ao limpar'); }
+  };
+  const [gerando, setGerando] = useState(false);
+  const MESES_NOME = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const gerarTarefas = async () => {
+    const hoje = new Date();
+    const mes = hoje.getMonth() + 1, ano = hoje.getFullYear();
+    if (!confirm(`Gerar as tarefas de ${MESES_NOME[mes - 1]}/${ano} para TODAS as empresas, a partir das obrigações ativas?\n\nNão duplica o que já existe.`)) return;
+    setGerando(true);
+    try {
+      const { data } = await obrigacoesAPI.gerar(mes, ano);
+      alert(`Tarefas de ${data.mes_entrega}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Erro ao gerar tarefas.');
+    } finally { setGerando(false); }
   };
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
@@ -197,6 +211,10 @@ export default function Obrigacoes() {
           </button>
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
+          </button>
+          <button onClick={gerarTarefas} disabled={gerando} className="btn-secondary flex items-center gap-2"
+            title="Cria as tarefas do mês atual para todas as empresas, a partir das obrigações ativas">
+            <Zap size={18} /> {gerando ? 'Gerando…' : 'Gerar tarefas do mês'}
           </button>
           <button onClick={abrirNovo} className="btn-primary flex items-center gap-2">
             <Plus size={18} /> Nova Obrigação

@@ -105,6 +105,7 @@ export const obrigacoesAPI = {
   update: (id, data) => api.put(`/obrigacoes/${id}`, data),
   delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
+  gerar: (mes, ano) => api.post('/obrigacoes/gerar', { mes, ano }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
   baixarRelatorio: async () => {
     const { data } = await api.get('/obrigacoes/relatorio', { responseType: 'blob' });
