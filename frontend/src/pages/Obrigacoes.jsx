@@ -490,8 +490,18 @@ export default function Obrigacoes() {
                 <button type="button" onClick={() => toggleSecao('publico')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
                   {secoes.publico ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Dados empresariais
                 </button>
-                {secoes.publico && (
-                <div className="grid grid-cols-2 gap-6">
+                {secoes.publico && (() => {
+                  const aplicaTodas = !form.aplica_regimes && !form.aplica_segmentos;
+                  return (
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer bg-gray-50 rounded px-3 py-2">
+                    <input type="checkbox" checked={aplicaTodas} className="h-4 w-4"
+                      onChange={(e) => { if (e.target.checked) { set('aplica_regimes', ''); set('aplica_segmentos', ''); } else { set('aplica_regimes', REGIMES[0][0]); } }} />
+                    <span className="font-medium text-gray-700">Aplicar a todas as empresas</span>
+                    <span className="text-gray-400 text-xs">— desmarque para restringir por regime/segmento</span>
+                  </label>
+                  {!aplicaTodas && (
+                  <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Regimes <span className="text-gray-400">(vazio = todos)</span></p>
                     <div className="space-y-1">
@@ -514,8 +524,11 @@ export default function Obrigacoes() {
                       ))}
                     </div>
                   </div>
+                  </div>
+                  )}
                 </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div className="border-t border-gray-100 pt-3">
