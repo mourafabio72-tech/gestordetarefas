@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from typing import List
 from ..database import get_db
 from ..models import Setor, Usuario
@@ -57,16 +58,45 @@ def update_setor(
     db.refresh(db_setor)
     return db_setor
 
+def _setor_em_uso(db: Session, setor_id: int) -> int:
+    from ..models import Obrigacao, Tarefa
+    return (db.query(Obrigacao).filter(Obrigacao.setor_id == setor_id).count()
+            + db.query(Tarefa).filter(Tarefa.setor_id == setor_id).count())
+
+
 @router.delete("/{setor_id}")
 def delete_setor(
     setor_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("setores", "editar"))
 ):
+    """Com vínculo (obrigação/tarefa): só INATIVA. Sem vínculo: exclui de vez."""
     db_setor = db.query(Setor).filter(Setor.id == setor_id).first()
     if not db_setor:
         raise HTTPException(status_code=404, detail="Setor não encontrado")
-
-    db_setor.ativo = False
+    if _setor_em_uso(db, setor_id) > 0:
+        db_setor.ativo = False
+        db.commit()
+        return {"message": "Setor tem obrigações/tarefas vinculadas — foi inativado (não excluído).", "inativado": True}
+    db.delete(db_setor)
     db.commit()
-    return {"message": "Setor desativado com sucesso"}
+    return {"message": "Setor excluído.", "inativado": False}
+
+
+class SetorStatus(BaseModel):
+    ativo: bool
+
+
+@router.post("/{setor_id}/status")
+def status_setor(
+    setor_id: int,
+    body: SetorStatus,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("setores", "editar"))
+):
+    s = db.query(Setor).filter(Setor.id == setor_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Setor não encontrado")
+    s.ativo = body.ativo
+    db.commit()
+    return {"message": "Ativado" if body.ativo else "Inativado"}

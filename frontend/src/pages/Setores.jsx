@@ -46,13 +46,13 @@ export default function Setores() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Tem certeza que deseja desativar este setor?')) {
-      try {
-        await setoresAPI.delete(id);
-        loadData();
-      } catch (error) {
-        alert('Erro ao desativar setor');
-      }
+    if (!confirm('Excluir este setor? Se tiver obrigações/tarefas vinculadas, ele será apenas inativado.')) return;
+    try {
+      const { data } = await setoresAPI.delete(id);
+      if (data?.message) alert(data.message);
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao excluir setor');
     }
   };
 

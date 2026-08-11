@@ -122,13 +122,13 @@ export default function Usuarios() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Tem certeza que deseja desativar este usuário?')) {
-      try {
-        await usuariosAPI.delete(id);
-        loadUsuarios();
-      } catch (error) {
-        alert('Erro ao desativar usuário');
-      }
+    if (!confirm('Excluir este usuário? Se tiver obrigações/tarefas/empresas vinculadas, ele será apenas inativado.')) return;
+    try {
+      const { data } = await usuariosAPI.delete(id);
+      if (data?.message) alert(data.message);
+      loadUsuarios();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao excluir usuário');
     }
   };
 

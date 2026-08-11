@@ -156,16 +156,33 @@ def update_usuario(
     db.refresh(db_usuario)
     return db_usuario
 
+def _usuario_em_uso(db: Session, uid: int) -> int:
+    from ..models import Obrigacao, Empresa, tarefa_responsaveis
+    n = db.query(Obrigacao).filter((Obrigacao.responsavel_id == uid) | (Obrigacao.supervisor_id == uid)).count()
+    n += db.query(Tarefa).filter((Tarefa.responsavel_id == uid) | (Tarefa.supervisor_id == uid)).count()
+    n += db.query(Empresa).filter((Empresa.responsavel_id == uid) | (Empresa.supervisor_id == uid)).count()
+    n += db.query(Usuario).filter(Usuario.gestor_id == uid).count()
+    n += db.query(tarefa_responsaveis).filter(tarefa_responsaveis.c.usuario_id == uid).count()
+    return n
+
+
 @router.delete("/{usuario_id}")
 def delete_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_gestor_ou_admin)
 ):
+    """Com vínculo (obrigação/tarefa/empresa/gestor): só INATIVA. Sem vínculo: exclui de vez.
+    Nunca exclui a si mesmo."""
     db_usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not db_usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-
-    db_usuario.ativo = False
+    if db_usuario.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Você não pode excluir o próprio usuário.")
+    if _usuario_em_uso(db, usuario_id) > 0:
+        db_usuario.ativo = False
+        db.commit()
+        return {"message": "Usuário tem vínculos (obrigações/tarefas/empresas) — foi inativado (não excluído).", "inativado": True}
+    db.delete(db_usuario)
     db.commit()
-    return {"message": "Usuário desativado com sucesso"}
+    return {"message": "Usuário excluído.", "inativado": False}
