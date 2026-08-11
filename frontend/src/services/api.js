@@ -152,7 +152,7 @@ export const cronogramaAPI = {
     fd.append('arquivo', file);
     return api.post('/cronograma/analisar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
-  importar: (grupo, itens, mapa) => api.post('/cronograma/importar', { grupo, itens, mapa }),
+  importar: (grupo, itens, mapa, para_todas = true) => api.post('/cronograma/importar', { grupo, itens, mapa, para_todas }),
   baixarModelo: async () => {
     const { data } = await api.get('/cronograma/modelo-importacao', { responseType: 'blob' });
     const url = URL.createObjectURL(data);

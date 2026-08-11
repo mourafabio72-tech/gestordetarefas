@@ -27,6 +27,7 @@ export default function ImportarCronograma() {
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [paraTodas, setParaTodas] = useState(true);
 
   useEffect(() => {
     empresasAPI.list().then((r) => setEmpresas(r.data)).catch(() => {});
@@ -84,7 +85,7 @@ export default function ImportarCronograma() {
   const importar = async () => {
     setBusy(true);
     try {
-      const { data } = await cronogramaAPI.importar(grupo, itens, {});
+      const { data } = await cronogramaAPI.importar(grupo, itens, {}, paraTodas);
       setResultado(data);
       setItens(null);
     } catch (e) {
@@ -158,11 +159,16 @@ export default function ImportarCronograma() {
                   <AlertTriangle size={13} /> {semSetor} sem setor
                 </span>
               )}
-              {semEmpresa > 0 && (
+              {!paraTodas && semEmpresa > 0 && (
                 <span className="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700 flex items-center gap-1">
                   <AlertTriangle size={13} /> {semEmpresa} sem empresa
                 </span>
               )}
+              <label className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 flex items-center gap-1.5 cursor-pointer"
+                title="A obrigação vale para todas as empresas (sem grudar CNPJ). Desmarque só para obrigações específicas de certas empresas.">
+                <input type="checkbox" checked={paraTodas} onChange={(e) => setParaTodas(e.target.checked)} />
+                Aplicar a todas as empresas
+              </label>
               <select value="" title="Aplicar um setor a todas as linhas"
                 onChange={(e) => { if (e.target.value) setItens((arr) => arr.map((it) => ({ ...it, setor: e.target.value }))); e.target.value = ''; }}
                 className="input-field py-1 text-xs w-auto">
@@ -184,7 +190,7 @@ export default function ImportarCronograma() {
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-3 font-medium">Atividade</th>
                   <th className="py-2 pr-3 font-medium">Setor</th>
-                  <th className="py-2 pr-3 font-medium w-[20rem]">Empresas</th>
+                  {!paraTodas && <th className="py-2 pr-3 font-medium w-[20rem]">Empresas</th>}
                   <th className="py-2 pr-3 font-medium">Prazo</th>
                   <th className="py-2 pr-3 font-medium">Competência</th>
                   <th className="py-2 pr-3 font-medium text-center">Multa</th>
@@ -201,6 +207,7 @@ export default function ImportarCronograma() {
                         {setorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
+                    {!paraTodas && (
                     <td className="py-1.5 pr-3">
                       <div className="flex flex-wrap gap-1 items-center">
                         {(it.empresa_ids || []).map((id) => (
@@ -218,6 +225,7 @@ export default function ImportarCronograma() {
                         </select>
                       </div>
                     </td>
+                    )}
                     <td className="py-1.5 pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
                     <td className="py-1.5 pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {it.competencia_ref === 'mes_anterior' ? 'mês anterior' : 'mesmo mês'}

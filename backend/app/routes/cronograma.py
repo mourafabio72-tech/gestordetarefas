@@ -37,6 +37,7 @@ class ImportarBody(BaseModel):
     grupo: str
     itens: List[Dict[str, Any]]
     mapa: Dict[str, Any] = {}   # {codigo_entidade: empresa_id}
+    para_todas: bool = True     # obrigações valem para todas as empresas (sem grudar CNPJ)
 
 
 @router.post("/importar")
@@ -47,4 +48,4 @@ def importar(
 ):
     if not body.itens:
         raise HTTPException(status_code=422, detail="Nada para importar.")
-    return cron.importar(db, body.grupo, body.itens, body.mapa)
+    return cron.importar(db, body.grupo, body.itens, body.mapa, para_todas=body.para_todas)

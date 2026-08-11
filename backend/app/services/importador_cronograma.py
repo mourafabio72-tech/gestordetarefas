@@ -229,11 +229,15 @@ def _get_or_create_setor(db, nome: str):
     return s
 
 
-def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
-    """Cria setores e obrigações (dedupe por nome; se já existe, apenas acrescenta
-    as empresas ao vínculo). Cada código de entidade (FOS/SL/SLS) é resolvido para
-    uma empresa: se `mapa[codigo]` aponta uma empresa cadastrada, usa ela; senão,
-    cria uma empresa pelo próprio código (fallback)."""
+def importar(db, grupo: str, itens: list, mapa: dict = None, para_todas: bool = True) -> dict:
+    """Cria setores e obrigações (dedupe por nome).
+
+    `para_todas=True` (padrão): a obrigação vale para TODAS as empresas — não
+    grava vínculo por CNPJ (regra de regime/segmento vazia = todas). Se a obrigação
+    já existir com vínculos antigos, eles são LIMPOS para ficar coerente com a tela.
+
+    `para_todas=False`: mantém o vínculo por empresa (seleção por linha `empresa_ids`
+    ou código FOS/SL/SLS via `mapa`), para obrigações realmente específicas."""
     grupo = (grupo or "").strip() or "GRUPO"
     mapa = mapa or {}
     codigos = sorted({c for it in itens for c in (it.get("entidades") or [])})
@@ -259,16 +263,23 @@ def importar(db, grupo: str, itens: list, mapa: dict = None) -> dict:
         if not nome:
             continue
         setor = _get_or_create_setor(db, it.get("setor"))
-        emps = _resolver(it)
+        emps = [] if para_todas else _resolver(it)
         for e in emps:
             usadas.add(e.razao_social)
 
         o = db.query(Obrigacao).filter(Obrigacao.nome == nome).first()
         if o:
-            atuais = {e.id for e in o.empresas}
-            for e in emps:
-                if e.id not in atuais:
-                    o.empresas.append(e)
+            if para_todas:
+                o.empresas = []        # limpa vínculos antigos → vale para todas
+            else:
+                atuais = {e.id for e in o.empresas}
+                for e in emps:
+                    if e.id not in atuais:
+                        o.empresas.append(e)
+            # garante que não há restrição de regime/segmento (para_todas)
+            if para_todas:
+                o.aplica_regimes = None
+                o.aplica_segmentos = None
             atualizadas += 1
         else:
             o = Obrigacao(
