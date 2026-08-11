@@ -81,20 +81,61 @@ def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util
     return d
 
 
-def empresas_alvo(db: Session, o: Obrigacao):
-    """Empresas ativas que casam a regra (regime/segmento) ∪ vínculos explícitos."""
+def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
+    """A empresa `e` é alvo da obrigação `o`? Casa a regra (regime/segmento)
+    OU está vinculada explicitamente. (Não checa ativo/bloqueado — quem chama filtra.)"""
     regimes = _csv_set(o.aplica_regimes)
     segmentos = _csv_set(o.aplica_segmentos)
+    ok_reg = (not regimes) or (e.regime_tributario in regimes)
+    ok_seg = (not segmentos) or (e.segmento in segmentos)
+    if ok_reg and ok_seg:
+        return True
+    return any(x.id == e.id for x in o.empresas)  # inclusão explícita
+
+
+def empresas_alvo(db: Session, o: Obrigacao):
+    """Empresas ativas que casam a regra (regime/segmento) ∪ vínculos explícitos."""
     alvo = {}
     for e in db.query(Empresa).filter(Empresa.ativo == True, Empresa.bloqueado == False).all():
-        ok_reg = (not regimes) or (e.regime_tributario in regimes)
-        ok_seg = (not segmentos) or (e.segmento in segmentos)
-        if ok_reg and ok_seg:
+        if _no_alvo(o, e):
             alvo[e.id] = e
     for e in o.empresas:            # inclusões explícitas (mesmo fora da regra)
         if e.ativo and not e.bloqueado:
             alvo[e.id] = e
     return list(alvo.values())
+
+
+def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
+                          competencia: str, prazo: date) -> bool:
+    """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
+    Retorna True se criou, False se já existia (dedupe)."""
+    existe = (db.query(Tarefa)
+              .filter(Tarefa.obrigacao_id == o.id,
+                      Tarefa.empresa_id == emp.id,
+                      Tarefa.competencia == competencia)
+              .first())
+    if existe:
+        return False
+    # Responsável/supervisor: a EMPRESA manda; a obrigação é fallback.
+    resp = emp.responsavel or o.responsavel
+    sup_id = emp.supervisor_id or o.supervisor_id
+    nova = Tarefa(
+        titulo=o.nome,
+        descricao=o.comentario_padrao,
+        empresa_id=emp.id,
+        setor_id=o.setor_id,
+        responsavel_id=(resp.id if resp else None),
+        supervisor_id=sup_id,
+        obrigacao_id=o.id,
+        competencia=competencia,
+        status=StatusTarefa.PENDENTE,
+        data_prazo=prazo,
+        gera_multa=bool(o.passivel_multa),
+    )
+    if resp:
+        nova.responsaveis = [resp]
+    db.add(nova)
+    return True
 
 
 def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
@@ -108,35 +149,11 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
                            o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
         n_o = 0
         for emp in empresas_alvo(db, o):
-            existe = (db.query(Tarefa)
-                      .filter(Tarefa.obrigacao_id == o.id,
-                              Tarefa.empresa_id == emp.id,
-                              Tarefa.competencia == competencia)
-                      .first())
-            if existe:
+            if _criar_tarefa_se_nova(db, o, emp, competencia, prazo):
+                criadas += 1
+                n_o += 1
+            else:
                 puladas += 1
-                continue
-            # Responsável/supervisor: a EMPRESA manda; a obrigação é fallback.
-            resp = emp.responsavel or o.responsavel
-            sup_id = emp.supervisor_id or o.supervisor_id
-            nova = Tarefa(
-                titulo=o.nome,
-                descricao=o.comentario_padrao,
-                empresa_id=emp.id,
-                setor_id=o.setor_id,
-                responsavel_id=(resp.id if resp else None),
-                supervisor_id=sup_id,
-                obrigacao_id=o.id,
-                competencia=competencia,
-                status=StatusTarefa.PENDENTE,
-                data_prazo=prazo,
-                gera_multa=bool(o.passivel_multa),
-            )
-            if resp:
-                nova.responsaveis = [resp]
-            db.add(nova)
-            criadas += 1
-            n_o += 1
         if n_o:
             por_obrigacao.append({"obrigacao": o.nome, "competencia": competencia,
                                   "prazo": prazo.isoformat(), "criadas": n_o})
@@ -148,3 +165,31 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
 def gerar_mes_atual(db: Session) -> dict:
     hoje = date.today()
     return gerar_tarefas(db, hoje.month, hoje.year)
+
+
+def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entrega: int) -> dict:
+    """Gera as tarefas de UMA empresa para o mês de entrega informado — usada quando
+    a empresa é cadastrada (vínculo automático por regime/segmento). Percorre todas as
+    obrigações ativas do mês cuja regra bate com a empresa e cria as tarefas faltantes."""
+    if not empresa.ativo or empresa.bloqueado:
+        return {"criadas": 0, "puladas": 0}
+    criadas, puladas = 0, 0
+    for o in db.query(Obrigacao).filter(Obrigacao.ativa == True).all():
+        if str(mes_entrega) not in _csv_set(o.meses_ativos):
+            continue
+        if not _no_alvo(o, empresa):
+            continue
+        competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
+        prazo = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
+                           o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
+        if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo):
+            criadas += 1
+        else:
+            puladas += 1
+    db.commit()
+    return {"criadas": criadas, "puladas": puladas}
+
+
+def gerar_empresa_mes_atual(db: Session, empresa: Empresa) -> dict:
+    hoje = date.today()
+    return gerar_para_empresa(db, empresa, hoje.month, hoje.year)

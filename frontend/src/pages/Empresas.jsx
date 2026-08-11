@@ -97,7 +97,9 @@ export default function Empresas() {
       if (editingEmpresa) {
         await empresasAPI.update(editingEmpresa.id, payload);
       } else {
-        await empresasAPI.create(payload);
+        const resp = await empresasAPI.create(payload);
+        const n = parseInt(resp?.headers?.['x-tarefas-geradas'] || '0', 10);
+        if (n > 0) alert(`Empresa cadastrada. ${n} tarefa(s) do mês gerada(s) automaticamente pelas obrigações que se aplicam.`);
       }
       setShowModal(false);
       setEditingEmpresa(null);

@@ -74,6 +74,7 @@ def get_empresa(
 @router.post("", response_model=EmpresaResponse, status_code=201)
 def create_empresa(
     empresa: EmpresaCreate,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("empresas", "editar"))
 ):
@@ -88,6 +89,16 @@ def create_empresa(
     db.add(db_empresa)
     db.commit()
     db.refresh(db_empresa)
+
+    # Vínculo automático: gera já as tarefas do mês para as obrigações cuja
+    # regra (regime/segmento) casa com esta empresa. Falha aqui não quebra o cadastro.
+    try:
+        from ..services import gerador
+        res = gerador.gerar_empresa_mes_atual(db, db_empresa)
+        response.headers["X-Tarefas-Geradas"] = str(res.get("criadas", 0))
+    except Exception:
+        db.rollback()
+        response.headers["X-Tarefas-Geradas"] = "0"
     return db_empresa
 
 @router.put("/{empresa_id}", response_model=EmpresaResponse)
