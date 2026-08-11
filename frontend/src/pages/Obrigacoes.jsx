@@ -236,7 +236,6 @@ export default function Obrigacoes() {
                   </th>
                   <th className="text-left py-2 px-2 font-medium">Obrigação</th>
                   <th className="text-left py-2 px-2 font-medium w-32">Setor</th>
-                  <th className="text-left py-2 px-2 font-medium w-32">Alvo</th>
                   <th className="text-left py-2 px-2 font-medium w-20">Empresas</th>
                   <th className="text-left py-2 px-2 font-medium w-20">Status</th>
                   <th className="text-right py-2 px-2 font-medium w-24">Ações</th>
@@ -250,9 +249,6 @@ export default function Obrigacoes() {
                     </td>
                     <td className="py-1.5 px-2 font-medium text-gray-800">{o.nome}</td>
                     <td className="py-1.5 px-2 text-gray-600">{setorNome(o.setor_id)}</td>
-                    <td className="py-1.5 px-2 text-xs text-gray-500">
-                      {[o.aplica_regimes, o.aplica_segmentos].filter(Boolean).join(' · ') || 'Todos'}
-                    </td>
                     <td className="py-1.5 px-2 text-gray-500">{(o.empresa_ids || []).length}</td>
                     <td className="py-1.5 px-2">
                       <span className={`px-2 py-0.5 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
