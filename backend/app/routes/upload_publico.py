@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Tarefa, Empresa, StatusTarefa
+from ..models import Tarefa, Empresa, Obrigacao, StatusTarefa
 from ..services import upload as up
 
 router = APIRouter(prefix="/publico", tags=["publico"])
@@ -23,10 +23,11 @@ def _tarefa_por_token(db: Session, token: str) -> Tarefa:
 @router.get("/tarefa/{token}")
 def contexto(token: str, db: Session = Depends(get_db)):
     t = _tarefa_por_token(db, token)
+    obrig = db.query(Obrigacao).filter(Obrigacao.id == t.obrigacao_id).first() if t.obrigacao_id else None
     return {
         "titulo": t.titulo,
         "empresa": t.empresa.razao_social if t.empresa else None,
-        "obrigacao": t.obrigacao.nome if t.obrigacao else None,
+        "obrigacao": obrig.nome if obrig else None,
         "competencia": t.competencia,
         "prazo": t.data_prazo.isoformat() if t.data_prazo else None,
         "ja_enviado": t.status == StatusTarefa.CONCLUIDA,
