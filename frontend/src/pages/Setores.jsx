@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { setoresAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 
 export default function Setores() {
   const [setores, setSetores] = useState([]);
@@ -8,12 +8,13 @@ export default function Setores() {
   const [showModal, setShowModal] = useState(false);
   const [editingSetor, setEditingSetor] = useState(null);
   const [formData, setFormData] = useState({ nome: '', descricao: '' });
+  const [mostrarInativos, setMostrarInativos] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
-      const res = await setoresAPI.list();
+      const res = await setoresAPI.list(true);
       setSetores(res.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -56,6 +57,13 @@ export default function Setores() {
     }
   };
 
+  const alternarStatus = async (s) => {
+    try { await setoresAPI.setAtiva(s.id, s.ativo === false); loadData(); }
+    catch { alert('Erro ao mudar o status do setor'); }
+  };
+
+  const setoresFiltrados = mostrarInativos ? setores : setores.filter((s) => s.ativo !== false);
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Carregando...</div>;
   }
@@ -67,17 +75,23 @@ export default function Setores() {
           <h1 className="text-2xl font-bold text-gray-800">Setores</h1>
           <p className="text-sm text-gray-500">Departamentos internos do escritório (Fiscal, Contábil, DP…).</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingSetor(null);
-            setFormData({ nome: '', descricao: '' });
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Novo Setor
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={mostrarInativos} onChange={(e) => setMostrarInativos(e.target.checked)} className="h-4 w-4" />
+            Mostrar inativos
+          </label>
+          <button
+            onClick={() => {
+              setEditingSetor(null);
+              setFormData({ nome: '', descricao: '' });
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Novo Setor
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -93,25 +107,37 @@ export default function Setores() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-600">Descrição</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Situação</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {setores.map((setor) => (
+                {setoresFiltrados.map((setor) => (
                   <tr key={setor.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium">{setor.nome}</td>
                     <td className="py-3 px-4 text-gray-500">{setor.descricao || '-'}</td>
                     <td className="py-3 px-4">
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${setor.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                        {setor.ativo === false ? 'Inativo' : 'Ativo'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleEdit(setor)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
+                          onClick={() => alternarStatus(setor)} title={setor.ativo === false ? 'Ativar' : 'Inativar'}
+                          className={`p-2 rounded-lg transition-colors ${setor.ativo === false ? 'text-green-600 hover:bg-green-50' : 'text-amber-600 hover:bg-amber-50'}`}
+                        >
+                          {setor.ativo === false ? <CheckCircle2 size={16} /> : <Ban size={16} />}
+                        </button>
+                        <button
                           onClick={() => handleDelete(setor.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir"
                         >
                           <Trash2 size={16} />
                         </button>

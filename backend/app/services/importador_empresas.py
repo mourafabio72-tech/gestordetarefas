@@ -8,6 +8,7 @@ import io
 import re
 import unicodedata
 from ..models import Empresa
+from .validacao import cnpj_valido
 
 
 def _norm(s: str) -> str:
@@ -130,6 +131,11 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
             continue
 
         cnpj = dados.get("cnpj")
+        if cnpj and not cnpj_valido(cnpj):
+            detalhes.append({"linha": razao, "status": "aviso",
+                             "detalhe": f"CNPJ inválido ({cnpj}) — importado sem CNPJ."})
+            dados.pop("cnpj", None)
+            cnpj = None
         existente = None
         if cnpj:
             existente = next((e for e in db.query(Empresa).filter(Empresa.cnpj != None).all()

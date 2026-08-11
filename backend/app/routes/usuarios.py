@@ -59,10 +59,37 @@ def bloquear_usuario(
         if body.substituto_id == usuario_id:
             raise HTTPException(status_code=400, detail="Substituto deve ser diferente")
         aplicar_definitiva(db, usuario_id, body.substituto_id)
+    if body.bloqueado and _eh_ultimo_admin(db, usuario_id):
+        raise HTTPException(status_code=400, detail="Não é possível bloquear o último admin ativo.")
     u.bloqueado = body.bloqueado
     db.commit()
     db.refresh(u)
     return u
+
+
+def _eh_ultimo_admin(db: Session, uid: int) -> bool:
+    u = db.query(Usuario).filter(Usuario.id == uid).first()
+    if not u or u.grupo != "admin":
+        return False
+    outros = db.query(Usuario).filter(Usuario.grupo == "admin", Usuario.id != uid,
+                                      Usuario.ativo == True, Usuario.bloqueado == False).count()
+    return outros == 0
+
+
+def _gestor_invalido(db: Session, uid, gestor_id) -> str:
+    """Mensagem de erro se o gestor for inválido (auto-gestor ou ciclo); senão ''."""
+    if not gestor_id:
+        return ""
+    if uid is not None and gestor_id == uid:
+        return "Um usuário não pode ser gestor de si mesmo."
+    atual, seen = gestor_id, set()
+    while atual and atual not in seen:
+        if uid is not None and atual == uid:
+            return "Vínculo de gestor cria um ciclo (A→B→A)."
+        seen.add(atual)
+        g = db.query(Usuario).filter(Usuario.id == atual).first()
+        atual = g.gestor_id if g else None
+    return ""
 
 @router.get("", response_model=List[UsuarioResponse])
 def list_usuarios(
@@ -127,6 +154,13 @@ def update_usuario(
     if not db_usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
+    if usuario.gestor_id is not None:
+        erro = _gestor_invalido(db, usuario_id, usuario.gestor_id)
+        if erro:
+            raise HTTPException(status_code=400, detail=erro)
+    if usuario.grupo is not None and usuario.grupo != "admin" and _eh_ultimo_admin(db, usuario_id):
+        raise HTTPException(status_code=400, detail="Não é possível rebaixar o último admin ativo.")
+
     if usuario.nome is not None:
         db_usuario.nome = usuario.nome
     if usuario.email is not None:
@@ -179,6 +213,8 @@ def delete_usuario(
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     if db_usuario.id == current_user.id:
         raise HTTPException(status_code=400, detail="Você não pode excluir o próprio usuário.")
+    if _eh_ultimo_admin(db, usuario_id):
+        raise HTTPException(status_code=400, detail="Não é possível excluir o último admin ativo.")
     if _usuario_em_uso(db, usuario_id) > 0:
         db_usuario.ativo = False
         db.commit()

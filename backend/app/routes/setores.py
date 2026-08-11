@@ -11,11 +11,16 @@ router = APIRouter(prefix="/setores", tags=["setores"])
 
 @router.get("", response_model=List[SetorResponse])
 def list_setores(
+    todas: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # Setores são internos/globais do escritório.
-    return db.query(Setor).filter(Setor.ativo == True).all()
+    # Setores são internos/globais do escritório. Por padrão só ativos;
+    # `todas=true` inclui inativos (cadastro de Setores, para reativar).
+    q = db.query(Setor)
+    if not todas:
+        q = q.filter(Setor.ativo == True)
+    return q.all()
 
 @router.get("/{setor_id}", response_model=SetorResponse)
 def get_setor(

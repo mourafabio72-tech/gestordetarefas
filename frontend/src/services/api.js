@@ -67,11 +67,12 @@ export const empresasAPI = {
 };
 
 export const setoresAPI = {
-  list: () => api.get('/setores'),
+  list: (todas) => api.get('/setores', { params: todas ? { todas: true } : {} }),
   get: (id) => api.get(`/setores/${id}`),
   create: (data) => api.post('/setores', data),
   update: (id, data) => api.put(`/setores/${id}`, data),
   delete: (id) => api.delete(`/setores/${id}`),
+  setAtiva: (id, ativo) => api.post(`/setores/${id}/status`, { ativo }),
 };
 
 export const usuariosAPI = {
