@@ -29,6 +29,12 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NOME: ${ADMIN_NOME:-Administrador}
+      # Comprovantes enviados pelo cliente (link público) — gravados no volume persistente.
+      UPLOAD_DIR: /app/data/uploads
+      PUBLIC_URL: ${PUBLIC_URL:-https://gestordetarefas.zoaria.com.br}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - uploads:/app/data
     depends_on:
       - db
     # Sem 'ports': o backend é acessado internamente pelo nginx do frontend (proxy /api).
@@ -43,3 +49,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:   # comprovantes enviados pelo cliente (persistente entre deploys)
