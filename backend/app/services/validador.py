@@ -13,6 +13,8 @@ from datetime import datetime
 import pypdf
 from sqlalchemy.orm import Session
 from ..models import Empresa, Obrigacao, Tarefa, StatusTarefa
+from . import config as cfgmod
+from . import ia as ia_mod
 
 
 def _norm(s: str) -> str:
@@ -282,10 +284,33 @@ def salvar_modelo(db: Session, dados: dict) -> "object":
 
 
 def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
-    """Extrai, casa e (se único) baixa a tarefa. Retorna um relatório."""
+    """Extrai, casa e (se único) baixa a tarefa. Retorna um relatório.
+    Se o método regex/palavra-chave não resolver e a IA estiver ativa, usa a IA
+    como reforço para preencher CNPJ/competência/obrigação."""
     texto = ler_arquivo(nome_arquivo, conteudo)
     dados = extrair_dados(texto)
-    res = {"arquivo": nome_arquivo, **dados, "status": None, "detalhe": None, "tarefa_id": None}
+    obrigacoes = identificar_obrigacao(db, texto)
+    usou_ia = False
+
+    # Reforço por IA só quando o método atual não resolveu.
+    if (not dados["cnpj"]) or (not dados["competencia"]) or (len(obrigacoes) != 1):
+        cfg = cfgmod.carregar(db)
+        if ia_mod.disponivel(cfg):
+            ativas = db.query(Obrigacao).filter(Obrigacao.ativa == True).all()
+            r_ia = ia_mod.extrair(texto, ativas, cfg)
+            if r_ia and not r_ia.get("erro"):
+                usou_ia = True
+                if not dados["cnpj"] and r_ia.get("cnpj"):
+                    dados["cnpj"] = r_ia["cnpj"]
+                if not dados["competencia"] and r_ia.get("competencia"):
+                    dados["competencia"] = r_ia["competencia"]
+                if len(obrigacoes) != 1 and r_ia.get("obrigacao_id"):
+                    o = db.query(Obrigacao).filter(Obrigacao.id == r_ia["obrigacao_id"]).first()
+                    if o:
+                        obrigacoes = [o]
+
+    res = {"arquivo": nome_arquivo, **dados, "ia": usou_ia,
+           "status": None, "detalhe": None, "tarefa_id": None}
 
     if not dados["cnpj"]:
         res.update(status="erro", detalhe="CNPJ não encontrado no documento")
@@ -297,9 +322,8 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         return res
     res["empresa"] = empresa.razao_social
 
-    obrigacoes = identificar_obrigacao(db, texto)
     if not obrigacoes:
-        res.update(status="erro", detalhe="Nenhuma obrigação reconhecida (ajuste os identificadores)")
+        res.update(status="erro", detalhe="Nenhuma obrigação reconhecida (ajuste os identificadores ou ative a IA)")
         return res
     if len(obrigacoes) > 1:
         res.update(status="ambiguo",

@@ -21,8 +21,13 @@ DEFAULTS = {
     "horarios_principal": "09:30,17:45",
     "horarios_extra": "14:30,16:00",
     "public_url": os.getenv("PUBLIC_URL", "https://gestordetarefas.zoaria.com.br"),
+    # IA (reforço do e-validador) — OpenAI
+    "ia_ativo": "1" if os.getenv("OPENAI_API_KEY") else "0",
+    "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
+    "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+    "openai_url": os.getenv("OPENAI_URL", "https://api.openai.com/v1/chat/completions"),
 }
-SEGREDOS = {"smtp_pass", "zap_api_key"}
+SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key"}
 
 
 def carregar(db) -> dict:

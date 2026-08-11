@@ -112,6 +112,7 @@ export default function EValidador() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800 truncate">{r.arquivo}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs ${s.cls}`}>{s.label}</span>
+                      {r.ia && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700">✨ IA</span>}
                     </div>
                     <p className="text-sm text-gray-600 mt-0.5">{r.detalhe}</p>
                     <p className="text-xs text-gray-400 mt-1">

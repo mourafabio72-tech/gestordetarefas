@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { configuracaoAPI } from '../services/api';
-import { Bell, Mail, MessageCircle, Clock, Save, Send } from 'lucide-react';
+import { Bell, Mail, MessageCircle, Clock, Save, Send, Sparkles } from 'lucide-react';
 
 export default function Notificacoes() {
   const [cfg, setCfg] = useState(null);
@@ -30,6 +30,7 @@ export default function Notificacoes() {
       const payload = { ...cfg };
       if (!payload.smtp_pass) delete payload.smtp_pass;
       if (!payload.zap_api_key) delete payload.zap_api_key;
+      if (!payload.openai_api_key) delete payload.openai_api_key;
       const { data } = await configuracaoAPI.putNotificacoes(payload);
       setCfg(data);
       setMsg({ ok: true, txt: 'Configuração salva. Os horários já valem para os próximos disparos.' });
@@ -51,6 +52,7 @@ export default function Notificacoes() {
       const payload = { ...cfg };
       if (!payload.smtp_pass) delete payload.smtp_pass;
       if (!payload.zap_api_key) delete payload.zap_api_key;
+      if (!payload.openai_api_key) delete payload.openai_api_key;
       const { data: salvo } = await configuracaoAPI.putNotificacoes(payload);
       setCfg(salvo);
       const { data } = await configuracaoAPI.testarEmail(email);
@@ -73,6 +75,7 @@ export default function Notificacoes() {
       const payload = { ...cfg };
       if (!payload.smtp_pass) delete payload.smtp_pass;
       if (!payload.zap_api_key) delete payload.zap_api_key;
+      if (!payload.openai_api_key) delete payload.openai_api_key;
       await configuracaoAPI.putNotificacoes(payload);
       const { data } = await configuracaoAPI.testarWhatsapp(numero);
       setMsg(data.success
@@ -183,6 +186,25 @@ export default function Notificacoes() {
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-2">Envia uma mensagem de teste ao número informado (formato 55 + DDD + número).</p>
+        </div>
+
+        {/* IA (e-validador) */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2"><Sparkles size={18} className="text-primary-700" /><h2 className="font-semibold">IA — reforço do e-validador (OpenAI)</h2></div>
+            <Toggle chave="ia_ativo" label="Usar IA no e-validador" />
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Quando o método por palavra-chave não resolve, a IA lê o texto do documento e identifica CNPJ, competência e a obrigação. Só texto (não escaneado) e só nos casos difíceis.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Key (OpenAI)</label>
+              <input type="password" value={cfg.openai_api_key ?? ''} onChange={(e) => set('openai_api_key', e.target.value)} className="input-field"
+                placeholder={cfg.openai_api_key_set ? '•••••• (guardada — deixe vazio p/ manter)' : 'sk-...'} />
+            </div>
+            <Campo chave="openai_model" label="Modelo" ph="gpt-4o-mini" />
+          </div>
         </div>
 
         <div className="flex justify-end">
