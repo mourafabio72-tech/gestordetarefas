@@ -122,16 +122,13 @@ def _resolver_empresa(db, valor: str):
 
 
 def _resolver_setor(db, valor: str):
-    """Setor por nome (normalizado). Cria se não existir (import tolerante)."""
+    """Setor por nome (normalizado). NÃO cria setor — só vincula a um já
+    cadastrado. Nome desconhecido devolve None (evita poluir o cadastro com
+    valores errados na coluna, ex.: cargos digitados como setor)."""
     if not valor:
         return None
     alvo = _norm(valor)
-    s = next((x for x in db.query(Setor).all() if _norm(x.nome) == alvo), None)
-    if not s:
-        s = Setor(nome=str(valor).strip())
-        db.add(s)
-        db.flush()
-    return s
+    return next((x for x in db.query(Setor).all() if _norm(x.nome) == alvo), None)
 
 
 def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
@@ -183,6 +180,10 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
         tipo = _mapear_tipo(dados.get("tipo"))
         empresa = _resolver_empresa(db, dados.get("empresa")) if tipo == "cliente" else None
         setor = _resolver_setor(db, dados.get("setor"))
+        setor_nome = (dados.get("setor") or "").strip()
+        if setor_nome and not setor:
+            detalhes.append({"linha": nome, "status": "aviso",
+                             "detalhe": f"Setor '{setor_nome}' não existe no cadastro — importado sem setor."})
         cargo = dados.get("cargo")
         telefone = dados.get("telefone")
         senha_informada = dados.get("senha")
