@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Empresa, Usuario
+from ..models import Empresa, Usuario, Setor, EmpresaSetorResponsavel
 from ..schemas import EmpresaCreate, EmpresaResponse
 from ..auth import get_current_user, require_perm
 from ..services import importador_empresas as imp
@@ -23,6 +23,51 @@ router = APIRouter(prefix="/empresas", tags=["empresas"])
 
 class BloquearRequest(BaseModel):
     bloqueado: bool = True
+
+
+class RespSetorItem(BaseModel):
+    setor_id: int
+    responsavel_id: Optional[int] = None
+
+
+class RespSetorBody(BaseModel):
+    itens: List[RespSetorItem]
+
+
+@router.get("/{empresa_id}/responsaveis-setor")
+def get_responsaveis_setor(
+    empresa_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Um item por setor ATIVO: o responsável dessa empresa naquele setor (ou None)."""
+    mapa = {r.setor_id: r.responsavel_id
+            for r in db.query(EmpresaSetorResponsavel).filter(EmpresaSetorResponsavel.empresa_id == empresa_id).all()}
+    setores = db.query(Setor).filter(Setor.ativo == True).order_by(Setor.nome).all()
+    return [{"setor_id": s.id, "setor_nome": s.nome, "responsavel_id": mapa.get(s.id)} for s in setores]
+
+
+@router.put("/{empresa_id}/responsaveis-setor")
+def set_responsaveis_setor(
+    empresa_id: int,
+    body: RespSetorBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("empresas", "editar")),
+):
+    """Grava a matriz responsável×setor da empresa (upsert por setor)."""
+    if not db.query(Empresa).filter(Empresa.id == empresa_id).first():
+        raise HTTPException(status_code=404, detail="Empresa não encontrada")
+    existentes = {r.setor_id: r for r in db.query(EmpresaSetorResponsavel)
+                  .filter(EmpresaSetorResponsavel.empresa_id == empresa_id).all()}
+    for it in body.itens:
+        row = existentes.get(it.setor_id)
+        if row:
+            row.responsavel_id = it.responsavel_id
+        else:
+            db.add(EmpresaSetorResponsavel(empresa_id=empresa_id, setor_id=it.setor_id,
+                                           responsavel_id=it.responsavel_id))
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/modelo-importacao")

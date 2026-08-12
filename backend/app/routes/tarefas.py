@@ -259,8 +259,12 @@ def update_tarefa(
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()
 
-    # responsaveis (M2M) tratado à parte
+    # responsaveis (M2M) tratado à parte — trocar o dono é só gestor/admin.
     if "responsavel_ids" in update_data:
+        novos = set(update_data.get("responsavel_ids") or [])
+        atuais = {u.id for u in db_tarefa.responsaveis}
+        if novos != atuais and current_user.grupo not in ("admin", "gestor"):
+            raise HTTPException(status_code=403, detail="Apenas gestor ou admin pode trocar o responsável.")
         _aplicar_responsaveis(db, db_tarefa, update_data.pop("responsavel_ids"))
 
     for key, value in update_data.items():
@@ -320,6 +324,8 @@ def transferir_tarefa(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("tarefas", "editar"))
 ):
+    if current_user.grupo not in ("admin", "gestor"):
+        raise HTTPException(status_code=403, detail="Apenas gestor ou admin pode trocar o responsável.")
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")

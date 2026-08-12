@@ -105,6 +105,18 @@ def empresas_alvo(db: Session, o: Obrigacao):
     return list(alvo.values())
 
 
+def _resp_do_setor(db: Session, empresa_id: int, setor_id):
+    """Responsável (analista) da empresa naquele setor, pela matriz. None se não definido."""
+    if not setor_id:
+        return None
+    from ..models import EmpresaSetorResponsavel
+    vin = (db.query(EmpresaSetorResponsavel)
+           .filter(EmpresaSetorResponsavel.empresa_id == empresa_id,
+                   EmpresaSetorResponsavel.setor_id == setor_id)
+           .first())
+    return vin.responsavel if (vin and vin.responsavel) else None
+
+
 def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
                           competencia: str, prazo: date) -> bool:
     """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
@@ -116,9 +128,10 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
               .first())
     if existe:
         return False
-    # Responsável/supervisor: a EMPRESA manda; a obrigação é fallback.
-    resp = emp.responsavel or o.responsavel
-    sup_id = emp.supervisor_id or o.supervisor_id
+    # Responsável = analista da empresa no setor da obrigação (matriz); fallback
+    # no responsável padrão da obrigação. Supervisor = gestor desse responsável.
+    resp = _resp_do_setor(db, emp.id, o.setor_id) or o.responsavel
+    sup_id = (resp.gestor_id if resp else None) or o.supervisor_id
     nova = Tarefa(
         titulo=o.nome,
         descricao=o.comentario_padrao,

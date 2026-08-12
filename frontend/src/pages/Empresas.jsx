@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { empresasAPI, usuariosAPI } from '../services/api';
+import { empresasAPI, usuariosAPI, setoresAPI } from '../services/api';
 import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
 
 const EMPRESA_VAZIA = {
@@ -35,6 +35,8 @@ const labelDe = (lista, val) => lista.find((o) => o.value === val)?.label || '-'
 export default function Empresas() {
   const [empresas, setEmpresas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [respSetor, setRespSetor] = useState([]);   // [{setor_id, setor_nome, responsavel_id}]
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState(null);
@@ -76,9 +78,10 @@ export default function Empresas() {
 
   const loadEmpresas = async () => {
     try {
-      const [emp, us] = await Promise.all([empresasAPI.list(true), usuariosAPI.list()]);
+      const [emp, us, st] = await Promise.all([empresasAPI.list(true), usuariosAPI.list(), setoresAPI.list()]);
       setEmpresas(emp.data);
       setUsuarios(us.data);
+      setSetores(st.data);
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
     } finally {
@@ -94,13 +97,22 @@ export default function Empresas() {
         responsavel_id: formData.responsavel_id ? parseInt(formData.responsavel_id) : null,
         supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : null,
       };
+      let empresaId;
       if (editingEmpresa) {
         await empresasAPI.update(editingEmpresa.id, payload);
+        empresaId = editingEmpresa.id;
       } else {
         const resp = await empresasAPI.create(payload);
+        empresaId = resp.data.id;
         const n = parseInt(resp?.headers?.['x-tarefas-geradas'] || '0', 10);
         if (n > 0) alert(`Empresa cadastrada. ${n} tarefa(s) do mês gerada(s) automaticamente pelas obrigações que se aplicam.`);
       }
+      // Grava a matriz responsável × setor
+      const itens = respSetor.map((r) => ({
+        setor_id: r.setor_id,
+        responsavel_id: r.responsavel_id ? parseInt(r.responsavel_id) : null,
+      }));
+      if (itens.length) await empresasAPI.setResponsaveisSetor(empresaId, itens);
       setShowModal(false);
       setEditingEmpresa(null);
       setFormData(EMPRESA_VAZIA);
@@ -127,6 +139,10 @@ export default function Empresas() {
       responsavel_id: empresa.responsavel_id || '',
       supervisor_id: empresa.supervisor_id || '',
     });
+    setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, responsavel_id: '' })));
+    empresasAPI.getResponsaveisSetor(empresa.id)
+      .then((r) => setRespSetor(r.data.map((x) => ({ ...x, responsavel_id: x.responsavel_id || '' }))))
+      .catch(() => {});
     setShowModal(true);
   };
 
@@ -186,6 +202,7 @@ export default function Empresas() {
             onClick={() => {
               setEditingEmpresa(null);
               setFormData(EMPRESA_VAZIA);
+              setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, responsavel_id: '' })));
               setShowModal(true);
             }}
             className="btn-primary flex items-center gap-2"
@@ -411,33 +428,30 @@ export default function Empresas() {
                   <option value="inativa">Inativa</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
-                <select
-                  value={formData.responsavel_id}
-                  onChange={(e) => setFormData({ ...formData, responsavel_id: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="">—</option>
-                  {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
-                    <option key={u.id} value={u.id}>{u.nome}</option>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável por setor</label>
+                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {respSetor.length === 0 && (
+                    <p className="text-xs text-gray-400 px-3 py-2">Cadastre setores para definir os responsáveis.</p>
+                  )}
+                  {respSetor.map((r, i) => (
+                    <div key={r.setor_id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-sm text-gray-600 w-32 shrink-0">{r.setor_nome}</span>
+                      <select
+                        value={r.responsavel_id}
+                        onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, responsavel_id: e.target.value } : x))}
+                        className="input-field py-1 text-sm flex-1"
+                      >
+                        <option value="">— sem responsável —</option>
+                        {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
+                          <option key={u.id} value={u.id}>{u.nome}</option>
+                        ))}
+                      </select>
+                    </div>
                   ))}
-                </select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">As tarefas de cada setor nascem com o responsável escolhido aqui; o gestor sai automático do gestor dessa pessoa.</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
-                <select
-                  value={formData.supervisor_id}
-                  onChange={(e) => setFormData({ ...formData, supervisor_id: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="">—</option>
-                  {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
-                    <option key={u.id} value={u.id}>{u.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <p className="text-xs text-gray-500 sm:col-span-2 -mt-1">As tarefas geradas para este cliente nascem com este responsável e supervisor.</p>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <textarea

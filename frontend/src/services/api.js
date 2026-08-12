@@ -52,6 +52,8 @@ export const empresasAPI = {
   update: (id, data) => api.put(`/empresas/${id}`, data),
   delete: (id) => api.delete(`/empresas/${id}`),
   bloquear: (id, bloqueado) => api.post(`/empresas/${id}/bloquear`, { bloqueado }),
+  getResponsaveisSetor: (id) => api.get(`/empresas/${id}/responsaveis-setor`),
+  setResponsaveisSetor: (id, itens) => api.put(`/empresas/${id}/responsaveis-setor`, { itens }),
   importar: (file) => {
     const fd = new FormData();
     fd.append('arquivo', file);

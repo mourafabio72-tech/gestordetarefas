@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Text, Boolean, Enum, Table
+from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Text, Boolean, Enum, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -84,6 +84,21 @@ class Empresa(Base):
     tarefas = relationship("Tarefa", back_populates="empresa")
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
     supervisor = relationship("Usuario", foreign_keys=[supervisor_id])
+    setor_responsaveis = relationship("EmpresaSetorResponsavel", cascade="all, delete-orphan")
+
+
+class EmpresaSetorResponsavel(Base):
+    """Responsável (analista) por setor, específico de cada empresa. O gestor da
+    tarefa sai do gestor_id desse responsável — não se cadastra aqui."""
+    __tablename__ = "empresa_setor_responsavel"
+    __table_args__ = (UniqueConstraint("empresa_id", "setor_id", name="uq_empresa_setor"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, index=True)
+    setor_id = Column(Integer, ForeignKey("setores.id"), nullable=False, index=True)
+    responsavel_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
 
 class Setor(Base):
     __tablename__ = "setores"
