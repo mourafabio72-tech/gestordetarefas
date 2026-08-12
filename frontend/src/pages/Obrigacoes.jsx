@@ -223,19 +223,19 @@ export default function Obrigacoes() {
         </div>
       </div>
 
-      <div className="card mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <input className="input-field" placeholder="Obrigação (nome ou mininome)"
+      <div className="card mb-4 p-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <input className="input-field py-1.5 text-sm" placeholder="Obrigação (nome)"
             value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
-          <select className="input-field" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
+          <select className="input-field py-1.5 text-sm" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
             <option value="">Todas as empresas</option>
             {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
           </select>
-          <select className="input-field" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
+          <select className="input-field py-1.5 text-sm" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
             <option value="">Todos os setores</option>
             {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
           </select>
-          <select className="input-field" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
+          <select className="input-field py-1.5 text-sm" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
             <option value="todas">Todos os status</option>
             <option value="ativa">Ativas</option>
             <option value="inativa">Inativas</option>
