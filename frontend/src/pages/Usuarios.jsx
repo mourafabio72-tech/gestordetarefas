@@ -328,9 +328,11 @@ export default function Usuarios() {
                   }}
                   className="input-field"
                 >
-                  {grupos.filter((g) => g.ativo).map((g) => (
-                    <option key={g.slug} value={g.slug}>{g.label}</option>
-                  ))}
+                  {grupos
+                    .filter((g) => g.ativo && (g.slug !== 'usuario' || formData.grupo === 'usuario'))
+                    .map((g) => (
+                      <option key={g.slug} value={g.slug}>{g.label}</option>
+                    ))}
                   <option value="__cliente__">Cliente (acesso externo)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
