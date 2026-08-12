@@ -209,12 +209,18 @@ export default function Tarefas() {
     }
   };
 
+  const bloqueiaBaixaManual = (tarefa) => tarefa.exige_documento && !tarefa.anexo_nome;
+
   const handleStatusChange = async (tarefa, newStatus) => {
+    if (newStatus === 'concluida' && bloqueiaBaixaManual(tarefa)) {
+      alert('Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.');
+      return;
+    }
     try {
       await tarefasAPI.update(tarefa.id, { status: newStatus });
       loadData();
     } catch (error) {
-      alert('Erro ao atualizar status');
+      alert(error.response?.data?.detail || 'Erro ao atualizar status');
     }
   };
 
@@ -407,7 +413,9 @@ export default function Tarefas() {
                       className="flex-1 text-[11px] border rounded px-1 py-1 bg-white" style={{ borderColor: SAGE.border, color: '#55614e' }}>
                       <option value="pendente">Pendente</option>
                       <option value="em_andamento">Em Andamento</option>
-                      <option value="concluida">Concluída</option>
+                      <option value="concluida" disabled={bloqueiaBaixaManual(tarefa)}>
+                        {bloqueiaBaixaManual(tarefa) ? 'Concluída (só e-validador)' : 'Concluída'}
+                      </option>
                     </select>
                   )}
                   {ativa && (

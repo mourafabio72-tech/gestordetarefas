@@ -149,6 +149,18 @@ class Tarefa(Base):
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id], back_populates="tarefas")
     supervisor = relationship("Usuario", foreign_keys=[supervisor_id])
     responsaveis = relationship("Usuario", secondary=tarefa_responsaveis)
+    obrigacao = relationship("Obrigacao", foreign_keys=[obrigacao_id])
+
+    @property
+    def exige_documento(self) -> bool:
+        """Baixa só pelo e-validador? Flag da obrigação manda; NULL deriva de
+        'identificadores'. Tarefa sem obrigação nunca exige."""
+        o = self.obrigacao
+        if o is None:
+            return False
+        if o.exige_documento is None:
+            return bool((o.identificadores or "").strip())
+        return bool(o.exige_documento)
 
 
 class Obrigacao(Base):

@@ -185,6 +185,7 @@ class TarefaResponse(BaseModel):
     protocolo_entrega: Optional[str] = None
     data_entrega: Optional[datetime] = None
     anexo_nome: Optional[str] = None
+    exige_documento: bool = False   # baixa só pelo e-validador (deriva da obrigação)
     created_at: datetime
 
     class Config:

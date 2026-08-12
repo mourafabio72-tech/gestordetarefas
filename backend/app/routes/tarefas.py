@@ -1,26 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa, Obrigacao
+from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
                     permissao_efetiva)
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
-
-
-def _exige_documento(obrig: Obrigacao) -> bool:
-    """Tarefa exige baixa por documento (e-validador)? A flag manda; NULL deriva
-    de 'identificadores' (se a obrigação tem o que validar, exige documento)."""
-    if obrig is None:
-        return False
-    if obrig.exige_documento is None:
-        return bool((obrig.identificadores or "").strip())
-    return bool(obrig.exige_documento)
 
 
 def _escopo_ids(db: Session, user: Usuario):
@@ -191,7 +181,7 @@ def list_tarefas(
     if status:
         query = query.filter(Tarefa.status == status)
 
-    return query.order_by(Tarefa.data_prazo.asc()).all()
+    return query.options(joinedload(Tarefa.obrigacao)).order_by(Tarefa.data_prazo.asc()).all()
 
 @router.get("/{tarefa_id}", response_model=TarefaResponse)
 def get_tarefa(
@@ -260,13 +250,11 @@ def update_tarefa(
     # Baixa: tarefa que exige documento só conclui pelo e-validador (com anexo).
     if (update_data.get("status") == StatusTarefa.CONCLUIDA
             and db_tarefa.status != StatusTarefa.CONCLUIDA
-            and not db_tarefa.anexo_nome):
-        obrig = (db.query(Obrigacao).filter(Obrigacao.id == db_tarefa.obrigacao_id).first()
-                 if db_tarefa.obrigacao_id else None)
-        if _exige_documento(obrig):
-            raise HTTPException(
-                status_code=403,
-                detail="Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.")
+            and not db_tarefa.anexo_nome
+            and db_tarefa.exige_documento):
+        raise HTTPException(
+            status_code=403,
+            detail="Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.")
 
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()
