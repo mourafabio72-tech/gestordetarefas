@@ -109,3 +109,30 @@ export function calcularOverrides(grupo, efetiva) {
   }
   return ov;
 }
+
+// Versões que recebem o preset do grupo já resolvido (vindo do backend).
+export function resolverCom(preset, overrides) {
+  const base = { ...(preset || PRESETS.consulta) };
+  if (overrides && typeof overrides === 'object') {
+    for (const k of Object.keys(overrides)) {
+      if (k in base) base[k] = overrides[k];
+    }
+  }
+  return base;
+}
+
+export function overridesCom(preset, efetiva) {
+  const base = preset || PRESETS.consulta;
+  const ov = {};
+  for (const k of Object.keys(base)) {
+    if (efetiva[k] !== base[k]) ov[k] = efetiva[k];
+  }
+  return ov;
+}
+
+// Matriz "vazia" completa (tudo no mais restrito) para criar grupo do zero.
+export const MATRIZ_VAZIA = {
+  ...Object.fromEntries(RECURSOS.map(([k]) => [k, 'nenhum'])),
+  escopo_tarefas: 'proprias',
+  ...Object.fromEntries(FLAGS.map(([k]) => [k, false])),
+};

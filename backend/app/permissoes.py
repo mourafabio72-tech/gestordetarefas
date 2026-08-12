@@ -75,9 +75,59 @@ PRESETS["usuario"] = {
 
 PAPEIS = tuple(PRESETS.keys())
 
+# Rótulos/descrições dos papéis nativos (para semear a tabela `grupos`).
+LABELS_NATIVOS = {
+    "admin": ("Admin", "Acesso total, incluindo papéis e permissões."),
+    "gestor": ("Gestor", "Gerencia cadastros, tarefas (todas) e usuários."),
+    "analista": ("Analista", "Edita só as próprias tarefas; cadastros só leitura."),
+    "estagiario": ("Estagiário", "Edita só as próprias tarefas; não mexe em prazos."),
+    "consulta": ("Consulta", "Só visualiza; não altera nada."),
+    "usuario": ("Usuário (legado)", "Papel antigo — só leitura, vê tudo."),
+}
+
+# ---- Cache dos grupos vindos do banco (fonte da verdade em runtime) ----
+# {slug: {"perm": dict, "ativo": bool}}. Vazio => cai nos PRESETS de código.
+_GRUPOS_DB: dict = {}
+
+
+def _completar(perm_parcial: dict, slug: str) -> dict:
+    """Garante todas as chaves: parte do preset do slug (ou consulta) e aplica o salvo."""
+    base = dict(PRESETS.get(slug, PRESETS["consulta"]))
+    for k, v in (perm_parcial or {}).items():
+        if k in CHAVES:
+            base[k] = v
+    return base
+
+
+def carregar_do_banco(db) -> None:
+    """(Re)carrega o cache de grupos a partir da tabela `grupos`. Chamar no
+    startup e após qualquer alteração de grupo. Falha silenciosa mantém o cache."""
+    global _GRUPOS_DB
+    try:
+        from .models import Grupo
+        novos = {}
+        for g in db.query(Grupo).all():
+            try:
+                salvo = json.loads(g.permissoes) if g.permissoes else {}
+            except (ValueError, TypeError):
+                salvo = {}
+            novos[g.slug] = {"perm": _completar(salvo, g.slug), "ativo": bool(g.ativo)}
+        _GRUPOS_DB = novos
+    except Exception:
+        pass
+
+
+def grupo_ativo(slug: str) -> bool:
+    info = _GRUPOS_DB.get(slug)
+    return info["ativo"] if info else True
+
 
 def preset_do_grupo(grupo: str) -> dict:
-    """Cópia do preset do papel; papel desconhecido cai no mais restrito."""
+    """Cópia da matriz do papel. Prioriza o cache do banco; se não houver,
+    cai no preset de código; papel desconhecido cai no mais restrito."""
+    info = _GRUPOS_DB.get(grupo)
+    if info:
+        return dict(info["perm"])
     return dict(PRESETS.get(grupo, PRESETS["consulta"]))
 
 

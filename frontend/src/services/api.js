@@ -189,6 +189,14 @@ export const configuracaoAPI = {
   testarIA: () => api.post('/configuracao/notificacoes/testar-ia'),
 };
 
+export const gruposAPI = {
+  list: () => api.get('/grupos'),
+  create: (data) => api.post('/grupos', data),
+  update: (slug, data) => api.put(`/grupos/${slug}`, data),
+  setAtivo: (slug, ativo) => api.post(`/grupos/${slug}/status`, { ativo }),
+  delete: (slug) => api.delete(`/grupos/${slug}`),
+};
+
 export const alertasAPI = {
   verificar: () => api.post('/alertas/verificar'),
   enviar: (usuarioId) => api.post(`/alertas/enviar/${usuarioId}`),

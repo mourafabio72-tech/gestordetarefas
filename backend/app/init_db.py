@@ -90,3 +90,28 @@ def ensure_admin_grupo():
             print(f"{promovidos} usuário(s) promovido(s) ao grupo admin.")
     finally:
         db.close()
+
+
+def seed_grupos():
+    """Semeia os papéis nativos na tabela `grupos` (uma vez) e carrega o cache
+    de permissões. Idempotente: só cria os slugs que ainda não existem."""
+    import json
+    from .models import Grupo
+    from . import permissoes
+    db = SessionLocal()
+    try:
+        existentes = {g.slug for g in db.query(Grupo).all()}
+        criados = 0
+        for slug, perm in permissoes.PRESETS.items():
+            if slug in existentes:
+                continue
+            label, desc = permissoes.LABELS_NATIVOS.get(slug, (slug.capitalize(), ""))
+            db.add(Grupo(slug=slug, label=label, descricao=desc,
+                         permissoes=json.dumps(perm), sistema=True, ativo=True))
+            criados += 1
+        if criados:
+            db.commit()
+            print(f"{criados} grupo(s) nativo(s) semeado(s).")
+        permissoes.carregar_do_banco(db)
+    finally:
+        db.close()

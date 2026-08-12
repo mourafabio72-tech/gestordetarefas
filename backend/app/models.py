@@ -97,6 +97,23 @@ class Setor(Base):
 
     tarefas = relationship("Tarefa", back_populates="setor")
 
+
+class Grupo(Base):
+    __tablename__ = "grupos"
+
+    # Papel/grupo de acesso. A matriz de permissões (recursos + escopo + flags)
+    # fica no JSON `permissoes`. 'sistema' protege os papéis nativos de exclusão.
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(30), unique=True, nullable=False, index=True)
+    label = Column(String(60), nullable=False)
+    descricao = Column(Text)
+    permissoes = Column(Text)          # JSON da matriz completa
+    sistema = Column(Boolean, default=False)  # nativo — não pode ser excluído
+    ativo = Column(Boolean, default=True)     # bloqueado -> não pode ser atribuído
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class Tarefa(Base):
     __tablename__ = "tarefas"
 
