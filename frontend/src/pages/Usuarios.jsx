@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usuariosAPI, empresasAPI, setoresAPI } from '../services/api';
+import { usuariosAPI, empresasAPI, setoresAPI, gruposAPI } from '../services/api';
 import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,7 @@ export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
+  const [grupos, setGrupos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
@@ -62,10 +63,13 @@ export default function Usuarios() {
 
   const loadUsuarios = async () => {
     try {
-      const [u, e, s] = await Promise.all([usuariosAPI.list(), empresasAPI.list(), setoresAPI.list()]);
+      const [u, e, s, g] = await Promise.all([
+        usuariosAPI.list(), empresasAPI.list(), setoresAPI.list(), gruposAPI.list().catch(() => ({ data: [] })),
+      ]);
       setUsuarios(u.data);
       setEmpresas(e.data);
       setSetores(s.data);
+      setGrupos(g.data);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     } finally {
@@ -308,24 +312,31 @@ export default function Usuarios() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Papel</label>
                 <select
-                  value={formData.cargo}
+                  value={formData.tipo === 'cliente' ? '__cliente__' : (formData.grupo || '')}
                   onChange={(e) => {
-                    const info = cargoInfo(e.target.value);
-                    setFormData({
-                      ...formData, cargo: info.value, grupo: info.grupo, tipo: info.tipo,
-                      empresa_id: info.tipo === 'cliente' ? formData.empresa_id : '',
-                    });
+                    const v = e.target.value;
+                    if (v === '__cliente__') {
+                      setFormData({ ...formData, tipo: 'cliente', grupo: 'consulta', cargo: 'Cliente' });
+                    } else {
+                      const g = grupos.find((x) => x.slug === v);
+                      setFormData({
+                        ...formData, tipo: 'colaborador', grupo: v, cargo: g?.label || v, empresa_id: '',
+                      });
+                    }
                   }}
                   className="input-field"
                 >
-                  {CARGOS.map((c) => <option key={c.value} value={c.value}>{c.value}</option>)}
+                  {grupos.filter((g) => g.ativo).map((g) => (
+                    <option key={g.slug} value={g.slug}>{g.label}</option>
+                  ))}
+                  <option value="__cliente__">Cliente (acesso externo)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {formData.tipo === 'cliente'
                     ? 'Cliente — alerta por WhatsApp + e-mail (contatos da empresa).'
-                    : 'Colaborador — alerta por e-mail. O cargo define o papel/permissões.'}
+                    : 'Colaborador — alerta por e-mail. O papel define as permissões.'}
                 </p>
               </div>
               {formData.tipo === 'cliente' && (

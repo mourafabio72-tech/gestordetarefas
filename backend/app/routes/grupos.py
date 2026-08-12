@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from ..database import get_db
 from ..models import Grupo, Usuario
-from ..auth import require_admin
+from ..auth import require_admin, require_gestor_ou_admin
 from .. import permissoes
 
 router = APIRouter(prefix="/grupos", tags=["grupos"])
@@ -83,7 +83,7 @@ def _serializar(db: Session, g: Grupo) -> dict:
 
 
 @router.get("")
-def listar(db: Session = Depends(get_db), _: Usuario = Depends(require_admin)):
+def listar(db: Session = Depends(get_db), _: Usuario = Depends(require_gestor_ou_admin)):
     return [_serializar(db, g) for g in db.query(Grupo).order_by(Grupo.sistema.desc(), Grupo.label).all()]
 
 

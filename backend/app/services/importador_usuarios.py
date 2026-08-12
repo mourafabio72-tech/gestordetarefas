@@ -15,7 +15,7 @@ import io
 import re
 import secrets
 import unicodedata
-from ..models import Usuario, Empresa, Setor
+from ..models import Usuario, Empresa, Setor, Grupo
 from ..auth import get_password_hash
 
 
@@ -60,8 +60,23 @@ TIPOS = {
 }
 
 
-def _mapear_grupo(v: str) -> str:
-    return GRUPOS.get(_norm(v), "usuario") if v else "usuario"
+def _carregar_grupos(db) -> dict:
+    """{nome_normalizado: slug} dos grupos ativos do banco — por slug e por label."""
+    mapa = {}
+    for g in db.query(Grupo).filter(Grupo.ativo == True).all():
+        mapa[_norm(g.slug)] = g.slug
+        mapa[_norm(g.label)] = g.slug
+    return mapa
+
+
+def _mapear_grupo(v: str, grupos_db: dict = None) -> str:
+    """Resolve o nível: banco (slug/label) tem prioridade; depois sinônimos fixos."""
+    if not v:
+        return "usuario"
+    n = _norm(v)
+    if grupos_db and n in grupos_db:
+        return grupos_db[n]
+    return GRUPOS.get(n, "usuario")
 
 
 def _mapear_tipo(v: str) -> str:
@@ -140,6 +155,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
     criadas = atualizadas = erros = 0
     detalhes = []
     gestor_pendente = []  # (usuario, valor_gestor) resolvidos na 2ª passada
+    grupos_db = _carregar_grupos(db)
 
     for linha in grade[idx_cab + 1:]:
         if not any(c not in (None, "") for c in linha):
@@ -163,7 +179,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
             detalhes.append({"linha": nome, "status": "erro", "detalhe": f"E-mail inválido: {email}"})
             continue
 
-        grupo = _mapear_grupo(dados.get("grupo"))
+        grupo = _mapear_grupo(dados.get("grupo"), grupos_db)
         tipo = _mapear_tipo(dados.get("tipo"))
         empresa = _resolver_empresa(db, dados.get("empresa")) if tipo == "cliente" else None
         setor = _resolver_setor(db, dados.get("setor"))
