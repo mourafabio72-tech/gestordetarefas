@@ -5,7 +5,7 @@ import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
 
 const FORM_VAZIO = {
-  nome: '', email: '', senha: '', cargo: '', grupo: 'analista', telefone: '',
+  nome: '', email: '', senha: '', cargo: 'Analista', grupo: 'analista', telefone: '',
   tipo: 'colaborador', empresa_id: '', gestor_id: '', setor_id: '',
 };
 
@@ -357,15 +357,16 @@ export default function Usuarios() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Papel</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
                 <select
                   value={formData.tipo === 'cliente' ? '__cliente__' : (formData.grupo || '')}
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v === '__cliente__') {
-                      setFormData({ ...formData, tipo: 'cliente', grupo: 'consulta' });
+                      setFormData({ ...formData, tipo: 'cliente', grupo: 'consulta', cargo: 'Cliente' });
                     } else {
-                      setFormData({ ...formData, tipo: 'colaborador', grupo: v, empresa_id: '' });
+                      const g = grupos.find((x) => x.slug === v);
+                      setFormData({ ...formData, tipo: 'colaborador', grupo: v, cargo: g?.label || v, empresa_id: '' });
                     }
                   }}
                   className="input-field"
@@ -385,17 +386,8 @@ export default function Usuarios() {
                 <p className="text-xs text-gray-500 mt-1">
                   {formData.tipo === 'cliente'
                     ? 'Cliente — alerta por WhatsApp + e-mail (contatos da empresa).'
-                    : 'Colaborador — alerta por e-mail. O papel define as permissões.'}
+                    : 'Colaborador — alerta por e-mail. O cargo define as permissões.'}
                 </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                <input
-                  value={formData.cargo}
-                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex.: Analista Fiscal (função, texto livre)"
-                />
               </div>
               {formData.tipo === 'cliente' && (
                 <div>
