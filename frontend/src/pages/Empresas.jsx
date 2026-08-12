@@ -107,12 +107,12 @@ export default function Empresas() {
         const n = parseInt(resp?.headers?.['x-tarefas-geradas'] || '0', 10);
         if (n > 0) alert(`Empresa cadastrada. ${n} tarefa(s) do mês gerada(s) automaticamente pelas obrigações que se aplicam.`);
       }
-      // Grava a matriz responsável × setor
-      const itens = respSetor.map((r) => ({
+      // Grava a matriz — só os setores que a empresa ATENDE
+      const itens = respSetor.filter((r) => r.atende).map((r) => ({
         setor_id: r.setor_id,
         responsavel_id: r.responsavel_id ? parseInt(r.responsavel_id) : null,
       }));
-      if (itens.length) await empresasAPI.setResponsaveisSetor(empresaId, itens);
+      await empresasAPI.setResponsaveisSetor(empresaId, itens);
       setShowModal(false);
       setEditingEmpresa(null);
       setFormData(EMPRESA_VAZIA);
@@ -139,9 +139,9 @@ export default function Empresas() {
       responsavel_id: empresa.responsavel_id || '',
       supervisor_id: empresa.supervisor_id || '',
     });
-    setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, responsavel_id: '' })));
+    setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_id: '' })));
     empresasAPI.getResponsaveisSetor(empresa.id)
-      .then((r) => setRespSetor(r.data.map((x) => ({ ...x, responsavel_id: x.responsavel_id || '' }))))
+      .then((r) => setRespSetor(r.data.map((x) => ({ ...x, atende: x.atende !== false, responsavel_id: x.responsavel_id || '' }))))
       .catch(() => {});
     setShowModal(true);
   };
@@ -202,7 +202,7 @@ export default function Empresas() {
             onClick={() => {
               setEditingEmpresa(null);
               setFormData(EMPRESA_VAZIA);
-              setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, responsavel_id: '' })));
+              setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_id: '' })));
               setShowModal(true);
             }}
             className="btn-primary flex items-center gap-2"
@@ -436,13 +436,19 @@ export default function Empresas() {
                   )}
                   {respSetor.map((r, i) => (
                     <div key={r.setor_id} className="flex items-center gap-2 px-3 py-1.5">
-                      <span className="text-sm text-gray-600 w-32 shrink-0">{r.setor_nome}</span>
+                      <label className="flex items-center gap-1.5 w-36 shrink-0 cursor-pointer" title="A empresa contratou este serviço?">
+                        <input type="checkbox" checked={r.atende}
+                          onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, atende: e.target.checked } : x))}
+                          className="h-4 w-4" />
+                        <span className="text-sm text-gray-600">{r.setor_nome}</span>
+                      </label>
                       <select
                         value={r.responsavel_id}
+                        disabled={!r.atende}
                         onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, responsavel_id: e.target.value } : x))}
-                        className="input-field py-1 text-sm flex-1"
+                        className="input-field py-1 text-sm flex-1 disabled:bg-gray-50 disabled:text-gray-400"
                       >
-                        <option value="">— sem responsável —</option>
+                        <option value="">{r.atende ? '— sem responsável —' : 'não atende'}</option>
                         {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
                           <option key={u.id} value={u.id}>{u.nome}</option>
                         ))}
@@ -450,7 +456,7 @@ export default function Empresas() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">As tarefas de cada setor nascem com o responsável escolhido aqui; o gestor sai automático do gestor dessa pessoa.</p>
+                <p className="text-xs text-gray-500 mt-1">Marque só os setores que a empresa contratou. Setor desmarcado não gera tarefa. O gestor sai automático do gestor do responsável.</p>
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>

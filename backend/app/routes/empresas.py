@@ -27,11 +27,11 @@ class BloquearRequest(BaseModel):
 
 class RespSetorItem(BaseModel):
     setor_id: int
-    responsavel_id: Optional[int] = None
+    responsavel_id: Optional[int] = None   # None = atende, mas sem dono ainda
 
 
 class RespSetorBody(BaseModel):
-    itens: List[RespSetorItem]
+    itens: List[RespSetorItem]             # SOMENTE os setores que a empresa ATENDE
 
 
 @router.get("/{empresa_id}/responsaveis-setor")
@@ -40,11 +40,15 @@ def get_responsaveis_setor(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Um item por setor ATIVO: o responsável dessa empresa naquele setor (ou None)."""
-    mapa = {r.setor_id: r.responsavel_id
-            for r in db.query(EmpresaSetorResponsavel).filter(EmpresaSetorResponsavel.empresa_id == empresa_id).all()}
+    """Um item por setor ATIVO: se a empresa atende + o responsável.
+    Empresa nunca configurada (0 linhas) = atende todos (retrocompatível)."""
+    linhas = {r.setor_id: r.responsavel_id for r in db.query(EmpresaSetorResponsavel)
+              .filter(EmpresaSetorResponsavel.empresa_id == empresa_id).all()}
+    nunca_config = len(linhas) == 0
     setores = db.query(Setor).filter(Setor.ativo == True).order_by(Setor.nome).all()
-    return [{"setor_id": s.id, "setor_nome": s.nome, "responsavel_id": mapa.get(s.id)} for s in setores]
+    return [{"setor_id": s.id, "setor_nome": s.nome,
+             "atende": nunca_config or (s.id in linhas),
+             "responsavel_id": linhas.get(s.id)} for s in setores]
 
 
 @router.put("/{empresa_id}/responsaveis-setor")
@@ -54,18 +58,14 @@ def set_responsaveis_setor(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("empresas", "editar")),
 ):
-    """Grava a matriz responsável×setor da empresa (upsert por setor)."""
+    """Regrava a matriz. Presença da linha = a empresa ATENDE aquele setor.
+    `itens` traz só os atendidos; os demais são removidos (não geram tarefa)."""
     if not db.query(Empresa).filter(Empresa.id == empresa_id).first():
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
-    existentes = {r.setor_id: r for r in db.query(EmpresaSetorResponsavel)
-                  .filter(EmpresaSetorResponsavel.empresa_id == empresa_id).all()}
+    db.query(EmpresaSetorResponsavel).filter(EmpresaSetorResponsavel.empresa_id == empresa_id).delete()
     for it in body.itens:
-        row = existentes.get(it.setor_id)
-        if row:
-            row.responsavel_id = it.responsavel_id
-        else:
-            db.add(EmpresaSetorResponsavel(empresa_id=empresa_id, setor_id=it.setor_id,
-                                           responsavel_id=it.responsavel_id))
+        db.add(EmpresaSetorResponsavel(empresa_id=empresa_id, setor_id=it.setor_id,
+                                       responsavel_id=it.responsavel_id))
     db.commit()
     return {"ok": True}
 

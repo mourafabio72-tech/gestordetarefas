@@ -117,10 +117,28 @@ def _resp_do_setor(db: Session, empresa_id: int, setor_id):
     return vin.responsavel if (vin and vin.responsavel) else None
 
 
+def _empresa_atende(db: Session, empresa_id: int, setor_id) -> bool:
+    """A empresa atende (contratou) o serviço deste setor? Empresa sem nenhuma
+    configuração atende todos (retrocompatível); com configuração, só os marcados.
+    Obrigação sem setor sempre gera."""
+    if not setor_id:
+        return True
+    from ..models import EmpresaSetorResponsavel
+    total = db.query(EmpresaSetorResponsavel).filter(EmpresaSetorResponsavel.empresa_id == empresa_id).count()
+    if total == 0:
+        return True
+    return db.query(EmpresaSetorResponsavel).filter(
+        EmpresaSetorResponsavel.empresa_id == empresa_id,
+        EmpresaSetorResponsavel.setor_id == setor_id).count() > 0
+
+
 def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
                           competencia: str, prazo: date) -> bool:
     """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
     Retorna True se criou, False se já existia (dedupe)."""
+    # Empresa não atende (não contratou) o setor desta obrigação → não gera.
+    if not _empresa_atende(db, emp.id, o.setor_id):
+        return False
     existe = (db.query(Tarefa)
               .filter(Tarefa.obrigacao_id == o.id,
                       Tarefa.empresa_id == emp.id,
