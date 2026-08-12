@@ -66,7 +66,7 @@ class Empresa(Base):
     email = Column(String(100))
     telefone = Column(String(20))
     endereco = Column(Text)
-    regime_tributario = Column(String(30), default="indefinido")  # indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor
+    regime_tributario = Column(String(30), default="indefinido")  # indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor|imune|isento
     segmento = Column(String(30))  # comercio|servico|comercio_servico|industria
     grupo = Column(String(80))     # grupo econômico (ex.: Markbuilding)
     # Responsável/supervisor padrão do cliente — as tarefas geradas herdam daqui.
