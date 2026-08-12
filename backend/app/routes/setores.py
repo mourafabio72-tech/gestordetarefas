@@ -66,7 +66,8 @@ def update_setor(
 def _setor_em_uso(db: Session, setor_id: int) -> int:
     from ..models import Obrigacao, Tarefa
     return (db.query(Obrigacao).filter(Obrigacao.setor_id == setor_id).count()
-            + db.query(Tarefa).filter(Tarefa.setor_id == setor_id).count())
+            + db.query(Tarefa).filter(Tarefa.setor_id == setor_id).count()
+            + db.query(Usuario).filter(Usuario.setor_id == setor_id).count())
 
 
 @router.delete("/{setor_id}")

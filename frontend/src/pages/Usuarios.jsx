@@ -17,6 +17,17 @@ export default function Usuarios() {
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [grupos, setGrupos] = useState([]);
+  const [filtros, setFiltros] = useState({ nome: '', email: '', cargo: '', status: '' });
+
+  const statusDe = (u) => (u.bloqueado ? 'bloqueado' : u.ativado === false ? 'pendente' : (u.ativo ? 'ativo' : 'inativo'));
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const c = (s) => (s || '').toLowerCase();
+    if (filtros.nome && !c(u.nome).includes(c(filtros.nome))) return false;
+    if (filtros.email && !c(u.email).includes(c(filtros.email))) return false;
+    if (filtros.cargo && !c(u.cargo).includes(c(filtros.cargo))) return false;
+    if (filtros.status && statusDe(u) !== filtros.status) return false;
+    return true;
+  });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
@@ -230,6 +241,25 @@ export default function Usuarios() {
         </div>
       </div>
 
+      <div className="card mb-4 p-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <input className="input-field py-1.5 text-sm" placeholder="Nome"
+            value={filtros.nome} onChange={(e) => setFiltros({ ...filtros, nome: e.target.value })} />
+          <input className="input-field py-1.5 text-sm" placeholder="E-mail"
+            value={filtros.email} onChange={(e) => setFiltros({ ...filtros, email: e.target.value })} />
+          <input className="input-field py-1.5 text-sm" placeholder="Cargo"
+            value={filtros.cargo} onChange={(e) => setFiltros({ ...filtros, cargo: e.target.value })} />
+          <select className="input-field py-1.5 text-sm" value={filtros.status}
+            onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
+            <option value="">Todos os status</option>
+            <option value="ativo">Ativo</option>
+            <option value="pendente">Pendente</option>
+            <option value="bloqueado">Bloqueado</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+
       <div className="card">
         {usuarios.length === 0 ? (
           <div className="text-center py-12">
@@ -249,7 +279,7 @@ export default function Usuarios() {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((usuario) => (
+                {usuariosFiltrados.map((usuario) => (
                   <tr key={usuario.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
