@@ -57,13 +57,14 @@ export default function Obrigacoes() {
   const [buscaEmp, setBuscaEmp] = useState('');
   const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false });
   const toggleSecao = (k) => setSecoes((s) => ({ ...s, [k]: !s[k] }));
-  const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', status: 'todas' });
+  const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
   const setorNome = (id) => setores.find((s) => s.id === id)?.nome || '—';
   const obrigacoesFiltradas = obrigacoes.filter((o) => {
     if (filtros.obrigacao && !`${so(o.nome)} ${so(o.mininome)}`.includes(so(filtros.obrigacao))) return false;
     if (filtros.empresa && !(o.empresa_ids || []).includes(parseInt(filtros.empresa))) return false;
+    if (filtros.setor && o.setor_id !== parseInt(filtros.setor)) return false;
     if (filtros.status === 'ativa' && !o.ativa) return false;
     if (filtros.status === 'inativa' && o.ativa) return false;
     return true;
@@ -223,12 +224,16 @@ export default function Obrigacoes() {
       </div>
 
       <div className="card mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <input className="input-field" placeholder="Obrigação (nome ou mininome)"
             value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
           <select className="input-field" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
             <option value="">Todas as empresas</option>
             {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+          </select>
+          <select className="input-field" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
+            <option value="">Todos os setores</option>
+            {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
           </select>
           <select className="input-field" value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}>
             <option value="todas">Todos os status</option>
