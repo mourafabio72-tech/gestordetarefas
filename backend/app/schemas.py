@@ -71,6 +71,7 @@ class UsuarioResponse(UsuarioBase):
     id: int
     ativo: bool
     bloqueado: bool = False
+    ativado: Optional[bool] = None   # True=ativou; False=pendente; None=legado
     created_at: datetime
 
     class Config:

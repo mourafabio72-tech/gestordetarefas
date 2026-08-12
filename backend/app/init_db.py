@@ -34,6 +34,8 @@ def migrate():
         ("empresa_grupo", "ALTER TABLE empresas ADD COLUMN grupo VARCHAR(80)"),
         ("tarefa_upload_token", "ALTER TABLE tarefas ADD COLUMN upload_token VARCHAR(64)"),
         ("usuario_setor_id", "ALTER TABLE usuarios ADD COLUMN setor_id INTEGER REFERENCES setores(id)"),
+        ("usuario_convite_token", "ALTER TABLE usuarios ADD COLUMN convite_token VARCHAR(64)"),
+        ("usuario_ativado", "ALTER TABLE usuarios ADD COLUMN ativado BOOLEAN"),
     ]
 
     for col_name, sql in migrations:

@@ -35,6 +35,8 @@ export const publicoAPI = {
     fd.append('arquivo', file);
     return apiPublico.post(`/publico/tarefa/${token}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  ativarContexto: (token) => apiPublico.get(`/publico/ativar/${token}`),
+  ativar: (token, senha) => apiPublico.post(`/publico/ativar/${token}`, { senha }),
 };
 
 export const authAPI = {
@@ -95,6 +97,8 @@ export const usuariosAPI = {
     a.href = url; a.download = 'modelo_importacao_usuarios.xlsx'; a.click();
     URL.revokeObjectURL(url);
   },
+  convite: (id) => api.post(`/usuarios/${id}/convite`),
+  conviteLote: (ids) => api.post('/usuarios/convite-lote', { ids: ids || null }),
 };
 
 export const tarefasAPI = {

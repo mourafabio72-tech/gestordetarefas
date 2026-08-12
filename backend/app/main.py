@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos
+from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico
 from .services.scheduler import start_scheduler
 from .init_db import migrate, seed_admin, ensure_admin_grupo, seed_grupos
 
@@ -40,6 +40,7 @@ app.include_router(modelos.router, prefix="/api")
 app.include_router(upload_publico.router, prefix="/api")
 app.include_router(cronograma.router, prefix="/api")
 app.include_router(grupos.router, prefix="/api")
+app.include_router(ativar_publico.router, prefix="/api")
 
 
 @app.on_event("startup")

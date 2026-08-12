@@ -49,6 +49,8 @@ class Usuario(Base):
     bloqueado = Column(Boolean, default=False)  # bloqueado -> não loga, não aparece, tarefas somem
     gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)  # departamento interno do colaborador
+    convite_token = Column(String(64), nullable=True)  # link de 1º acesso (define a própria senha)
+    ativado = Column(Boolean, nullable=True)  # True=ativou; False=pendente; NULL=legado (considerado ativo)
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

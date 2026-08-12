@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usuariosAPI, empresasAPI, setoresAPI, gruposAPI } from '../services/api';
-import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download, Send } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -55,6 +55,32 @@ export default function Usuarios() {
     } catch (err) {
       alert(err.response?.data?.detail || 'Erro ao importar usuários.');
     } finally { setImportando(false); }
+  };
+
+  const [convidandoId, setConvidandoId] = useState(null);
+  const [convidandoLote, setConvidandoLote] = useState(false);
+  const enviarConvite = async (usuario) => {
+    setConvidandoId(usuario.id);
+    try {
+      const { data } = await usuariosAPI.convite(usuario.id);
+      alert(`Convite enviado a ${usuario.nome} por ${data.canal === 'whatsapp' ? 'WhatsApp' : 'e-mail'}.`);
+      loadUsuarios();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Não consegui enviar o convite.');
+    } finally { setConvidandoId(null); }
+  };
+  const convidarPendentes = async () => {
+    if (!confirm('Enviar convite de primeiro acesso para todos os usuários pendentes?')) return;
+    setConvidandoLote(true);
+    try {
+      const { data } = await usuariosAPI.conviteLote(null);
+      let msg = `${data.enviados}/${data.total} convite(s) enviado(s).`;
+      if (data.falhas?.length) msg += `\n\nFalhas:\n` + data.falhas.map((f) => `• ${f.nome}: ${f.erro}`).join('\n');
+      alert(msg);
+      loadUsuarios();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao enviar convites.');
+    } finally { setConvidandoLote(false); }
   };
 
   useEffect(() => {
@@ -174,6 +200,13 @@ export default function Usuarios() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Usuários</h1>
         <div className="flex gap-2">
+          {usuarios.some((u) => u.ativado === false && !u.bloqueado) && (
+            <button onClick={convidarPendentes} disabled={convidandoLote}
+              className="btn-secondary flex items-center gap-2"
+              title="Enviar convite de primeiro acesso a todos os pendentes">
+              <Send size={18} /> {convidandoLote ? 'Enviando…' : 'Convidar pendentes'}
+            </button>
+          )}
           <button onClick={() => usuariosAPI.baixarModelo()} className="btn-secondary flex items-center gap-2"
             title="Baixar planilha-modelo para importação de usuários">
             <Download size={18} /> Baixar modelo
@@ -231,6 +264,8 @@ export default function Usuarios() {
                     <td className="py-3 px-4">
                       {usuario.bloqueado ? (
                         <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Bloqueado</span>
+                      ) : usuario.ativado === false ? (
+                        <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Pendente</span>
                       ) : (
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           usuario.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
@@ -241,6 +276,16 @@ export default function Usuarios() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-end gap-2">
+                        {usuario.ativado === false && !usuario.bloqueado && (
+                          <button
+                            onClick={() => enviarConvite(usuario)}
+                            disabled={convidandoId === usuario.id}
+                            title="Enviar convite de primeiro acesso"
+                            className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            <Send size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleBloquear(usuario)}
                           title={usuario.bloqueado ? 'Desbloquear' : 'Bloquear'}

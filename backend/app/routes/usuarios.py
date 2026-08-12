@@ -11,6 +11,7 @@ from ..auth import (get_password_hash, get_current_user, require_gestor_ou_admin
                     permissao_efetiva)
 from ..permissoes import pode
 from ..services.substituicao import aplicar_definitiva
+from ..services import config as cfgmod, convite as convite_mod
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -135,6 +136,47 @@ async def importar_usuarios(
         raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
 
 
+class ConviteLoteBody(BaseModel):
+    ids: Optional[List[int]] = None  # None/vazio = todos os pendentes
+
+
+@router.post("/{usuario_id}/convite")
+async def enviar_convite(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_gestor_ou_admin),
+):
+    u = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    cfg = cfgmod.carregar(db)
+    res = await convite_mod.enviar(db, u, cfg)
+    db.commit()
+    if not res["ok"]:
+        raise HTTPException(status_code=400, detail=res.get("erro") or "Falha ao enviar o convite.")
+    return {"ok": True, **res}
+
+
+@router.post("/convite-lote")
+async def enviar_convite_lote(
+    body: ConviteLoteBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_gestor_ou_admin),
+):
+    q = db.query(Usuario).filter(Usuario.bloqueado == False)
+    alvos = q.filter(Usuario.id.in_(body.ids)).all() if body.ids else q.filter(Usuario.ativado == False).all()
+    cfg = cfgmod.carregar(db)
+    enviados, falhas = 0, []
+    for u in alvos:
+        res = await convite_mod.enviar(db, u, cfg)
+        if res["ok"]:
+            enviados += 1
+        else:
+            falhas.append({"nome": u.nome, "erro": res.get("erro")})
+    db.commit()
+    return {"total": len(alvos), "enviados": enviados, "falhas": falhas}
+
+
 @router.post("", response_model=UsuarioResponse, status_code=201)
 def create_usuario(
     usuario: UsuarioCreate,
@@ -164,6 +206,7 @@ def create_usuario(
         empresa_id=usuario.empresa_id if tipo == "cliente" else None,
         gestor_id=usuario.gestor_id,
         setor_id=usuario.setor_id,
+        ativado=False,   # pendente até ativar pelo link de convite
     )
     db.add(db_usuario)
     db.commit()

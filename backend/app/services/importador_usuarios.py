@@ -211,6 +211,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                 cargo=cargo, telefone=telefone, grupo=grupo, tipo=tipo,
                 empresa_id=empresa.id if empresa else None,
                 setor_id=setor.id if setor else None,
+                ativado=False,   # pendente até ativar pelo link de convite
             )
             db.add(novo)
             db.flush()
