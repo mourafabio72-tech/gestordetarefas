@@ -131,7 +131,7 @@ async def importar_usuarios(
     from ..services import importador_usuarios as impu
     conteudo = await arquivo.read()
     try:
-        return impu.importar(db, arquivo.filename, conteudo)
+        return impu.importar(db, arquivo.filename, conteudo, executor_email=current_user.email)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
 

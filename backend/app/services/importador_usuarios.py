@@ -131,7 +131,8 @@ def _resolver_setor(db, valor: str):
     return next((x for x in db.query(Setor).all() if _norm(x.nome) == alvo), None)
 
 
-def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
+def importar(db, nome_arquivo: str, conteudo: bytes, executor_email: str = None) -> dict:
+    executor_email = (executor_email or "").strip().lower() or None
     grade = _ler_grade(nome_arquivo, conteudo)
     if not grade:
         return {"resumo": {"total": 0, "criadas": 0, "atualizadas": 0, "erros": 0}, "detalhes": []}
@@ -191,8 +192,15 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
         existente = db.query(Usuario).filter(Usuario.email == email).first()
         if existente:
             existente.nome = nome
-            existente.grupo = grupo
-            existente.tipo = tipo
+            # Não rebaixa/altera o nível de quem está executando a importação
+            # (evita o admin se trancar fora sem querer).
+            eh_executor = bool(executor_email) and email == executor_email
+            if eh_executor and existente.grupo != grupo:
+                detalhes.append({"linha": nome, "status": "aviso",
+                                 "detalhe": "Seu próprio nível foi mantido (não é possível rebaixar a si mesmo pela importação)."})
+            else:
+                existente.grupo = grupo
+                existente.tipo = tipo
             existente.empresa_id = empresa.id if empresa else None
             if setor:
                 existente.setor_id = setor.id
