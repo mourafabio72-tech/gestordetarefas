@@ -54,6 +54,18 @@ export const empresasAPI = {
   bloquear: (id, bloqueado) => api.post(`/empresas/${id}/bloquear`, { bloqueado }),
   getResponsaveisSetor: (id) => api.get(`/empresas/${id}/responsaveis-setor`),
   setResponsaveisSetor: (id, itens) => api.put(`/empresas/${id}/responsaveis-setor`, { itens }),
+  importarResponsaveis: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/empresas/importar-responsaveis', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  baixarModeloResponsaveis: async () => {
+    const { data } = await api.get('/empresas/modelo-responsaveis', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'modelo_responsaveis_setor.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
   importar: (file) => {
     const fd = new FormData();
     fd.append('arquivo', file);

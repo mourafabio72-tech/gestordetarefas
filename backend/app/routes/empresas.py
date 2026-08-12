@@ -34,6 +34,31 @@ class RespSetorBody(BaseModel):
     itens: List[RespSetorItem]             # SOMENTE os setores que a empresa ATENDE
 
 
+@router.get("/modelo-responsaveis")
+def modelo_responsaveis(db: Session = Depends(get_db),
+                        current_user: Usuario = Depends(require_perm("empresas", "editar"))):
+    from ..services import importador_resp_setor as impr
+    return Response(
+        content=impr.gerar_modelo(db),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modelo_responsaveis_setor.xlsx"},
+    )
+
+
+@router.post("/importar-responsaveis")
+async def importar_responsaveis(
+    arquivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("empresas", "editar")),
+):
+    from ..services import importador_resp_setor as impr
+    conteudo = await arquivo.read()
+    try:
+        return impr.importar(db, arquivo.filename, conteudo)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
+
+
 @router.get("/{empresa_id}/responsaveis-setor")
 def get_responsaveis_setor(
     empresa_id: int,

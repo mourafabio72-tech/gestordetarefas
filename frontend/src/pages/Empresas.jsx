@@ -72,6 +72,28 @@ export default function Empresas() {
     }
   };
 
+  const [importandoResp, setImportandoResp] = useState(false);
+  const handleImportResp = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportandoResp(true);
+    try {
+      const { data } = await empresasAPI.importarResponsaveis(file);
+      if (data.erro) { alert(data.erro); return; }
+      const r = data.resumo || {};
+      let msg = `${r.empresas} empresa(s): ${r.marcados} setor(es) marcado(s), ${r.desmarcados} desmarcado(s), ${r.erros} erro(s).`;
+      const avisos = (data.detalhes || []).filter((d) => d.status !== 'ok');
+      if (avisos.length) msg += `\n\n` + avisos.slice(0, 30).map((d) => `• ${d.linha}: ${d.detalhe}`).join('\n');
+      alert(msg);
+      loadEmpresas();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao importar responsáveis.');
+    } finally {
+      setImportandoResp(false);
+    }
+  };
+
   useEffect(() => {
     loadEmpresas();
   }, []);
@@ -197,6 +219,15 @@ export default function Empresas() {
             <Upload size={16} />
             {importing ? 'Importando…' : 'Importar Excel'}
             <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+          <button onClick={() => empresasAPI.baixarModeloResponsaveis()} className="btn-secondary flex items-center gap-2"
+            title="Modelo p/ importar responsável por setor (CNPJ + colunas de setor)">
+            <Download size={16} /> Modelo resp.
+          </button>
+          <label className={`btn-secondary flex items-center gap-2 cursor-pointer ${importandoResp ? 'opacity-60 pointer-events-none' : ''}`}
+            title="Importar responsável por setor: célula preenchida marca; vazia desmarca">
+            <Upload size={16} /> {importandoResp ? 'Importando…' : 'Importar resp.'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportResp} />
           </label>
           <button
             onClick={() => {
