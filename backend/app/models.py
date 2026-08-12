@@ -100,6 +100,20 @@ class EmpresaSetorResponsavel(Base):
 
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
 
+
+class EmpresaObrigacaoDetalhe(Base):
+    """Detalhe/complemento fixo de uma empresa numa obrigação (ex.: 'Empréstimo —
+    Banco Itaú'). Herdado na descrição de toda tarefa gerada dessa obrigação
+    para essa empresa."""
+    __tablename__ = "empresa_obrigacao_detalhe"
+    __table_args__ = (UniqueConstraint("empresa_id", "obrigacao_id", name="uq_empresa_obrigacao_det"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, index=True)
+    obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=False, index=True)
+    observacao = Column(Text)
+
+
 class Setor(Base):
     __tablename__ = "setores"
 

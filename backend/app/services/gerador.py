@@ -117,6 +117,15 @@ def _resp_do_setor(db: Session, empresa_id: int, setor_id):
     return vin.responsavel if (vin and vin.responsavel) else None
 
 
+def _detalhe_empresa(db: Session, empresa_id: int, obrigacao_id: int):
+    """Detalhe/complemento fixo desta empresa nesta obrigação (ou None)."""
+    from ..models import EmpresaObrigacaoDetalhe
+    d = (db.query(EmpresaObrigacaoDetalhe)
+         .filter(EmpresaObrigacaoDetalhe.empresa_id == empresa_id,
+                 EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).first())
+    return (d.observacao or "").strip() if d and d.observacao else None
+
+
 def _empresa_atende(db: Session, empresa_id: int, setor_id) -> bool:
     """A empresa atende (contratou) o serviço deste setor? Empresa sem nenhuma
     configuração atende todos (retrocompatível); com configuração, só os marcados.
@@ -150,9 +159,14 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     # no responsável padrão da obrigação. Supervisor = gestor desse responsável.
     resp = _resp_do_setor(db, emp.id, o.setor_id) or o.responsavel
     sup_id = (resp.gestor_id if resp else None) or o.supervisor_id
+    # Detalhe fixo da empresa nesta obrigação (ex.: "Banco Itaú") entra na descrição.
+    descricao = o.comentario_padrao or ""
+    det = _detalhe_empresa(db, emp.id, o.id)
+    if det:
+        descricao = f"{descricao}\n{det}".strip() if descricao else det
     nova = Tarefa(
         titulo=o.nome,
-        descricao=o.comentario_padrao,
+        descricao=descricao,
         empresa_id=emp.id,
         setor_id=o.setor_id,
         responsavel_id=(resp.id if resp else None),

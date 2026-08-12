@@ -5,12 +5,50 @@ from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Obrigacao, Empresa, Setor, Usuario
+from typing import Optional
+from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
 from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
 from ..auth import get_current_user, require_perm, require_flag
 from ..services.gerador import gerar_tarefas
 
 router = APIRouter(prefix="/obrigacoes", tags=["obrigacoes"])
+
+
+class DetalheItem(BaseModel):
+    empresa_id: int
+    observacao: Optional[str] = None
+
+
+class DetalhesBody(BaseModel):
+    itens: List[DetalheItem]
+
+
+@router.get("/{obrigacao_id}/detalhes-empresa")
+def get_detalhes_empresa(obrigacao_id: int, db: Session = Depends(get_db),
+                         current_user: Usuario = Depends(get_current_user)):
+    """Detalhes fixos por empresa nesta obrigação (ex.: 'Empréstimo — Banco X')."""
+    out = []
+    for d in db.query(EmpresaObrigacaoDetalhe).filter(EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).all():
+        emp = db.query(Empresa).filter(Empresa.id == d.empresa_id).first()
+        out.append({"empresa_id": d.empresa_id,
+                    "empresa_nome": emp.razao_social if emp else "?",
+                    "observacao": d.observacao or ""})
+    return out
+
+
+@router.put("/{obrigacao_id}/detalhes-empresa")
+def set_detalhes_empresa(obrigacao_id: int, body: DetalhesBody, db: Session = Depends(get_db),
+                         current_user: Usuario = Depends(require_perm("obrigacoes", "editar"))):
+    """Regrava os detalhes; só mantém os que têm texto."""
+    if not db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first():
+        raise HTTPException(status_code=404, detail="Obrigação não encontrada")
+    db.query(EmpresaObrigacaoDetalhe).filter(EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).delete()
+    for it in body.itens:
+        texto = (it.observacao or "").strip()
+        if texto:
+            db.add(EmpresaObrigacaoDetalhe(obrigacao_id=obrigacao_id, empresa_id=it.empresa_id, observacao=texto))
+    db.commit()
+    return {"ok": True}
 
 _COMP = {"mes_anterior": "Mês anterior", "mesmo_mes": "Mesmo mês",
          "mes_seguinte": "Mês seguinte", "ano_anterior": "Ano anterior"}

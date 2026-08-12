@@ -136,6 +136,8 @@ export const obrigacoesAPI = {
   delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
   gerar: (mes, ano) => api.post('/obrigacoes/gerar', { mes, ano }),
+  getDetalhes: (id) => api.get(`/obrigacoes/${id}/detalhes-empresa`),
+  setDetalhes: (id, itens) => api.put(`/obrigacoes/${id}/detalhes-empresa`, { itens }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
   baixarRelatorio: async () => {
     const { data } = await api.get('/obrigacoes/relatorio', { responseType: 'blob' });

@@ -55,8 +55,9 @@ export default function Obrigacoes() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [buscaEmp, setBuscaEmp] = useState('');
-  const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false });
+  const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false, detalhes: false });
   const toggleSecao = (k) => setSecoes((s) => ({ ...s, [k]: !s[k] }));
+  const [detalhes, setDetalhes] = useState([]);   // [{empresa_id, empresa_nome, observacao}]
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
@@ -136,7 +137,7 @@ export default function Obrigacoes() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setShowModal(true); };
+  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setDetalhes([]); setShowModal(true); };
   const abrirEdicao = (o) => {
     setEditing(o);
     setForm({
@@ -147,6 +148,8 @@ export default function Obrigacoes() {
       empresa_ids: o.empresa_ids || [],
     });
     setModelo(null);
+    setDetalhes([]);
+    obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
     setShowModal(true);
   };
 
@@ -163,8 +166,11 @@ export default function Obrigacoes() {
           ? parseInt(form.regra_prazo_dia) : null,
         lembrar_dias_antes: parseInt(form.lembrar_dias_antes) || 0,
       };
-      if (editing) await obrigacoesAPI.update(editing.id, payload);
-      else await obrigacoesAPI.create(payload);
+      let obrigId;
+      if (editing) { await obrigacoesAPI.update(editing.id, payload); obrigId = editing.id; }
+      else { const r = await obrigacoesAPI.create(payload); obrigId = r.data.id; }
+      // Detalhes fixos por empresa
+      await obrigacoesAPI.setDetalhes(obrigId, detalhes.map((d) => ({ empresa_id: d.empresa_id, observacao: d.observacao })));
       setShowModal(false); loadData();
     } catch (err) {
       alert(err.response?.data?.detail || 'Erro ao salvar obrigação');
@@ -552,6 +558,40 @@ export default function Obrigacoes() {
                 </div>
                   );
                 })()}
+              </div>
+
+              <div className="border-t border-gray-100 pt-3">
+                <button type="button" onClick={() => toggleSecao('detalhes')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-1">
+                  {secoes.detalhes ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Detalhe por empresa <span className="text-gray-400 font-normal ml-1">(complemento fixo, ex.: banco do empréstimo)</span>
+                </button>
+                {secoes.detalhes && (
+                  <div className="space-y-2">
+                    {detalhes.map((d, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-sm text-gray-600 w-40 shrink-0 pt-1 truncate" title={d.empresa_nome}>{d.empresa_nome}</span>
+                        <input value={d.observacao}
+                          onChange={(e) => setDetalhes((arr) => arr.map((x, j) => j === i ? { ...x, observacao: e.target.value } : x))}
+                          className="input-field py-1 text-sm flex-1" placeholder="Ex.: Empréstimo — Banco Itaú, conta 123" />
+                        <button type="button" onClick={() => setDetalhes((arr) => arr.filter((_, j) => j !== i))}
+                          className="text-gray-400 hover:text-red-600 pt-1">×</button>
+                      </div>
+                    ))}
+                    <select value=""
+                      onChange={(e) => {
+                        const id = parseInt(e.target.value); e.target.value = '';
+                        if (!id) return;
+                        const emp = empresas.find((x) => x.id === id);
+                        if (emp && !detalhes.some((d) => d.empresa_id === id))
+                          setDetalhes([...detalhes, { empresa_id: id, empresa_nome: emp.razao_social, observacao: '' }]);
+                      }}
+                      className="input-field py-1 text-sm">
+                      <option value="">+ adicionar empresa…</option>
+                      {empresas.filter((e) => !detalhes.some((d) => d.empresa_id === e.id))
+                        .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                    </select>
+                    <p className="text-xs text-gray-500">O texto entra na descrição de toda tarefa gerada dessa obrigação para a empresa.</p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-gray-100 pt-3">
