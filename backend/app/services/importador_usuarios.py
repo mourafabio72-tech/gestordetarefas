@@ -15,7 +15,7 @@ import io
 import re
 import secrets
 import unicodedata
-from ..models import Usuario, Empresa
+from ..models import Usuario, Empresa, Setor
 from ..auth import get_password_hash
 
 
@@ -40,6 +40,7 @@ COLUNAS = {
     "telefone": "telefone", "fone": "telefone", "celular": "telefone", "whatsapp": "telefone",
     "nivel": "grupo", "grupo": "grupo", "papel": "grupo", "perfil": "grupo", "acesso": "grupo",
     "tipo": "tipo",
+    "setor": "setor", "departamento": "setor", "depto": "setor", "area": "setor",
     "empresa": "empresa", "cliente": "empresa", "empresa (cliente)": "empresa",
     "gestor": "gestor", "supervisor": "gestor", "responsavel": "gestor",
 }
@@ -105,6 +106,19 @@ def _resolver_empresa(db, valor: str):
     return next((e for e in db.query(Empresa).all() if _norm(e.razao_social) == alvo), None)
 
 
+def _resolver_setor(db, valor: str):
+    """Setor por nome (normalizado). Cria se não existir (import tolerante)."""
+    if not valor:
+        return None
+    alvo = _norm(valor)
+    s = next((x for x in db.query(Setor).all() if _norm(x.nome) == alvo), None)
+    if not s:
+        s = Setor(nome=str(valor).strip())
+        db.add(s)
+        db.flush()
+    return s
+
+
 def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
     grade = _ler_grade(nome_arquivo, conteudo)
     if not grade:
@@ -152,6 +166,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
         grupo = _mapear_grupo(dados.get("grupo"))
         tipo = _mapear_tipo(dados.get("tipo"))
         empresa = _resolver_empresa(db, dados.get("empresa")) if tipo == "cliente" else None
+        setor = _resolver_setor(db, dados.get("setor"))
         cargo = dados.get("cargo")
         telefone = dados.get("telefone")
         senha_informada = dados.get("senha")
@@ -162,6 +177,8 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
             existente.grupo = grupo
             existente.tipo = tipo
             existente.empresa_id = empresa.id if empresa else None
+            if setor:
+                existente.setor_id = setor.id
             if cargo is not None:
                 existente.cargo = cargo
             if telefone is not None:
@@ -177,6 +194,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                 nome=nome, email=email, senha_hash=get_password_hash(senha),
                 cargo=cargo, telefone=telefone, grupo=grupo, tipo=tipo,
                 empresa_id=empresa.id if empresa else None,
+                setor_id=setor.id if setor else None,
             )
             db.add(novo)
             db.flush()
@@ -215,14 +233,14 @@ def gerar_modelo() -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Usuários"
-    ws.append(["Nome", "E-mail", "Senha", "Cargo", "Telefone", "Nível", "Tipo", "Empresa", "Gestor"])
+    ws.append(["Nome", "E-mail", "Senha", "Cargo", "Telefone", "Nível", "Tipo", "Setor", "Empresa", "Gestor"])
     ws.append(["Ana Souza", "ana@bps4.com.br", "", "Analista Fiscal", "(21) 99999-0000",
-               "Analista", "Colaborador", "", "carlos@bps4.com.br"])
+               "Analista", "Colaborador", "Fiscal", "", "carlos@bps4.com.br"])
     ws.append(["Carlos Lima", "carlos@bps4.com.br", "", "Gestor Contábil", "(21) 98888-0000",
-               "Gestor", "Colaborador", "", ""])
+               "Gestor", "Colaborador", "Contábil", "", ""])
     ws.append(["João Cliente", "joao@empresa.com.br", "", "", "",
-               "Consulta", "Cliente", "12.345.678/0001-90", ""])
-    for col, w in zip("ABCDEFGHI", (22, 28, 14, 20, 18, 12, 14, 26, 26)):
+               "Consulta", "Cliente", "", "12.345.678/0001-90", ""])
+    for col, w in zip("ABCDEFGHIJ", (22, 28, 14, 20, 18, 12, 14, 16, 26, 26)):
         ws.column_dimensions[col].width = w
     buf = io.BytesIO()
     wb.save(buf)

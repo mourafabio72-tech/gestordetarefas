@@ -36,6 +36,7 @@ class UsuarioBase(BaseModel):
     tipo: Optional[str] = "colaborador"  # colaborador | cliente
     empresa_id: Optional[int] = None     # empresa do cliente (quando tipo=cliente)
     gestor_id: Optional[int] = None
+    setor_id: Optional[int] = None       # departamento interno (colaborador)
 
     @field_validator("permissoes", mode="before")
     @classmethod
@@ -64,6 +65,7 @@ class UsuarioUpdate(BaseModel):
     tipo: Optional[str] = None
     empresa_id: Optional[int] = None
     gestor_id: Optional[int] = None
+    setor_id: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
     id: int

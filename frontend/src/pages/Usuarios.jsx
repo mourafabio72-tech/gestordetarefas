@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { usuariosAPI, empresasAPI } from '../services/api';
+import { usuariosAPI, empresasAPI, setoresAPI } from '../services/api';
 import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
 
 const FORM_VAZIO = {
   nome: '', email: '', senha: '', cargo: 'Analista', grupo: 'analista', telefone: '',
-  tipo: 'colaborador', empresa_id: '', gestor_id: '',
+  tipo: 'colaborador', empresa_id: '', gestor_id: '', setor_id: '',
 };
 
 const cargoInfo = (cargo) => CARGOS.find((c) => c.value === cargo) || CARGOS[2]; // fallback Analista
@@ -15,6 +15,7 @@ const grupoParaCargo = (grupo) => (CARGOS.find((c) => c.grupo === grupo)?.value)
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
@@ -61,9 +62,10 @@ export default function Usuarios() {
 
   const loadUsuarios = async () => {
     try {
-      const [u, e] = await Promise.all([usuariosAPI.list(), empresasAPI.list()]);
+      const [u, e, s] = await Promise.all([usuariosAPI.list(), empresasAPI.list(), setoresAPI.list()]);
       setUsuarios(u.data);
       setEmpresas(e.data);
+      setSetores(s.data);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     } finally {
@@ -79,6 +81,7 @@ export default function Usuarios() {
         ...formData,
         empresa_id: cliente && formData.empresa_id ? parseInt(formData.empresa_id) : null,
         gestor_id: (cliente || !formData.gestor_id) ? null : parseInt(formData.gestor_id),
+        setor_id: (cliente || !formData.setor_id) ? null : parseInt(formData.setor_id),
       };
       if (editingUsuario) {
         if (!payload.senha) delete payload.senha;
@@ -107,6 +110,7 @@ export default function Usuarios() {
       tipo: usuario.tipo || 'colaborador',
       empresa_id: usuario.empresa_id || '',
       gestor_id: usuario.gestor_id || '',
+      setor_id: usuario.setor_id || '',
     });
     setShowModal(true);
   };
@@ -352,6 +356,21 @@ export default function Usuarios() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Formato: DDD + Número</p>
               </div>
+              {formData.tipo !== 'cliente' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+                  <select
+                    value={formData.setor_id}
+                    onChange={(e) => setFormData({ ...formData, setor_id: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Sem setor</option>
+                    {setores.filter((s) => s.ativo !== false).map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {formData.tipo !== 'cliente' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gestor direto</label>

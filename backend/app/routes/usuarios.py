@@ -162,7 +162,8 @@ def create_usuario(
         permissoes=permissoes_json,
         tipo=tipo,
         empresa_id=usuario.empresa_id if tipo == "cliente" else None,
-        gestor_id=usuario.gestor_id
+        gestor_id=usuario.gestor_id,
+        setor_id=usuario.setor_id,
     )
     db.add(db_usuario)
     db.commit()
@@ -202,6 +203,7 @@ def update_usuario(
         db_usuario.empresa_id = usuario.empresa_id if (usuario.tipo or db_usuario.tipo) == "cliente" else None
     if usuario.gestor_id is not None:
         db_usuario.gestor_id = usuario.gestor_id
+    db_usuario.setor_id = usuario.setor_id  # form sempre envia (vazio = limpa)
     # Só quem tem 'usuarios: editar' altera papel e permissões de outro usuário.
     if _pode_gerir_papel(current_user):
         if usuario.grupo is not None:

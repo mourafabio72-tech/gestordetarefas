@@ -48,11 +48,13 @@ class Usuario(Base):
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)  # cliente pertence a uma empresa
     bloqueado = Column(Boolean, default=False)  # bloqueado -> não loga, não aparece, tarefas somem
     gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)  # departamento interno do colaborador
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     gestor = relationship("Usuario", remote_side=[id], foreign_keys=[gestor_id])
+    setor = relationship("Setor", foreign_keys=[setor_id])
     empresa = relationship("Empresa", foreign_keys=[empresa_id])
     tarefas = relationship("Tarefa", back_populates="responsavel", foreign_keys="Tarefa.responsavel_id")
 
