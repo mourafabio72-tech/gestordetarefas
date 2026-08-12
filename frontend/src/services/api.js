@@ -83,6 +83,18 @@ export const usuariosAPI = {
   delete: (id) => api.delete(`/usuarios/${id}`),
   carga: (id) => api.get(`/usuarios/${id}/carga`),
   bloquear: (id, bloqueado, substituto_id) => api.post(`/usuarios/${id}/bloquear`, { bloqueado, substituto_id }),
+  importar: (file) => {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    return api.post('/usuarios/importar', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  baixarModelo: async () => {
+    const { data } = await api.get('/usuarios/modelo-importacao', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'modelo_importacao_usuarios.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 export const tarefasAPI = {

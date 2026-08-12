@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from pydantic import BaseModel
@@ -108,6 +108,32 @@ def get_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return usuario
+
+
+@router.get("/modelo-importacao")
+def modelo_importacao_usuarios(current_user: Usuario = Depends(require_gestor_ou_admin)):
+    from fastapi.responses import Response
+    from ..services import importador_usuarios as impu
+    return Response(
+        content=impu.gerar_modelo(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modelo_importacao_usuarios.xlsx"},
+    )
+
+
+@router.post("/importar")
+async def importar_usuarios(
+    arquivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_gestor_ou_admin),
+):
+    from ..services import importador_usuarios as impu
+    conteudo = await arquivo.read()
+    try:
+        return impu.importar(db, arquivo.filename, conteudo)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
+
 
 @router.post("", response_model=UsuarioResponse, status_code=201)
 def create_usuario(

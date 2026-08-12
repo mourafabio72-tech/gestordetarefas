@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usuariosAPI, empresasAPI } from '../services/api';
-import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -28,6 +28,31 @@ export default function Usuarios() {
     const u = editingUsuario;
     setShowModal(false);
     handleBloquear(u);
+  };
+
+  const [importando, setImportando] = useState(false);
+  const importarArquivo = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportando(true);
+    try {
+      const { data } = await usuariosAPI.importar(file);
+      if (data.erro) { alert(data.erro); return; }
+      const r = data.resumo || {};
+      const temps = (data.detalhes || []).filter((d) => d.detalhe && d.detalhe.startsWith('senha temporária'));
+      let msg = `Importação: ${r.criadas} criado(s), ${r.atualizadas} atualizado(s), ${r.erros} erro(s).`;
+      if (temps.length) {
+        msg += `\n\nSenhas temporárias (anote e repasse — o usuário troca depois):\n` +
+          temps.map((d) => `• ${d.linha}: ${d.detalhe.replace('senha temporária: ', '')}`).join('\n');
+      }
+      const avisos = (data.detalhes || []).filter((d) => d.status === 'erro' || d.status === 'aviso');
+      if (avisos.length) msg += `\n\nAvisos:\n` + avisos.map((d) => `• ${d.linha}: ${d.detalhe}`).join('\n');
+      alert(msg);
+      loadUsuarios();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao importar usuários.');
+    } finally { setImportando(false); }
   };
 
   useEffect(() => {
@@ -140,17 +165,28 @@ export default function Usuarios() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Usuários</h1>
-        <button
-          onClick={() => {
-            setEditingUsuario(null);
-            setFormData(FORM_VAZIO);
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} />
-          Novo Usuário
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => usuariosAPI.baixarModelo()} className="btn-secondary flex items-center gap-2"
+            title="Baixar planilha-modelo para importação de usuários">
+            <Download size={18} /> Baixar modelo
+          </button>
+          <label className={`btn-secondary flex items-center gap-2 cursor-pointer ${importando ? 'opacity-60 pointer-events-none' : ''}`}
+            title="Importar usuários de uma planilha (upsert por e-mail)">
+            <Upload size={18} /> {importando ? 'Importando…' : 'Importar'}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={importarArquivo} />
+          </label>
+          <button
+            onClick={() => {
+              setEditingUsuario(null);
+              setFormData(FORM_VAZIO);
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} />
+            Novo Usuário
+          </button>
+        </div>
       </div>
 
       <div className="card">
