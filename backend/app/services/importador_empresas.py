@@ -40,7 +40,7 @@ REGIMES = {
     "mei": "mei",
     "terceiro setor": "terceiro_setor",
     "imune": "imune",
-    "isento": "isento", "isenta": "isento",
+    "isento": "isento",
 }
 
 SEGMENTOS = {
