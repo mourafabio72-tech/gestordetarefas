@@ -34,7 +34,7 @@ const emptyForm = {
   meses_ativos: '1,2,3,4,5,6,7,8,9,10,11,12',
   lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
   sabado_util: false, competencia_ref: 'mes_anterior',
-  exige_robo: false, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
+  exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
   comentario_padrao: '', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
 };
 
@@ -606,6 +606,12 @@ export default function Obrigacoes() {
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700"
+                  title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
+                  <input type="checkbox"
+                    checked={form.exige_documento ?? !!(form.identificadores || '').trim()}
+                    onChange={(e) => set('exige_documento', e.target.checked)} className="h-4 w-4" /> Exige documento (baixa só pelo e-validador)
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.alerta_guia_nao_lida} onChange={(e) => set('alerta_guia_nao_lida', e.target.checked)} className="h-4 w-4" /> Alerta guia não-lida

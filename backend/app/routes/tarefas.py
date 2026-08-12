@@ -5,12 +5,22 @@ from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
+from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa, Obrigacao
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
                     permissao_efetiva)
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
+
+
+def _exige_documento(obrig: Obrigacao) -> bool:
+    """Tarefa exige baixa por documento (e-validador)? A flag manda; NULL deriva
+    de 'identificadores' (se a obrigação tem o que validar, exige documento)."""
+    if obrig is None:
+        return False
+    if obrig.exige_documento is None:
+        return bool((obrig.identificadores or "").strip())
+    return bool(obrig.exige_documento)
 
 
 def _escopo_ids(db: Session, user: Usuario):
@@ -231,20 +241,32 @@ def update_tarefa(
 
     perm = permissao_efetiva(current_user)
     update_data = tarefa.model_dump(exclude_unset=True)
+    eh_admin = current_user.grupo == "admin"
 
-    # Flags de ação sensível — só barram quando o valor de fato muda.
+    # Datas de prazo (interno) e de vencimento: SÓ admin altera.
     if ("data_vencimento" in update_data
             and update_data["data_vencimento"] != db_tarefa.data_vencimento
-            and not perm.get("alterar_prazo_legal")):
-        raise HTTPException(status_code=403, detail="Sem permissão para alterar o prazo legal (vencimento)")
+            and not eh_admin):
+        raise HTTPException(status_code=403, detail="Apenas administrador pode alterar a data de vencimento.")
     if ("data_prazo" in update_data
             and update_data["data_prazo"] != db_tarefa.data_prazo
-            and not perm.get("alterar_prazo_tecnico")):
-        raise HTTPException(status_code=403, detail="Sem permissão para alterar o prazo técnico")
+            and not eh_admin):
+        raise HTTPException(status_code=403, detail="Apenas administrador pode alterar o prazo interno.")
     if (update_data.get("status") == StatusTarefa.CANCELADA
             and db_tarefa.status != StatusTarefa.CANCELADA
             and not perm.get("dispensar_demanda")):
         raise HTTPException(status_code=403, detail="Sem permissão para dispensar/cancelar a demanda")
+
+    # Baixa: tarefa que exige documento só conclui pelo e-validador (com anexo).
+    if (update_data.get("status") == StatusTarefa.CONCLUIDA
+            and db_tarefa.status != StatusTarefa.CONCLUIDA
+            and not db_tarefa.anexo_nome):
+        obrig = (db.query(Obrigacao).filter(Obrigacao.id == db_tarefa.obrigacao_id).first()
+                 if db_tarefa.obrigacao_id else None)
+        if _exige_documento(obrig):
+            raise HTTPException(
+                status_code=403,
+                detail="Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.")
 
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()

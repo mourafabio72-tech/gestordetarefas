@@ -175,6 +175,8 @@ class Obrigacao(Base):
     competencia_ref = Column(String(15), default="mes_anterior")  # mes_anterior|mesmo_mes|mes_seguinte|ano_anterior
 
     exige_robo = Column(Boolean, default=False)
+    # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
+    exige_documento = Column(Boolean, nullable=True)
     passivel_multa = Column(Boolean, default=False)
     alerta_guia_nao_lida = Column(Boolean, default=False)
     ativa = Column(Boolean, default=True)

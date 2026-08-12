@@ -208,6 +208,7 @@ class ObrigacaoBase(BaseModel):
     sabado_util: bool = False
     competencia_ref: str = "mes_anterior"
     exige_robo: bool = False
+    exige_documento: Optional[bool] = None   # baixa só pelo e-validador; NULL deriva de identificadores
     passivel_multa: bool = False
     alerta_guia_nao_lida: bool = False
     ativa: bool = True
@@ -235,6 +236,7 @@ class ObrigacaoUpdate(BaseModel):
     sabado_util: Optional[bool] = None
     competencia_ref: Optional[str] = None
     exige_robo: Optional[bool] = None
+    exige_documento: Optional[bool] = None
     passivel_multa: Optional[bool] = None
     alerta_guia_nao_lida: Optional[bool] = None
     ativa: Optional[bool] = None
