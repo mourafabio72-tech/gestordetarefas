@@ -78,6 +78,11 @@ class CopiarModeloRequest(BaseModel):
     destino_empresa_id: int
 
 
+class DesvincularEmpresaRequest(BaseModel):
+    empresa_id: int
+    obrigacao_ids: Optional[List[int]] = None  # None/vazio = todas as obrigações
+
+
 class GerarRequest(BaseModel):
     mes: int   # mês de entrega (1-12)
     ano: int
@@ -190,6 +195,31 @@ def copiar_modelo_empresa(
     db.commit()
     return {"message": f"{vinculadas} obrigação(ões) vinculada(s) à empresa destino.",
             "vinculadas": vinculadas, "total_origem": len(obrigacoes)}
+
+
+@router.post("/desvincular-empresa")
+def desvincular_empresa(
+    body: DesvincularEmpresaRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+):
+    """Remove o vínculo de uma empresa nas obrigações. Sem `obrigacao_ids`,
+    tira a empresa de TODAS as obrigações onde está vinculada (inverso do
+    'Copiar de outra empresa'). Não apaga a obrigação nem a empresa —
+    só o vínculo. Tarefas já geradas não são afetadas."""
+    emp = db.query(Empresa).filter(Empresa.id == body.empresa_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Empresa não encontrada")
+    q = db.query(Obrigacao).filter(Obrigacao.empresas.any(Empresa.id == body.empresa_id))
+    if body.obrigacao_ids:
+        q = q.filter(Obrigacao.id.in_(body.obrigacao_ids))
+    n = 0
+    for o in q.all():
+        if emp in o.empresas:
+            o.empresas.remove(emp)
+            n += 1
+    db.commit()
+    return {"desvinculadas": n, "empresa": emp.razao_social}
 
 
 @router.post("", response_model=ObrigacaoResponse, status_code=201)

@@ -149,6 +149,8 @@ export const obrigacoesAPI = {
   },
   copiarEmpresa: (origem_empresa_id, destino_empresa_id) =>
     api.post('/obrigacoes/copiar-empresa', { origem_empresa_id, destino_empresa_id }),
+  desvincularEmpresa: (empresa_id, obrigacao_ids = null) =>
+    api.post('/obrigacoes/desvincular-empresa', { empresa_id, obrigacao_ids }),
   analisarModelo: (file) => {
     const fd = new FormData();
     fd.append('arquivo', file);

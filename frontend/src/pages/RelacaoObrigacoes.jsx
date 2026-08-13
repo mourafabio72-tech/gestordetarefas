@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI } from '../services/api';
-import { FileStack, Download } from 'lucide-react';
+import { FileStack, Download, Unlink } from 'lucide-react';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const COMP = { mes_anterior: 'Mês anterior', mesmo_mes: 'Mesmo mês', mes_seguinte: 'Mês seguinte', ano_anterior: 'Ano anterior' };
@@ -22,13 +22,34 @@ export default function RelacaoObrigacoes() {
   const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
+  const [showDesvincular, setShowDesvincular] = useState(false);
+  const [desvincEmpresa, setDesvincEmpresa] = useState('');
+  const [desvinculando, setDesvinculando] = useState(false);
 
-  useEffect(() => {
+  const load = () =>
     Promise.all([obrigacoesAPI.list(), empresasAPI.list(true), setoresAPI.list()])
       .then(([o, e, s]) => { setObrigacoes(o.data); setEmpresas(e.data); setSetores(s.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+
+  useEffect(() => { load(); }, []);
+
+  const desvincularEmpresa = async () => {
+    if (!desvincEmpresa) return;
+    const eid = parseInt(desvincEmpresa);
+    const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
+    const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
+    if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
+    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo — não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
+    setDesvinculando(true);
+    try {
+      const r = await obrigacoesAPI.desvincularEmpresa(eid);
+      alert(r.data?.desvinculadas != null ? `${r.data.desvinculadas} obrigação(ões) desvinculada(s) de "${nome}".` : 'Desvinculado.');
+      setShowDesvincular(false); setDesvincEmpresa(''); load();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao desvincular');
+    } finally { setDesvinculando(false); }
+  };
 
   const empresaById = useMemo(() => Object.fromEntries(empresas.map((e) => [e.id, e])), [empresas]);
   const setorById = useMemo(() => Object.fromEntries(setores.map((s) => [s.id, s.nome])), [setores]);
@@ -54,10 +75,52 @@ export default function RelacaoObrigacoes() {
           <FileStack className="text-primary-700" />
           <h1 className="text-2xl font-bold text-gray-800">Relação de obrigações</h1>
         </div>
-        <button onClick={() => obrigacoesAPI.baixarRelatorio()} className="btn-primary flex items-center gap-2">
-          <Download size={18} /> Exportar Excel
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowDesvincular(true)} className="btn-secondary flex items-center gap-2 text-red-600"
+            title="Remove o vínculo de uma empresa das obrigações (não apaga nada além do vínculo)">
+            <Unlink size={18} /> Desvincular empresa
+          </button>
+          <button onClick={() => obrigacoesAPI.baixarRelatorio()} className="btn-primary flex items-center gap-2">
+            <Download size={18} /> Exportar Excel
+          </button>
+        </div>
       </div>
+
+      {showDesvincular && (() => {
+        const eid = parseInt(desvincEmpresa) || 0;
+        const qtd = eid ? obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length : 0;
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Desvincular empresa das obrigações</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Remove o vínculo da empresa em <strong>todas</strong> as obrigações. Não apaga a
+                obrigação nem a empresa, e não mexe nas tarefas já geradas.
+              </p>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
+                <select value={desvincEmpresa} onChange={(e) => setDesvincEmpresa(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                </select>
+                {eid > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">Vinculada a <strong>{qtd}</strong> obrigação(ões).</p>
+                )}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowDesvincular(false); setDesvincEmpresa(''); }} className="btn-secondary flex-1">Cancelar</button>
+                <button onClick={desvincularEmpresa} disabled={!desvincEmpresa || !qtd || desvinculando} className="btn-danger flex-1">
+                  {desvinculando ? 'Desvinculando…' : 'Desvincular'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       <div className="card mb-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">

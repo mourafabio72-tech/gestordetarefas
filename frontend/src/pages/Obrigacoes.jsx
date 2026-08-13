@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -108,6 +108,9 @@ export default function Obrigacoes() {
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
+  const [showDesvincular, setShowDesvincular] = useState(false);
+  const [desvincEmpresa, setDesvincEmpresa] = useState('');
+  const [desvinculando, setDesvinculando] = useState(false);
   const [modelo, setModelo] = useState(null);       // resultado da análise do comprovante
   const [analisando, setAnalisando] = useState(false);
 
@@ -215,6 +218,23 @@ export default function Obrigacoes() {
     }
   };
 
+  const desvincularEmpresa = async () => {
+    if (!desvincEmpresa) return;
+    const eid = parseInt(desvincEmpresa);
+    const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
+    const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
+    if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
+    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo — não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
+    setDesvinculando(true);
+    try {
+      const r = await obrigacoesAPI.desvincularEmpresa(eid);
+      alert(r.data?.desvinculadas != null ? `${r.data.desvinculadas} obrigação(ões) desvinculada(s) de "${nome}".` : 'Desvinculado.');
+      setShowDesvincular(false); setDesvincEmpresa(''); loadData();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao desvincular');
+    } finally { setDesvinculando(false); }
+  };
+
   const nomeEmpresa = (id) => empresas.find((e) => e.id === id)?.razao_social || `#${id}`;
 
   if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
@@ -234,6 +254,10 @@ export default function Obrigacoes() {
           </button>
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
+          </button>
+          <button onClick={() => setShowDesvincular(true)} className="btn-secondary flex items-center gap-2 text-red-600"
+            title="Remove o vínculo de uma empresa das obrigações (não apaga nada além do vínculo)">
+            <Unlink size={18} /> Desvincular empresa
           </button>
           <button onClick={gerarTarefas} disabled={gerando} className="btn-secondary flex items-center gap-2"
             title="Cria as tarefas do mês atual para todas as empresas, a partir das obrigações ativas">
@@ -324,6 +348,42 @@ export default function Obrigacoes() {
           </div>
         )}
       </div>
+
+      {showDesvincular && (() => {
+        const eid = parseInt(desvincEmpresa) || 0;
+        const qtd = eid ? obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length : 0;
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Desvincular empresa das obrigações</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Remove o vínculo da empresa em <strong>todas</strong> as obrigações. Não apaga a
+                obrigação nem a empresa, e não mexe nas tarefas já geradas.
+              </p>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
+                <select value={desvincEmpresa} onChange={(e) => setDesvincEmpresa(e.target.value)} className="input-field">
+                  <option value="">Selecione</option>
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                </select>
+                {eid > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">Vinculada a <strong>{qtd}</strong> obrigação(ões).</p>
+                )}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowDesvincular(false); setDesvincEmpresa(''); }} className="btn-secondary flex-1">Cancelar</button>
+                <button onClick={desvincularEmpresa} disabled={!desvincEmpresa || !qtd || desvinculando} className="btn-danger flex-1">
+                  {desvinculando ? 'Desvinculando…' : 'Desvincular'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {showCopy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
