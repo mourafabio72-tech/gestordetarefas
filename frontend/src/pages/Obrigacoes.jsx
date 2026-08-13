@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
-import { Plus, Edit2, Trash2, FileStack, Copy, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -152,6 +152,22 @@ export default function Obrigacoes() {
     obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
     setShowModal(true);
   };
+  const duplicar = (o) => {
+    setEditing(null);   // cria uma NOVA (POST), não edita a original
+    setForm({
+      ...emptyForm, ...o,
+      nome: `${o.nome} (cópia)`,
+      setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
+      supervisor_id: o.supervisor_id || '',
+      tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
+      aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
+      empresa_ids: o.empresa_ids || [],
+    });
+    setModelo(null);
+    setDetalhes([]);
+    obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
+    setShowModal(true);
+  };
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -267,7 +283,7 @@ export default function Obrigacoes() {
                   <th className="text-left py-2 px-2 font-medium w-32">Setor</th>
                   <th className="text-left py-2 px-2 font-medium w-20">Empresas</th>
                   <th className="text-left py-2 px-2 font-medium w-20">Status</th>
-                  <th className="text-right py-2 px-2 font-medium w-24">Ações</th>
+                  <th className="text-right py-2 px-2 font-medium w-28">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -288,6 +304,9 @@ export default function Obrigacoes() {
                       <div className="flex justify-end gap-1">
                         <button onClick={() => abrirEdicao(o)} title="Editar" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                           <Edit2 size={15} />
+                        </button>
+                        <button onClick={() => duplicar(o)} title="Duplicar (criar nova a partir desta)" className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg">
+                          <CopyPlus size={15} />
                         </button>
                         <button onClick={() => alternarStatus(o)} title={o.ativa ? 'Inativar' : 'Ativar'}
                           className={`p-1.5 rounded-lg ${o.ativa ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}>
