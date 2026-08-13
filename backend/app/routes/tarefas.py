@@ -8,7 +8,7 @@ from ..database import get_db
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
-                    permissao_efetiva)
+                    require_admin, permissao_efetiva)
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
@@ -364,7 +364,7 @@ class ExcluirCompetenciaBody(BaseModel):
 def excluir_tarefas_competencia(
     body: ExcluirCompetenciaBody,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_flag("dispensar_demanda")),
+    current_user: Usuario = Depends(require_admin),
 ):
     """Apaga DE VEZ as tarefas geradas por obrigação (com obrigacao_id) da
     competência informada (MM/AAAA). É o desfazer do 'Gerar tarefas do mês' —

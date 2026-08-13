@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from pydantic import BaseModel
 from typing import List, Optional
 from ..database import get_db
@@ -97,7 +97,7 @@ def list_usuarios(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    return db.query(Usuario).filter(Usuario.ativo == True).all()
+    return db.query(Usuario).filter(Usuario.ativo == True).order_by(func.lower(Usuario.nome)).all()
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def get_usuario(

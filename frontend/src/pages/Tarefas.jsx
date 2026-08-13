@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -83,6 +84,8 @@ const setorCores = [
 const corDoSetor = (nome) => (setorCores.find((s) => s.re.test(nome || ''))?.cor) || '#c9bfa8';
 
 export default function Tarefas() {
+  const { user } = useAuth();
+  const ehAdmin = user?.grupo === 'admin';
   const [tarefas, setTarefas] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
@@ -329,14 +332,16 @@ export default function Tarefas() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tarefas</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowExcluirMes(true)}
-            className="btn-secondary flex items-center gap-2 text-red-600"
-            title="Apaga as tarefas geradas por obrigação de uma competência (desfaz o 'Gerar tarefas do mês')"
-          >
-            <Trash2 size={18} />
-            Excluir tarefas do mês
-          </button>
+          {ehAdmin && (
+            <button
+              onClick={() => setShowExcluirMes(true)}
+              className="btn-secondary flex items-center gap-2 text-red-600"
+              title="Apaga as tarefas geradas por obrigação de uma competência (desfaz o 'Gerar tarefas do mês'). Só admin."
+            >
+              <Trash2 size={18} />
+              Excluir tarefas do mês
+            </button>
+          )}
           <button
             onClick={() => { setShowCopy(true); }}
             className="btn-secondary flex items-center gap-2"
