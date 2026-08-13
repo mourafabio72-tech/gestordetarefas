@@ -103,6 +103,11 @@ export default function Tarefas() {
   const [copyBusca, setCopyBusca] = useState('');
   const [copyRegime, setCopyRegime] = useState('');
   const [copyGrupo, setCopyGrupo] = useState('');
+  const _hoje = new Date();
+  const [showExcluirMes, setShowExcluirMes] = useState(false);
+  const [exclMes, setExclMes] = useState(_hoje.getMonth() + 1);
+  const [exclAno, setExclAno] = useState(_hoje.getFullYear());
+  const [excluindoMes, setExcluindoMes] = useState(false);
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
@@ -269,6 +274,22 @@ export default function Tarefas() {
     }
   };
 
+  const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const handleExcluirMes = async () => {
+    const comp = `${String(exclMes).padStart(2, '0')}/${exclAno}`;
+    if (!confirm(`Excluir DEFINITIVAMENTE as tarefas geradas da competência ${comp} (${MESES_NOME[exclMes - 1]}/${exclAno})?\n\nApaga só as que vieram de obrigações — não mexe nas tarefas avulsas. Dá para regerar depois. Não dá para desfazer.`)) return;
+    setExcluindoMes(true);
+    try {
+      const { data } = await tarefasAPI.excluirCompetencia(comp);
+      alert(`${data.excluidas} tarefa(s) excluída(s) da competência ${comp}.`);
+      setShowExcluirMes(false);
+      loadData();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Erro ao excluir tarefas do mês.');
+    } finally { setExcluindoMes(false); }
+  };
+
   const handleCopiarLink = async (tarefa) => {
     try {
       const { data } = await tarefasAPI.linkEnvio(tarefa.id);
@@ -308,6 +329,14 @@ export default function Tarefas() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tarefas</h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowExcluirMes(true)}
+            className="btn-secondary flex items-center gap-2 text-red-600"
+            title="Apaga as tarefas geradas por obrigação de uma competência (desfaz o 'Gerar tarefas do mês')"
+          >
+            <Trash2 size={18} />
+            Excluir tarefas do mês
+          </button>
           <button
             onClick={() => { setShowCopy(true); }}
             className="btn-secondary flex items-center gap-2"
@@ -438,6 +467,48 @@ export default function Tarefas() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {showExcluirMes && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Excluir tarefas do mês</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Apaga as tarefas <strong>geradas por obrigação</strong> da competência escolhida.
+                Não mexe nas tarefas avulsas (criadas à mão). Dá para regerar depois.
+              </p>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mês (competência)</label>
+                  <select value={exclMes} onChange={(e) => setExclMes(parseInt(e.target.value))} className="input-field">
+                    {MESES_NOME.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ano (competência)</label>
+                  <input type="number" min="2000" max="2100" value={exclAno}
+                    onChange={(e) => setExclAno(parseInt(e.target.value) || _hoje.getFullYear())}
+                    className="input-field" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                Competência alvo: <strong>{String(exclMes).padStart(2, '0')}/{exclAno}</strong>.
+                É a mesma competência que aparece na tarefa (não é o vencimento).
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowExcluirMes(false)} className="btn-secondary flex-1">Cancelar</button>
+                <button type="button" onClick={handleExcluirMes} disabled={excluindoMes} className="btn-danger flex-1">
+                  {excluindoMes ? 'Excluindo…' : 'Excluir definitivamente'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

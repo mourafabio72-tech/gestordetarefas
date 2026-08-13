@@ -354,3 +354,34 @@ def delete_tarefa(
     db_tarefa.status = StatusTarefa.CANCELADA
     db.commit()
     return {"message": "Tarefa cancelada com sucesso"}
+
+
+class ExcluirCompetenciaBody(BaseModel):
+    competencia: str  # "MM/AAAA"
+
+
+@router.post("/excluir-competencia")
+def excluir_tarefas_competencia(
+    body: ExcluirCompetenciaBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_flag("dispensar_demanda")),
+):
+    """Apaga DE VEZ as tarefas geradas por obrigação (com obrigacao_id) da
+    competência informada (MM/AAAA). É o desfazer do 'Gerar tarefas do mês' —
+    depois dá para regerar limpo. Não toca em tarefas avulsas (criadas à mão)."""
+    comp = (body.competencia or "").strip()
+    p = comp.split("/")
+    valido = (len(p) == 2 and p[0].isdigit() and p[1].isdigit()
+              and len(p[0]) == 2 and len(p[1]) == 4 and 1 <= int(p[0]) <= 12)
+    if not valido:
+        raise HTTPException(status_code=400, detail="Competência inválida (use MM/AAAA)")
+    tarefas = (db.query(Tarefa)
+               .filter(Tarefa.competencia == comp, Tarefa.obrigacao_id.isnot(None))
+               .all())
+    n = 0
+    for t in tarefas:
+        t.responsaveis = []
+        db.delete(t)
+        n += 1
+    db.commit()
+    return {"excluidas": n, "competencia": comp}

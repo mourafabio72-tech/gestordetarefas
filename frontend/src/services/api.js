@@ -126,6 +126,7 @@ export const tarefasAPI = {
   transferir: (id, responsavel_id) => api.post(`/tarefas/${id}/transferir`, { responsavel_id }),
   linkEnvio: (id) => api.get(`/tarefas/${id}/link-envio`),
   copiar: (origem_empresa_id, destino_empresa_id) => api.post('/tarefas/copiar', { origem_empresa_id, destino_empresa_id }),
+  excluirCompetencia: (competencia) => api.post('/tarefas/excluir-competencia', { competencia }),
 };
 
 export const obrigacoesAPI = {
