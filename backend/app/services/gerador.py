@@ -81,6 +81,36 @@ def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util
     return d
 
 
+def _dia_util_anterior(d: date, sabado_util: bool) -> date:
+    """Recua até cair num dia útil (inclui o próprio d se já for útil)."""
+    for _ in range(31):
+        if _e_dia_util(d, sabado_util):
+            return d
+        d -= timedelta(days=1)
+    return d
+
+
+def calc_prazo_interno(vencimento: date, dias_antes, tipo_dias: str, sabado_util: bool) -> date:
+    """Prazo interno (técnico) = vencimento antecipado por `dias_antes`.
+    tipo_dias='uteis' conta só dias úteis; 'corridos' conta corridos e depois
+    ajusta para o dia útil anterior. dias_antes<=0 → cai no próprio vencimento."""
+    n = int(dias_antes or 0)
+    if n <= 0:
+        return _dia_util_anterior(vencimento, sabado_util)
+    if (tipo_dias or "corridos") == "uteis":
+        d = vencimento
+        recuados = 0
+        for _ in range(365):
+            d -= timedelta(days=1)
+            if _e_dia_util(d, sabado_util):
+                recuados += 1
+                if recuados >= n:
+                    return d
+        return d
+    # corridos: recua N dias corridos e cai no dia útil anterior
+    return _dia_util_anterior(vencimento - timedelta(days=n), sabado_util)
+
+
 def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
     """A empresa `e` é alvo da obrigação `o`? Casa a regra (regime/segmento)
     OU está vinculada explicitamente. (Não checa ativo/bloqueado — quem chama filtra.)"""
@@ -142,7 +172,7 @@ def _empresa_atende(db: Session, empresa_id: int, setor_id) -> bool:
 
 
 def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
-                          competencia: str, prazo: date) -> bool:
+                          competencia: str, prazo: date, vencimento: date = None) -> bool:
     """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
     Retorna True se criou, False se já existia (dedupe)."""
     # Empresa não atende (não contratou) o setor desta obrigação → não gera.
@@ -175,6 +205,7 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
         competencia=competencia,
         status=StatusTarefa.PENDENTE,
         data_prazo=prazo,
+        data_vencimento=vencimento,
         gera_multa=bool(o.passivel_multa),
     )
     if resp:
@@ -190,18 +221,20 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
         if str(mes_entrega) not in _csv_set(o.meses_ativos):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
-        prazo = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
-                           o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
+        vencimento = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
+                                o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
+        prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
+                                           o.tipo_dias, bool(o.sabado_util))
         n_o = 0
         for emp in empresas_alvo(db, o):
-            if _criar_tarefa_se_nova(db, o, emp, competencia, prazo):
+            if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento):
                 criadas += 1
                 n_o += 1
             else:
                 puladas += 1
         if n_o:
             por_obrigacao.append({"obrigacao": o.nome, "competencia": competencia,
-                                  "prazo": prazo.isoformat(), "criadas": n_o})
+                                  "prazo": vencimento.isoformat(), "criadas": n_o})
     db.commit()
     return {"mes_entrega": f"{mes_entrega:02d}/{ano_entrega:04d}",
             "criadas": criadas, "puladas": puladas, "detalhe": por_obrigacao}
@@ -225,9 +258,11 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
         if not _no_alvo(o, empresa):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
-        prazo = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
-                           o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
-        if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo):
+        vencimento = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
+                                o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
+        prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
+                                           o.tipo_dias, bool(o.sabado_util))
+        if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo_interno, vencimento):
             criadas += 1
         else:
             puladas += 1
