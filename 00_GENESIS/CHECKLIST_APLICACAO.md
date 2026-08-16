@@ -311,6 +311,13 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       que é o aceite do PLANO_FASEADO para a Fase 4 e o primeiro dos três casos
       desta. Faltam os outros dois: e-mail sem cadastro no Tareffas, e conta
       bloqueada, os dois esperando o mesmo aviso âmbar e nunca a entrada.
-- [ ] Login por e-mail e senha continua funcionando para quem entra pela URL direta
+- [x] Login por e-mail e senha continua funcionando para quem entra pela URL direta
+      EVIDÊNCIA: conferência em produção pelo usuário, 2026-08-16, em janela
+      anônima do navegador: `https://gestordetarefas.zoaria.com.br` pediu e-mail e
+      senha. A janela anônima é o que dá valor à prova: na janela normal ele tinha
+      acabado de entrar pelo card, e o JWT de 8 horas no `localStorage` responderia
+      pela sessão, o que provaria só que a sessão existia. Fecha o item obrigatório
+      "Tela de login" do tipo `App_Online_Auth`: o SSO é caminho adicional, nunca
+      substituto.
 - [ ] `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
 - [ ] Mapa Graphify gerado, se o usuário aceitar instalar
