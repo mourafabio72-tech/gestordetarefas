@@ -109,30 +109,127 @@ de `app.py:497`. Nenhum corte novo nesta fase.
 
 ## Fase 3 : Tareffas consome o bilhete
 
-- [ ] Ler `Padrao_Validacao_de_Input` e `Padrao_Logging_Estruturado` ANTES de escrever a rota
-- [ ] Tabela `sso_bilhetes_usados` (jti, usado_em, ip) com limpeza do que venceu
-- [ ] Recusa bilhete acima do tamanho esperado ANTES de consultar o banco
+- [x] Ler `Padrao_Validacao_de_Input` e `Padrao_Logging_Estruturado` ANTES de escrever a rota
+      EVIDÊNCIA: bloco FONTES LIDAS da sessão, com as duas integrais (197 e 210
+      linhas, conferidas por `wc -l` antes do Read) mais as outras 6 notas do
+      LASTRO. O que veio de cada uma: da validação, o teto de comprimento antes
+      da regra de negócio (`routes/auth.py:114-117`) e o valor padrão no schema
+      (`:63-66`); do logging, os campos fixos e a lista do que nunca entra em log
+      (`seguranca.py:57-66`).
+- [x] Tabela `sso_bilhetes_usados` (jti, usado_em, ip) com limpeza do que venceu
+      EVIDÊNCIA: `models.py:296-311`, com `jti` como CHAVE PRIMÁRIA (é ela que dá
+      a trava) e índice em `usado_em`. Limpeza em `routes/auth.py:168-175`,
+      retenção de 7 dias (`:26`), que também varre `login_tentativas` (30 dias,
+      `seguranca.py:105-110`). Item 19 da prova: linha fora da retenção some na
+      entrada seguinte. Tabela nova nasce pelo `Base.metadata.create_all` de
+      `main.py:8`; o `migrate()` continua sendo só para coluna nova.
+- [x] Recusa bilhete acima do tamanho esperado ANTES de consultar o banco
       (`Padrao_Impersonacao_Segura`, bloco Consumo)
-- [ ] Marca o jti como usado ANTES de emitir o JWT
+      EVIDÊNCIA: `routes/auth.py:114-117`, primeira coisa depois de ler o IP, e
+      `sso.py:58` no leitor. Item 9 da prova não confia na leitura do código: um
+      ouvinte de `before_cursor_execute` conta as queries e exige ZERO.
+- [x] Marca o jti como usado ANTES de emitir o JWT
       PROIBIDO: emitir o token e marcar depois
       (`Padrao_Impersonacao_Segura`: "Marcar como usado ANTES do login, e nunca depois")
-- [ ] `UPDATE ... WHERE jti=%s AND usado=0` **e o código confere as linhas afetadas**
+      EVIDÊNCIA: `routes/auth.py:135-137` (marca) vem antes de `:161` (emite), com
+      a busca do usuário no meio. Item 10 da prova: bilhete de e-mail sem cadastro
+      recusa a entrada E deixa o jti gravado, o que só é possível se a marcação
+      acontece antes de existir sessão.
+- [x] `UPDATE ... WHERE jti=%s AND usado=0` **e o código confere as linhas afetadas**
       PROVA: teste de corrida com duas requisições simultâneas, só uma entra
       (`Padrao_Impersonacao_Segura`, cenário 6)
-- [ ] Inexistente, expirado, já usado e assinatura inválida devolvem a MESMA resposta
+      EVIDÊNCIA: `routes/auth.py:80-96`. DIVERGÊNCIA DE FORMA, declarada: a nota
+      descreve `UPDATE ... AND usado=0` porque no caso dela a linha do token já
+      existe na tabela. Aqui o consumidor não sabe do bilhete até ele chegar, e o
+      equivalente é `INSERT ... ON CONFLICT (jti) DO NOTHING` com `res.rowcount == 1`
+      (`:96`). A propriedade exigida é a mesma e está atendida: quem decide o
+      vencedor é o banco, e o código obedece ao veredito em vez de seguir em
+      frente. Item 11 da prova dispara duas requisições de verdade com
+      `threading.Barrier`, e exige `[200, 404]`.
+      PROVA DE QUE A PROVA TEM DENTE: trocando `:96` por `return True`, a prova
+      falha nos itens 4, 5, 6 e 11. Restaurado depois, 25 verdes de novo.
+- [x] Inexistente, expirado, já usado e assinatura inválida devolvem a MESMA resposta
       (`Padrao_Impersonacao_Segura`: "Mensagem diferente para expirado, usado e inexistente vira oráculo")
-- [ ] Usuário ausente, bloqueado ou inativo: mesma mensagem única
+      EVIDÊNCIA: uma constante só, `routes/auth.py:22`, usada em todos os caminhos
+      de recusa (`:77` e `:117`, os dois únicos). O motivo real vai só para o log. Item 6 da
+      prova compara o corpo das NOVE recusas (lixo, expirado, já usado, chave
+      errada, salt alheio, sem cadastro, bloqueada, inativa, convite pendente) e
+      exige um único texto distinto entre elas.
+- [x] Usuário ausente, bloqueado ou inativo: mesma mensagem única
       (`Forca_Bruta_Login` regra 3: "Mensagem de erro é única")
-- [ ] Recusa devolve 404, nunca 403
+      EVIDÊNCIA: `routes/auth.py:146-157`, quatro casos e um só retorno. Entrou um
+      quarto que o plano não previa: `ativado is False` (`:156-157`), que é convite de
+      primeiro acesso pendente. Quem nunca definiu a própria senha não passa a ter
+      conta ativa por ter clicado no card do Hub. Itens 7 e 8 da prova.
+- [x] Recusa devolve 404, nunca 403
       (`Padrao_IDOR`: "Retornar 403 em vez de 404 quando não é dono: confirma que o recurso existe")
-- [ ] Tentativas registradas e limitadas por IP, como no login por senha
+      EVIDÊNCIA: `routes/auth.py:77` e `:117`, os dois únicos pontos de recusa,
+      ambos 404. Item 5 da prova varre as nove respostas.
+- [x] Tentativas registradas e limitadas por IP, como no login por senha
       (`Forca_Bruta_Login` regra 2: "Toda tentativa, sucesso ou falha, é registrada")
-- [ ] O JWT emitido tem a MESMA validade do login normal (8 horas)
+      EVIDÊNCIA: tabela `login_tentativas` em `models.py:314-321`, gravação em
+      `seguranca.py:68-78`, contagem da janela em `:80-103` e o corte em
+      `routes/auth.py:119-125` (5 falhas em 15 minutos, `seguranca.py:24-25`).
+      Itens 12, 13, 14 e 15 da prova, incluindo o 15, que confere que o bloqueio
+      é do IP que errou e não do sistema inteiro.
+      CORREÇÃO DO ENUNCIADO: "como no login por senha" não era cumprível, porque
+      o login por senha deste projeto NÃO registra nem limita nada
+      (`routes/auth.py:28-40`, e `grep -rni "tentativa\|rate_limit"` no backend
+      voltava vazio antes desta fase). A tabela e os helpers nasceram genéricos,
+      com coluna `origem`, para o login por senha entrar depois numa chamada de
+      duas linhas. Ligar lá é decisão do usuário, e está na lista de pendências.
+- [x] O JWT emitido tem a MESMA validade do login normal (8 horas)
       PROIBIDO: sessão mais longa por ter entrado pelo Hub
       (`Timeout_de_Sessao`)
-- [ ] Rota de consumo declarada como isenta de CSRF, por ser entrada externa
+      EVIDÊNCIA: `routes/auth.py:161` chama `create_access_token(data={"sub": ...})`
+      sem `expires_delta`, exatamente como a rota de senha em `:39`. O padrão é
+      `ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8` em `auth.py:16`. Item 2 da prova não
+      confia nisso: decodifica os dois JWTs e compara o `exp`.
+- [x] Rota de consumo declarada como isenta de CSRF, por ser entrada externa
       (`CSRF_Cookies_Headers`, seção "Rotas isentas")
-- [ ] Log de entrada com e-mail, IP e resultado; bilhete fora do log
+      EVIDÊNCIA: NÃO HÁ LISTA DE ISENTAS NESTE PROJETO, e o motivo está escrito na
+      docstring da rota (`routes/auth.py:106-110`). `grep -rni "csrf" backend/app`
+      volta vazio: o Tareffas não usa cookie de sessão. O token vai em
+      `Authorization: Bearer` a partir do `localStorage`
+      (`frontend/src/contexts/AuthContext.jsx:11,32`), e cabeçalho não é anexado
+      sozinho pelo navegador em pedido de outro site. A nota rege app com cookie
+      de sessão; aqui a superfície não existe. Declarado em vez de fingir cumprido.
+- [x] Log de entrada com e-mail, IP e resultado; bilhete fora do log
+      EVIDÊNCIA: `seguranca.py:57-66` (uma linha JSON por evento, com timestamp,
+      nível e campos fixos) e os três eventos em `routes/auth.py:116`, `:121`,
+      `:75` e `:163`: `SSO_OK`, `SSO_RECUSADO` (com o motivo real, que não vai
+      para o usuário) e `SSO_BLOQUEADO`. O bilhete nunca é passado a `log_event`:
+      `grep -n "log_event\|print" routes/auth.py | grep -i "bilhete\|body\."`
+      volta vazio. Item 16 da prova é mais forte que o grep: varre as duas tabelas
+      de rastro e exige que nenhum pedaço do bilhete apareça.
+
+**Achados da autoverificação (três furos meus, fechados antes de fechar a fase):**
+
+- [x] `X-Forwarded-For` era lido do começo da lista, e o nginx ANEXA em vez de
+      substituir (`frontend/nginx.conf:14`, `$proxy_add_x_forwarded_for`). Quem
+      mandasse `X-Forwarded-For: 1.2.3.4` ganhava um IP novo a cada tentativa e
+      passava por cima do limite de força bruta, além de sujar o rastro com IP
+      inventado. Fechado em `seguranca.py:38-56`, que lê de trás para frente
+      descontando os saltos nossos (`PROXIES_ANEXADOS = 1`, `:35`). Item 18a da
+      prova manda uma cadeia forjada de três IPs e exige que o contado seja o
+      real.
+- [x] Comparação de e-mail era exata, e o Postgres diferencia maiúscula. Conta
+      cadastrada como `Fulano@bps4.com.br` seria barrada por um bilhete com
+      `fulano@bps4.com.br`, que é a mesma pessoa. Fechado em
+      `routes/auth.py:146-151` com `func.lower` nos dois lados. O efeito colateral
+      veio junto: duas contas que só diferem por caixa tornam a identidade
+      ambígua, e nesse caso NINGUÉM entra (`:147-148`), porque escolher uma seria
+      escolher no escuro de quem é a sessão. Itens 18b e 18c da prova.
+- [x] `SSORequest.bilhete` era obrigatório, e corpo sem o campo respondia 422 do
+      pydantic, diferente das outras recusas. Fechado com valor padrão em
+      `routes/auth.py:63-66`. Item 18d da prova compara o corpo com o da recusa
+      por lixo.
+
+**Fechamento da fase:** `provas/prova_sso_f3.py` com 25 checagens verdes (rota
+real, SQLite temporário, sem deixar arquivo), `python app/sso.py` com 7 casos, e
+o app inteiro subindo com a rota registrada (`/api/auth/sso` aparece em
+`app.routes`). Balanço da escada: `grep -rn "escada:"` no backend devolve 0
+marcadores; nenhum corte deliberado nesta fase.
 
 ## Fase 4 : frontend
 

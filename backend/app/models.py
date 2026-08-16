@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+from datetime import datetime
 import enum
 
 # Vínculo N:N entre obrigação (modelo) e empresas (exceções/inclusões explícitas)
@@ -290,3 +291,36 @@ class Modelo(Base):
 
     empresa = relationship("Empresa")
     obrigacao = relationship("Obrigacao")
+
+
+class SSOBilheteUsado(Base):
+    """Uso único do bilhete que vem do Hub Zoaria.
+
+    O `jti` é a chave primária de propósito: é o banco, e não o código Python,
+    quem decide o vencedor quando o mesmo bilhete chega em duas requisições no
+    mesmo instante. O segundo INSERT não passa, e a rota confere isso pela
+    quantidade de linhas afetadas.
+
+    Linha antiga vira rastro de auditoria, não trava: o bilhete morre em 60
+    segundos, então guardar por dias serve para saber quem entrou, não para
+    impedir a segunda entrada."""
+    __tablename__ = "sso_bilhetes_usados"
+
+    jti = Column(String(64), primary_key=True)
+    usado_em = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    ip = Column(String(45))
+
+
+class LoginTentativa(Base):
+    """Toda tentativa de entrar, por qualquer porta, com sucesso ou sem.
+
+    Serve a dois propósitos: contar falhas recentes por e-mail ou IP para travar
+    força bruta, e deixar rastro de quem tentou entrar e de onde."""
+    __tablename__ = "login_tentativas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(200), index=True)
+    ip = Column(String(45), index=True)
+    origem = Column(String(20), default="sso")   # sso | senha
+    sucesso = Column(Boolean, default=False)
+    criado_em = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

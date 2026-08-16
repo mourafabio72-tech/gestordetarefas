@@ -65,7 +65,7 @@ Segurança não é fase separada aqui: ela nasce junto com a superfície que cri
 certa e falha com chave errada; app não marcado continua redirecionando puro.
 
 ## Fase 3 : Tareffas consome o bilhete
-**Status:** pending
+**Status:** done (2026-08-16, 12 de 12 itens com evidência, 25 checagens verdes)
 **Duração:** 4 horas
 **Rege:** `Padrao_Impersonacao_Segura`, `Padrao_IDOR`, `Forca_Bruta_Login`, `Timeout_de_Sessao`, `Padrao_Validacao_de_Input` (ler antes)
 **Depende de:** Fase 2

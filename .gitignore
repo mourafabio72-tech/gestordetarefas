@@ -33,3 +33,6 @@ Thumbs.db
 *.log
 # uploads de comprovantes (público)
 data/
+
+# Mapa de dependencias gerado localmente (refaz com: graphify . --code-only)
+graphify-out/

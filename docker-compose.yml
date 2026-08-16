@@ -20,6 +20,8 @@ services:
       DB_PORT: "5432"
       DB_NAME: gestor_tarefas
       SECRET_KEY: ${SECRET_KEY:-sua-chave-secreta-mude-em-producao}
+      # Entrada pelo card do Hub. Vazio desliga o SSO e mantém o login por senha.
+      ZOARIA_SSO_SECRET: ${ZOARIA_SSO_SECRET:-}
       ZAP_API_URL: ${ZAP_API_URL:-https://api-bps4.zapcontabil.chat}
       ZAP_API_KEY: ${ZAP_API_KEY:-}
       ZAP_CONNECTION_FROM: ${ZAP_CONNECTION_FROM:-0}
