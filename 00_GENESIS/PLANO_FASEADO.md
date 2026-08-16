@@ -106,6 +106,24 @@ não mostra mais o bilhete. Entrar direto pela URL continua pedindo senha.
 **Duração:** 1 hora
 **Depende de:** Fase 4
 
+## Fase 6 : faxina de travessão no frontend (decidida em 2026-08-16)
+**Status:** pending
+**Duração:** 40 minutos
+**Rege:** `CLAUDE.md` da vault (regra 1), `Revisao_Professor_Pasquale`
+**Depende de:** Fase 5
+
+Nasceu do achado da Fase 1, confirmado na Fase 4: `grep -ro "—" frontend/src`
+devolve 46 ocorrências em 13 arquivos, todas em código anterior a este trabalho.
+Vira fase própria em vez de entrar de carona no deploy do SSO: é texto que o
+usuário lê em 13 telas, e merece revisão de língua própria, não um `sed`.
+
+- Trocar os 46 travessões por vírgula, dois pontos ou parêntese, conforme a frase
+- Conferir de quebra acentuação e concordância no mesmo texto tocado
+- `grep -rn "—" frontend/src` volta vazio, e a linha da matriz fecha
+
+**Aceite:** a linha "CLAUDE.md da vault (regra 1)" do `CONFORMIDADE_VAULT.md`
+passa a `ok` com a saída colada, e nenhuma tela mudou de sentido.
+
 - Variáveis nos dois serviços do EasyPanel, mesma chave dos dois lados
 - Teste com três pessoas reais: uma com cadastro, uma sem, uma bloqueada
 - `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
