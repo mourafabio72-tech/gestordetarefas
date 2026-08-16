@@ -299,8 +299,18 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
 
 ## Fase 5 : entrega
 
-- [ ] Mesma chave nos dois serviços do EasyPanel
+- [x] Mesma chave nos dois serviços do EasyPanel
+      EVIDÊNCIA: `ZOARIA_SSO_SECRET` criada pelo usuário nos dois serviços, com o
+      mesmo valor, e deploy rodado nos dois (2026-08-16). A terceira condição, que
+      não é do EasyPanel e é a que mais se esquece, também foi feita: o app
+      Tareffas marcado como "Entrada direta" em `/admin/apps` do Hub. Prova de
+      ponta a ponta abaixo: sem as três, o card não entraria.
 - [ ] Teste real: pessoa com cadastro entra; sem cadastro vê o aviso; bloqueada é barrada
+      PARCIAL: o caminho feliz está confirmado em produção. O usuário clicou no
+      card do Hub e entrou no Tareffas sem digitar senha ("funcionou", 2026-08-16),
+      que é o aceite do PLANO_FASEADO para a Fase 4 e o primeiro dos três casos
+      desta. Faltam os outros dois: e-mail sem cadastro no Tareffas, e conta
+      bloqueada, os dois esperando o mesmo aviso âmbar e nunca a entrada.
 - [ ] Login por e-mail e senha continua funcionando para quem entra pela URL direta
 - [ ] `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
 - [ ] Mapa Graphify gerado, se o usuário aceitar instalar
