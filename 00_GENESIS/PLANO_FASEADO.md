@@ -84,7 +84,11 @@ certa e falha com chave errada; app não marcado continua redirecionando puro.
 (mesmo bilhete em duas requisições simultâneas: só uma entra).
 
 ## Fase 4 : o frontend entra sozinho
-**Status:** pending
+**Status:** código feito (2026-08-16, 4 de 4 itens com evidência, mais 1 achado da
+autoverificação, e 7 casos verdes em `frontend/provas/prova_sso_f4.js`). NÃO
+fechada: a linha do travessão na matriz `CONFORMIDADE_VAULT.md` segue pendente
+por 46 ocorrências em 13 arquivos anteriores a este trabalho, e a faxina é
+ampliação de escopo que depende do usuário.
 **Duração:** 1 hora
 **Rege:** `Padrao_Impersonacao_Segura` (redirecionar logo após consumir)
 **Depende de:** Fase 3

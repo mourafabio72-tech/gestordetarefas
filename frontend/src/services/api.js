@@ -41,6 +41,10 @@ export const publicoAPI = {
 
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  // Entrada pelo card do Hub. Vai pela instância pública de propósito: a recusa
+  // é 404 e o limite por IP é 429, e nenhum dos dois pode cair no interceptor de
+  // 401 que apaga o token e redireciona.
+  sso: (bilhete) => apiPublico.post('/auth/sso', { bilhete }),
   register: (data) => api.post('/auth/register', data),
   me: () => api.get('/auth/me'),
 };

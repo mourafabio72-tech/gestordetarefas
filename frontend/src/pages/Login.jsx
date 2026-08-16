@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Lock, User } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, aviso, limparAviso } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
@@ -12,6 +12,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    limparAviso();
     setLoading(true);
 
     try {
@@ -32,6 +33,12 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {aviso && (
+            <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm">
+              {aviso}
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
               {error}

@@ -233,14 +233,69 @@ marcadores; nenhum corte deliberado nesta fase.
 
 ## Fase 4 : frontend
 
-- [ ] `AuthContext` troca `?sso=` por JWT quando não há token guardado
-- [ ] `history.replaceState` limpa a URL logo após consumir
+- [x] `AuthContext` troca `?sso=` por JWT quando não há token guardado
+      EVIDÊNCIA: `contexts/AuthContext.jsx:27` colhe o bilhete, `:37-40` só entra
+      por ele quando `localStorage.getItem('token')` voltou vazio em `:28`, e
+      `entrarPorBilhete` (`:59-71`) chama `authAPI.sso`, guarda o `access_token` e
+      carrega o usuário. A chamada em `services/api.js:47` usa a instância
+      `apiPublico` de propósito: a recusa da rota é 404 e o limite por IP é 429,
+      e nenhum dos dois pode cair no interceptor de 401 (`api.js:18-27`), que
+      apaga o token e redireciona.
+      Enquanto o consumo corre, `loading` continua `true`, então o `PrivateRoute`
+      (`App.jsx:25-27`) segura a tela em vez de piscar o login.
+- [x] `history.replaceState` limpa a URL logo após consumir
       (`Padrao_Impersonacao_Segura`: "redirecionar logo após consumir, para o token
       não ficar na barra nem no histórico")
-- [ ] Quem já está logado não é derrubado por um bilhete que chega
-- [ ] Mensagem de recusa em português com acentuação completa, legível para quem
+      EVIDÊNCIA: `contexts/bilhete.js:26-34`. MAIS FORTE QUE O ITEM PEDIA, e
+      declarado: a limpeza acontece ANTES da chamada ao servidor, e não depois do
+      consumo dar certo. Enquanto o bilhete estiver na barra ele vaza pelo
+      histórico, pelo `Referer` da página seguinte e por captura de tela, e a
+      recusa não é motivo para deixá-lo lá. O que se perde numa falha é um
+      bilhete de 60 segundos e uso único.
+      Item 3 da `frontend/provas/prova_sso_f4.js`: `ok 3. a URL é limpa e o
+      bilhete some do endereço`. Itens 4 e 7 conferem que a limpeza não leva
+      junto outros parâmetros, o hash nem a rota.
+      PROVA DE QUE A PROVA TEM DENTE: trocando `bilhete.js:34` por um comentário,
+      a prova falha no item 3 (`expected: 1` de chamadas de `replaceState`).
+      Restaurado, 7 verdes de novo.
+- [x] Quem já está logado não é derrubado por um bilhete que chega
+      EVIDÊNCIA: `contexts/AuthContext.jsx:30-35`. O ramo do token guardado vem
+      ANTES do ramo do bilhete e faz `return`, então a sessão aberta segue por
+      `loadUser()` e o bilhete não é consumido. A URL é limpa do mesmo jeito
+      (`:27` roda antes dos dois ramos), porque bilhete na barra é vazamento
+      mesmo quando ninguém o usa.
+      Consequência aceita e registrada: quem está logado como uma pessoa e clica
+      no card do Hub como outra continua na primeira sessão. É o que este item
+      manda, e trocar de conta se faz por Sair.
+      TRAVA EXTRA: `:24-25`. O `StrictMode` (`main.jsx:7`) monta duas vezes em
+      desenvolvimento, e bilhete é de uso único: sem o `useRef`, a segunda
+      montagem gastaria o mesmo bilhete e a pessoa veria o aviso de recusa depois
+      de já ter entrado.
+- [x] Mensagem de recusa em português com acentuação completa, legível para quem
       não é técnico (vault `CLAUDE.md` regra 1)
       PROIBIDO: travessão em qualquer texto, inclusive dentro de JSX
+      EVIDÊNCIA: `contexts/AuthContext.jsx:11-12`, uma constante só
+      (`AVISO_SSO`), usada nos dois caminhos de falha (`:64` e `:68`). Texto:
+      "Não foi possível entrar pelo portal Zoaria. Entre com seu e-mail e senha,
+      ou procure quem administra o sistema." Sem jargão, sem código de erro, e
+      espelhando a recusa única do servidor: não diz se o problema foi o bilhete
+      ou a conta.
+      Aparece em `pages/Login.jsx:36-40`, em bloco âmbar separado do vermelho de
+      erro de senha, e some quando a pessoa tenta entrar (`:15`, `limparAviso`).
+      `grep -n "—"` nos cinco arquivos desta fase (`bilhete.js`, `AuthContext.jsx`,
+      `Login.jsx`, `api.js`, `prova_sso_f4.js`): vazio.
+- [x] Caminho triste achado na autoverificação: `loadUser` engole a própria falha
+      e apaga o token (`AuthContext.jsx:48-56`). Um bilhete ACEITO cujo `/me`
+      falhasse depois jogaria a pessoa no login sem uma palavra. Fechado em
+      `:61-64`, que confere se o token sobreviveu e mostra o mesmo aviso se não.
+
+**Fechamento da fase:** `node provas/prova_sso_f4.js` com 7 casos verdes, e
+`npm run build` transformando 2276 módulos sem erro. Balanço da escada:
+`grep -rn "escada:"` no frontend devolve 0 marcadores; nenhum corte deliberado
+nesta fase.
+PENDÊNCIA QUE NÃO É DESTA FASE, e por isso a matriz segue com uma linha aberta:
+`grep -rn "—" frontend/src` acha 46 travessões em 13 arquivos pré-existentes.
+Código novo nasce conforme a regra; a faxina do código velho é decisão do usuário.
 
 ## Fase 5 : entrega
 
