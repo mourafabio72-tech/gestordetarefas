@@ -305,8 +305,20 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       não é do EasyPanel e é a que mais se esquece, também foi feita: o app
       Tareffas marcado como "Entrada direta" em `/admin/apps` do Hub. Prova de
       ponta a ponta abaixo: sem as três, o card não entraria.
-- [ ] Teste real: pessoa com cadastro entra; sem cadastro vê o aviso; bloqueada é barrada
-      PARCIAL: o caminho feliz está confirmado em produção. O usuário clicou no
+- [x] Teste real: pessoa com cadastro entra; sem cadastro vê o aviso; bloqueada é barrada
+      OS TRÊS CASOS FECHADOS em produção, 2026-08-16, com captura de tela nos dois
+      de recusa. Identidade conferida antes de dar por bom: o usuário de teste no
+      Hub é `mourafabio72@gmail.com` e a conta real do usuário no Tareffas é
+      `fabio@bps4.com.br`, então o caso "sem cadastro" foi mesmo sem cadastro, e
+      não um descasamento de e-mail fazendo os dois testes provarem a mesma coisa.
+      RESSALVA DE PRECISÃO: a conta de teste foi criada sem senha, então era
+      bloqueada E pendente na hora da recusa, e os dois casos barram
+      (`routes/auth.py:152-157`). A recusa está certa; qual dos dois motivos
+      disparou não se distingue de fora, porque a mensagem é única de propósito.
+      O caminho feliz é o registro de `sso_no_ar`: o usuário entrou pelo card com
+      a própria conta, no mesmo ambiente e no mesmo dia em que as outras duas
+      foram barradas. Entrar um e recusar outros é a prova de que a rota
+      discrimina, e não de que ela recusa todo mundo. O usuário clicou no
       card do Hub e entrou no Tareffas sem digitar senha ("funcionou", 2026-08-16),
       que é o aceite do PLANO_FASEADO para a Fase 4 e o primeiro dos três casos
       desta. Faltam os outros dois: e-mail sem cadastro no Tareffas, e conta
