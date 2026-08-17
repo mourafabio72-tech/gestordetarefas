@@ -52,7 +52,8 @@ Em 2026-08-17, depois da Fase 7, a matriz tem 19 linhas e nenhuma pendente:
 editável). A linha que estava `parcial (SSO ok)` fechou: o login por e-mail e
 senha passou a registrar e limitar igual ao SSO.
 
-Fica de fora, e é a única coisa que o repositório não decide: se o serviço
-backend tem domínio próprio no EasyPanel. Se tiver, `/docs` e `/openapi.json`
-estão públicos, e aí entram `docs_url=None` fora de desenvolvimento e a remoção
-da exceção de CSP que existe só por causa deles.
+A última pergunta que o repositório não respondia foi respondida pelo painel em
+2026-08-17: o backend NÃO tem domínio próprio. Os dois domínios do projeto
+apontam para a porta 80 (o nginx do frontend), e o backend responde em 8000 sem
+ser destino de nenhum. Logo `/docs` e `/openapi.json` não saem pela internet, e
+`docs_url=None` não precisa entrar.

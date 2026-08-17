@@ -136,9 +136,9 @@ passa a `ok` com a saída colada, e nenhuma tela mudou de sentido.
 funcionando para quem entra direto.
 
 ## Fase 7 : fechar a porta da frente (decidida em 2026-08-17)
-**Status:** 3 de 4 itens feitos com evidência (2026-08-17). Os três de código
-estão fechados e provados; o quarto é uma conferência no painel do EasyPanel,
-que não se decide pelo repositório e está com o usuário.
+**Status:** done (2026-08-17, 4 de 4 itens com evidência, 19 checagens verdes na
+prova de segurança e 4 na de cabeçalhos). Commitado em `142ef92` e **não
+enviado**: o push dispara o deploy e o modo é interativo.
 **Duração:** 3 horas
 **Rege:** `Forca_Bruta_Login`, `CSRF_Cookies_Headers` (a parte de headers, que não
 depende de cookie), `App_Online_Auth`

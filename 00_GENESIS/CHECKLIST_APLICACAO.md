@@ -572,16 +572,26 @@ seguem verdes. Balanço da escada: `grep -rn "escada:"` em `frontend/src` e
       login; as telas internas usam o mesmo bundle e o mesmo CSS, e a varredura
       por recurso externo em `frontend/src` achou só um link para o Hub e um texto
       de exemplo, nenhum script ou folha de estilo de fora.
-- [ ] Conferir se o serviço backend tem domínio próprio no EasyPanel
-      PENDENTE, e é a única coisa desta fase que não se decide pelo repositório.
-      Pelo código, o `/docs` e o `/openapi.json` NÃO saem pelo domínio público:
-      o nginx do frontend só proxia `/api` (`frontend/nginx.conf:25`). Se o
-      serviço backend tiver domínio próprio no painel, saem, e aí entram
-      `docs_url=None` e `openapi_url=None` fora de desenvolvimento, mais a
-      remoção da exceção de CSP de `seguranca.py:121`, que existe só por causa
-      deles.
+- [x] Conferir se o serviço backend tem domínio próprio no EasyPanel
+      EVIDÊNCIA: captura de tela do painel (`meuprojeto / gestor-de-tarefas`,
+      2026-08-17), seção Domínios, com duas entradas e **nenhuma apontando para o
+      backend**: `https://gestordetarefas.zoaria.com.br/` vai para
+      `http://meuprojeto_gestor-de-tarefas_frontend:80/`, e o domínio automático
+      `https://meuprojeto-gestor-de-tarefas.ocue6h.easy...` vai para
+      `http://meuprojeto_gestor-de-tarefas:80/`. Os dois na porta 80, que é a do
+      nginx; o backend responde em 8000 e não é destino de nenhum.
+      Logo o `/docs` e o `/openapi.json` NÃO saem pela internet, porque o nginx
+      do frontend só proxia `/api` (`frontend/nginx.conf:25`). `docs_url=None`
+      não entra nesta fase, e a exceção de CSP de `seguranca.py:121` continua
+      valendo para quem abre a documentação por dentro da rede do projeto.
+      ACHADO DE PASSAGEM, não alterado: o domínio automático aponta para
+      `meuprojeto_gestor-de-tarefas`, sem o sufixo `_frontend` que o outro tem.
+      Se ele responder, é uma segunda entrada pública para o mesmo app. Não muda
+      nada do que esta fase entregou, porque requisição de mesma origem não passa
+      por CORS, mas é porta a mais e vale saber se está aberta de propósito.
 
-**Fechamento da fase:** `backend/provas/prova_seguranca_f7.py` com 19 checagens
+**Fechamento da fase:** 4 de 4 itens com evidência.
+`backend/provas/prova_seguranca_f7.py` com 19 checagens
 verdes contra as rotas reais, `frontend/provas/prova_headers_f7.py` com 4, e a
 conferência visual da CSP no navegador. Regressão sem nenhuma queda:
 `prova_sso_f3.py` com 25, `app/sso.py` com 7, `prova_sso_f4.js` com 7 e
