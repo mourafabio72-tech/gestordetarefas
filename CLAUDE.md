@@ -204,3 +204,24 @@ quando a chave existe nos dois lugares.
 - `backend/gestor_local.db` é SQLite de teste local. Produção é Postgres.
 - Os volumes `uploads` e `pgdata` são persistentes. `UPLOAD_DIR=/app/data/uploads`
   guarda comprovante enviado por cliente: apagar volume perde documento.
+
+## Mapa do projeto (graphify)
+
+Este projeto tem um mapa de dependências em `graphify-out/`, com os nós centrais,
+as comunidades de arquivos e as relações entre eles. O mapa é gerado na máquina,
+lendo a árvore do código, e não custa token. A pasta está no `.gitignore`: quem
+clonar o repositório gera a dela com `graphify . --code-only`.
+
+Regras:
+
+- Para pergunta sobre o código, rode `graphify query "<pergunta>"` antes de sair
+  abrindo arquivo, desde que `graphify-out/graph.json` exista. Use
+  `graphify path "<A>" "<B>"` para relação entre duas coisas e
+  `graphify explain "<conceito>"` para um ponto específico. Os três devolvem um
+  recorte do grafo, quase sempre menor do que o `GRAPH_REPORT.md` ou a saída
+  crua de um grep.
+- Se `graphify-out/wiki/index.md` existir, navegue por ele em vez de vasculhar o
+  fonte.
+- Leia o `graphify-out/GRAPH_REPORT.md` só para revisão ampla de arquitetura, ou
+  quando `query`, `path` e `explain` não trouxerem contexto suficiente.
+- Depois de mexer no código, rode `graphify update .` para o mapa não envelhecer.

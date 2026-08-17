@@ -36,3 +36,6 @@ data/
 
 # Mapa de dependencias gerado localmente (refaz com: graphify . --code-only)
 graphify-out/
+
+# Config local do Claude Code: os hooks apontam para caminho absoluto desta maquina
+.claude/
