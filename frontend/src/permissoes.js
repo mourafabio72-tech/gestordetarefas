@@ -77,7 +77,7 @@ export const GRUPOS = [
   { value: 'analista', label: 'Analista', desc: 'Edita só as próprias tarefas; cadastros só leitura.' },
   { value: 'estagiario', label: 'Estagiário', desc: 'Edita só as próprias tarefas; não mexe em prazos.' },
   { value: 'consulta', label: 'Consulta', desc: 'Só visualiza; não altera nada.' },
-  { value: 'usuario', label: 'Usuário (legado)', desc: 'Papel antigo — só leitura, vê tudo.' },
+  { value: 'usuario', label: 'Usuário (legado)', desc: 'Papel antigo: só leitura, vê tudo.' },
 ];
 
 // Cargos escolhíveis no cadastro de usuário → mapeiam papel (grupo) + tipo.

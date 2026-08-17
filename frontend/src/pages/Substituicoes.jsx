@@ -7,7 +7,7 @@ const FORM_VAZIO = {
   data_inicio: '', data_fim: '', motivo: '',
 };
 
-const fmt = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString('pt-BR') : '—');
+const fmt = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString('pt-BR') : '-');
 
 export default function Substituicoes() {
   const [subs, setSubs] = useState([]);
@@ -110,7 +110,7 @@ export default function Substituicoes() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-500">
-                      {s.tipo === 'temporaria' ? `${fmt(s.data_inicio)} → ${fmt(s.data_fim)}` : '—'}
+                      {s.tipo === 'temporaria' ? `${fmt(s.data_inicio)} → ${fmt(s.data_fim)}` : '-'}
                     </td>
                     <td className="py-3 px-4 text-gray-500">{s.motivo || '-'}</td>
                     <td className="py-3 px-4">
@@ -159,8 +159,8 @@ export default function Substituicoes() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
                 <select value={form.tipo} onChange={(e) => set('tipo', e.target.value)} className="input-field">
-                  <option value="temporaria">Temporária (férias/doença) — reverte no fim</option>
-                  <option value="definitiva">Definitiva — reatribui tudo agora</option>
+                  <option value="temporaria">Temporária (férias/doença): reverte no fim</option>
+                  <option value="definitiva">Definitiva: reatribui tudo agora</option>
                 </select>
               </div>
               {form.tipo === 'temporaria' && (

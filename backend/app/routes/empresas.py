@@ -221,7 +221,7 @@ def delete_empresa(
     if _empresa_em_uso(db, empresa_id) > 0:
         db_empresa.ativo = False
         db.commit()
-        return {"message": "Empresa tem tarefas/obrigações/usuários vinculados — foi inativada (não excluída).", "inativado": True}
+        return {"message": "Empresa tem tarefas/obrigações/usuários vinculados, então foi inativada e não excluída.", "inativado": True}
     db.delete(db_empresa)
     db.commit()
     return {"message": "Empresa excluída.", "inativado": False}

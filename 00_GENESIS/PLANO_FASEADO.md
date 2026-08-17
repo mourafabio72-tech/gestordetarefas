@@ -84,11 +84,11 @@ certa e falha com chave errada; app não marcado continua redirecionando puro.
 (mesmo bilhete em duas requisições simultâneas: só uma entra).
 
 ## Fase 4 : o frontend entra sozinho
-**Status:** código feito (2026-08-16, 4 de 4 itens com evidência, mais 1 achado da
-autoverificação, e 7 casos verdes em `frontend/provas/prova_sso_f4.js`). NÃO
-fechada: a linha do travessão na matriz `CONFORMIDADE_VAULT.md` segue pendente
-por 46 ocorrências em 13 arquivos anteriores a este trabalho, e a faxina é
-ampliação de escopo que depende do usuário.
+**Status:** done (2026-08-17). Código feito em 2026-08-16, 4 de 4 itens com
+evidência, mais 1 achado da autoverificação, e 7 casos verdes em
+`frontend/provas/prova_sso_f4.js`. Ficou aberta por uma linha da matriz que não
+era desta fase (o travessão de 46 ocorrências em código anterior), e essa linha
+fechou na Fase 6.
 **Duração:** 1 hora
 **Rege:** `Padrao_Impersonacao_Segura` (redirecionar logo após consumir)
 **Depende de:** Fase 3
@@ -102,15 +102,15 @@ ampliação de escopo que depende do usuário.
 não mostra mais o bilhete. Entrar direto pela URL continua pedindo senha.
 
 ## Fase 5 : entrega e validação
-**Status:** funciona em produção (2026-08-16). 4 de 5 itens com evidência, sendo
-os três casos de teste real conferidos no ar com captura de tela. NÃO fechada por
-um item só: a matriz `CONFORMIDADE_VAULT.md` ainda tem a linha do travessão, que
-é o objeto da Fase 6.
+**Status:** done (2026-08-17). Funciona em produção desde 2026-08-16, com os três
+casos de teste real conferidos no ar e captura de tela nos dois de recusa. O
+quinto item era a matriz sem linha pendente, e fechou junto com a Fase 6.
 **Duração:** 1 hora
 **Depende de:** Fase 4
 
 ## Fase 6 : faxina de travessão no frontend (decidida em 2026-08-16)
-**Status:** pending
+**Status:** done (2026-08-17, 3 de 3 itens com evidência, mais os 7 casos de
+backend que a autoverificação trouxe por causa raiz)
 **Duração:** 40 minutos
 **Rege:** `CLAUDE.md` da vault (regra 1), `Revisao_Professor_Pasquale`
 **Depende de:** Fase 5

@@ -48,7 +48,7 @@ export default function EnviarComprovante() {
         {ctx && (
           <>
             <div className="text-sm text-gray-600 mb-4 space-y-0.5">
-              <p><span className="text-gray-400">Empresa:</span> <strong>{ctx.empresa || '—'}</strong></p>
+              <p><span className="text-gray-400">Empresa:</span> <strong>{ctx.empresa || '-'}</strong></p>
               <p><span className="text-gray-400">Obrigação:</span> {ctx.obrigacao || ctx.titulo}</p>
               {ctx.competencia && <p><span className="text-gray-400">Competência:</span> {ctx.competencia}</p>}
             </div>

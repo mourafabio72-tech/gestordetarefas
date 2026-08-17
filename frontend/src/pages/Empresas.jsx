@@ -20,7 +20,7 @@ const REGIMES = [
 ];
 
 const SEGMENTOS = [
-  { value: '', label: '—' },
+  { value: '', label: '-' },
   { value: 'comercio', label: 'Comércio' },
   { value: 'servico', label: 'Serviço' },
   { value: 'comercio_servico', label: 'Comércio & Serviço' },
@@ -129,7 +129,7 @@ export default function Empresas() {
         const n = parseInt(resp?.headers?.['x-tarefas-geradas'] || '0', 10);
         if (n > 0) alert(`Empresa cadastrada. ${n} tarefa(s) do mês gerada(s) automaticamente pelas obrigações que se aplicam.`);
       }
-      // Grava a matriz — só os setores que a empresa ATENDE
+      // Grava a matriz: só os setores que a empresa ATENDE
       const itens = respSetor.filter((r) => r.atende).map((r) => ({
         setor_id: r.setor_id,
         responsavel_id: r.responsavel_id ? parseInt(r.responsavel_id) : null,
@@ -479,7 +479,7 @@ export default function Empresas() {
                         onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, responsavel_id: e.target.value } : x))}
                         className="input-field py-1 text-sm flex-1 disabled:bg-gray-50 disabled:text-gray-400"
                       >
-                        <option value="">{r.atende ? '— sem responsável —' : 'não atende'}</option>
+                        <option value="">{r.atende ? '(sem responsável)' : 'não atende'}</option>
                         {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
                           <option key={u.id} value={u.id}>{u.nome}</option>
                         ))}

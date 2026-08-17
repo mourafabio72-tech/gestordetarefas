@@ -337,7 +337,13 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       pela sessão, o que provaria só que a sessão existia. Fecha o item obrigatório
       "Tela de login" do tipo `App_Online_Auth`: o SSO é caminho adicional, nunca
       substituto.
-- [ ] `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
+- [x] `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
+      EVIDÊNCIA: as 15 linhas da matriz estão preenchidas, e nenhuma segue
+      pendente. Contagem por status: 13 `ok`, 1 `não se aplica` (CSRF, com o
+      motivo escrito na docstring da rota) e 1 `parcial (SSO ok)` (força bruta:
+      o login por senha continua sem registro e sem limite, e ligar lá é
+      ampliação declarada, não item desta fase). A última que faltava era a do
+      travessão, fechada pela Fase 6 abaixo.
 - [x] Mapa Graphify gerado, se o usuário aceitar instalar
       EVIDÊNCIA: `graphify` instalado em `~/.local/bin/graphify` e mapa gerado na
       Fase 0 com `--code-only`: `graphify-out/` tem `GRAPH_REPORT.md`, `graph.json`,
@@ -345,3 +351,93 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       40 comunidades. A pasta está no `.gitignore` por ser mapa gerado localmente.
       PENDENTE, e é decisão do usuário: `graphify claude install`, que escreve
       configuração do Claude Code nesta máquina, não foi rodado.
+
+## Fase 6 : faxina de travessão
+
+- [x] Trocar os 46 travessões por vírgula, dois pontos ou parêntese, conforme a frase
+      (`Sem_Travessao`: "Nunca usar o caractere travessão em lugar nenhum", com a
+      tabela de substituições; `Revisao_Professor_Pasquale` código E4)
+      EVIDÊNCIA: 42 trechos reescritos em 13 arquivos de `frontend/src`, cobrindo
+      os 46 caracteres (quatro linhas de `<option>` tinham travessão duplo
+      emoldurando a opção nula). `git diff --stat` do frontend fecha em
+      **42 inserções e 42 remoções**, simetria que prova que nenhuma linha foi
+      criada nem removida: cada uma foi reescrita no lugar.
+      As três formas usadas, decididas por leitura de cada frase e não por `sed`:
+      (a) travessão que separa oração virou **dois pontos** quando o segundo
+      trecho explica o primeiro (`Bloqueado: não loga e as tarefas dele somem.`,
+      `Definitiva: reatribui tudo agora`, `IA: reforço do e-validador (OpenAI)`)
+      ou **vírgula** quando é aposto (`(guardada, deixe vazio p/ manter)`,
+      `Função, ex.: Assistente, Coordenadora, Sócio`);
+      (b) travessão que emoldurava opção nula de `<select>` virou **parêntese**
+      (`(não vinculada)`, `(sem responsável)`, `(escolher)`), que é o que a tabela
+      de `Sem_Travessao` manda para o caso de moldura;
+      (c) travessão que representava valor ausente em célula de tabela virou
+      **hífen simples** (`{m.identificador || '-'}`), e não en-dash, porque o
+      en-dash é aviso A2 do Pasquale.
+      ÚNICA troca que acrescentou palavra, declarada: o `placeholder` de
+      `Obrigacoes.jsx:653` era `Ex.: Empréstimo — Banco Itaú, conta 123` e virou
+      `Ex.: Empréstimo do Banco Itaú, conta 123`. Dois pontos ali colidiria com o
+      `Ex.:` da própria frase, e hífen num exemplo de texto livre lê pior que a
+      preposição.
+- [x] Conferir de quebra acentuação e concordância no mesmo texto tocado
+      (`Revisao_Professor_Pasquale`, seção "O que só se prova lendo")
+      EVIDÊNCIA: `git diff -U0` das 49 linhas lido integralmente, par a par.
+      Nenhum ajuste de concordância foi necessário: as 42 trocas do frontend
+      substituem um separador, e em nenhuma delas o travessão sustentava
+      concordância verbal ou nominal. As 7 do backend estão no item abaixo, e
+      três delas foram reescritas de fato, não só pontuadas (`... vinculados —
+      foi inativada (não excluída)` virou `... vinculados, então foi inativada e
+      não excluída`, que troca o parêntese por oração e lê melhor em voz ativa).
+      Encoding conferido nos 13 arquivos do frontend com `file -I`: 13 de 13 em
+      `charset=utf-8`, nenhum `iso-8859-1`. Mojibake: `grep -rlnP` do padrão
+      `Ã|Â|â` seguido de continuação UTF-8 volta vazio em `frontend/src` e em
+      `backend/app`. En-dash em `frontend/src`: vazio.
+      O executor `scripts/pasquale.py` continua indisponível nesta cópia da vault
+      (`ls scripts/` devolve só `atualizar_mapa.py`), então a entrega **não alega
+      conformidade com o script**, só com a regra, e a parte de dicionário de
+      acentuação que só o script cobre fica declarada como não verificada.
+- [x] `grep -rn "—" frontend/src` volta vazio, e a linha da matriz fecha
+      EVIDÊNCIA: o comando devolve saída vazia com exit code 1, contra as 46
+      ocorrências em 13 arquivos medidas na Fase 4. Colado na linha do travessão
+      da `CONFORMIDADE_VAULT.md`, que passou de `pendente (código anterior)` a
+      `ok`. Regressão conferida: `node provas/prova_sso_f4.js` com os 7 casos
+      verdes, `npm run build` transformando 2276 módulos sem erro (mesmo número
+      da Fase 4), `backend/provas/prova_sso_f3.py` com as 25 checagens verdes no
+      venv do projeto, e `python app/sso.py` com os 7 casos.
+
+**Achado da autoverificação, e é causa raiz, não escopo novo:** a mesma frase que
+eu limpei em `Tarefas.jsx:224` também é emitida pelo servidor, em
+`backend/app/routes/tarefas.py:257`, como `detail` de um `HTTPException 403`. O
+usuário lê as duas. Limpar só o lado do React deixaria o travessão saindo pelo
+caminho do servidor, que é o "corrigir só o caminho reclamado deixa os irmãos
+quebrados" do `Escada_Preguica_de_Codigo`, nota do próprio LASTRO. Varredura
+completa do backend por texto lido pelo usuário (`detail=`, `"message"`, valor
+devolvido para a tela) achou **7 casos**, todos fechados:
+
+- [x] `routes/tarefas.py:257` (a frase gêmea da tela), `routes/usuarios.py:292`,
+      `routes/empresas.py:224` e `routes/setores.py:86`, que são as mensagens de
+      "tem vínculos, então foi inativado" que o front exibe direto ao usuário
+- [x] `routes/obrigacoes.py:73`, `services/importador_cronograma.py:115` e `:203`,
+      que devolvem o marcador de valor ausente para a célula da tabela
+      EVIDÊNCIA: `grep -rn "—" backend/app` cruzado com `detail=|"message"|
+      prazo_label|or "—"` volta vazio. Os 6 arquivos compilam
+      (`python -m py_compile`, 6 de 6) e o app inteiro sobe com as 5 rotas
+      tocadas presentes em `app.routes` (68 rotas no total), usando
+      `DATABASE_URL` de SQLite porque o host `db` do Compose não existe nesta
+      máquina.
+      EIXO ADVERSARIAL que autorizou trocar o glifo: `grep` por comparação com o
+      caractere (`== '—'`, `=== '—'` e as variantes com aspas duplas) volta vazio
+      em `frontend/src` e em `backend/app`. Ninguém compara contra o marcador de
+      vazio, então trocá-lo por hífen não muda lógica nenhuma, só o que se lê.
+
+**PENDÊNCIA DECLARADA, e não é omissão:** sobram **44 travessões em 17 arquivos**
+de `backend/app`, todos em comentário de código e docstring. `Sem_Travessao` diz
+"qualquer arquivo" e inclui comentário, então a regra os alcança. Não entraram
+aqui por duas razões escritas: o aceite desta fase é `grep -rn "—" frontend/src`
+vazio, e o usuário não lê comentário de servidor, então nenhuma tela muda. Vira
+decisão do usuário, do mesmo jeito que esta fase nasceu de uma.
+
+**Fechamento da fase:** aceite do `PLANO_FASEADO` atendido (`grep` vazio e a linha
+da matriz em `ok`), nenhuma tela mudou de sentido, e as quatro provas do projeto
+seguem verdes. Balanço da escada: `grep -rn "escada:"` em `frontend/src` e
+`backend/app` devolve 0 marcadores; nenhum corte deliberado nesta fase.

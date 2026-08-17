@@ -70,7 +70,7 @@ def _meses_label(csv: str) -> str:
     nums = [int(x) for x in (csv or "").split(",") if x.strip().isdigit()]
     if len(nums) >= 12:
         return "Todos"
-    return ", ".join(_MESES[n - 1] for n in sorted(nums) if 1 <= n <= 12) or "—"
+    return ", ".join(_MESES[n - 1] for n in sorted(nums) if 1 <= n <= 12) or "-"
 
 
 class CopiarModeloRequest(BaseModel):

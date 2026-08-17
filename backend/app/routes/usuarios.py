@@ -289,7 +289,7 @@ def delete_usuario(
     if _usuario_em_uso(db, usuario_id) > 0:
         db_usuario.ativo = False
         db.commit()
-        return {"message": "Usuário tem vínculos (obrigações/tarefas/empresas) — foi inativado (não excluído).", "inativado": True}
+        return {"message": "Usuário tem vínculos (obrigações/tarefas/empresas), então foi inativado e não excluído.", "inativado": True}
     db.delete(db_usuario)
     db.commit()
     return {"message": "Usuário excluído.", "inativado": False}

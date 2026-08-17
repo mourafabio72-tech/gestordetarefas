@@ -98,7 +98,7 @@ export default function Layout() {
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
             <X size={24} />
           </button>
-          {/* recolher/expandir barra — só desktop */}
+          {/* recolher/expandir barra, só desktop */}
           <button onClick={toggleColapsado}
             className={`hidden lg:block text-white/50 hover:text-white ${colapsado ? 'lg:hidden' : ''}`}
             title="Recolher menu">

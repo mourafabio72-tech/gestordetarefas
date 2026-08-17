@@ -13,7 +13,7 @@ const prazoLabel = (o) => {
 };
 const mesesLabel = (csv) => {
   const n = (csv || '').split(',').map((x) => parseInt(x)).filter((x) => x >= 1 && x <= 12);
-  return n.length >= 12 ? 'Todos' : n.sort((a, b) => a - b).map((x) => MESES[x - 1]).join(', ') || '—';
+  return n.length >= 12 ? 'Todos' : n.sort((a, b) => a - b).map((x) => MESES[x - 1]).join(', ') || '-';
 };
 
 export default function RelacaoObrigacoes() {
@@ -40,7 +40,7 @@ export default function RelacaoObrigacoes() {
     const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
     const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
     if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
-    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo — não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
+    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo: não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
     setDesvinculando(true);
     try {
       const r = await obrigacoesAPI.desvincularEmpresa(eid);
@@ -167,12 +167,12 @@ export default function RelacaoObrigacoes() {
                   return (
                     <tr key={o.id} className="border-b border-gray-100">
                       <td className="py-2 pr-3 text-gray-800">{o.nome}{o.mininome ? <span className="text-gray-400"> · {o.mininome}</span> : null}</td>
-                      <td className="py-2 pr-3 text-gray-600">{setorById[o.setor_id] || '—'}</td>
+                      <td className="py-2 pr-3 text-gray-600">{setorById[o.setor_id] || '-'}</td>
                       <td className="py-2 pr-3 text-gray-500 max-w-[16rem] truncate" title={emps.join(', ')}>
-                        {emps.length ? (emps.length <= 2 ? emps.join(', ') : `${emps.slice(0, 2).join(', ')} +${emps.length - 2}`) : '—'}
+                        {emps.length ? (emps.length <= 2 ? emps.join(', ') : `${emps.slice(0, 2).join(', ')} +${emps.length - 2}`) : '-'}
                       </td>
                       <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">{prazoLabel(o)}</td>
-                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{COMP[o.competencia_ref] || '—'}</td>
+                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{COMP[o.competencia_ref] || '-'}</td>
                       <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{mesesLabel(o.meses_ativos)}</td>
                       <td className="py-2 pr-3 text-center">{o.passivel_multa ? '⚠️' : ''}</td>
                       <td className="py-2 pr-3">

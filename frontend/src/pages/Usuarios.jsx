@@ -56,7 +56,7 @@ export default function Usuarios() {
       const temps = (data.detalhes || []).filter((d) => d.detalhe && d.detalhe.startsWith('senha temporária'));
       let msg = `Importação: ${r.criadas} criado(s), ${r.atualizadas} atualizado(s), ${r.erros} erro(s).`;
       if (temps.length) {
-        msg += `\n\nSenhas temporárias (anote e repasse — o usuário troca depois):\n` +
+        msg += `\n\nSenhas temporárias (anote e repasse, o usuário troca depois):\n` +
           temps.map((d) => `• ${d.linha}: ${d.detalhe.replace('senha temporária: ', '')}`).join('\n');
       }
       const avisos = (data.detalhes || []).filter((d) => d.status === 'erro' || d.status === 'aviso');
@@ -414,8 +414,8 @@ export default function Usuarios() {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {formData.tipo === 'cliente'
-                    ? 'Cliente — alerta por WhatsApp + e-mail (contatos da empresa).'
-                    : 'Colaborador — alerta por e-mail. O nível define as permissões.'}
+                    ? 'Cliente: alerta por WhatsApp + e-mail (contatos da empresa).'
+                    : 'Colaborador: alerta por e-mail. O nível define as permissões.'}
                 </p>
               </div>
               <div>
@@ -424,7 +424,7 @@ export default function Usuarios() {
                   value={formData.cargo}
                   onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                   className="input-field"
-                  placeholder="Função — ex.: Assistente, Coordenadora, Sócio"
+                  placeholder="Função, ex.: Assistente, Coordenadora, Sócio"
                 />
               </div>
               {formData.tipo === 'cliente' && (
@@ -495,8 +495,8 @@ export default function Usuarios() {
                       <p className="text-sm font-medium text-gray-700">Situação do acesso</p>
                       <p className="text-xs text-gray-500">
                         {editingUsuario.bloqueado
-                          ? 'Bloqueado — não loga e as tarefas dele somem.'
-                          : 'Ativo — pode logar e receber tarefas.'}
+                          ? 'Bloqueado: não loga e as tarefas dele somem.'
+                          : 'Ativo: pode logar e receber tarefas.'}
                       </p>
                     </div>
                     <button

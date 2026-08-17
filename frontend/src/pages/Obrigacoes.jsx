@@ -61,7 +61,7 @@ export default function Obrigacoes() {
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
-  const setorNome = (id) => setores.find((s) => s.id === id)?.nome || '—';
+  const setorNome = (id) => setores.find((s) => s.id === id)?.nome || '-';
   const obrigacoesFiltradas = obrigacoes.filter((o) => {
     if (filtros.obrigacao && !`${so(o.nome)} ${so(o.mininome)}`.includes(so(filtros.obrigacao))) return false;
     if (filtros.empresa && !(o.empresa_ids || []).includes(parseInt(filtros.empresa))) return false;
@@ -224,7 +224,7 @@ export default function Obrigacoes() {
     const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
     const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
     if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
-    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo — não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
+    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo: não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
     setDesvinculando(true);
     try {
       const r = await obrigacoesAPI.desvincularEmpresa(eid);
@@ -606,7 +606,7 @@ export default function Obrigacoes() {
                     <input type="checkbox" checked={aplicaTodas} className="h-4 w-4"
                       onChange={(e) => { if (e.target.checked) { set('aplica_regimes', ''); set('aplica_segmentos', ''); } else { set('aplica_regimes', REGIMES[0][0]); } }} />
                     <span className="font-medium text-gray-700">Aplicar a todas as empresas</span>
-                    <span className="text-gray-400 text-xs">— desmarque para restringir por regime/segmento</span>
+                    <span className="text-gray-400 text-xs">(desmarque para restringir por regime/segmento)</span>
                   </label>
                   {!aplicaTodas && (
                   <div className="grid grid-cols-2 gap-6">
@@ -650,7 +650,7 @@ export default function Obrigacoes() {
                         <span className="text-sm text-gray-600 w-40 shrink-0 pt-1 truncate" title={d.empresa_nome}>{d.empresa_nome}</span>
                         <input value={d.observacao}
                           onChange={(e) => setDetalhes((arr) => arr.map((x, j) => j === i ? { ...x, observacao: e.target.value } : x))}
-                          className="input-field py-1 text-sm flex-1" placeholder="Ex.: Empréstimo — Banco Itaú, conta 123" />
+                          className="input-field py-1 text-sm flex-1" placeholder="Ex.: Empréstimo do Banco Itaú, conta 123" />
                         <button type="button" onClick={() => setDetalhes((arr) => arr.filter((_, j) => j !== i))}
                           className="text-gray-400 hover:text-red-600 pt-1">×</button>
                       </div>

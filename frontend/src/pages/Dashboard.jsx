@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 // Cores de STATUS (validadas): amarelo/azul/verde/vermelho. Ordem do donut deixa
-// verde (concluídas) e vermelho (atrasadas) separados — nunca adjacentes.
+// verde (concluídas) e vermelho (atrasadas) separados, nunca adjacentes.
 const STATUS_DONUT = [
   { key: 'concluidas',   label: 'Concluídas',   color: '#4d8a3f', Icon: CheckCircle },
   { key: 'pendentes',    label: 'Pendentes',    color: '#b0813f', Icon: Clock },

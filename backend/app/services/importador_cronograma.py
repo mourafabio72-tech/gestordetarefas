@@ -112,7 +112,7 @@ def parse_vencimento(cel):
         return "ultimo_dia_util", None, "último dia útil"
     if "primeiro dia" in t:
         return "primeiro_dia_util", None, "primeiro dia útil"
-    return "ultimo_dia_util", None, "—"
+    return "ultimo_dia_util", None, "-"
 
 
 def mapear_setor(cel) -> str:
@@ -200,7 +200,7 @@ def analisar(conteudo: bytes) -> dict:
             "entidades": ents, "cnpjs": sorted(g["cnpjs"]),
             "competencia_ref": g["comp"] or "mes_anterior",
             "regra_prazo_tipo": g["tipo"] or "ultimo_dia_util",
-            "regra_prazo_dia": g["dia"], "prazo_label": g["label"] or "—",
+            "regra_prazo_dia": g["dia"], "prazo_label": g["label"] or "-",
             "gera_multa": g["multa"],
         })
     itens.sort(key=lambda x: (x["regra_prazo_dia"] or 99, x["nome"]))

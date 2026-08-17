@@ -254,7 +254,7 @@ def update_tarefa(
             and db_tarefa.exige_documento):
         raise HTTPException(
             status_code=403,
-            detail="Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.")
+            detail="Esta tarefa exige validação de documento: baixe pelo e-validador. Baixa manual não é permitida.")
 
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()

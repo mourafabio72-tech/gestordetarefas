@@ -221,7 +221,7 @@ export default function Tarefas() {
 
   const handleStatusChange = async (tarefa, newStatus) => {
     if (newStatus === 'concluida' && bloqueiaBaixaManual(tarefa)) {
-      alert('Esta tarefa exige validação de documento — baixe pelo e-validador. Baixa manual não é permitida.');
+      alert('Esta tarefa exige validação de documento: baixe pelo e-validador. Baixa manual não é permitida.');
       return;
     }
     try {
@@ -281,7 +281,7 @@ export default function Tarefas() {
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   const handleExcluirMes = async () => {
     const comp = `${String(exclMes).padStart(2, '0')}/${exclAno}`;
-    if (!confirm(`Excluir DEFINITIVAMENTE as tarefas geradas da competência ${comp} (${MESES_NOME[exclMes - 1]}/${exclAno})?\n\nApaga só as que vieram de obrigações — não mexe nas tarefas avulsas. Dá para regerar depois. Não dá para desfazer.`)) return;
+    if (!confirm(`Excluir DEFINITIVAMENTE as tarefas geradas da competência ${comp} (${MESES_NOME[exclMes - 1]}/${exclAno})?\n\nApaga só as que vieram de obrigações: não mexe nas tarefas avulsas. Dá para regerar depois. Não dá para desfazer.`)) return;
     setExcluindoMes(true);
     try {
       const { data } = await tarefasAPI.excluirCompetencia(comp);
@@ -771,7 +771,7 @@ export default function Tarefas() {
                     className="input-field"
                     required
                   />
-                  <p className="text-xs text-gray-400 mt-1">Limite da equipe — comanda os alertas.</p>
+                  <p className="text-xs text-gray-400 mt-1">Limite da equipe: comanda os alertas.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>

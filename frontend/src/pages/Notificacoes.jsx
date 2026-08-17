@@ -161,7 +161,7 @@ export default function Notificacoes() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
               <input type="password" value={cfg.smtp_pass ?? ''} onChange={(e) => set('smtp_pass', e.target.value)} className="input-field"
-                placeholder={cfg.smtp_pass_set ? '•••••• (guardada — deixe vazio p/ manter)' : 'senha do SMTP'} />
+                placeholder={cfg.smtp_pass_set ? '•••••• (guardada, deixe vazio p/ manter)' : 'senha do SMTP'} />
             </div>
             <Campo chave="smtp_from" label="Remetente (From)" ph="Gestor <no-reply@dominio.com>" />
             <div className="flex items-end pb-2"><Toggle chave="smtp_tls" label="Usar TLS (recomendado)" /></div>
@@ -189,7 +189,7 @@ export default function Notificacoes() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
               <input type="password" value={cfg.zap_api_key ?? ''} onChange={(e) => set('zap_api_key', e.target.value)} className="input-field"
-                placeholder={cfg.zap_api_key_set ? '•••••• (guardada — deixe vazio p/ manter)' : 'token da API'} />
+                placeholder={cfg.zap_api_key_set ? '•••••• (guardada, deixe vazio p/ manter)' : 'token da API'} />
             </div>
             <Campo chave="zap_phone" label="Número de envio" ph="5521999998888" />
             <Campo chave="zap_connection_from" label="Conexão (connectionFrom)" ph="0" />
@@ -209,7 +209,7 @@ export default function Notificacoes() {
         {/* IA (e-validador) */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><Sparkles size={18} className="text-primary-700" /><h2 className="font-semibold">IA — reforço do e-validador (OpenAI)</h2></div>
+            <div className="flex items-center gap-2"><Sparkles size={18} className="text-primary-700" /><h2 className="font-semibold">IA: reforço do e-validador (OpenAI)</h2></div>
             <Toggle chave="ia_ativo" label="Usar IA no e-validador" />
           </div>
           <p className="text-xs text-gray-500 mb-3">
@@ -219,7 +219,7 @@ export default function Notificacoes() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">API Key (OpenAI)</label>
               <input type="password" value={cfg.openai_api_key ?? ''} onChange={(e) => set('openai_api_key', e.target.value)} className="input-field"
-                placeholder={cfg.openai_api_key_set ? '•••••• (guardada — deixe vazio p/ manter)' : 'sk-...'} />
+                placeholder={cfg.openai_api_key_set ? '•••••• (guardada, deixe vazio p/ manter)' : 'sk-...'} />
             </div>
             <Campo chave="openai_model" label="Modelo" ph="gpt-4o-mini" />
           </div>

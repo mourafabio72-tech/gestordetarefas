@@ -153,7 +153,7 @@ export default function Modelos() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} className="text-green-600" />
-              <h2 className="font-semibold text-gray-800 truncate">Revisar — {atual.nome_arquivo}</h2>
+              <h2 className="font-semibold text-gray-800 truncate">Revisar: {atual.nome_arquivo}</h2>
             </div>
             {fila.length > 1 && (
               <span className="text-xs text-gray-400 whitespace-nowrap">{fila.length} na fila</span>
@@ -174,14 +174,14 @@ export default function Modelos() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
               <select className="input-field" value={form.empresa_id}
                 onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}>
-                <option value="">— não vinculada —</option>
+                <option value="">(não vinculada)</option>
                 {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
               </select>
               <p className="text-xs text-gray-400 mt-1">
                 {atual.cnpj
                   ? (atual.empresa_id
                       ? <span className="text-green-600">CNPJ {atual.cnpj} reconhecido automaticamente.</span>
-                      : <span className="text-amber-600">CNPJ {atual.cnpj} não cadastrado — selecione ou cadastre a empresa.</span>)
+                      : <span className="text-amber-600">CNPJ {atual.cnpj} não cadastrado: selecione ou cadastre a empresa.</span>)
                   : 'CNPJ não encontrado no documento.'}
               </p>
               {atual.razao_social_extraida && (
@@ -201,7 +201,7 @@ export default function Modelos() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Obrigação</label>
               <select className="input-field" value={form.obrigacao_id}
                 onChange={(e) => setForm({ ...form, obrigacao_id: e.target.value })}>
-                <option value="">— não vinculada —</option>
+                <option value="">(não vinculada)</option>
                 {obrigacoes.map((o) => <option key={o.id} value={o.id}>{o.nome}</option>)}
               </select>
               {atual.obrigacao_sugerida_id && (
@@ -270,7 +270,7 @@ export default function Modelos() {
                     <td className="py-2 pr-4">
                       {m.empresa_nome
                         ? <span className="flex items-center gap-1 text-gray-700"><Building2 size={13} className="text-gray-400" />{m.empresa_nome}</span>
-                        : <span className="text-amber-600 text-xs">{m.razao_social_extraida || m.cnpj || '—'}</span>}
+                        : <span className="text-amber-600 text-xs">{m.razao_social_extraida || m.cnpj || '-'}</span>}
                     </td>
                     <td className="py-2 pr-4">
                       <span className={`text-xs rounded-full px-2 py-0.5 ${TIPO_CLS[m.tipo_documento] || TIPO_CLS.outro}`}>
@@ -280,9 +280,9 @@ export default function Modelos() {
                     <td className="py-2 pr-4 text-gray-700">
                       {m.obrigacao_nome
                         ? <span className="flex items-center gap-1"><FileCheck2 size={13} className="text-primary-500" />{m.obrigacao_nome}</span>
-                        : <span className="text-gray-400">—</span>}
+                        : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="py-2 pr-4 text-gray-500 max-w-[12rem] truncate" title={m.identificador}>{m.identificador || '—'}</td>
+                    <td className="py-2 pr-4 text-gray-500 max-w-[12rem] truncate" title={m.identificador}>{m.identificador || '-'}</td>
                     <td className="py-2 text-right">
                       <button onClick={() => excluir(m.id)} className="text-gray-400 hover:text-red-600" title="Remover">
                         <Trash2 size={16} />

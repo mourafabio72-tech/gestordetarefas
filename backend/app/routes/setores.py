@@ -83,7 +83,7 @@ def delete_setor(
     if _setor_em_uso(db, setor_id) > 0:
         db_setor.ativo = False
         db.commit()
-        return {"message": "Setor tem obrigações/tarefas vinculadas — foi inativado (não excluído).", "inativado": True}
+        return {"message": "Setor tem obrigações/tarefas vinculadas, então foi inativado e não excluído.", "inativado": True}
     db.delete(db_setor)
     db.commit()
     return {"message": "Setor excluído.", "inativado": False}

@@ -112,7 +112,7 @@ export default function ImportarCronograma() {
         <div className="card mb-6">
           <div className="flex items-center gap-2 text-green-700 mb-1">
             <CheckCircle2 size={18} />
-            <h2 className="font-semibold">Importado — grupo {resultado.grupo}</h2>
+            <h2 className="font-semibold">Importado: grupo {resultado.grupo}</h2>
           </div>
           <p className="text-sm text-gray-600">
             {resultado.criadas} obrigação(ões) criada(s) · {resultado.atualizadas} atualizada(s) ·
@@ -203,7 +203,7 @@ export default function ImportarCronograma() {
                     <td className="py-1.5 pr-3">
                       <select value={it.setor} onChange={(e) => patch(idx, 'setor', e.target.value)}
                         className={`input-field py-1 text-xs ${!it.setor ? 'border-amber-400' : ''}`}>
-                        <option value="">— escolher —</option>
+                        <option value="">(escolher)</option>
                         {setorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
