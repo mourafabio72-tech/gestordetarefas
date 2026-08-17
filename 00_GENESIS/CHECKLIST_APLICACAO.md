@@ -311,6 +311,12 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       que é o aceite do PLANO_FASEADO para a Fase 4 e o primeiro dos três casos
       desta. Faltam os outros dois: e-mail sem cadastro no Tareffas, e conta
       bloqueada, os dois esperando o mesmo aviso âmbar e nunca a entrada.
+      CASO 2 FECHADO (2026-08-16, captura de tela em produção): conta com acesso
+      ao card no Hub e sem cadastro no Tareffas NÃO entrou, e a tela de login
+      exibiu o aviso âmbar com o texto literal de `AuthContext.jsx:11-12`. A mesma
+      captura prova de novo a URL limpa (`/login`, sem `?sso=`), e prova o bloco
+      de `Login.jsx:36-40` renderizando de verdade, que era conferência visual e
+      não sairia de grep nenhum. Falta só a conta bloqueada.
 - [x] Login por e-mail e senha continua funcionando para quem entra pela URL direta
       EVIDÊNCIA: conferência em produção pelo usuário, 2026-08-16, em janela
       anônima do navegador: `https://gestordetarefas.zoaria.com.br` pediu e-mail e
