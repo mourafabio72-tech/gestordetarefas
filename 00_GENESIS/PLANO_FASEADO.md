@@ -102,7 +102,10 @@ ampliação de escopo que depende do usuário.
 não mostra mais o bilhete. Entrar direto pela URL continua pedindo senha.
 
 ## Fase 5 : entrega e validação
-**Status:** pending
+**Status:** funciona em produção (2026-08-16). 4 de 5 itens com evidência, sendo
+os três casos de teste real conferidos no ar com captura de tela. NÃO fechada por
+um item só: a matriz `CONFORMIDADE_VAULT.md` ainda tem a linha do travessão, que
+é o objeto da Fase 6.
 **Duração:** 1 hora
 **Depende de:** Fase 4
 

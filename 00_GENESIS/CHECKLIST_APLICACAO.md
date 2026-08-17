@@ -338,4 +338,10 @@ Código novo nasce conforme a regra; a faxina do código velho é decisão do us
       "Tela de login" do tipo `App_Online_Auth`: o SSO é caminho adicional, nunca
       substituto.
 - [ ] `CONFORMIDADE_VAULT.md` com evidência colada em cada linha
-- [ ] Mapa Graphify gerado, se o usuário aceitar instalar
+- [x] Mapa Graphify gerado, se o usuário aceitar instalar
+      EVIDÊNCIA: `graphify` instalado em `~/.local/bin/graphify` e mapa gerado na
+      Fase 0 com `--code-only`: `graphify-out/` tem `GRAPH_REPORT.md`, `graph.json`,
+      `graph.html` e `manifest.json`. 66 arquivos de código, 739 nós, 1694 arestas,
+      40 comunidades. A pasta está no `.gitignore` por ser mapa gerado localmente.
+      PENDENTE, e é decisão do usuário: `graphify claude install`, que escreve
+      configuração do Claude Code nesta máquina, não foi rodado.
