@@ -131,8 +131,12 @@ checa(1, "bilhete válido de conta ativa entra e recebe token",
 
 # 2. O JWT do SSO tem a MESMA validade do login por senha. Entrar pelo Hub não
 #    compra sessão mais longa.
+# O cabeçalho de IP vai também no login por senha: desde a Fase 7 ele registra
+# tentativa igual ao SSO, e sem o cabeçalho a linha nasceria com o IP da conexão
+# do teste, que é o que o item 17 proíbe.
 r_senha = cliente.post("/api/auth/login",
-                       json={"email": "ativa@bps4.com.br", "senha": "senha-boa-123"})
+                       json={"email": "ativa@bps4.com.br", "senha": "senha-boa-123"},
+                       headers={"X-Forwarded-For": "10.0.0.12, 172.18.0.5"})
 exp_sso = jwt.decode(r.json()["access_token"], SECRET_KEY, algorithms=[ALGORITHM])["exp"]
 exp_senha = jwt.decode(r_senha.json()["access_token"], SECRET_KEY,
                        algorithms=[ALGORITHM])["exp"]
@@ -307,7 +311,8 @@ checa(20, "com ZOARIA_SSO_SECRET vazia nada entra pelo SSO",
 # 21. E o login por senha continua de pé mesmo com o SSO desligado.
 sso_mod.SSO_SECRET = ""
 r = cliente.post("/api/auth/login",
-                 json={"email": "ativa@bps4.com.br", "senha": "senha-boa-123"})
+                 json={"email": "ativa@bps4.com.br", "senha": "senha-boa-123"},
+                 headers={"X-Forwarded-For": "10.0.0.13, 172.18.0.5"})
 sso_mod.SSO_SECRET = CHAVE
 checa(21, "SSO desligado não derruba o login por e-mail e senha",
       r.status_code == 200)

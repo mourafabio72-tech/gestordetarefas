@@ -482,3 +482,115 @@ disfarçado. Decisão do usuário: ficam.
 da matriz em `ok`), nenhuma tela mudou de sentido, e as quatro provas do projeto
 seguem verdes. Balanço da escada: `grep -rn "escada:"` em `frontend/src` e
 `backend/app` devolve 0 marcadores; nenhum corte deliberado nesta fase.
+
+## Fase 7 : fechar a porta da frente
+
+- [x] Ligar `registrar_tentativa` e `falhas_recentes` no login por e-mail e senha,
+      com o MESMO limite do SSO
+      (`Forca_Bruta_Login` regras 1 e 2: conta por e-mail OU IP, e toda tentativa
+      deixa linha)
+      EVIDÊNCIA: `routes/auth.py:29-66`. O corte vem em `:40`, ANTES de buscar o
+      usuário e antes do `verify_password`, com `MAX_TENTATIVAS = 5` e
+      `JANELA_MINUTOS = 15` (`seguranca.py:24-25`), que são os mesmos números do
+      SSO. As três chamadas de `registrar_tentativa` cobrem os três desfechos:
+      credenciais erradas (`:50`), conta bloqueada ou inativa (`:58`) e entrada
+      bem sucedida (`:64`). Três eventos no log estruturado: `LOGIN_BLOQUEADO`
+      (`:41`), `LOGIN_RECUSADO` (`:51` e `:59`) e `LOGIN_OK` (`:65`).
+      A `origem="senha"` separa esta contagem da do SSO: quem errou a senha cinco
+      vezes não perde o caminho do card do Hub, que é outra credencial. Item 7 da
+      `provas/prova_seguranca_f7.py` prova a separação.
+      Itens 1 a 8 da prova: entrada correta (1), registro do sucesso (2) e da
+      falha (3), o 429 na sexta (4), o 429 valendo até para a senha CERTA porque
+      o corte vem antes de conferi-la (5), o bloqueio sendo de quem errou e não
+      do sistema (6), e o corpo do 429 igual para e-mail que existe e que não
+      existe (8).
+      PREÇO DECLARADO, e é da regra da vault, não da implementação: contar por
+      e-mail OU IP significa que dá para travar a conta de outra pessoa errando a
+      senha dela cinco vezes, de qualquer IP. Item 6b da prova mostra isso
+      acontecendo. A nota manda contar pelos dois (`Forca_Bruta_Login` regra 1) e
+      a vault vence, mas o efeito fica escrito em vez de descoberto em produção.
+      DESVIO HERDADO DA FASE 3, repetido aqui: a regra 4 da nota diz "tempo de
+      bloqueio é configurável, sem redeploy", e aqui os dois números são
+      constantes em `seguranca.py:21-25`, com o motivo no comentário. Valor de
+      segurança que só muda com deploy é problema menor do que valor de segurança
+      que qualquer um afrouxa pela tela.
+      PROVA DE QUE A PROVA TEM DENTE: trocando o `>= MAX_TENTATIVAS` de `:40` por
+      `>= 9999`, a prova falha nos itens 4, 5 e 8. Restaurado, 19 verdes de novo.
+- [x] Trocar `allow_origins=["*"]` por lista explícita
+      EVIDÊNCIA: `main.py:29-45`. A lista sai de `CORS_ORIGINS` (variável de
+      ambiente, `:36`) e cai no padrão do código quando ninguém a define, que
+      cobre produção mais o desenvolvimento local (`:29-33`).
+      `allow_credentials` passou a `False` (`:45`): este projeto autentica por
+      `Authorization: Bearer` do `localStorage`, sem cookie, e ligar credencial
+      sem cookie nenhum só amplia o que o CORS permite. Item 16 da prova.
+      Itens 13, 14 e 15: a lista não tem coringa, o preflight de origem estranha
+      não recebe permissão, e o da origem de produção recebe.
+      FURO MEU, achado antes de subir e fechado: eu tinha escrito
+      `os.getenv("CORS_ORIGINS", _ORIGENS_PADRAO)`, e o `docker-compose.yml:24`
+      entrega a variável como string VAZIA quando ninguém a preenche. O segundo
+      argumento do `getenv` só vale quando a variável não existe, então a lista
+      sairia vazia e a API recusaria toda origem em produção. Fechado com `or`
+      (`:36`). Item 13b da prova recarrega o módulo com a variável vazia e exige
+      a lista padrão; com o `getenv` antigo ele falha.
+- [x] Cabeçalhos de segurança em toda resposta, nos DOIS lugares que respondem
+      (`CSRF_Cookies_Headers`, seção "Headers de segurança (em toda resposta)`)
+      EVIDÊNCIA: antes desta fase não existia nenhum, nem no nginx nem no backend.
+      LADO API: `seguranca.py:109-131`, com os seis da nota
+      (`X-Content-Type-Options`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`,
+      `Strict-Transport-Security`, `Permissions-Policy` e CSP), aplicados por
+      middleware em `main.py:51-55`, que pega inclusive a resposta de erro.
+      A CSP da API é `default-src 'none'` e não a do site: resposta de API é JSON
+      e não carrega script, estilo nem imagem. Exceção declarada em
+      `seguranca.py:121`: `/docs`, `/redoc` e `/openapi.json` ficam fora da CSP
+      porque a documentação interativa carrega script e estilo de CDN, e os
+      outros cinco cabeçalhos continuam saindo lá.
+      Itens 9 a 12 da prova: os seis presentes na resposta comum, presentes
+      também na de erro 404, a CSP da API sendo `default-src 'none'`, e o
+      `/openapi.json` sem CSP mas com o resto.
+      Item 17, que é o caminho triste deste desenho: middleware que reembrulha
+      resposta é lugar clássico de download sair truncado. A prova baixa o modelo
+      de importação de empresas e exige assinatura `PK` de xlsx,
+      `content-length` igual ao corpo recebido, e o cabeçalho presente.
+      LADO NAVEGADOR: `frontend/nginx.conf:14-22`, os mesmos seis no `location /`,
+      todos com `always` (sem ele o nginx omite o cabeçalho nas respostas de
+      erro). A rota `/api` não repete nada: quem responde ali é o backend.
+      A CSP do site é fechada, com `script-src 'self'` e sem `unsafe-eval`. O
+      `'unsafe-inline'` aparece só em `style-src`, e é necessário: o React escreve
+      estilo em atributo `style` do elemento, e atributo herda dessa diretiva.
+      Script não precisa, porque o build do Vite não injeta script inline no
+      `index.html` (conferido no `dist/index.html` gerado).
+      CONFERÊNCIA VISUAL, feita em 2026-08-17, tela: login servida com a CSP real:
+      `frontend/provas/prova_headers_f7.py --servir` sobe o `dist/` com os
+      cabeçalhos LIDOS do `nginx.conf`, e a tela abriu completa (fundo, tipografia,
+      ícones, campos e botão) com o console do navegador sem uma única violação de
+      CSP. Isso é o que grep nenhum prova: CSP errada não quebra teste, quebra a
+      tela do usuário.
+      NÃO PROVADO, e declarado: esta máquina não tem nginx nem docker, então a
+      SINTAXE do `nginx.conf` não foi validada por `nginx -t`. O que a
+      `prova_headers_f7.py` confere é o conteúdo dos cabeçalhos e a presença do
+      `always`, por leitura do arquivo. A conferência visual cobriu a tela de
+      login; as telas internas usam o mesmo bundle e o mesmo CSS, e a varredura
+      por recurso externo em `frontend/src` achou só um link para o Hub e um texto
+      de exemplo, nenhum script ou folha de estilo de fora.
+- [ ] Conferir se o serviço backend tem domínio próprio no EasyPanel
+      PENDENTE, e é a única coisa desta fase que não se decide pelo repositório.
+      Pelo código, o `/docs` e o `/openapi.json` NÃO saem pelo domínio público:
+      o nginx do frontend só proxia `/api` (`frontend/nginx.conf:25`). Se o
+      serviço backend tiver domínio próprio no painel, saem, e aí entram
+      `docs_url=None` e `openapi_url=None` fora de desenvolvimento, mais a
+      remoção da exceção de CSP de `seguranca.py:121`, que existe só por causa
+      deles.
+
+**Fechamento da fase:** `backend/provas/prova_seguranca_f7.py` com 19 checagens
+verdes contra as rotas reais, `frontend/provas/prova_headers_f7.py` com 4, e a
+conferência visual da CSP no navegador. Regressão sem nenhuma queda:
+`prova_sso_f3.py` com 25, `app/sso.py` com 7, `prova_sso_f4.js` com 7 e
+`npm run build` transformando os mesmos 2276 módulos.
+CORREÇÃO NA PROVA DA FASE 3, e é consequência legítima desta fase: o item 17
+exigia zero linha com IP `testclient`, e as duas chamadas de `/api/auth/login`
+daquela prova iam sem `X-Forwarded-For`. Elas não registravam nada antes, e
+passaram a registrar. O cabeçalho entrou nas duas (`provas/prova_sso_f3.py:137-139`
+e `:313-315`), que é o que o nginx faz em produção. O item 17 segue com dente:
+foi ele que acusou a mudança.
+Balanço da escada: `grep -rn "escada:"` em `backend/app` e `frontend/src` devolve
+0 marcadores; nenhum corte deliberado nesta fase.

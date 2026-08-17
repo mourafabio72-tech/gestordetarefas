@@ -177,6 +177,8 @@ Atenção: **o EasyPanel descarta variável cujo valor começa com ponto.**
 | Alertas | `ALERT_DAYS_BEFORE`, `ALERT_GESTOR_NIVEIS`, `TEAMS_WEBHOOK_URL` |
 | Links públicos | `PUBLIC_URL`, `UPLOAD_DIR` |
 | IA (opcional) | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_URL` |
+| Entrada pelo Hub | `ZOARIA_SSO_SECRET` (mesmo valor aqui e no Hub; vazio desliga o SSO) |
+| CORS | `CORS_ORIGINS` (lista por vírgula; vazio usa o padrão do código) |
 | Frontend (build) | `VITE_HUB_URL` (volta para o Hub; padrão `https://zoaria.com.br`) |
 
 A configuração de notificações também vive no banco (tabela `configuracoes`), com
@@ -192,8 +194,13 @@ quando a chave existe nos dois lugares.
 - `migrate()` é DDL na mão, idempotente, em `init_db.py`. O `alembic` está no
   `requirements.txt` mas não há migrations no repositório: coluna nova entra no
   `migrate()`, não em revisão do Alembic.
-- CORS está em `allow_origins=["*"]` porque em produção o nginx serve tudo na mesma
-  origem. Só faz diferença em desenvolvimento.
+- CORS é lista explícita em `main.py`, não `"*"`, e `allow_credentials` é `False`
+  porque a sessão vai em `Authorization: Bearer` do `localStorage`, sem cookie.
+  Origem nova entra por `CORS_ORIGINS`, não editando o código.
+- Cabeçalho de segurança sai de **dois lugares**, com CSP diferente em cada um:
+  o nginx do frontend cuida do que o navegador abre (`frontend/nginx.conf`), e o
+  middleware de `main.py` cuida das respostas de API (`default-src 'none'`).
+  Mexer só num deixa metade das respostas descoberta.
 - `backend/gestor_local.db` é SQLite de teste local. Produção é Postgres.
 - Os volumes `uploads` e `pgdata` são persistentes. `UPLOAD_DIR=/app/data/uploads`
   guarda comprovante enviado por cliente: apagar volume perde documento.

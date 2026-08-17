@@ -26,17 +26,43 @@ RECUSA_SSO = "Não foi possível entrar por aqui. Faça login com e-mail e senha
 RETENCAO_BILHETES_DIAS = 7
 
 @router.post("/login", response_model=Token)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(Usuario).filter(Usuario.email == request.email).first()
-    if not user or not verify_password(request.senha, user.senha_hash):
+def login(dados: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    """Login por e-mail e senha, com registro e limite de tentativa.
+
+    A contagem usa `origem="senha"`, separada da do SSO: quem errou a senha
+    cinco vezes não fica impedido de entrar pelo card do Hub, que é outra
+    credencial. O limite e a janela são os mesmos dos dois lados.
+    """
+    ip = ip_cliente(request)
+    email = (dados.email or "").strip()
+
+    # Antes de conferir a senha, como manda a nota: passou do limite, não atende.
+    if falhas_recentes(db, email, ip, origem="senha") >= MAX_TENTATIVAS:
+        log_event("LOGIN_BLOQUEADO", level="WARN", email=email or None, ip=ip,
+                  janela_min=JANELA_MINUTOS)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Muitas tentativas. Aguarde {JANELA_MINUTOS} minutos.",
+        )
+
+    user = db.query(Usuario).filter(Usuario.email == dados.email).first()
+    if not user or not verify_password(dados.senha, user.senha_hash):
+        registrar_tentativa(db, email, ip, sucesso=False, origem="senha")
+        log_event("LOGIN_RECUSADO", level="WARN", email=email or None, ip=ip,
+                  motivo="credenciais")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha inválidos"
         )
     if getattr(user, "bloqueado", False) or not user.ativo:
+        registrar_tentativa(db, email, ip, sucesso=False, origem="senha")
+        log_event("LOGIN_RECUSADO", level="WARN", email=email or None, ip=ip,
+                  motivo="conta")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário bloqueado")
 
     access_token = create_access_token(data={"sub": user.email})
+    registrar_tentativa(db, email, ip, sucesso=True, origem="senha")
+    log_event("LOGIN_OK", email=email, ip=ip, usuario_id=user.id)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register", response_model=UsuarioResponse, status_code=201)

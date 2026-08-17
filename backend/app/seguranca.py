@@ -102,6 +102,35 @@ def falhas_recentes(db: Session, email: str, ip: str,
     return q.filter(or_(*alvo)).count()
 
 
+# Cabeçalhos que toda resposta leva, na lista da nota de segurança da vault.
+# A CSP é a da API, e não a do site: resposta de API é JSON e não carrega script,
+# estilo nem imagem, então o certo aqui é `default-src 'none'`. A CSP do que o
+# usuário vê no navegador é outra, e vive no nginx que serve o React.
+HEADERS_SEGURANCA = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+}
+
+# A documentação interativa carrega script e estilo de CDN, então a CSP acima a
+# quebraria. Estes caminhos ficam de fora dela e recebem os outros cabeçalhos
+# normalmente. Se o /docs vier a ser desligado em produção, esta exceção some.
+PATHS_SEM_CSP = ("/docs", "/redoc", "/openapi.json")
+
+
+def aplicar_headers(response, path: str = ""):
+    """Escreve os cabeçalhos de segurança na resposta, sem sobrescrever o que
+    a própria rota já tenha definido de propósito."""
+    for nome, valor in HEADERS_SEGURANCA.items():
+        if nome == "Content-Security-Policy" and path.startswith(PATHS_SEM_CSP):
+            continue
+        response.headers.setdefault(nome, valor)
+    return response
+
+
 def limpar_tentativas_antigas(db: Session) -> int:
     """Apaga rastro que passou da retenção. Devolve quantas linhas saíram."""
     corte = datetime.utcnow() - timedelta(days=RETENCAO_TENTATIVAS_DIAS)
