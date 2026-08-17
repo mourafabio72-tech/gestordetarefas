@@ -133,7 +133,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
         cnpj = dados.get("cnpj")
         if cnpj and not cnpj_valido(cnpj):
             detalhes.append({"linha": razao, "status": "aviso",
-                             "detalhe": f"CNPJ inválido ({cnpj}) — importado sem CNPJ."})
+                             "detalhe": f"CNPJ inválido ({cnpj}), importado sem CNPJ."})
             dados.pop("cnpj", None)
             cnpj = None
         existente = None

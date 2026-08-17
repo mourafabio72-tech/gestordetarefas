@@ -184,7 +184,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes, executor_email: str = None)
         setor_nome = (dados.get("setor") or "").strip()
         if setor_nome and not setor:
             detalhes.append({"linha": nome, "status": "aviso",
-                             "detalhe": f"Setor '{setor_nome}' não existe no cadastro — importado sem setor."})
+                             "detalhe": f"Setor '{setor_nome}' não existe no cadastro, importado sem setor."})
         cargo = dados.get("cargo")
         telefone = dados.get("telefone")
         senha_informada = dados.get("senha")

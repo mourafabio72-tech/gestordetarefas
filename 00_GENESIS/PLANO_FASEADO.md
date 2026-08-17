@@ -135,6 +135,52 @@ passa a `ok` com a saída colada, e nenhuma tela mudou de sentido.
 **Aceite:** funciona em produção pelo caminho real, e o login por senha continua
 funcionando para quem entra direto.
 
+## Fase 7 : fechar a porta da frente (decidida em 2026-08-17)
+**Status:** pending
+**Duração:** 3 horas
+**Rege:** `Forca_Bruta_Login`, `CSRF_Cookies_Headers` (a parte de headers, que não
+depende de cookie), `App_Online_Auth`
+**Depende de:** Fase 6
+**Repositório:** `_deploy_gestortarefas`
+
+Nasceu de três achados que a Fase 6 encontrou de passagem, e o valor está no
+cruzamento deles, não em cada um sozinho. O que amarra tudo é a única linha da
+matriz que ficou `parcial`: **o login por e-mail e senha não registra nem limita
+tentativa**, enquanto a rota de SSO limita. A porta de trás ficou mais dura que a
+porta da frente.
+
+- Ligar `registrar_tentativa` e `falhas_recentes` no login por senha
+  (`routes/auth.py:28-40`), usando a coluna `origem` da tabela `login_tentativas`
+  que já nasceu genérica na Fase 3 exatamente para isso. É a chamada de duas
+  linhas que ficou pendente lá, e o limite tem de ser o mesmo do SSO: 5 falhas em
+  15 minutos (`seguranca.py:24-25`)
+- Trocar `allow_origins=["*"]` por lista explícita de origens
+  (`main.py:21-27`). Hoje qualquer site pode chamar a API do navegador de quem o
+  visita. Sozinho é fraco, porque o token vai em header do `localStorage` e site
+  terceiro não lê isso, mas cruzado com o item acima significa força bruta
+  disparada do navegador de visitantes de qualquer site, sem tocar no seu domínio.
+  `allow_credentials=True` com `*` é configuração inválida que o Starlette
+  contorna ecoando a origem, o que é pior que o que parece estar escrito
+- Headers de segurança em toda resposta: `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `HSTS` e CSP. Hoje **não existe nenhum**,
+  nem no nginx que serve o React (`frontend/nginx.conf`, 19 linhas, só `location /`
+  e `location /api`) nem no backend. O Hub já tem isso desde o commit de perfis; o
+  Tareffas não
+- Conferir se o serviço backend tem domínio próprio no EasyPanel. Se tiver, o
+  `/docs` e o `/openapi.json` estão públicos e entregam o mapa inteiro da API a
+  quem pedir, e aí `docs_url=None` fora de desenvolvimento entra nesta fase. Pelo
+  repositório não se decide: o nginx só proxia `/api`, então isso é pergunta de
+  painel, não de código
+
+**Aceite:** o login por senha registra e limita igual ao SSO, provado por teste que
+erra a senha 6 vezes e recebe 429 na sexta; a API recusa origem não listada,
+provado por requisição com `Origin` de outro domínio; e os headers aparecem na
+resposta, provados por `curl -I`. Cada um com uma linha própria na matriz.
+
+**Fora desta fase, e declarado:** os 32 travessões que sobram em comentário e
+docstring interna de `backend/app`. Não são lidos por nenhum usuário por nenhum
+caminho, provado por AST e pelo OpenAPI zerados na Fase 6.
+
 ---
 
 ## Fora de escopo (cortado pela escada)

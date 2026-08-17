@@ -66,7 +66,7 @@ async def lote(
 ):
     """Analisa vários documentos: salva sozinho os 100% reconhecidos (empresa casada
     por CNPJ + obrigação sugerida + identificador livre de colisão) e devolve os demais
-    para revisão manual. Não salva automático se o identificador colidir — nem com os
+    para revisão manual. Não salva automático se o identificador colidir, nem com os
     existentes, nem com outro arquivo do mesmo lote (evita bagunçar o matcher)."""
     salvos, revisar = [], []
     usados = {}  # identificador_normalizado -> obrigacao_id já escolhido neste lote
@@ -111,7 +111,7 @@ async def lote(
             if not a.get("empresa_id"):
                 a["motivo"] = "Empresa não reconhecida (CNPJ não cadastrado)"
             elif not a.get("obrigacao_sugerida_id"):
-                a["motivo"] = "Obrigação não reconhecida — escolha e defina o identificador"
+                a["motivo"] = "Obrigação não reconhecida: escolha e defina o identificador"
             elif not livre:
                 a["motivo"] = "Identificador candidato colide com obrigação existente"
             else:

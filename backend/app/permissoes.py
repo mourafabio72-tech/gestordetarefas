@@ -82,7 +82,7 @@ LABELS_NATIVOS = {
     "analista": ("Analista", "Edita só as próprias tarefas; cadastros só leitura."),
     "estagiario": ("Estagiário", "Edita só as próprias tarefas; não mexe em prazos."),
     "consulta": ("Consulta", "Só visualiza; não altera nada."),
-    "usuario": ("Usuário (legado)", "Papel antigo — só leitura, vê tudo."),
+    "usuario": ("Usuário (legado)", "Papel antigo: só leitura, vê tudo."),
 }
 
 # ---- Cache dos grupos vindos do banco (fonte da verdade em runtime) ----

@@ -59,7 +59,7 @@ def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuari
         urgency = f"📋 Prazo interno em *{days_remaining} dias*"
 
     base = _base_date(tarefa)
-    prazo_str = base.strftime("%d/%m/%Y %H:%M") if base else "—"
+    prazo_str = base.strftime("%d/%m/%Y %H:%M") if base else "-"
 
     linhas = [
         urgency, "",
@@ -185,7 +185,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal") -> list:
             message += f"\n\n📎 Enviar o comprovante: {link}"
         except Exception:
             pass
-        assunto = f"[Tareffas] {tarefa.titulo} — {tarefa.empresa.razao_social}"
+        assunto = f"[Tareffas] {tarefa.titulo} - {tarefa.empresa.razao_social}"
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis):

@@ -96,7 +96,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                 resp = usuario_por_nome.get(_norm(valor))
                 if not resp:
                     detalhes.append({"linha": emp.razao_social, "status": "aviso",
-                                     "detalhe": f"{setor.nome}: responsável '{valor}' não encontrado — setor marcado sem responsável."})
+                                     "detalhe": f"{setor.nome}: responsável '{valor}' não encontrado, setor marcado sem responsável."})
                 if existente:
                     existente.responsavel_id = resp.id if resp else None
                 else:

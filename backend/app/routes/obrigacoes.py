@@ -26,7 +26,7 @@ class DetalhesBody(BaseModel):
 @router.get("/{obrigacao_id}/detalhes-empresa")
 def get_detalhes_empresa(obrigacao_id: int, db: Session = Depends(get_db),
                          current_user: Usuario = Depends(get_current_user)):
-    """Detalhes fixos por empresa nesta obrigação (ex.: 'Empréstimo — Banco X')."""
+    """Detalhes fixos por empresa nesta obrigação (ex.: 'Empréstimo do Banco X')."""
     out = []
     for d in db.query(EmpresaObrigacaoDetalhe).filter(EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).all():
         emp = db.query(Empresa).filter(Empresa.id == d.empresa_id).first()
@@ -205,7 +205,7 @@ def desvincular_empresa(
 ):
     """Remove o vínculo de uma empresa nas obrigações. Sem `obrigacao_ids`,
     tira a empresa de TODAS as obrigações onde está vinculada (inverso do
-    'Copiar de outra empresa'). Não apaga a obrigação nem a empresa —
+    'Copiar de outra empresa'). Não apaga a obrigação nem a empresa,
     só o vínculo. Tarefas já geradas não são afetadas."""
     emp = db.query(Empresa).filter(Empresa.id == body.empresa_id).first()
     if not emp:

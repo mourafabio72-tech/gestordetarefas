@@ -124,7 +124,7 @@ def get_dashboard_stats_por_setor(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    """Distribuição de status por setor — um bloco por setor para os donuts."""
+    """Distribuição de status por setor: um bloco por setor para os donuts."""
     now = datetime.utcnow()
     resultado = []
     for setor in db.query(Setor).order_by(Setor.nome).all():
@@ -367,7 +367,7 @@ def excluir_tarefas_competencia(
     current_user: Usuario = Depends(require_admin),
 ):
     """Apaga DE VEZ as tarefas geradas por obrigação (com obrigacao_id) da
-    competência informada (MM/AAAA). É o desfazer do 'Gerar tarefas do mês' —
+    competência informada (MM/AAAA). É o desfazer do 'Gerar tarefas do mês', e
     depois dá para regerar limpo. Não toca em tarefas avulsas (criadas à mão)."""
     comp = (body.competencia or "").strip()
     p = comp.split("/")

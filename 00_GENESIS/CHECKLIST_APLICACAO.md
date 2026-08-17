@@ -430,12 +430,53 @@ devolvido para a tela) achou **7 casos**, todos fechados:
       em `frontend/src` e em `backend/app`. Ninguém compara contra o marcador de
       vazio, então trocá-lo por hífen não muda lógica nenhuma, só o que se lê.
 
-**PENDÊNCIA DECLARADA, e não é omissão:** sobram **44 travessões em 17 arquivos**
-de `backend/app`, todos em comentário de código e docstring. `Sem_Travessao` diz
-"qualquer arquivo" e inclui comentário, então a regra os alcança. Não entraram
-aqui por duas razões escritas: o aceite desta fase é `grep -rn "—" frontend/src`
-vazio, e o usuário não lê comentário de servidor, então nenhuma tela muda. Vira
-decisão do usuário, do mesmo jeito que esta fase nasceu de uma.
+**SEGUNDA RODADA no backend, autorizada pelo usuário, e ela existe porque a minha
+primeira varredura estava fraca.** Eu tinha afirmado que sobravam 44 travessões
+"todos em comentário e docstring", e que só 5 chegavam ao usuário. Errado nos dois
+números, e o erro é de método: eu grepava por **nome de chave** (`detail=`,
+`"message"`, `prazo_label`), e nome de chave é adivinhação. Uma string exibida na
+tela sob a chave `"motivo"` passou por baixo, com o comentário da linha acima
+dizendo literalmente "motivo curto para a UI". Refeita por **AST**, procurando
+toda constante `str` com travessão e excluindo docstring de módulo, classe e
+função, apareceram **7 strings de dado**, não uma. Afirmar ausência com varredura
+fraca é o furo da regra 4 da `Leitura_e_Retencao_de_Notas`, e eu cometi ele com um
+grep que parecia específico.
+
+- [x] 7 strings de dado, e duas são piores que tela
+      EVIDÊNCIA: `whatsapp.py:188` era a **linha de assunto do e-mail** que sai
+      para o cliente (`[Tareffas] título — empresa`), e `whatsapp.py:62` é o prazo
+      mostrado na mensagem de WhatsApp quando a tarefa não tem data. E-mail
+      transacional e WhatsApp automático estão nomeados no gatilho do
+      `Revisao_Professor_Pasquale` e na lista do `Sem_Travessao`: eram os menos
+      discutíveis de todos, e foram os últimos que eu achei. Os outros cinco:
+      `permissoes.py:85`, que é a frase **gêmea** de `frontend/src/permissoes.js:80`
+      já limpa (a segunda frase gêmea desta fase); `modelos.py:114`, o motivo
+      exibido na tela do e-validador; e três avisos de importação que o front
+      lista na tela de resultado (`importador_empresas.py:136`,
+      `importador_resp_setor.py:99`, `importador_usuarios.py:187`).
+- [x] 5 docstrings de rota
+      EVIDÊNCIA: `modelos.py:69`, `obrigacoes.py:29` e `:208`, `tarefas.py:127` e
+      `:370`. Docstring de rota no FastAPI vira a descrição do endpoint no
+      OpenAPI, então é texto lido por gente e não comentário. A prova é direta e
+      melhor que grep de arquivo: o app sobe e `str(app.openapi())` tem **zero**
+      travessões, o que cobre de uma vez toda docstring de rota e todo schema que
+      entra na documentação. RESSALVA DE ALCANCE, para o item não alegar mais do
+      que vale: o `/docs` **não sai pelo domínio público hoje**, porque o nginx do
+      frontend só proxia `/api` (`frontend/nginx.conf:12`). Se o serviço backend
+      tiver domínio próprio no EasyPanel, sai, e isso não se vê do repositório.
+- [x] Prova de fechamento das duas classes, por comando e não por leitura
+      EVIDÊNCIA: a varredura por AST devolve **0** strings de dado com travessão
+      em `backend/app`, e o OpenAPI devolve **0**. Os 6 arquivos tocados compilam
+      (`py_compile`, 6 de 6) e o app sobe com 92 rotas. Regressão: 25 checagens da
+      `prova_sso_f3.py` e 7 casos do `app/sso.py`, verdes.
+
+**PENDÊNCIA DECLARADA, com o número corrigido:** sobram **32 travessões em 13
+arquivos** de `backend/app`, e agora a classificação está provada, não suposta:
+AST devolve zero string de dado e o OpenAPI devolve zero, então o que resta é
+comentário com `#` e docstring de model, de schema e de função auxiliar, que
+nenhum usuário lê por nenhum caminho. `Sem_Travessao` diz "qualquer arquivo" e
+inclui comentário, então a regra os alcança e isso fica escrito em vez de
+disfarçado. Decisão do usuário: ficam.
 
 **Fechamento da fase:** aceite do `PLANO_FASEADO` atendido (`grep` vazio e a linha
 da matriz em `ok`), nenhuma tela mudou de sentido, e as quatro provas do projeto
