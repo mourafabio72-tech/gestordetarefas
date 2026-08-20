@@ -105,23 +105,23 @@ export default function Setores() {
             <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Descrição</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Situação</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                  <th className="text-left font-semibold text-gray-600">Nome</th>
+                  <th className="text-left font-semibold text-gray-600">Descrição</th>
+                  <th className="text-left font-semibold text-gray-600">Situação</th>
+                  <th className="text-right font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {setoresFiltrados.map((setor) => (
                   <tr key={setor.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{setor.nome}</td>
-                    <td className="py-3 px-4 text-gray-500">{setor.descricao || '-'}</td>
-                    <td className="py-3 px-4">
+                    <td className="font-medium">{setor.nome}</td>
+                    <td className="text-gray-500">{setor.descricao || '-'}</td>
+                    <td>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${setor.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>
                         {setor.ativo === false ? 'Inativo' : 'Ativo'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleEdit(setor)}

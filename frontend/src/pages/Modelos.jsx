@@ -255,35 +255,35 @@ export default function Modelos() {
             <table className="table-app">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-4 font-medium">Arquivo</th>
-                  <th className="py-2 pr-4 font-medium">Empresa</th>
-                  <th className="py-2 pr-4 font-medium">Tipo</th>
-                  <th className="py-2 pr-4 font-medium">Obrigação</th>
-                  <th className="py-2 pr-4 font-medium">Identificador</th>
-                  <th className="py-2"></th>
+                  <th className="pr-4 font-medium">Arquivo</th>
+                  <th className="pr-4 font-medium">Empresa</th>
+                  <th className="pr-4 font-medium">Tipo</th>
+                  <th className="pr-4 font-medium">Obrigação</th>
+                  <th className="pr-4 font-medium">Identificador</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {modelos.map((m) => (
                   <tr key={m.id} className="border-b border-gray-100">
-                    <td className="py-2 pr-4 text-gray-700 max-w-[16rem] truncate" title={m.nome_arquivo}>{m.nome_arquivo}</td>
-                    <td className="py-2 pr-4">
+                    <td className="pr-4 text-gray-700 max-w-[16rem] truncate" title={m.nome_arquivo}>{m.nome_arquivo}</td>
+                    <td className="pr-4">
                       {m.empresa_nome
                         ? <span className="flex items-center gap-1 text-gray-700"><Building2 size={13} className="text-gray-400" />{m.empresa_nome}</span>
                         : <span className="text-amber-600 text-xs">{m.razao_social_extraida || m.cnpj || '-'}</span>}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="pr-4">
                       <span className={`text-xs rounded-full px-2 py-0.5 ${TIPO_CLS[m.tipo_documento] || TIPO_CLS.outro}`}>
                         {m.tipo_label}
                       </span>
                     </td>
-                    <td className="py-2 pr-4 text-gray-700">
+                    <td className="pr-4 text-gray-700">
                       {m.obrigacao_nome
                         ? <span className="flex items-center gap-1"><FileCheck2 size={13} className="text-primary-500" />{m.obrigacao_nome}</span>
                         : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="py-2 pr-4 text-gray-500 max-w-[12rem] truncate" title={m.identificador}>{m.identificador || '-'}</td>
-                    <td className="py-2 text-right">
+                    <td className="pr-4 text-gray-500 max-w-[12rem] truncate" title={m.identificador}>{m.identificador || '-'}</td>
+                    <td className="text-right">
                       <button onClick={() => excluir(m.id)} className="text-gray-400 hover:text-red-600" title="Remover">
                         <Trash2 size={16} />
                       </button>

@@ -165,14 +165,14 @@ export default function RelacaoObrigacoes() {
             <table className="table-app">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-3 font-medium">Obrigação</th>
-                  <th className="py-2 pr-3 font-medium">Setor</th>
-                  <th className="py-2 pr-3 font-medium">Empresas</th>
-                  <th className="py-2 pr-3 font-medium">Prazo</th>
-                  <th className="py-2 pr-3 font-medium">Competência</th>
-                  <th className="py-2 pr-3 font-medium">Meses</th>
-                  <th className="py-2 pr-3 font-medium text-center">Multa</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="pr-3 font-medium">Obrigação</th>
+                  <th className="pr-3 font-medium">Setor</th>
+                  <th className="pr-3 font-medium">Empresas</th>
+                  <th className="pr-3 font-medium">Prazo</th>
+                  <th className="pr-3 font-medium">Competência</th>
+                  <th className="pr-3 font-medium">Meses</th>
+                  <th className="pr-3 font-medium text-center">Multa</th>
+                  <th className="pr-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -180,16 +180,16 @@ export default function RelacaoObrigacoes() {
                   const emps = nomesEmpresas(o);
                   return (
                     <tr key={o.id} className="border-b border-gray-100">
-                      <td className="py-2 pr-3 text-gray-800">{o.nome}{o.mininome ? <span className="text-gray-400"> · {o.mininome}</span> : null}</td>
-                      <td className="py-2 pr-3 text-gray-600">{setorById[o.setor_id] || '-'}</td>
-                      <td className="py-2 pr-3 text-gray-500 max-w-[16rem] truncate" title={emps.join(', ')}>
+                      <td className="pr-3 text-gray-800">{o.nome}{o.mininome ? <span className="text-gray-400"> · {o.mininome}</span> : null}</td>
+                      <td className="pr-3 text-gray-600">{setorById[o.setor_id] || '-'}</td>
+                      <td className="pr-3 text-gray-500 max-w-[16rem] truncate" title={emps.join(', ')}>
                         {emps.length ? (emps.length <= 2 ? emps.join(', ') : `${emps.slice(0, 2).join(', ')} +${emps.length - 2}`) : '-'}
                       </td>
-                      <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">{prazoLabel(o)}</td>
-                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{rotuloCompetencia(o.competencia_ref)}</td>
-                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{mesesLabel(o.meses_ativos)}</td>
-                      <td className="py-2 pr-3 text-center">{o.passivel_multa ? '⚠️' : ''}</td>
-                      <td className="py-2 pr-3">
+                      <td className="pr-3 text-gray-600 whitespace-nowrap">{prazoLabel(o)}</td>
+                      <td className="pr-3 text-gray-500 whitespace-nowrap">{rotuloCompetencia(o.competencia_ref)}</td>
+                      <td className="pr-3 text-gray-500 whitespace-nowrap">{mesesLabel(o.meses_ativos)}</td>
+                      <td className="pr-3 text-center">{o.passivel_multa ? '⚠️' : ''}</td>
+                      <td className="pr-3">
                         <span className={`px-2 py-0.5 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                           {o.ativa ? 'Ativa' : 'Inativa'}
                         </span>

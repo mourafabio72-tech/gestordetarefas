@@ -216,28 +216,28 @@ export default function Grupos() {
           <table className="table-app">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-600">
-                <th className="py-2 px-3 font-semibold">Grupo</th>
-                <th className="py-2 px-3 font-semibold">Descrição</th>
-                <th className="py-2 px-3 font-semibold text-center">Usuários</th>
-                <th className="py-2 px-3 font-semibold text-center">Situação</th>
-                <th className="py-2 px-3 font-semibold text-right">Ações</th>
+                <th className="font-semibold">Grupo</th>
+                <th className="font-semibold">Descrição</th>
+                <th className="font-semibold text-center">Usuários</th>
+                <th className="font-semibold text-center">Situação</th>
+                <th className="font-semibold text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {grupos.map((g) => (
                 <tr key={g.slug} className={`border-b border-gray-100 ${g.ativo ? '' : 'opacity-60'}`}>
-                  <td className="py-2 px-3">
+                  <td>
                     <span className="font-medium text-gray-800">{g.label}</span>
                     {g.sistema && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500">nativo</span>}
                   </td>
-                  <td className="py-2 px-3 text-gray-500 max-w-md">{g.descricao}</td>
-                  <td className="py-2 px-3 text-center text-gray-600">{g.usuarios}</td>
-                  <td className="py-2 px-3 text-center">
+                  <td className="text-gray-500 max-w-md">{g.descricao}</td>
+                  <td className="text-center text-gray-600">{g.usuarios}</td>
+                  <td className="text-center">
                     {g.ativo
                       ? <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">Ativo</span>
                       : <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Bloqueado</span>}
                   </td>
-                  <td className="py-2 px-3">
+                  <td>
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => abrirEditGrupo(g)} title="Editar permissões"
                         className="p-1.5 text-primary-700 hover:bg-primary-50 rounded-lg">
@@ -272,10 +272,10 @@ export default function Grupos() {
           <table className="table-app">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-600">Papel</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-600">Permissões</th>
+                <th className="text-left font-semibold text-gray-600">Nome</th>
+                <th className="text-left font-semibold text-gray-600">Email</th>
+                <th className="text-left font-semibold text-gray-600">Papel</th>
+                <th className="text-left font-semibold text-gray-600">Permissões</th>
               </tr>
             </thead>
             <tbody>
@@ -288,11 +288,11 @@ export default function Grupos() {
                   : [...gruposAtivos, { slug, label: grupoLabel(slug) }];
                 return (
                   <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">
+                    <td className="font-medium">
                       {u.nome}{ehVoce && <span className="ml-2 text-xs text-gray-400">(você)</span>}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{u.email}</td>
-                    <td className="py-3 px-4">
+                    <td className="text-gray-500">{u.email}</td>
+                    <td>
                       <select
                         value={slug}
                         disabled={savingId === u.id || ehVoce}
@@ -302,7 +302,7 @@ export default function Grupos() {
                         {opts.map((g) => <option key={g.slug} value={g.slug}>{g.label}</option>)}
                       </select>
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                       <button onClick={() => abrirMatrizUser(u)} disabled={ehVoce}
                         className="inline-flex items-center gap-2 text-sm text-primary-700 hover:bg-primary-50 rounded-lg px-2 py-1 disabled:opacity-40">
                         <SlidersHorizontal size={15} /> Ajustar

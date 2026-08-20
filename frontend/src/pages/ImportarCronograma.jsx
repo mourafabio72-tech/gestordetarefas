@@ -188,19 +188,19 @@ export default function ImportarCronograma() {
             <table className="table-app">
               <thead className="sticky top-0 bg-white">
                 <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-3 font-medium">Atividade</th>
-                  <th className="py-2 pr-3 font-medium">Setor</th>
-                  {!paraTodas && <th className="py-2 pr-3 font-medium w-[20rem]">Empresas</th>}
-                  <th className="py-2 pr-3 font-medium">Prazo</th>
-                  <th className="py-2 pr-3 font-medium">Competência</th>
-                  <th className="py-2 pr-3 font-medium text-center">Multa</th>
+                  <th className="pr-3 font-medium">Atividade</th>
+                  <th className="pr-3 font-medium">Setor</th>
+                  {!paraTodas && <th className="pr-3 font-medium w-[20rem]">Empresas</th>}
+                  <th className="pr-3 font-medium">Prazo</th>
+                  <th className="pr-3 font-medium">Competência</th>
+                  <th className="pr-3 font-medium text-center">Multa</th>
                 </tr>
               </thead>
               <tbody>
                 {itens.map((it, idx) => (
                   <tr key={idx} className="border-b border-gray-100 align-top">
-                    <td className="py-1.5 pr-3 text-gray-700 max-w-[20rem]">{it.nome}</td>
-                    <td className="py-1.5 pr-3">
+                    <td className="pr-3 text-gray-700 max-w-[20rem]">{it.nome}</td>
+                    <td className="pr-3">
                       <select value={it.setor} onChange={(e) => patch(idx, 'setor', e.target.value)}
                         className={`input-field py-1 text-xs ${!it.setor ? 'border-amber-400' : ''}`}>
                         <option value="">(escolher)</option>
@@ -208,7 +208,7 @@ export default function ImportarCronograma() {
                       </select>
                     </td>
                     {!paraTodas && (
-                    <td className="py-1.5 pr-3">
+                    <td className="pr-3">
                       <div className="flex flex-wrap gap-1 items-center">
                         {(it.empresa_ids || []).map((id) => (
                           <span key={id} title={empresaById[id]?.razao_social}
@@ -226,11 +226,11 @@ export default function ImportarCronograma() {
                       </div>
                     </td>
                     )}
-                    <td className="py-1.5 pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
-                    <td className="py-1.5 pr-3 text-gray-400 text-xs whitespace-nowrap">
+                    <td className="pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
+                    <td className="pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {it.competencia_ref === 'mes_anterior' ? 'mês anterior' : 'mesmo mês'}
                     </td>
-                    <td className="py-1.5 pr-3 text-center">
+                    <td className="pr-3 text-center">
                       <input type="checkbox" className="h-4 w-4" checked={!!it.gera_multa}
                         onChange={(e) => patch(idx, 'gera_multa', e.target.checked)} />
                     </td>

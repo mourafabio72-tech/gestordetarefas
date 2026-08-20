@@ -313,35 +313,35 @@ export default function Empresas() {
             <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Código</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Razão Social</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">CNPJ</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Regime</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Grupo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Situação</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                  <th className="text-left font-semibold text-gray-600">Código</th>
+                  <th className="text-left font-semibold text-gray-600">Razão Social</th>
+                  <th className="text-left font-semibold text-gray-600">CNPJ</th>
+                  <th className="text-left font-semibold text-gray-600">Regime</th>
+                  <th className="text-left font-semibold text-gray-600">Grupo</th>
+                  <th className="text-left font-semibold text-gray-600">Situação</th>
+                  <th className="text-right font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {empresasFiltradas.map((empresa) => (
                   <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-500 font-mono">#{empresa.id}</td>
-                    <td className="py-3 px-4">
+                    <td className="text-gray-500 font-mono">#{empresa.id}</td>
+                    <td>
                       {empresa.razao_social}
                       {empresa.bloqueado && (
                         <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Bloqueada</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">{empresa.cnpj || '-'}</td>
-                    <td className="py-3 px-4">{labelDe(REGIMES, empresa.regime_tributario)}</td>
-                    <td className="py-3 px-4">{empresa.grupo || '-'}</td>
-                    <td className="py-3 px-4">
+                    <td>{empresa.cnpj || '-'}</td>
+                    <td>{labelDe(REGIMES, empresa.regime_tributario)}</td>
+                    <td>{empresa.grupo || '-'}</td>
+                    <td>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${
                         empresa.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>
                         {empresa.ativo === false ? 'Inativa' : 'Ativa'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleBloquear(empresa)}

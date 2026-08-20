@@ -57,6 +57,19 @@ body {
     @apply w-full text-sm;
   }
 
+  /* Espaçamento das células. Estava em três padrões diferentes -- py-3 px-4 em
+     Empresas/Usuarios/Setores/Substituicoes, py-2 px-2 ou px-3 nas outras,
+     py-1.5 em ImportarCronograma -- e a mesma listagem tinha altura de linha
+     diferente conforme a tela. py-2 px-3 é o meio-termo: mais linhas visíveis
+     que o espaçado, mais respiro que o comprimido.
+
+     Célula que precisa ser estreita (checkbox, coluna de ações) sobrescreve com
+     px-2 na própria tag, como qualquer utilitária do Tailwind. */
+  .table-app th,
+  .table-app td {
+    @apply py-2 px-3;
+  }
+
   .card {
     @apply bg-white rounded-xl p-4 border border-gray-200;
     box-shadow: 0 1px 3px rgba(86, 100, 80, 0.08);

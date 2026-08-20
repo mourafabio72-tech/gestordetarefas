@@ -88,37 +88,37 @@ export default function Substituicoes() {
             <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Ausente</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Substituto</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Tipo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Período</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Motivo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Situação</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                  <th className="text-left font-semibold text-gray-600">Ausente</th>
+                  <th className="text-left font-semibold text-gray-600">Substituto</th>
+                  <th className="text-left font-semibold text-gray-600">Tipo</th>
+                  <th className="text-left font-semibold text-gray-600">Período</th>
+                  <th className="text-left font-semibold text-gray-600">Motivo</th>
+                  <th className="text-left font-semibold text-gray-600">Situação</th>
+                  <th className="text-right font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {subs.map((s) => (
                   <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{s.usuario?.nome}</td>
-                    <td className="py-3 px-4">{s.substituto?.nome}</td>
-                    <td className="py-3 px-4">
+                    <td className="font-medium">{s.usuario?.nome}</td>
+                    <td>{s.substituto?.nome}</td>
+                    <td>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
                         s.tipo === 'definitiva' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                         {s.tipo === 'definitiva' ? <LogOut size={12} /> : <Plane size={12} />}
                         {s.tipo === 'definitiva' ? 'Definitiva' : 'Temporária'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-500">
+                    <td className="text-gray-500">
                       {s.tipo === 'temporaria' ? `${fmt(s.data_inicio)} → ${fmt(s.data_fim)}` : '-'}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{s.motivo || '-'}</td>
-                    <td className="py-3 px-4">
+                    <td className="text-gray-500">{s.motivo || '-'}</td>
+                    <td>
                       <span className={`px-2 py-0.5 rounded-full text-xs ${s.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {s.ativa ? 'Ativa' : 'Encerrada'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="text-right">
                       {s.ativa && s.tipo === 'temporaria' && (
                         <button onClick={() => encerrar(s)} title="Encerrar" className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
                           <X size={16} />

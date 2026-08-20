@@ -301,31 +301,31 @@ export default function Obrigacoes() {
             <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="py-2 px-2 w-8">
+                  <th className="w-8 px-2">
                     <input type="checkbox" className="h-4 w-4" checked={todasMarcadas} onChange={toggleTodas} title="Marcar todas (filtradas)" />
                   </th>
-                  <th className="text-left py-2 px-2 font-medium">Obrigação</th>
-                  <th className="text-left py-2 px-2 font-medium w-32">Setor</th>
-                  <th className="text-left py-2 px-2 font-medium w-20">Empresas</th>
-                  <th className="text-left py-2 px-2 font-medium w-20">Status</th>
-                  <th className="text-right py-2 px-2 font-medium w-28">Ações</th>
+                  <th className="text-left font-medium">Obrigação</th>
+                  <th className="text-left font-medium w-32 px-2">Setor</th>
+                  <th className="text-left font-medium w-20 px-2">Empresas</th>
+                  <th className="text-left font-medium w-20 px-2">Status</th>
+                  <th className="text-right font-medium w-28 px-2">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {obrigacoesFiltradas.map((o) => (
                   <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-1.5 px-2">
+                    <td>
                       <input type="checkbox" className="h-4 w-4" checked={selecionados.includes(o.id)} onChange={() => toggleSel(o.id)} />
                     </td>
-                    <td className="py-1.5 px-2 font-medium text-gray-800">{o.nome}</td>
-                    <td className="py-1.5 px-2 text-gray-600">{setorNome(o.setor_id)}</td>
-                    <td className="py-1.5 px-2 text-gray-500">{(o.empresa_ids || []).length}</td>
-                    <td className="py-1.5 px-2">
+                    <td className="font-medium text-gray-800">{o.nome}</td>
+                    <td className="text-gray-600">{setorNome(o.setor_id)}</td>
+                    <td className="text-gray-500">{(o.empresa_ids || []).length}</td>
+                    <td>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${o.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {o.ativa ? 'Ativa' : 'Inativa'}
                       </span>
                     </td>
-                    <td className="py-1.5 px-2">
+                    <td>
                       <div className="flex justify-end gap-1">
                         <button onClick={() => abrirEdicao(o)} title="Editar" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                           <Edit2 size={15} />

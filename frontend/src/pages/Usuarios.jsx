@@ -271,17 +271,17 @@ export default function Usuarios() {
             <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Cargo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Status</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Ações</th>
+                  <th className="text-left font-semibold text-gray-600">Nome</th>
+                  <th className="text-left font-semibold text-gray-600">Email</th>
+                  <th className="text-left font-semibold text-gray-600">Cargo</th>
+                  <th className="text-left font-semibold text-gray-600">Status</th>
+                  <th className="text-right font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {usuariosFiltrados.map((usuario) => (
                   <tr key={usuario.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
+                    <td>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-medium">
                           {usuario.nome.charAt(0).toUpperCase()}
@@ -289,9 +289,9 @@ export default function Usuarios() {
                         <span className="font-medium">{usuario.nome}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{usuario.email}</td>
-                    <td className="py-3 px-4">{usuario.cargo || '-'}</td>
-                    <td className="py-3 px-4">
+                    <td className="text-gray-500">{usuario.email}</td>
+                    <td>{usuario.cargo || '-'}</td>
+                    <td>
                       {usuario.bloqueado ? (
                         <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">Bloqueado</span>
                       ) : usuario.ativado === false ? (
@@ -304,7 +304,7 @@ export default function Usuarios() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td>
                       <div className="flex justify-end gap-2">
                         {usuario.ativado === false && !usuario.bloqueado && (
                           <button
