@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authAPI } from '../services/api';
 import { colherBilhete } from './bilhete';
+import { decidirEntrada } from './entrada';
 
 const AuthContext = createContext(null);
 
@@ -26,16 +27,15 @@ export function AuthProvider({ children }) {
 
     const bilhete = colherBilhete(window.location, window.history);
     const token = localStorage.getItem('token');
+    const entrada = decidirEntrada({ bilhete, token });
 
-    if (token) {
-      // Quem já tem sessão aberta não é derrubado por um bilhete que chega. O
-      // bilhete sai da URL do mesmo jeito, porque ele não pode ficar na barra.
-      loadUser();
+    if (entrada.via === 'sso') {
+      entrarPorBilhete(entrada.bilhete, entrada.tokenReserva);
       return;
     }
 
-    if (bilhete) {
-      entrarPorBilhete(bilhete);
+    if (entrada.via === 'sessao') {
+      loadUser();
       return;
     }
 
@@ -53,7 +53,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const entrarPorBilhete = async (bilhete) => {
+  const entrarPorBilhete = async (bilhete, tokenReserva) => {
     try {
       const response = await authAPI.sso(bilhete);
       localStorage.setItem('token', response.data.access_token);
@@ -63,8 +63,17 @@ export function AuthProvider({ children }) {
       // login sem uma palavra de explicação.
       if (!localStorage.getItem('token')) setAviso(AVISO_SSO);
     } catch (error) {
-      // Qualquer falha cai na tela de login com o mesmo aviso, inclusive o 429
-      // do limite por IP: quem está do lado de fora não precisa saber a diferença.
+      // Bilhete recusado (vencido, já usado, 429 do limite por IP) não pode
+      // custar a sessão de quem já estava dentro: devolve o token anterior e
+      // segue com ele. Só quando ele também não vale é que a pessoa vê a tela
+      // de senha -- e aí o aviso é o mesmo para todos os motivos, porque
+      // distinguir entregaria a quem tenta adivinhar quais contas existem.
+      if (tokenReserva) {
+        localStorage.setItem('token', tokenReserva);
+        await loadUser();
+        if (!localStorage.getItem('token')) setAviso(AVISO_SSO);
+        return;
+      }
       setAviso(AVISO_SSO);
       setLoading(false);
     }
