@@ -35,3 +35,41 @@ pessoa anterior sem perceber.
 Provas: `frontend/provas/prova_entrada_sso.js` (7 casos, Node puro). As provas
 anteriores seguem passando: `prova_sso_f4.js` (7 casos) e `backend/app/sso.py`.
 Build do frontend refeito sem erro.
+
+---
+
+## 2026-08-20 — consultas lentas: N+1 na listagem, laco no painel, zero indices
+
+Sintoma: "as consultas estao lentas".
+
+Medido antes de mexer, contando idas ao banco (nao tempo, que varia com a
+maquina): listagem de 500 tarefas = **503 consultas**. Uma por tarefa.
+
+Causa 1 — N+1 na serializacao. `TarefaResponse` expoe `responsaveis` e
+`supervisor`, e a query so trazia `joinedload(Tarefa.obrigacao)`. O Pydantic
+buscava cada um no banco na hora de serializar. Em SQLite local custava 78 ms e
+passava despercebido; contra o Postgres do servidor cada consulta e um
+ida-e-volta de rede, e a tela levava segundos. Corrigido com `selectinload` nos
+responsaveis (colecao — joinedload multiplicaria as linhas) e `joinedload` no
+supervisor. **503 -> 2 consultas, constante em qualquer volume.**
+
+Causa 2 — laco no painel. `stats-por-setor` percorria os setores fazendo cinco
+`count()` em cada um, mais a montagem do escopo. Virou um `GROUP BY` com
+contagem condicional. **~40 -> 1 consulta.**
+
+Causa 3 — `tarefas`, a tabela grande, nao tinha indice em NENHUMA chave
+estrangeira, nem em status/data_prazo/competencia. Toda listagem filtrada
+varria a tabela. `Base.metadata.create_all` so cria tabela nova, entao marcar
+`index=True` no model nao alcanca base existente: os indices entram por
+`init_db.criar_indices()`, no mesmo mecanismo idempotente das colunas, chamado
+no boot. Onze indices, incluindo `(status, data_prazo)` — que andam sempre
+juntos na conta de atrasadas — e `tarefa_responsaveis(usuario_id)`, porque a PK
+comeca por `tarefa_id` e o escopo busca por usuario.
+
+Prova: `backend/provas/prova_consultas_rapidas.py`. Ela mede CONSULTAS, nao
+segundos, e trava o custo constante: se alguem acrescentar campo no
+`TarefaResponse` sem o carregamento correspondente, o N+1 volta e a prova
+quebra. As provas anteriores seguem passando (seguranca_f7: 19, sso_f3: 25).
+
+Nao mexido de proposito: paginacao da listagem. Muda o contrato da API e o
+front junto, e com 2 consultas constantes o problema imediato saiu.

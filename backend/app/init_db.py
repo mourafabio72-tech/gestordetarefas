@@ -51,6 +51,45 @@ def migrate():
                     print(f"Erro na coluna '{col_name}': {e}")
 
 
+def criar_indices():
+    """Índices das colunas por que se filtra e se ordena.
+
+    `Base.metadata.create_all` só cria tabela que não existe -- em base já
+    criada, marcar `index=True` no model não faz nada. Por isso os índices
+    entram aqui, no mesmo mecanismo idempotente das colunas.
+
+    `tarefas` é a tabela grande e a mais consultada, e não tinha índice em
+    nenhuma chave estrangeira: toda listagem filtrada por empresa, setor ou
+    responsável varria a tabela inteira. `CREATE INDEX IF NOT EXISTS` funciona
+    tanto no Postgres do servidor quanto no SQLite local.
+    """
+    indices = [
+        # tarefas: filtros da listagem e do escopo por responsável
+        ("ix_tarefas_empresa_id",     "CREATE INDEX IF NOT EXISTS ix_tarefas_empresa_id ON tarefas (empresa_id)"),
+        ("ix_tarefas_setor_id",       "CREATE INDEX IF NOT EXISTS ix_tarefas_setor_id ON tarefas (setor_id)"),
+        ("ix_tarefas_responsavel_id", "CREATE INDEX IF NOT EXISTS ix_tarefas_responsavel_id ON tarefas (responsavel_id)"),
+        ("ix_tarefas_supervisor_id",  "CREATE INDEX IF NOT EXISTS ix_tarefas_supervisor_id ON tarefas (supervisor_id)"),
+        ("ix_tarefas_obrigacao_id",   "CREATE INDEX IF NOT EXISTS ix_tarefas_obrigacao_id ON tarefas (obrigacao_id)"),
+        ("ix_tarefas_status",         "CREATE INDEX IF NOT EXISTS ix_tarefas_status ON tarefas (status)"),
+        ("ix_tarefas_data_prazo",     "CREATE INDEX IF NOT EXISTS ix_tarefas_data_prazo ON tarefas (data_prazo)"),
+        # atrasadas = status pendente/andamento COM prazo vencido, sempre juntos
+        ("ix_tarefas_status_prazo",   "CREATE INDEX IF NOT EXISTS ix_tarefas_status_prazo ON tarefas (status, data_prazo)"),
+        # e-validador procura por (empresa, obrigação, competência)
+        ("ix_tarefas_competencia",    "CREATE INDEX IF NOT EXISTS ix_tarefas_competencia ON tarefas (competencia)"),
+        # M2M: a PK é (tarefa_id, usuario_id), então buscar POR USUÁRIO -- que é
+        # o que o escopo faz -- não aproveita a chave primária.
+        ("ix_tarefa_resp_usuario",    "CREATE INDEX IF NOT EXISTS ix_tarefa_resp_usuario ON tarefa_responsaveis (usuario_id)"),
+        # subordinados diretos, lidos a cada request para montar o escopo
+        ("ix_usuarios_gestor_id",     "CREATE INDEX IF NOT EXISTS ix_usuarios_gestor_id ON usuarios (gestor_id)"),
+    ]
+    for nome, sql in indices:
+        with engine.begin() as conn:
+            try:
+                conn.execute(text(sql))
+            except Exception as e:
+                print(f"Erro no índice '{nome}': {e}")
+
+
 def seed_admin():
     """Cria o admin inicial a partir de ADMIN_EMAIL/ADMIN_PASSWORD apenas
     quando a tabela de usuários está vazia. Sem essas envs, não faz nada."""

@@ -48,7 +48,7 @@ class Usuario(Base):
     tipo = Column(String(20), default="colaborador")  # colaborador | cliente
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=True)  # cliente pertence a uma empresa
     bloqueado = Column(Boolean, default=False)  # bloqueado -> não loga, não aparece, tarefas somem
-    gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, index=True)
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)  # departamento interno do colaborador
     convite_token = Column(String(64), nullable=True)  # link de 1º acesso (define a própria senha)
     ativado = Column(Boolean, nullable=True)  # True=ativou; False=pendente; NULL=legado (considerado ativo)
@@ -152,21 +152,24 @@ class Tarefa(Base):
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String(200), nullable=False)
     descricao = Column(Text)
-    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
-    setor_id = Column(Integer, ForeignKey("setores.id"))
-    responsavel_id = Column(Integer, ForeignKey("usuarios.id"))  # principal (= 1º dos responsaveis); mantido p/ escopo/compat
-    supervisor_id = Column(Integer, ForeignKey("usuarios.id"))
-    obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=True)  # de qual modelo veio
-    competencia = Column(String(7))  # "MM/AAAA" — chave de baixa do e-validador
+    # index=True em tudo que a listagem filtra: `tarefas` é a tabela grande.
+    # Base já existente não ganha índice por aqui (create_all só cria tabela
+    # nova) -- quem cria em produção é `init_db.criar_indices()`.
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, index=True)
+    setor_id = Column(Integer, ForeignKey("setores.id"), index=True)
+    responsavel_id = Column(Integer, ForeignKey("usuarios.id"), index=True)  # principal (= 1º dos responsaveis); mantido p/ escopo/compat
+    supervisor_id = Column(Integer, ForeignKey("usuarios.id"), index=True)
+    obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=True, index=True)  # de qual modelo veio
+    competencia = Column(String(7), index=True)  # "MM/AAAA" — chave de baixa do e-validador
     # Baixa pelo e-validador (comprovante de entrega)
     protocolo_entrega = Column(String(120))
     data_entrega = Column(DateTime(timezone=True))
     anexo_nome = Column(String(200))
     upload_token = Column(String(64), unique=True, index=True)  # link público de envio do comprovante
-    status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE)
+    status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE, index=True)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
-    data_prazo = Column(DateTime(timezone=True))  # prazo interno — comanda alertas (nulo em tarefa-modelo copiada)
+    data_prazo = Column(DateTime(timezone=True), index=True)  # prazo interno — comanda alertas (nulo em tarefa-modelo copiada)
     data_vencimento = Column(DateTime(timezone=True))             # vencimento fiscal/legal
     gera_multa = Column(Boolean, default=False)
     data_conclusao = Column(DateTime(timezone=True))

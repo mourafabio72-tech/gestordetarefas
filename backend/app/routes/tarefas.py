@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import and_, or_, func, case
 from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
@@ -124,28 +124,48 @@ def get_dashboard_stats_por_setor(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    """Distribuição de status por setor: um bloco por setor para os donuts."""
+    """Distribuição de status por setor: um bloco por setor para os donuts.
+
+    Uma consulta só, agrupada por setor. Antes era um laço: para cada setor,
+    cinco `count()` mais a montagem do escopo -- num escritório com dez setores,
+    sessenta idas ao banco para desenhar uns gráficos de rosca. O trabalho é
+    todo de contagem condicional, e SQL faz isso num `GROUP BY`.
+    """
     now = datetime.utcnow()
-    resultado = []
-    for setor in db.query(Setor).order_by(Setor.nome).all():
-        base = _aplicar_escopo(db.query(Tarefa), db, current_user).filter(Tarefa.setor_id == setor.id)
-        total = base.count()
-        if total == 0:
-            continue  # setor sem tarefas não vira donut
-        atrasadas = base.filter(and_(
-            Tarefa.data_prazo < now,
-            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO]),
-        )).count()
-        resultado.append({
-            "setor_id": setor.id,
-            "setor_nome": setor.nome,
-            "total_tarefas": total,
-            "pendentes": base.filter(Tarefa.status == StatusTarefa.PENDENTE).count(),
-            "em_andamento": base.filter(Tarefa.status == StatusTarefa.EM_ANDAMENTO).count(),
-            "concluidas": base.filter(Tarefa.status == StatusTarefa.CONCLUIDA).count(),
-            "atrasadas": atrasadas,
-        })
-    return resultado
+
+    def _quando(condicao):
+        """1 quando a linha satisfaz, 0 quando não -- somado vira contagem."""
+        return func.sum(case((condicao, 1), else_=0))
+
+    atrasada = and_(
+        Tarefa.data_prazo < now,
+        Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO]),
+    )
+
+    linhas = (_aplicar_escopo(
+        db.query(
+            Setor.id.label("setor_id"),
+            Setor.nome.label("setor_nome"),
+            func.count(Tarefa.id).label("total"),
+            _quando(Tarefa.status == StatusTarefa.PENDENTE).label("pendentes"),
+            _quando(Tarefa.status == StatusTarefa.EM_ANDAMENTO).label("em_andamento"),
+            _quando(Tarefa.status == StatusTarefa.CONCLUIDA).label("concluidas"),
+            _quando(atrasada).label("atrasadas"),
+        ).join(Setor, Tarefa.setor_id == Setor.id), db, current_user)
+        .group_by(Setor.id, Setor.nome)
+        .order_by(Setor.nome)
+        .all())
+
+    # Setor sem tarefa não vira donut -- com o join, ele nem chega aqui.
+    return [{
+        "setor_id": l.setor_id,
+        "setor_nome": l.setor_nome,
+        "total_tarefas": int(l.total or 0),
+        "pendentes": int(l.pendentes or 0),
+        "em_andamento": int(l.em_andamento or 0),
+        "concluidas": int(l.concluidas or 0),
+        "atrasadas": int(l.atrasadas or 0),
+    } for l in linhas]
 
 @router.get("/{tarefa_id}/link-envio")
 def link_envio(
@@ -181,7 +201,23 @@ def list_tarefas(
     if status:
         query = query.filter(Tarefa.status == status)
 
-    return query.options(joinedload(Tarefa.obrigacao)).order_by(Tarefa.data_prazo.asc()).all()
+    # Sem estes carregamentos a listagem vira N+1: `TarefaResponse` expõe
+    # `responsaveis` e `supervisor`, e o Pydantic ia buscar cada um no banco na
+    # hora de serializar -- uma query POR TAREFA. Medido antes de corrigir: 500
+    # tarefas = 503 queries. Em SQLite local isso custava 78 ms e passava
+    # despercebido; contra o Postgres do servidor, cada uma é um ida-e-volta de
+    # rede, e a tela levava segundos.
+    #
+    # `selectinload` (não joinedload) para os responsáveis, porque é uma coleção:
+    # o join multiplicaria as linhas da tarefa pelo número de responsáveis.
+    return (query
+            .options(
+                joinedload(Tarefa.obrigacao),      # exige_documento lê a obrigação
+                joinedload(Tarefa.supervisor),
+                selectinload(Tarefa.responsaveis),
+            )
+            .order_by(Tarefa.data_prazo.asc())
+            .all())
 
 @router.get("/{tarefa_id}", response_model=TarefaResponse)
 def get_tarefa(

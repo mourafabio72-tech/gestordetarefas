@@ -6,10 +6,11 @@ from .database import engine, Base
 from .seguranca import aplicar_headers
 from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico
 from .services.scheduler import start_scheduler
-from .init_db import migrate, seed_admin, ensure_admin_grupo, seed_grupos
+from .init_db import migrate, criar_indices, seed_admin, ensure_admin_grupo, seed_grupos
 
 Base.metadata.create_all(bind=engine)
 migrate()
+criar_indices()
 seed_admin()
 ensure_admin_grupo()
 seed_grupos()
