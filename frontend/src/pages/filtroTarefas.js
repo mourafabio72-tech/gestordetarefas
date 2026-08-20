@@ -85,10 +85,15 @@ export function presetsVencimento(hoje = new Date()) {
   };                                             // meia-noite o UTC vira outro dia
   const ano = hoje.getFullYear();
   const mes = hoje.getMonth();
+  // Rótulos curtos: a barra tem de caber numa linha só, e o nome por extenso
+  // fica no `title` de cada botão.
   return [
-    { rotulo: 'Vencidas', de: '', ate: iso(new Date(ano, mes, hoje.getDate() - 1)) },
-    { rotulo: 'Próx. 7 dias', de: iso(hoje), ate: iso(new Date(ano, mes, hoje.getDate() + 7)) },
-    { rotulo: 'Este mês', de: iso(new Date(ano, mes, 1)), ate: iso(new Date(ano, mes + 1, 0)) },
+    { rotulo: 'Vencidas', titulo: 'Vencimento já passou',
+      de: '', ate: iso(new Date(ano, mes, hoje.getDate() - 1)) },
+    { rotulo: '7 dias', titulo: 'Vence nos próximos 7 dias',
+      de: iso(hoje), ate: iso(new Date(ano, mes, hoje.getDate() + 7)) },
+    { rotulo: 'Mês', titulo: 'Vence dentro deste mês',
+      de: iso(new Date(ano, mes, 1)), ate: iso(new Date(ano, mes + 1, 0)) },
   ];
 }
 
