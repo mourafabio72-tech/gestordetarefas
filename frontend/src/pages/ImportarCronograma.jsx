@@ -185,7 +185,7 @@ export default function ImportarCronograma() {
           </div>
 
           <div className="overflow-x-auto max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-sm">
+            <table className="table-app">
               <thead className="sticky top-0 bg-white">
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-3 font-medium">Atividade</th>

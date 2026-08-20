@@ -252,7 +252,7 @@ export default function Modelos() {
           <p className="text-sm text-gray-500">Nenhum modelo ainda. Suba o primeiro documento acima.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="table-app">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-4 font-medium">Arquivo</th>

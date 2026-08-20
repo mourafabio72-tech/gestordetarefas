@@ -162,7 +162,7 @@ export default function RelacaoObrigacoes() {
           <p className="text-gray-500 text-center py-8">Nenhuma obrigação com esses filtros.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="table-app">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-3 font-medium">Obrigação</th>

@@ -130,7 +130,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-800 mb-4">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
 
       {/* Cards compactos, uma linha só */}
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
@@ -151,12 +151,12 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="card">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Distribuição por status</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Distribuição por status</h2>
           <Donut stats={stats} />
         </div>
 
         <div className="card">
-          <h2 className="text-base font-semibold text-gray-800 mb-3">Próximas do vencimento</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-3">Próximas do vencimento</h2>
           {tarefasProximas.length === 0 ? (
             <p className="text-gray-500 text-center py-4 text-sm">Nenhuma tarefa pendente</p>
           ) : (
@@ -192,7 +192,7 @@ export default function Dashboard() {
       {/* Um donut por setor */}
       {porSetor.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-gray-800 mb-3">Por setor</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-3">Por setor</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {porSetor.map((s) => <DonutSetor key={s.setor_id} setor={s} />)}
           </div>

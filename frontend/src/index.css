@@ -32,6 +32,31 @@ body {
     background: #fffdf9;
   }
 
+  /* ── Escala tipográfica ────────────────────────────────────────────────
+     Referência: a tela de Tarefas. Antes de padronizar, a mesma listagem
+     aparecia em tamanhos diferentes conforme a tela — metade das tabelas
+     trazia `text-sm` e a outra metade herdava os 16px do corpo, e o Dashboard
+     titulava em text-xl onde as demais usavam text-2xl.
+
+       text-2xl    título da página (<h1>)
+       text-xl     título de seção (<h2>) e número de indicador
+       text-sm     corpo: tabelas, formulários, subtítulo de página
+       text-xs     apoio: legenda de campo, filtro
+       text-[11px] miúdo: badge, rodapé de card, item de menu
+       text-[10px] micro: etiqueta de status dentro do card
+
+     Telas públicas (Login, AtivarAcesso, EnviarComprovante) são cartões
+     centrados, fora do layout com barra lateral, e têm escala própria.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* Tabela padrão das telas. Existia divergência: metade das tabelas trazia
+     `text-sm` na tag e a outra metade não trazia nada, herdando os 16px do
+     corpo — a mesma listagem parecia de tamanhos diferentes conforme a tela.
+     14px é o tamanho do corpo da tela de Tarefas, tomado como referência. */
+  .table-app {
+    @apply w-full text-sm;
+  }
+
   .card {
     @apply bg-white rounded-xl p-4 border border-gray-200;
     box-shadow: 0 1px 3px rgba(86, 100, 80, 0.08);

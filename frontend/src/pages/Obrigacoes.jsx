@@ -297,7 +297,7 @@ export default function Obrigacoes() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="table-app">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500">
                   <th className="py-2 px-2 w-8">

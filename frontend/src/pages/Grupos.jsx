@@ -213,7 +213,7 @@ export default function Grupos() {
       {/* Cadastro de grupos */}
       <div className="card mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="table-app">
             <thead>
               <tr className="border-b border-gray-200 text-left text-gray-600">
                 <th className="py-2 px-3 font-semibold">Grupo</th>
@@ -266,10 +266,10 @@ export default function Grupos() {
       </div>
 
       {/* Usuários */}
-      <h2 className="text-lg font-semibold text-gray-800 mb-3">Usuários</h2>
+      <h2 className="text-xl font-semibold text-gray-800 mb-3">Usuários</h2>
       <div className="card">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="table-app">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-semibold text-gray-600">Nome</th>
