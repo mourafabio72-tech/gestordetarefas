@@ -32,6 +32,9 @@ OBRIGAÇÃO (modelo) --vínculo N empresas--> GERADOR --> TAREFA (empresa+compet
 | ajuste_nao_util | str | `antecipar` \| `postergar` \| `nenhum` |
 | sabado_util | bool (False) | Sábado é útil? |
 | competencia_ref | str | Deslocamento em meses entre a entrega e o fato gerador: `-1` (ou `mes_anterior`), `0` (`mesmo_mes`), `-2` (SPED, EFD-Contribuições), `-3`, `1` (`mes_seguinte`), `-12` (`ano_anterior`). Apelidos antigos seguem aceitos. |
+| **ancora** | str (null) | `fechamento` = etapa do processo, vence em relação ao marco da empresa; null = prazo legal próprio (padrão) |
+| **ancora_dias_antes** | int (0) | dias antes do marco; 0 = no próprio dia do fechamento |
+| **ancora_tipo_dias** | str | `uteis` \| `corridos` |
 | exige_robo | bool (False) | Exigir Robô? |
 | passivel_multa | bool (False) | Passível de multa? → vira `gera_multa` na tarefa |
 | alerta_guia_nao_lida | bool (False) | Alerta guia ñ-lida? |
@@ -45,6 +48,42 @@ Vocabulários (alinhados ao cadastro de empresa):
 - regimes: `lucro_real`, `lucro_presumido`, `simples_nacional`, `mei`, `terceiro_setor`
 - segmentos: `comercio`, `industria`, `servico`, `terceiro_setor`
   (⚠️ hoje o empresa usa também `comercio_servico`; reconciliar no cadastro de empresa.)
+
+## 1b. Prazo que varia por empresa — o marco de fechamento
+
+Duas famílias de obrigação convivem e não se parecem:
+
+- **Prazo em lei** (SPED, DEFIS, DARF): a data é a mesma para toda empresa.
+  `ancora` fica NULL e vale a regra própria da obrigação. É o padrão e a maioria.
+- **Etapa do fechamento** (lançar notas, conciliar, balancete): não tem data
+  legal — tem que caber ANTES do fechamento daquele cliente, que varia.
+
+Para as segundas, a data sai do **marco da empresa** (`empresas.fechamento_tipo`
++ `fechamento_dia`) recuado por `ancora_dias_antes`:
+
+```
+vencimento = marco_da_empresa − ancora_dias_antes (úteis ou corridos)
+```
+
+O cadastro é **um por empresa** (o marco) mais **um por obrigação** (a folga),
+e não o produto dos dois. Muda o marco de um cliente e a cadeia inteira dele
+desloca junto.
+
+Empresa ancorada mas SEM marco definido cai na regra própria da obrigação:
+falta de cadastro não impede a tarefa de nascer.
+
+Exemplo (set/2026, marco A = dia 15, marco B = 5º dia útil):
+
+| Obrigação | dias antes | Empresa A | Empresa B |
+|---|---|---|---|
+| Lançar notas | 6 úteis | 07/09 | 28/08 |
+| Conciliar banco | 3 úteis | 10/09 | 02/09 |
+| Balancete | 0 | 15/09 | 07/09 |
+| EFD-Contribuições (sem âncora) | — | 14/09 | 14/09 |
+
+Fora do escopo por ora: **dependência** entre obrigações (bloquear a conclusão
+de uma etapa cuja anterior não foi concluída). Trava o trabalho durante a
+implantação; aqui só se calcula data.
 
 ## 2. Público-alvo (targeting) e vínculo com empresas
 A obrigação define a QUEM se aplica de dois modos, combináveis:

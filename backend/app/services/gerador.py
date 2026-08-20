@@ -109,6 +109,50 @@ def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util
     return d
 
 
+def calc_marco_fechamento(empresa, mes: int, ano: int, sabado_util: bool = False):
+    """Data do fechamento contábil DESTA empresa no mês de entrega, ou None.
+
+    None quer dizer "esta empresa não usa marco" -- e aí toda obrigação dela cai
+    no prazo legal próprio, que é o comportamento de sempre.
+    """
+    tipo = (getattr(empresa, "fechamento_tipo", None) or "").strip()
+    if not tipo:
+        return None
+    return calc_prazo(mes, ano, tipo, getattr(empresa, "fechamento_dia", None),
+                      "antecipar", sabado_util)
+
+
+def calc_vencimento(o, empresa, mes: int, ano: int):
+    """Vencimento da tarefa: ancorado no marco da empresa, ou regra própria.
+
+    Duas obrigações convivem no mesmo escritório e não se parecem:
+
+      · SPED, DEFIS, DARF -- prazo é lei, igual para toda empresa. Regra própria,
+        e nada muda para elas (é o caso da imensa maioria, e o padrão).
+      · Etapas do fechamento -- lançar notas, conciliar, fechar balancete. Não
+        têm data legal: têm que caber ANTES do fechamento daquele cliente, que
+        varia de cliente para cliente.
+
+    Para as segundas, a data sai do marco da empresa recuado por
+    `ancora_dias_antes`. Muda o marco de um cliente e a cadeia inteira dele
+    desloca junto, sem revisar obrigação por obrigação.
+
+    Empresa ancorada mas SEM marco definido cai na regra própria da obrigação:
+    falta de cadastro não pode impedir a tarefa de nascer.
+    """
+    sab = bool(o.sabado_util)
+    if (o.ancora or "") == "fechamento":
+        marco = calc_marco_fechamento(empresa, mes, ano, sab)
+        if marco is not None:
+            dias = int(o.ancora_dias_antes or 0)
+            if dias <= 0:
+                return marco                     # é o próprio marco (o balancete)
+            # Recuar N dias a partir do marco é a MESMA conta do prazo interno.
+            return calc_prazo_interno(marco, dias, o.ancora_tipo_dias or "uteis", sab)
+    return calc_prazo(mes, ano, o.regra_prazo_tipo, o.regra_prazo_dia,
+                      o.ajuste_nao_util, sab)
+
+
 def _dia_util_anterior(d: date, sabado_util: bool) -> date:
     """Recua até cair num dia útil (inclui o próprio d se já for útil)."""
     for _ in range(31):
@@ -249,12 +293,13 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
         if str(mes_entrega) not in _csv_set(o.meses_ativos):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
-        vencimento = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
-                                o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
-        prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
-                                           o.tipo_dias, bool(o.sabado_util))
         n_o = 0
         for emp in empresas_alvo(db, o):
+            # Vencimento POR EMPRESA: obrigação ancorada no fechamento tem data
+            # diferente em cada cliente, então o cálculo entra no laço.
+            vencimento = calc_vencimento(o, emp, mes_entrega, ano_entrega)
+            prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
+                                               o.tipo_dias, bool(o.sabado_util))
             if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento):
                 criadas += 1
                 n_o += 1
@@ -262,7 +307,8 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
                 puladas += 1
         if n_o:
             por_obrigacao.append({"obrigacao": o.nome, "competencia": competencia,
-                                  "prazo": vencimento.isoformat(), "criadas": n_o})
+                                  "ancorada": (o.ancora or "") == "fechamento",
+                                  "criadas": n_o})
     db.commit()
     return {"mes_entrega": f"{mes_entrega:02d}/{ano_entrega:04d}",
             "criadas": criadas, "puladas": puladas, "detalhe": por_obrigacao}
@@ -286,8 +332,7 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
         if not _no_alvo(o, empresa):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
-        vencimento = calc_prazo(mes_entrega, ano_entrega, o.regra_prazo_tipo,
-                                o.regra_prazo_dia, o.ajuste_nao_util, bool(o.sabado_util))
+        vencimento = calc_vencimento(o, empresa, mes_entrega, ano_entrega)
         prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
                                            o.tipo_dias, bool(o.sabado_util))
         if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo_interno, vencimento):

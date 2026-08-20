@@ -34,6 +34,7 @@ const emptyForm = {
   meses_ativos: '1,2,3,4,5,6,7,8,9,10,11,12',
   lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
   sabado_util: false, competencia_ref: 'mes_anterior',
+  ancora: '', ancora_dias_antes: 0, ancora_tipo_dias: 'uteis',
   exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
   comentario_padrao: '', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
 };
@@ -524,6 +525,45 @@ export default function Obrigacoes() {
                 </button>
                 {secoes.recorrencia && (<div>
                 <div className="grid grid-cols-3 gap-4">
+                  <div className="md:col-span-2 border border-primary-200 bg-primary-50/40 rounded-lg p-3 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={form.ancora === 'fechamento'}
+                        onChange={(e) => set('ancora', e.target.checked ? 'fechamento' : '')}
+                      />
+                      Esta obrigação é etapa do fechamento contábil
+                    </label>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Marque só as etapas do processo (lançar notas, conciliar, balancete).
+                      O vencimento sai do <strong>fechamento de cada empresa</strong>, então varia
+                      de cliente para cliente. Obrigação com prazo em lei — SPED, DEFIS, DARF —
+                      deixe desmarcada: o prazo é o mesmo para todos.
+                    </p>
+                    {form.ancora === 'fechamento' && (
+                      <div className="flex items-end gap-2 mt-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Vence</label>
+                          <input
+                            type="number" min="0" max="60"
+                            value={form.ancora_dias_antes}
+                            onChange={(e) => set('ancora_dias_antes', e.target.value)}
+                            className="input-field w-20"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">dias</label>
+                          <select value={form.ancora_tipo_dias} onChange={(e) => set('ancora_tipo_dias', e.target.value)} className="input-field w-28">
+                            <option value="uteis">úteis</option>
+                            <option value="corridos">corridos</option>
+                          </select>
+                        </div>
+                        <span className="text-xs text-gray-600 pb-2">
+                          antes do fechamento {Number(form.ancora_dias_antes) === 0 && '(0 = no próprio dia do fechamento)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo</label>
                     <select value={form.regra_prazo_tipo} onChange={(e) => set('regra_prazo_tipo', e.target.value)} className="input-field">

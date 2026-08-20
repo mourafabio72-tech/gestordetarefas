@@ -37,6 +37,11 @@ def migrate():
         ("usuario_convite_token", "ALTER TABLE usuarios ADD COLUMN convite_token VARCHAR(64)"),
         ("usuario_ativado", "ALTER TABLE usuarios ADD COLUMN ativado BOOLEAN"),
         ("obrigacao_exige_documento", "ALTER TABLE obrigacoes ADD COLUMN exige_documento BOOLEAN"),
+        ("fechamento_tipo", "ALTER TABLE empresas ADD COLUMN fechamento_tipo VARCHAR(20)"),
+        ("fechamento_dia", "ALTER TABLE empresas ADD COLUMN fechamento_dia INTEGER"),
+        ("ancora", "ALTER TABLE obrigacoes ADD COLUMN ancora VARCHAR(20)"),
+        ("ancora_dias_antes", "ALTER TABLE obrigacoes ADD COLUMN ancora_dias_antes INTEGER DEFAULT 0"),
+        ("ancora_tipo_dias", "ALTER TABLE obrigacoes ADD COLUMN ancora_tipo_dias VARCHAR(10) DEFAULT 'uteis'"),
     ]
 
     for col_name, sql in migrations:

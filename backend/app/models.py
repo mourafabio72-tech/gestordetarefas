@@ -77,6 +77,13 @@ class Empresa(Base):
     # Responsável/supervisor padrão do cliente — as tarefas geradas herdam daqui.
     responsavel_id = Column(Integer, ForeignKey("usuarios.id"))
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"))
+    # Marco de fechamento contábil do mês DESTA empresa (ex.: "10º dia útil").
+    # As obrigações que fazem parte do processo de fechamento se posicionam em
+    # relação a ele, em vez de cada uma trazer a própria data: muda o marco, a
+    # cadeia inteira desloca junto. Vazio = a empresa não usa marco, e toda
+    # obrigação cai no prazo legal próprio, como sempre foi.
+    fechamento_tipo = Column(String(20))   # dia_util|dia_fixo|ultimo_dia_util|primeiro_dia_util
+    fechamento_dia = Column(Integer)       # qual dia (útil ou do mês), quando o tipo pede
     bloqueado = Column(Boolean, default=False)  # bloqueada -> tarefas somem, gerador ignora
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -218,6 +225,14 @@ class Obrigacao(Base):
     ajuste_nao_util = Column(String(12), default="antecipar")  # antecipar|postergar|nenhum
     sabado_util = Column(Boolean, default=False)
     competencia_ref = Column(String(15), default="mes_anterior")  # mes_anterior|mesmo_mes|mes_seguinte|ano_anterior
+
+    # Ancoragem no marco de fechamento da empresa. NULL (o padrão) = obrigação
+    # com prazo legal próprio -- SPED, DEFIS e a maioria. 'fechamento' = etapa
+    # do processo contábil, cujo vencimento sai do marco da empresa recuado por
+    # `ancora_dias_antes` (0 = é o próprio marco, caso do balancete).
+    ancora = Column(String(20))                       # NULL|fechamento
+    ancora_dias_antes = Column(Integer, default=0)
+    ancora_tipo_dias = Column(String(10), default="uteis")   # uteis|corridos
 
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.

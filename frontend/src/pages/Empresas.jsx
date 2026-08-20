@@ -6,7 +6,19 @@ const EMPRESA_VAZIA = {
   razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
   endereco: '', regime_tributario: 'indefinido', segmento: '', grupo: '',
   ativo: true, responsavel_id: '', supervisor_id: '',
+  fechamento_tipo: '', fechamento_dia: '',
 };
+
+// Marco de fechamento contábil da empresa. As obrigações que fazem parte do
+// processo se posicionam em relação a ele — muda aqui, a cadeia inteira desta
+// empresa desloca junto.
+const FECHAMENTO = [
+  { value: '', label: 'Sem marco definido' },
+  { value: 'dia_util', label: 'N-ésimo dia útil' },
+  { value: 'dia_fixo', label: 'Dia fixo do mês' },
+  { value: 'ultimo_dia_util', label: 'Último dia útil' },
+  { value: 'primeiro_dia_util', label: 'Primeiro dia útil' },
+];
 
 const REGIMES = [
   { value: 'indefinido', label: 'Indefinido' },
@@ -155,6 +167,8 @@ export default function Empresas() {
       telefone: empresa.telefone || '',
       endereco: empresa.endereco || '',
       regime_tributario: empresa.regime_tributario || 'indefinido',
+      fechamento_tipo: empresa.fechamento_tipo || '',
+      fechamento_dia: empresa.fechamento_dia ?? '',
       segmento: empresa.segmento || '',
       grupo: empresa.grupo || '',
       ativo: empresa.ativo !== false,
@@ -447,6 +461,36 @@ export default function Empresas() {
                   className="input-field"
                   placeholder="ex.: Markbuilding"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fechamento contábil
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.fechamento_tipo}
+                    onChange={(e) => setFormData({ ...formData, fechamento_tipo: e.target.value })}
+                    className="input-field"
+                  >
+                    {FECHAMENTO.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                  {(formData.fechamento_tipo === 'dia_util' || formData.fechamento_tipo === 'dia_fixo') && (
+                    <input
+                      type="number" min="1" max="31"
+                      value={formData.fechamento_dia}
+                      onChange={(e) => setFormData({ ...formData, fechamento_dia: e.target.value })}
+                      className="input-field w-24"
+                      placeholder={formData.fechamento_tipo === 'dia_util' ? '10' : '15'}
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Quando esta empresa fecha o mês. As obrigações marcadas como etapa do
+                  fechamento vencem em relação a esta data — muda aqui e todas se ajustam.
+                  Em branco, cada obrigação usa o próprio prazo legal.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Situação</label>

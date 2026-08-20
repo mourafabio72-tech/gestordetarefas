@@ -100,6 +100,9 @@ class EmpresaBase(BaseModel):
     ativo: Optional[bool] = True
     responsavel_id: Optional[int] = None
     supervisor_id: Optional[int] = None
+    # Marco de fechamento contábil desta empresa (ver models.Empresa)
+    fechamento_tipo: Optional[str] = None
+    fechamento_dia: Optional[int] = None
 
 class EmpresaCreate(EmpresaBase):
     pass
@@ -201,6 +204,9 @@ class ObrigacaoBase(BaseModel):
     supervisor_id: Optional[int] = None
     tempo_previsto_min: Optional[int] = None
     regra_prazo_tipo: str = "ultimo_dia_util"
+    ancora: Optional[str] = None                 # NULL|fechamento
+    ancora_dias_antes: Optional[int] = 0
+    ancora_tipo_dias: Optional[str] = "uteis"
     regra_prazo_dia: Optional[int] = None
     meses_ativos: str = "1,2,3,4,5,6,7,8,9,10,11,12"
     lembrar_dias_antes: int = 5
@@ -229,6 +235,9 @@ class ObrigacaoUpdate(BaseModel):
     supervisor_id: Optional[int] = None
     tempo_previsto_min: Optional[int] = None
     regra_prazo_tipo: Optional[str] = None
+    ancora: Optional[str] = None
+    ancora_dias_antes: Optional[int] = None
+    ancora_tipo_dias: Optional[str] = None
     regra_prazo_dia: Optional[int] = None
     meses_ativos: Optional[str] = None
     lembrar_dias_antes: Optional[int] = None

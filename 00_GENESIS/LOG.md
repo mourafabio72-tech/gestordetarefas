@@ -144,3 +144,36 @@ motivo de `contexts/bilhete.js`: roda em prova Node pura.
 Provas: `frontend/provas/prova_filtro_tarefas.js` (13 casos). Demais passando —
 entrada_sso 7, sso_f4 7, e no backend competencia_prazo, consultas_rapidas,
 seguranca_f7 19, sso_f3 25. Build sem erro.
+
+---
+
+## 2026-08-20 — prazo por empresa: marco de fechamento
+
+Pergunta do usuario: mesma obrigacao, prazo diferente por empresa (balancete dia
+15 na A, 5o dia util na B, dia 18 na C). E, mais que isso: as etapas que
+antecedem o balancete precisam caber antes do prazo daquele cliente.
+
+Preocupacoes que ele levantou, e que definiram o desenho:
+1. "vou ter que verificar cada obrigacao?" — nao. O padrao continua sendo prazo
+   legal proprio; marca-se so as etapas do fechamento, que sao poucas.
+2. "dependencia trava o processo na implantacao?" — trava. Por isso ficou de
+   fora: aqui so se CALCULA DATA, nada bloqueia conclusao fora de ordem.
+
+Desenho: a EMPRESA ganha um marco (`fechamento_tipo` + `fechamento_dia`) e a
+OBRIGACAO diz quantos dias antes dele vence (`ancora`, `ancora_dias_antes`,
+`ancora_tipo_dias`). Cadastro = um por empresa + um por obrigacao, e nao o
+produto dos dois. Muda o marco, a cadeia inteira daquele cliente desloca junto.
+
+`calc_vencimento(o, empresa, mes, ano)` decide: ancorada e com marco -> sai do
+marco; senao -> regra propria. O calculo do vencimento entrou no laco das
+empresas no gerador, porque agora a mesma obrigacao tem data diferente em cada
+uma. Empresa ancorada sem marco cai na regra propria: falta de cadastro nao
+impede tarefa de nascer.
+
+Telas: campo "Fechamento contabil" no cadastro da empresa; caixa "Esta obrigacao
+e etapa do fechamento contabil" no cadastro da obrigacao, com dias antes e
+uteis/corridos.
+
+Provas: `backend/provas/prova_marco_fechamento.py`, com o cenario do usuario
+(tres empresas, tres marcos) e a cadeia de tres etapas deslocando junto. Demais
+passando. Spec atualizada (secao 1b).
