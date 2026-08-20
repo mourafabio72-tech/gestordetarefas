@@ -16,21 +16,49 @@ def _csv_set(s):
     return {x.strip() for x in (s or "").split(",") if x.strip()}
 
 
-def calc_competencia(mes_entrega: int, ano_entrega: int, ref: str) -> str:
+# Apelidos antigos de `competencia_ref`, agora expressos como deslocamento em
+# meses. Ficam aceitos para sempre: é o que está gravado nas obrigações já
+# cadastradas, e converter dado em produção para ganhar uniformidade seria
+# trocar risco por estética.
+_REF_APELIDOS = {
+    "mes_anterior": -1,
+    "mesmo_mes": 0,
+    "mes_seguinte": 1,
+    "ano_anterior": -12,
+}
+
+
+def deslocamento_competencia(ref) -> int:
+    """Quantos meses a competência fica ANTES do mês de entrega (negativo = antes).
+
+    Aceita o apelido antigo ou o número direto ("-2", -2). O número é o que
+    destrava a família SPED: EFD-Contribuições, DCTF e afins vencem no segundo
+    mês subsequente ao fato gerador, e com os quatro apelidos de antes a
+    competência saía um mês adiantada -- fato gerador de julho virava tarefa
+    marcada como agosto, e o comprovante não casava na baixa.
+    """
+    if ref is None or ref == "":
+        return -1                      # o padrão histórico do campo
+    if isinstance(ref, int):
+        return ref
+    texto = str(ref).strip()
+    if texto in _REF_APELIDOS:
+        return _REF_APELIDOS[texto]
+    try:
+        return int(texto)
+    except ValueError:
+        return -1                      # valor estranho não pode gerar tarefa fora de hora
+
+
+def calc_competencia(mes_entrega: int, ano_entrega: int, ref) -> str:
     """Competência (MM/AAAA) referida por um mês de entrega."""
-    m, a = mes_entrega, ano_entrega
-    if ref == "mes_anterior":
-        m -= 1
-    elif ref == "mes_seguinte":
-        m += 1
-    elif ref == "ano_anterior":
-        a -= 1
-    # normaliza virada de ano
-    if m < 1:
-        m += 12; a -= 1
-    elif m > 12:
-        m -= 12; a += 1
-    return f"{m:02d}/{a:04d}"
+    desloc = deslocamento_competencia(ref)
+    # Aritmética em meses absolutos: atravessa qualquer virada de ano, inclusive
+    # deslocamento maior que 12. Somar e "corrigir depois" só funcionava para um
+    # mês de diferença.
+    total = (ano_entrega * 12 + (mes_entrega - 1)) + desloc
+    a, m = divmod(total, 12)
+    return f"{m + 1:02d}/{a:04d}"
 
 
 def _e_dia_util(d: date, sabado_util: bool) -> bool:

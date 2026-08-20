@@ -3,7 +3,21 @@ import { obrigacoesAPI, empresasAPI, setoresAPI } from '../services/api';
 import { FileStack, Download, Unlink } from 'lucide-react';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-const COMP = { mes_anterior: 'Mês anterior', mesmo_mes: 'Mesmo mês', mes_seguinte: 'Mês seguinte', ano_anterior: 'Ano anterior' };
+// Rótulo da competência de referência. O campo aceita apelido (o formato
+// antigo, ainda gravado nas obrigações existentes) ou deslocamento em meses --
+// que é o que representa SPED e EFD-Contribuições, entregues no 2º mês
+// subsequente ao fato gerador.
+const COMP_APELIDOS = { mes_anterior: -1, mesmo_mes: 0, mes_seguinte: 1, ano_anterior: -12 };
+
+function rotuloCompetencia(ref) {
+  if (ref === null || ref === undefined || ref === '') return '-';
+  const n = ref in COMP_APELIDOS ? COMP_APELIDOS[ref] : parseInt(ref, 10);
+  if (Number.isNaN(n)) return '-';
+  if (n === 0) return 'Mesmo mês';
+  if (n === -12) return 'Ano anterior';
+  if (n < 0) return n === -1 ? 'Mês anterior' : `${-n} meses antes`;
+  return n === 1 ? 'Mês seguinte' : `${n} meses depois`;
+}
 const prazoLabel = (o) => {
   const t = o.regra_prazo_tipo;
   if (t === 'dia_util') return `${o.regra_prazo_dia || 1}º dia útil`;
@@ -172,7 +186,7 @@ export default function RelacaoObrigacoes() {
                         {emps.length ? (emps.length <= 2 ? emps.join(', ') : `${emps.slice(0, 2).join(', ')} +${emps.length - 2}`) : '-'}
                       </td>
                       <td className="py-2 pr-3 text-gray-600 whitespace-nowrap">{prazoLabel(o)}</td>
-                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{COMP[o.competencia_ref] || '-'}</td>
+                      <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{rotuloCompetencia(o.competencia_ref)}</td>
                       <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{mesesLabel(o.meses_ativos)}</td>
                       <td className="py-2 pr-3 text-center">{o.passivel_multa ? '⚠️' : ''}</td>
                       <td className="py-2 pr-3">

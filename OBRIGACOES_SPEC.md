@@ -24,14 +24,14 @@ OBRIGAÇÃO (modelo) --vínculo N empresas--> GERADOR --> TAREFA (empresa+compet
 | setor_id | FK setores (null) | Departamento |
 | responsavel_id | FK usuarios (null) | Responsável (default) |
 | tempo_previsto_min | int (null) | Tempo previsto (min) |
-| regra_prazo_tipo | str | Entrega: `ultimo_dia_util` \| `dia_fixo` \| `primeiro_dia_util` |
+| regra_prazo_tipo | str | Entrega: `ultimo_dia_util` \| `dia_fixo` \| `primeiro_dia_util` \| `dia_util` (N-ésimo dia útil — `regra_prazo_dia` diz qual) |
 | regra_prazo_dia | int (null) | dia do mês quando `dia_fixo` (ex.: 20) |
 | meses_ativos | str CSV | "1,2,…,12" — quais meses ocorre |
 | lembrar_dias_antes | int (5) | Lembrar X dias antes |
 | tipo_dias | str | `corridos` \| `uteis` |
 | ajuste_nao_util | str | `antecipar` \| `postergar` \| `nenhum` |
 | sabado_util | bool (False) | Sábado é útil? |
-| competencia_ref | str | `mes_anterior` \| `mesmo_mes` \| `mes_seguinte` \| `ano_anterior` |
+| competencia_ref | str | Deslocamento em meses entre a entrega e o fato gerador: `-1` (ou `mes_anterior`), `0` (`mesmo_mes`), `-2` (SPED, EFD-Contribuições), `-3`, `1` (`mes_seguinte`), `-12` (`ano_anterior`). Apelidos antigos seguem aceitos. |
 | exige_robo | bool (False) | Exigir Robô? |
 | passivel_multa | bool (False) | Passível de multa? → vira `gera_multa` na tarefa |
 | alerta_guia_nao_lida | bool (False) | Alerta guia ñ-lida? |

@@ -73,3 +73,36 @@ quebra. As provas anteriores seguem passando (seguranca_f7: 19, sso_f3: 25).
 
 Nao mexido de proposito: paginacao da listagem. Muda o contrato da API e o
 front junto, e com 2 consultas constantes o problema imediato saiu.
+
+---
+
+## 2026-08-20 — competencia de referencia vira deslocamento em meses
+
+Pergunta do usuario: SPED entregue ate o decimo dia do SEGUNDO mes subsequente
+ao fato gerador — julho gera entrega em setembro. Isso era representavel?
+
+Nao era. `competencia_ref` tinha quatro apelidos (mes_anterior, mesmo_mes,
+mes_seguinte, ano_anterior) e nenhum diz "dois meses antes". Gerando as tarefas
+de setembro com mes_anterior, a competencia saia 08/2026: a tarefa nascia um mes
+adiantada. Como a competencia e a chave de baixa do e-validador, o comprovante
+do SPED de julho nao casaria com a tarefa. Vale para toda a familia SPED —
+EFD-Contribuicoes, DCTF — que vence no 2o mes subsequente.
+
+Agora o campo e um deslocamento em meses, e os apelidos continuam aceitos
+(e o que esta gravado nas obrigacoes ja cadastradas; converter dado em producao
+para ganhar uniformidade seria trocar risco por estetica). A aritmetica passou a
+ser em meses absolutos com divmod: atravessa virada de ano e deslocamento maior
+que 12, coisa que o "soma e corrige depois" so fazia para um mes.
+
+Achado no caminho: `regra_prazo_tipo` ja tinha `dia_util` (N-esimo dia util,
+via `_nth_dia_util`) implementado no backend, mas nunca foi exposto na tela nem
+documentado no spec. Era exatamente a regra que o SPED usa. Agora esta no select,
+com o campo "qual dia util". Em set/2026 a diferenca e concreta: dia fixo 10 cai
+em 10/09, o 10o dia util cai em 14/09.
+
+Modelo confirmado ao usuario: a REGRA fica na obrigacao, as DATAS ficam em cada
+tarefa (`competencia`, `data_vencimento` legal, `data_prazo` interno derivado do
+vencimento por `lembrar_dias_antes`).
+
+Provas: `backend/provas/prova_competencia_prazo.py`. As demais seguem passando
+(consultas_rapidas, seguranca_f7 19, sso_f3 25). Build do frontend sem erro.

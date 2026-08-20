@@ -530,19 +530,31 @@ export default function Obrigacoes() {
                       <option value="ultimo_dia_util">Último dia útil</option>
                       <option value="primeiro_dia_util">Primeiro dia útil</option>
                       <option value="dia_fixo">Dia fixo</option>
+                      <option value="dia_util">N-ésimo dia útil</option>
                     </select>
                   </div>
-                  {form.regra_prazo_tipo === 'dia_fixo' && (
+                  {(form.regra_prazo_tipo === 'dia_fixo' || form.regra_prazo_tipo === 'dia_util') && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Dia do mês</label>
-                      <input type="number" min="1" max="31" value={form.regra_prazo_dia} onChange={(e) => set('regra_prazo_dia', e.target.value)} className="input-field" placeholder="20" />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {form.regra_prazo_tipo === 'dia_util' ? 'Qual dia útil' : 'Dia do mês'}
+                      </label>
+                      <input type="number" min="1" max="31" value={form.regra_prazo_dia} onChange={(e) => set('regra_prazo_dia', e.target.value)} className="input-field"
+                             placeholder={form.regra_prazo_tipo === 'dia_util' ? '10' : '20'} />
+                      {form.regra_prazo_tipo === 'dia_util' && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Ex.: 10 = 10º dia útil do mês, que muda de data a cada mês.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
                     <select value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
-                      <option value="mes_anterior">Mês anterior</option>
-                      <option value="mesmo_mes">Mesmo mês</option>
+                      <option value="mesmo_mes">Mesmo mês da entrega</option>
+                      <option value="mes_anterior">Mês anterior (1 mês antes)</option>
+                      <option value="-2">2 meses antes — SPED, EFD-Contribuições</option>
+                      <option value="-3">3 meses antes</option>
+                      <option value="-6">6 meses antes</option>
                       <option value="mes_seguinte">Mês seguinte</option>
                       <option value="ano_anterior">Ano anterior</option>
                     </select>
