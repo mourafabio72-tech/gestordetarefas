@@ -362,103 +362,95 @@ export default function Tarefas() {
         </div>
       </div>
 
-      {/* Barra de filtros — uma linha só, em qualquer largura de tela.
-          Com sidebar de 256px e padding, um monitor de 1280 deixa ~976px úteis:
-          larguras fixas não cabiam e a barra quebrava em duas. Os três selects
-          longos ganham `flex-1 min-w-0` e dividem a sobra entre si (é a razão
-          social da empresa que estica); data e atalhos, que não podem encolher
-          sem cortar conteúdo, ficam fixos. */}
-      <div className="flex items-end gap-2 mb-5 text-xs overflow-x-auto">
+      {/* Barra de filtros — uma faixa única de controles, lado a lado.
+          O rótulo de cada select é a própria opção "Todas/Todos", em vez de um
+          label acima: label empilhado dobra a altura da barra e é o que fazia
+          ela ocupar dois andares. Os selects longos dividem a sobra entre si
+          (é a razão social da empresa que estica e quebrava a linha); data e
+          atalhos ficam fixos, porque não encolhem sem cortar conteúdo. */}
+      <div className="flex items-center gap-1 mb-5 text-xs overflow-x-auto">
         {[
-          { chave: 'empresa_id', rotulo: 'Empresa', vazio: 'Todas',
+          { chave: 'empresa_id', vazio: 'Todas as empresas',
             opcoes: empresas.map(e => ({ v: e.id, t: e.razao_social })) },
-          { chave: 'setor_id', rotulo: 'Setor', vazio: 'Todos',
+          { chave: 'setor_id', vazio: 'Todos os setores',
             opcoes: setores.map(x => ({ v: x.id, t: x.nome })) },
-          { chave: 'status', rotulo: 'Status', vazio: 'Todos',
+          { chave: 'status', vazio: 'Todos os status',
             opcoes: Object.entries(statusLabels).map(([v, t]) => ({ v, t })) },
         ].map(f => (
-          <div key={f.chave} className="flex flex-col flex-1 min-w-[88px]">
-            <span className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{f.rotulo}</span>
-            <select
-              value={filtros[f.chave]}
-              onChange={(e) => setFiltros({ ...filtros, [f.chave]: e.target.value })}
-              className="w-full h-8 pl-2 pr-1 text-xs border border-gray-300 rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            >
-              <option value="">{f.vazio}</option>
-              {f.opcoes.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
-            </select>
-          </div>
+          <select
+            key={f.chave}
+            value={filtros[f.chave]}
+            onChange={(e) => setFiltros({ ...filtros, [f.chave]: e.target.value })}
+            className={`flex-1 min-w-[92px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+              filtros[f.chave] ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
+          >
+            <option value="">{f.vazio}</option>
+            {f.opcoes.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
+          </select>
         ))}
 
-        <div className="flex flex-col shrink-0">
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">Competência</span>
-          <select
-            value={filtros.competencia}
-            onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
-            className="w-[96px] h-8 pl-2 pr-1 text-xs border border-gray-300 rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            title="Competência do fato gerador — MM/AAAA"
-          >
-            <option value="">Todas</option>
-            {competenciasDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
-            <option value={SEM_COMPETENCIA}>avulsas</option>
-          </select>
-        </div>
+        <select
+          value={filtros.competencia}
+          onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
+          className={`shrink-0 w-[118px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+            filtros.competencia ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
+          title="Competência do fato gerador — MM/AAAA"
+        >
+          <option value="">Toda competência</option>
+          {competenciasDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value={SEM_COMPETENCIA}>— avulsas</option>
+        </select>
 
-        <div className="flex flex-col shrink-0">
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">Vence de</span>
-          <input
-            type="date"
-            value={filtros.venc_de}
-            onChange={(e) => setFiltros({ ...filtros, venc_de: e.target.value })}
-            className="w-[124px] h-8 px-1.5 text-xs border border-gray-300 rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-          />
-        </div>
-        <div className="flex flex-col shrink-0">
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">Até</span>
-          <input
-            type="date"
-            value={filtros.venc_ate}
-            onChange={(e) => setFiltros({ ...filtros, venc_ate: e.target.value })}
-            className="w-[124px] h-8 px-1.5 text-xs border border-gray-300 rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-          />
-        </div>
+        <span className="shrink-0 text-[11px] text-gray-500 pl-1">Vence</span>
+        <input
+          type="date"
+          value={filtros.venc_de}
+          onChange={(e) => setFiltros({ ...filtros, venc_de: e.target.value })}
+          title="Vencimento a partir de"
+          className={`shrink-0 w-[118px] h-8 px-1 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+            filtros.venc_de ? 'border-primary-400' : 'border-gray-300'}`}
+        />
+        <span className="shrink-0 text-[11px] text-gray-500">a</span>
+        <input
+          type="date"
+          value={filtros.venc_ate}
+          onChange={(e) => setFiltros({ ...filtros, venc_ate: e.target.value })}
+          title="Vencimento até"
+          className={`shrink-0 w-[118px] h-8 px-1 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+            filtros.venc_ate ? 'border-primary-400' : 'border-gray-300'}`}
+        />
 
-        <div className="flex flex-col shrink-0">
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">Atalhos</span>
-          <div className="flex">
-            {presetsVencimento().map((p, i, arr) => (
-              <button
-                key={p.rotulo}
-                type="button"
-                onClick={() => aplicarPreset(p)}
-                title={p.titulo}
-                className={`h-8 px-2 text-[11px] font-medium border transition whitespace-nowrap
-                  ${i === 0 ? 'rounded-l-md' : '-ml-px'} ${i === arr.length - 1 ? 'rounded-r-md' : ''}
-                  ${presetAtivo(p)
-                    ? 'bg-primary-100 border-primary-400 text-primary-800 relative z-10'
-                    : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'}`}
-              >
-                {p.rotulo}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 h-8 shrink-0 pl-1">
-          {temFiltro && (
+        <div className="flex shrink-0 ml-1">
+          {presetsVencimento().map((p, i, arr) => (
             <button
+              key={p.rotulo}
               type="button"
-              onClick={() => setFiltros(filtrosVazios())}
-              title="Limpar todos os filtros"
-              className="text-[11px] text-gray-500 underline hover:text-gray-700 whitespace-nowrap"
+              onClick={() => aplicarPreset(p)}
+              title={p.titulo}
+              className={`h-8 px-2 text-[11px] font-medium border whitespace-nowrap transition
+                ${i === 0 ? 'rounded-l-md' : '-ml-px'} ${i === arr.length - 1 ? 'rounded-r-md' : ''}
+                ${presetAtivo(p)
+                  ? 'bg-primary-100 border-primary-400 text-primary-800 relative z-10'
+                  : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'}`}
             >
-              Limpar
+              {p.rotulo}
             </button>
-          )}
-          <span className="text-[11px] text-gray-500 whitespace-nowrap tabular-nums">
-            {filteredTarefas.length}/{tarefas.length}
-          </span>
+          ))}
         </div>
+
+        {temFiltro && (
+          <button
+            type="button"
+            onClick={() => setFiltros(filtrosVazios())}
+            title="Limpar todos os filtros"
+            className="shrink-0 h-8 px-1.5 text-[11px] text-gray-500 underline hover:text-gray-700 whitespace-nowrap"
+          >
+            Limpar
+          </button>
+        )}
+        <span className="shrink-0 text-[11px] text-gray-500 whitespace-nowrap tabular-nums pl-1">
+          {filteredTarefas.length}/{tarefas.length}
+        </span>
       </div>
 
       {filteredTarefas.length === 0 ? (
