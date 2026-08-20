@@ -106,3 +106,41 @@ vencimento por `lembrar_dias_antes`).
 
 Provas: `backend/provas/prova_competencia_prazo.py`. As demais seguem passando
 (consultas_rapidas, seguranca_f7 19, sso_f3 25). Build do frontend sem erro.
+
+---
+
+## 2026-08-20 — filtro por competencia e por vencimento na tela de Tarefas
+
+Pedido: filtrar tarefas por competencia e por vencimento.
+
+Entregue na barra de filtros: **Competencia** (select alimentado pelas
+competencias que EXISTEM nas tarefas carregadas, mais uma entrada "sem
+competencia" para as avulsas) e **faixa de vencimento** (vence de / ate), com
+tres atalhos — Vencidas, Prox. 7 dias, Este mes. Somam-se aos filtros que ja
+havia (empresa, setor, status), mais contador "N de M" e botao de limpar.
+
+Padrao: o `Padrao_Barra_de_Filtros` da vault e escrito para o stack Flask com
+CSS puro (classes `fu-bar`, `--fu-h`). Esta tela e React + Tailwind e ja tinha
+barra propria. Aplicados os PRINCIPIOS do padrao — altura unica (h-38px em todo
+elemento), label em cima do campo em 11px uppercase, um grupo por filtro,
+presets de periodo, acao alinhada a direita — escritos em Tailwind. Copiar o CSS
+literal criaria duas linguagens visuais na mesma tela.
+
+Decisao: filtragem em memoria, como os filtros que ja existiam nesta tela. A
+listagem ja vem inteira do backend e agora custa 2 consultas fixas, entao
+filtrar no cliente responde na hora, sem ida ao servidor a cada tecla. Se o
+volume crescer a ponto de o payload pesar, o caminho e paginacao no servidor —
+anotado, nao feito.
+
+Dois detalhes que a prova trava:
+- vencimento chega como ISO COM HORA; a comparacao e so de data, senao tarefa
+  que vence as 12:30 do proprio dia escolhido em "ate" ficaria de fora;
+- tarefa SEM vencimento nao entra em faixa nenhuma, em vez de aparecer em todas
+  como se fosse data zero.
+
+A logica saiu do JSX para `frontend/src/pages/filtroTarefas.js`, pelo mesmo
+motivo de `contexts/bilhete.js`: roda em prova Node pura.
+
+Provas: `frontend/provas/prova_filtro_tarefas.js` (13 casos). Demais passando —
+entrada_sso 7, sso_f4 7, e no backend competencia_prazo, consultas_rapidas,
+seguranca_f7 19, sso_f3 25. Build sem erro.

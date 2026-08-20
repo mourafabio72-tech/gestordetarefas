@@ -5,6 +5,8 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2 } from 'lucide-react';
+import { filtrarTarefas, competenciasDe, presetsVencimento,
+         filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -95,9 +97,7 @@ export default function Tarefas() {
   const [showModal, setShowModal] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState(null);
   const [searchParams] = useSearchParams();
-  const [filtros, setFiltros] = useState({
-    empresa_id: '', status: '', setor_id: searchParams.get('setor') || '',
-  });
+  const [filtros, setFiltros] = useState(filtrosVazios(searchParams.get('setor') || ''));
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
@@ -151,12 +151,11 @@ export default function Tarefas() {
     }
   };
 
-  const filteredTarefas = tarefas.filter(t => {
-    if (filtros.empresa_id && t.empresa_id !== parseInt(filtros.empresa_id)) return false;
-    if (filtros.status && t.status !== filtros.status) return false;
-    if (filtros.setor_id && t.setor_id !== parseInt(filtros.setor_id)) return false;
-    return true;
-  });
+  const competenciasDisponiveis = competenciasDe(tarefas);
+  const filteredTarefas = filtrarTarefas(tarefas, filtros);
+  const aplicarPreset = (p) => setFiltros({ ...filtros, venc_de: p.de, venc_ate: p.ate });
+  const presetAtivo = (p) => filtros.venc_de === p.de && filtros.venc_ate === p.ate;
+  const temFiltro = temFiltroAtivo(filtros);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -363,37 +362,113 @@ export default function Tarefas() {
         </div>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <select
-          value={filtros.empresa_id}
-          onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })}
-          className="input-field w-auto"
-        >
-          <option value="">Todas as empresas</option>
-          {empresas.map(e => (
-            <option key={e.id} value={e.id}>{e.razao_social}</option>
-          ))}
-        </select>
-        <select
-          value={filtros.setor_id}
-          onChange={(e) => setFiltros({ ...filtros, setor_id: e.target.value })}
-          className="input-field w-auto"
-        >
-          <option value="">Todos os setores</option>
-          {setores.map(s => (
-            <option key={s.id} value={s.id}>{s.nome}</option>
-          ))}
-        </select>
-        <select
-          value={filtros.status}
-          onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
-          className="input-field w-auto"
-        >
-          <option value="">Todos os status</option>
-          {Object.entries(statusLabels).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+      {/* Barra de filtros — princípios do padrão da casa (altura única, label em
+          cima do campo, um grupo por filtro, presets de período) escritos em
+          Tailwind, que é o que o resto desta tela usa. */}
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Empresa</span>
+          <select
+            value={filtros.empresa_id}
+            onChange={(e) => setFiltros({ ...filtros, empresa_id: e.target.value })}
+            className="input-field w-auto h-[38px]"
+          >
+            <option value="">Todas</option>
+            {empresas.map(e => (
+              <option key={e.id} value={e.id}>{e.razao_social}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Setor</span>
+          <select
+            value={filtros.setor_id}
+            onChange={(e) => setFiltros({ ...filtros, setor_id: e.target.value })}
+            className="input-field w-auto h-[38px]"
+          >
+            <option value="">Todos</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Status</span>
+          <select
+            value={filtros.status}
+            onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
+            className="input-field w-auto h-[38px]"
+          >
+            <option value="">Todos</option>
+            {Object.entries(statusLabels).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Competência</span>
+          <select
+            value={filtros.competencia}
+            onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
+            className="input-field w-auto h-[38px]"
+            title="Competência do fato gerador — MM/AAAA"
+          >
+            <option value="">Todas</option>
+            {competenciasDisponiveis.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            <option value={SEM_COMPETENCIA}>— sem competência (avulsas)</option>
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Vence de</span>
+          <input
+            type="date"
+            value={filtros.venc_de}
+            onChange={(e) => setFiltros({ ...filtros, venc_de: e.target.value })}
+            className="input-field w-auto h-[38px]"
+          />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">até</span>
+          <input
+            type="date"
+            value={filtros.venc_ate}
+            onChange={(e) => setFiltros({ ...filtros, venc_ate: e.target.value })}
+            className="input-field w-auto h-[38px]"
+          />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Atalhos</span>
+          <div className="flex gap-1">
+            {presetsVencimento().map(p => (
+              <button
+                key={p.rotulo}
+                type="button"
+                onClick={() => aplicarPreset(p)}
+                className={`h-[38px] px-3 text-xs font-medium rounded-md border transition ${
+                  presetAtivo(p)
+                    ? 'bg-primary-50 border-primary-400 text-primary-700'
+                    : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'
+                }`}
+              >
+                {p.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+        {temFiltro && (
+          <button
+            type="button"
+            onClick={() => setFiltros(filtrosVazios())}
+            className="h-[38px] px-3 text-xs font-medium text-gray-500 underline hover:text-gray-700"
+          >
+            Limpar filtros
+          </button>
+        )}
+        <span className="h-[38px] flex items-center text-xs text-gray-500 ml-auto">
+          {filteredTarefas.length} de {tarefas.length} tarefa(s)
+        </span>
       </div>
 
       {filteredTarefas.length === 0 ? (
