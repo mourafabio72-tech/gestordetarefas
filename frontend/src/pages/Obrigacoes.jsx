@@ -591,14 +591,19 @@ export default function Obrigacoes() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
                     <select value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
-                      <option value="mesmo_mes">Mesmo mês da entrega</option>
-                      <option value="mes_anterior">Mês anterior (1 mês antes)</option>
-                      <option value="-2">2 meses antes — SPED, EFD-Contribuições</option>
+                      <option value="mesmo_mes">Mesmo mês</option>
+                      <option value="mes_anterior">Mês anterior</option>
+                      <option value="-2">2 meses antes</option>
                       <option value="-3">3 meses antes</option>
                       <option value="-6">6 meses antes</option>
                       <option value="mes_seguinte">Mês seguinte</option>
                       <option value="ano_anterior">Ano anterior</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Qual mês a tarefa se refere, contado a partir do mês de entrega.
+                      SPED e EFD-Contribuições são <strong>2 meses antes</strong>: entrega em
+                      setembro, competência de julho.
+                    </p>
                   </div>
                 </div>
                 <div className="mt-3">
