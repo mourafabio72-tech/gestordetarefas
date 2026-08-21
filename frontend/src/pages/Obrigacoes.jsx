@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
+import { montarPayloadObrigacao } from './payloadObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
@@ -190,16 +191,7 @@ export default function Obrigacoes() {
   const salvar = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        ...form,
-        setor_id: form.setor_id ? parseInt(form.setor_id) : null,
-        responsavel_id: form.responsavel_id ? parseInt(form.responsavel_id) : null,
-        supervisor_id: form.supervisor_id ? parseInt(form.supervisor_id) : null,
-        tempo_previsto_min: form.tempo_previsto_min ? parseInt(form.tempo_previsto_min) : null,
-        regra_prazo_dia: form.regra_prazo_tipo === 'dia_fixo' && form.regra_prazo_dia
-          ? parseInt(form.regra_prazo_dia) : null,
-        lembrar_dias_antes: parseInt(form.lembrar_dias_antes) || 0,
-      };
+      const payload = montarPayloadObrigacao(form);
       let obrigId;
       if (editing) { await obrigacoesAPI.update(editing.id, payload); obrigId = editing.id; }
       else { const r = await obrigacoesAPI.create(payload); obrigId = r.data.id; }
