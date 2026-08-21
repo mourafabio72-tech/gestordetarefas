@@ -84,6 +84,43 @@ o.empresas = []
 db.commit()
 check("lista vazia, e não o escritório inteiro", nomes(o) == [], f"({nomes(o)})")
 
+print("\n=== 7. gerar só as obrigações escolhidas ===")
+# Sem recorte, o botão gerava TODAS as ativas -- num escritório com dezenas de
+# obrigações e dezenas de clientes, milhares de tarefas de uma vez, mesmo quando
+# se quer só a que acabou de ser cadastrada.
+from app.models import Tarefa, tarefa_responsaveis                       # noqa: E402
+from app.services.gerador import gerar_tarefas                           # noqa: E402
+from app.models import StatusTarefa                                      # noqa: E402
+
+db.execute(tarefa_responsaveis.delete()); db.query(Tarefa).delete()
+db.query(Obrigacao).delete(); db.commit()
+for e in (teste_a, teste_b, teste_c, real_1, real_2):
+    e.ativo, e.bloqueado = True, False
+db.commit()
+
+meses = "1,2,3,4,5,6,7,8,9,10,11,12"
+alvo   = Obrigacao(nome="Só esta", ativa=True, meses_ativos=meses,
+                   regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+outra1 = Obrigacao(nome="Outra 1", ativa=True, meses_ativos=meses,
+                   regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+outra2 = Obrigacao(nome="Outra 2", ativa=True, meses_ativos=meses,
+                   regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+db.add_all([alvo, outra1, outra2]); db.commit()
+
+r = gerar_tarefas(db, 9, 2026, [alvo.id])
+criadas = db.query(Tarefa).all()
+check("gerou só da obrigação escolhida",
+      {t.obrigacao_id for t in criadas} == {alvo.id}, f"({r['criadas']} tarefas)")
+check("uma por empresa alcançada (5)", r["criadas"] == 5, f"({r['criadas']})")
+
+db.execute(tarefa_responsaveis.delete()); db.query(Tarefa).delete(); db.commit()
+r2 = gerar_tarefas(db, 9, 2026)          # sem recorte
+check("sem recorte, gera das três", r2["criadas"] == 15, f"({r2['criadas']})")
+
+db.execute(tarefa_responsaveis.delete()); db.query(Tarefa).delete(); db.commit()
+r3 = gerar_tarefas(db, 9, 2026, [])      # lista vazia = sem recorte, não "nenhuma"
+check("lista vazia se comporta como 'todas'", r3["criadas"] == 15, f"({r3['criadas']})")
+
 db.close()
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

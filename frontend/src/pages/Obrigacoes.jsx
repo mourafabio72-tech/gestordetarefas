@@ -105,7 +105,9 @@ export default function Obrigacoes() {
   const gerarTarefas = async () => {
     setGerando(true);
     try {
-      const { data } = await obrigacoesAPI.gerar(gerMes, gerAno);
+      // selecionadas quando há seleção; todas as ativas quando não há
+      const { data } = await obrigacoesAPI.gerar(gerMes, gerAno,
+        selecionados.length ? selecionados : null);
       setShowGerar(false);
       alert(`Tarefas de ${data.mes_entrega}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
     } catch (e) {
@@ -853,10 +855,12 @@ export default function Obrigacoes() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Gerar tarefas do mês</h2>
+              <h2 className="text-xl font-semibold">
+                {selecionados.length ? `Gerar ${selecionados.length} obrigação(ões)` : 'Gerar tarefas do mês'}
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
-                Cria as tarefas de <strong>todas as obrigações ativas</strong> do mês escolhido,
-                para as empresas que cada uma alcança. Não duplica o que já existe.
+                Cria as tarefas do mês escolhido para as empresas que cada obrigação alcança.
+                Não duplica o que já existe.
               </p>
             </div>
             <div className="p-4 space-y-3">
@@ -881,6 +885,14 @@ export default function Obrigacoes() {
                 <button type="button" onClick={() => { setGerMes(_hj.getMonth() + 1); setGerAno(_hj.getFullYear()); }}
                   className="btn-secondary text-xs px-3 py-1">mês atual</button>
                 <button type="button" onClick={() => pularMes(1)} className="btn-secondary text-xs px-3 py-1">próximo mês →</button>
+              </div>
+              <div className={`text-xs rounded px-3 py-2 ${selecionados.length
+                ? 'bg-primary-50 text-primary-800' : 'bg-amber-50 text-amber-800'}`}>
+                {selecionados.length
+                  ? <>Vai gerar <strong>somente as {selecionados.length} obrigação(ões) selecionada(s)</strong>.</>
+                  : <>Nenhuma obrigação selecionada: vai gerar <strong>todas as ativas</strong> do
+                     sistema, para todas as empresas que cada uma alcança. Para gerar só algumas,
+                     feche isto e marque-as na lista.</>}
               </div>
               <p className="text-xs text-gray-500">
                 Mês de <strong>entrega</strong>, não de competência. Cada obrigação calcula a

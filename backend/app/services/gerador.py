@@ -316,9 +316,16 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     return True
 
 
-def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int) -> dict:
+def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids: list = None) -> dict:
     criadas, puladas, por_obrigacao = 0, 0, []
-    obrigacoes = db.query(Obrigacao).filter(Obrigacao.ativa == True).all()
+    q = db.query(Obrigacao).filter(Obrigacao.ativa == True)
+    # Recorte opcional: gerar só as obrigações escolhidas na tela. Sem isso, a
+    # única opção era gerar TODAS as ativas -- e num escritório com dezenas de
+    # obrigações e dezenas de clientes isso são milhares de tarefas de uma vez,
+    # mesmo quando se quer só a obrigação que acabou de ser cadastrada.
+    if obrigacao_ids:
+        q = q.filter(Obrigacao.id.in_(obrigacao_ids))
+    obrigacoes = q.all()
     for o in obrigacoes:
         if str(mes_entrega) not in _csv_set(o.meses_ativos):
             continue

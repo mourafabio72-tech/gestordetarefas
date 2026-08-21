@@ -140,7 +140,7 @@ export const obrigacoesAPI = {
   update: (id, data) => api.put(`/obrigacoes/${id}`, data),
   delete: (id, definitivo) => api.delete(`/obrigacoes/${id}`, { params: definitivo ? { definitivo: true } : {} }),
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
-  gerar: (mes, ano) => api.post('/obrigacoes/gerar', { mes, ano }),
+  gerar: (mes, ano, obrigacao_ids) => api.post('/obrigacoes/gerar', { mes, ano, obrigacao_ids }),
   getDetalhes: (id) => api.get(`/obrigacoes/${id}/detalhes-empresa`),
   setDetalhes: (id, itens) => api.put(`/obrigacoes/${id}/detalhes-empresa`, { itens }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
