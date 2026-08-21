@@ -22,6 +22,17 @@ const TAREFAS = [
   { id: 4, empresa_id: 2, setor_id: 1, status: 'pendente',  competencia: '12/2025', data_vencimento: '2026-01-20T00:00:00' },
   { id: 5, empresa_id: 1, setor_id: 1, status: 'pendente',  competencia: null,      data_vencimento: null },
 ];
+
+// Conjunto próprio para título e pessoa, para não deslocar as contagens acima.
+const COM_GENTE = [
+  { id: 6, empresa_id: 1, setor_id: 1, status: 'pendente', titulo: 'balancete teste',
+    responsaveis: [{ id: 7, nome: 'Ana' }] },
+  { id: 7, empresa_id: 2, setor_id: 1, status: 'pendente', titulo: 'conciliar banco',
+    responsaveis: [{ id: 7, nome: 'Ana' }, { id: 8, nome: 'Bia' }],
+    supervisor: { id: 9, nome: 'Carlos' } },
+  { id: 8, empresa_id: 2, setor_id: 1, status: 'pendente', titulo: 'lançar notas',
+    responsaveis: [] },
+];
 const ids = (lista) => lista.map(t => t.id);
 
 // 1. PROVA POSITIVA. Sem ela, um filtro que devolvesse [] passaria no resto.
@@ -123,6 +134,35 @@ const ids = (lista) => lista.map(t => t.id);
   assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), competencia: '07/2026' }), true);
   assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), venc_ate: '2026-09-20' }), true);
   ok('"limpar filtros" só aparece com filtro ativo');
+}
+
+// 14. Busca pelo título — com centenas de tarefas no mês, os selects não bastam.
+{
+  const r = filtrarTarefas(COM_GENTE, { ...filtrosVazios(), texto: 'balan' });
+  assert.deepStrictEqual(ids(r), [6]);
+  assert.deepStrictEqual(ids(filtrarTarefas(COM_GENTE, { ...filtrosVazios(), texto: 'BALAN' })), [6],
+    'busca não pode diferenciar maiúscula');
+  assert.deepStrictEqual(ids(filtrarTarefas(COM_GENTE, { ...filtrosVazios(), texto: '  ' })), ids(COM_GENTE),
+    'só espaço não filtra nada');
+  ok('busca por parte do título, sem diferenciar maiúscula');
+}
+
+// 15. Por pessoa: conta responsável E supervisor, porque as duas são "minhas".
+{
+  const porResp = filtrarTarefas(COM_GENTE, { ...filtrosVazios(), usuario_id: '7' });
+  assert.deepStrictEqual(ids(porResp), [6, 7], 'um dos vários responsáveis conta');
+  const porSup = filtrarTarefas(COM_GENTE, { ...filtrosVazios(), usuario_id: '9' });
+  assert.deepStrictEqual(ids(porSup), [7], 'supervisor também vê como sua');
+  ok('filtro por pessoa pega responsável e supervisor');
+}
+
+// 16. Os dois novos somam com os que já existiam.
+{
+  const r = filtrarTarefas(COM_GENTE, { ...filtrosVazios(), texto: 'balan', usuario_id: '9' });
+  assert.deepStrictEqual(ids(r), [], 'balancete não é do usuário 9');
+  assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), texto: 'x' }), true);
+  assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), usuario_id: '3' }), true);
+  ok('texto e pessoa combinam com o resto e acendem o "limpar"');
 }
 
 console.log(`\nPROVA OK: ${n} casos`);

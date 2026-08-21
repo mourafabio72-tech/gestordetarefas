@@ -374,6 +374,26 @@ export default function Tarefas() {
           (é a razão social da empresa que estica e quebrava a linha); data e
           atalhos ficam fixos, porque não encolhem sem cortar conteúdo. */}
       <div className="flex items-center gap-1 mb-5 text-xs overflow-x-auto">
+        <input
+          type="search"
+          value={filtros.texto}
+          onChange={(e) => setFiltros({ ...filtros, texto: e.target.value })}
+          placeholder="Buscar tarefa..."
+          className={`flex-1 min-w-[120px] h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+            filtros.texto ? 'border-primary-400' : 'border-gray-300'}`}
+        />
+        <select
+          value={filtros.usuario_id}
+          onChange={(e) => setFiltros({ ...filtros, usuario_id: e.target.value })}
+          title="Responsável ou supervisor da tarefa"
+          className={`flex-1 min-w-[92px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+            filtros.usuario_id ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
+        >
+          <option value="">Todas as pessoas</option>
+          {usuarios.filter((u) => !u.bloqueado).map((u) => (
+            <option key={u.id} value={u.id}>{u.nome}</option>
+          ))}
+        </select>
         {[
           { chave: 'empresa_id', vazio: 'Todas as empresas',
             opcoes: empresas.map(e => ({ v: e.id, t: e.razao_social })) },

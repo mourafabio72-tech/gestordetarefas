@@ -47,7 +47,18 @@ function soData(iso) {
  */
 export function filtrarTarefas(tarefas, filtros) {
   const f = filtros || {};
+  const termo = (f.texto || '').trim().toLowerCase();
   return (tarefas || []).filter(t => {
+    // Busca pelo título da tarefa. Com centenas de tarefas no mês, achar "a
+    // conciliação da Mark Building" pelos selects é caça ao tesouro.
+    if (termo && !(t.titulo || '').toLowerCase().includes(termo)) return false;
+    // Por pessoa: conta como dela se é responsável (um dos vários) ou supervisor.
+    if (f.usuario_id) {
+      const uid = parseInt(f.usuario_id);
+      const ehResp = (t.responsaveis || []).some(r => r.id === uid);
+      const ehSup = t.supervisor && t.supervisor.id === uid;
+      if (!ehResp && !ehSup) return false;
+    }
     if (f.empresa_id && t.empresa_id !== parseInt(f.empresa_id)) return false;
     if (f.status && t.status !== f.status) return false;
     if (f.setor_id && t.setor_id !== parseInt(f.setor_id)) return false;
@@ -100,12 +111,14 @@ export function presetsVencimento(hoje = new Date()) {
 /** Estado inicial (e o "Limpar filtros"). */
 export function filtrosVazios(setor = '') {
   return { empresa_id: '', status: '', setor_id: setor,
-           competencia: '', venc_de: '', venc_ate: '' };
+           competencia: '', venc_de: '', venc_ate: '',
+           texto: '', usuario_id: '' };
 }
 
 /** Algum filtro ativo? Comanda o botão de limpar. */
 export function temFiltroAtivo(filtros) {
   const f = filtros || {};
   return Boolean(f.empresa_id || f.status || f.setor_id
-    || f.competencia || f.venc_de || f.venc_ate);
+    || f.competencia || f.venc_de || f.venc_ate
+    || (f.texto || '').trim() || f.usuario_id);
 }
