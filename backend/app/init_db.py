@@ -37,6 +37,7 @@ def migrate():
         ("usuario_convite_token", "ALTER TABLE usuarios ADD COLUMN convite_token VARCHAR(64)"),
         ("usuario_ativado", "ALTER TABLE usuarios ADD COLUMN ativado BOOLEAN"),
         ("obrigacao_exige_documento", "ALTER TABLE obrigacoes ADD COLUMN exige_documento BOOLEAN"),
+        ("fechamento_cliente", "ALTER TABLE tarefas ADD COLUMN fechamento_cliente DATE"),
         ("alvo_modo", "ALTER TABLE obrigacoes ADD COLUMN alvo_modo VARCHAR(12) DEFAULT 'regra'"),
         ("setor_gestor_id", "ALTER TABLE setores ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
         ("fechamento_tipo", "ALTER TABLE empresas ADD COLUMN fechamento_tipo VARCHAR(20)"),

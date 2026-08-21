@@ -189,6 +189,7 @@ class TarefaResponse(BaseModel):
     setor_id: Optional[int] = None
     obrigacao_id: Optional[int] = None
     competencia: Optional[str] = None
+    fechamento_cliente: Optional[date] = None   # marco do cliente no mês desta tarefa
     responsaveis: List[UsuarioMini] = []
     supervisor: Optional[UsuarioMini] = None
     prioridade: PrioridadeTarefa

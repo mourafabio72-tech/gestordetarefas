@@ -5,7 +5,7 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { mensagemDeErro } from '../services/erroApi';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag} from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 
@@ -467,6 +467,13 @@ export default function Tarefas() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {filteredTarefas.map((tarefa) => {
             const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
+            // Fechamento do cliente naquele mês. `fechamento_cliente` vem como
+            // "AAAA-MM-DD" puro: passar por new Date() o interpretaria como UTC
+            // e mostraria o dia anterior aqui no fuso de Brasília.
+            const fech = tarefa.fechamento_cliente || null;
+            const fechBr = fech ? `${fech.slice(8, 10)}/${fech.slice(5, 7)}` : null;
+            const venc = (tarefa.data_vencimento || '').slice(0, 10);
+            const encerra = fech && venc && fech === venc;
             const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
             const st = statusSage[tarefa.status] || statusSage.pendente;
             const pr = prioSage[tarefa.prioridade] || prioSage.media;
@@ -498,6 +505,19 @@ export default function Tarefas() {
                     {prazoDate ? format(prazoDate, "dd/MM/yy", { locale: ptBR }) : 'sem prazo'}
                     {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
                   </p>
+                  {fechBr && (
+                    encerra ? (
+                      <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
+                         title={`Esta tarefa vence no próprio dia do fechamento de ${getEmpresaNome(tarefa.empresa_id)} — é a última do processo.`}>
+                        <Flag size={11} /> encerra o fechamento
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-1" style={{ color: '#8a8378' }}
+                         title={`${getEmpresaNome(tarefa.empresa_id)} fecha o mês em ${fechBr}. Esta tarefa vem antes.`}>
+                        <Flag size={11} /> cliente fecha {fechBr}
+                      </p>
+                    )
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1 mb-2">
                   <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>

@@ -143,5 +143,68 @@ check("setor que atende sem dono é aceito", i.responsavel_id is None)
 check("com dono continua chegando número",
       RespSetorItem(setor_id=1, responsavel_id="7").responsavel_id == 7)
 
+print("\n=== 10. a tarefa guarda o fechamento do cliente ===")
+# O card mostra "cliente fecha 15/09" para dar a régua de quem executa. O valor
+# é GRAVADO na geração, e não calculado na hora: é a foto do que valia quando a
+# tarefa nasceu, então mudar o marco da empresa depois não reescreve o passado.
+import tempfile as _tmp                                                   # noqa: E402
+os.environ.setdefault("DATABASE_URL", "sqlite:///" + _tmp.mktemp(suffix=".db"))
+from app.database import SessionLocal, Base, engine                       # noqa: E402
+from app.models import (Empresa as Emp2, Setor as Set2, Usuario as Usr2,  # noqa: E402
+                        Obrigacao as Obr2, Tarefa as Tar2, tarefa_responsaveis)
+from app.services.gerador import gerar_tarefas                            # noqa: E402
+
+Base.metadata.create_all(bind=engine)
+db = SessionLocal()
+db.execute(tarefa_responsaveis.delete())
+for m in (Tar2, Obr2, Emp2, Set2, Usr2):
+    db.query(m).delete()
+db.commit()
+
+setor = Set2(nome="Contábil"); db.add(setor); db.commit()
+com_marco = Emp2(razao_social="COM MARCO", ativo=True,
+                 fechamento_tipo="dia_fixo", fechamento_dia=15)
+sem_marco = Emp2(razao_social="SEM MARCO", ativo=True)
+db.add_all([com_marco, sem_marco]); db.commit()
+
+meses = "1,2,3,4,5,6,7,8,9,10,11,12"
+balancete = Obr2(nome="Balancete", setor_id=setor.id, ativa=True, meses_ativos=meses,
+                 ancora="fechamento", ancora_dias_antes=0, ancora_tipo_dias="uteis",
+                 regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+conciliar = Obr2(nome="Conciliar", setor_id=setor.id, ativa=True, meses_ativos=meses,
+                 ancora="fechamento", ancora_dias_antes=3, ancora_tipo_dias="uteis",
+                 regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+db.add_all([balancete, conciliar]); db.commit()
+gerar_tarefas(db, 9, 2026)
+
+def pega(nome, empresa):
+    return (db.query(Tar2).join(Obr2, Tar2.obrigacao_id == Obr2.id)
+            .filter(Obr2.nome == nome, Tar2.empresa_id == empresa.id).first())
+
+t_bal = pega("Balancete", com_marco)
+t_con = pega("Conciliar", com_marco)
+t_sem = pega("Balancete", sem_marco)
+
+check("gravou o fechamento do cliente",
+      t_bal and t_bal.fechamento_cliente and t_bal.fechamento_cliente.isoformat() == "2026-09-15",
+      f"({t_bal and t_bal.fechamento_cliente})")
+check("o balancete vence NO fechamento — o card dirá 'encerra o fechamento'",
+      t_bal.data_vencimento.date() == t_bal.fechamento_cliente)
+check("a etapa anterior vence antes, e carrega o mesmo marco",
+      t_con.fechamento_cliente == t_bal.fechamento_cliente
+      and t_con.data_vencimento < t_bal.data_vencimento,
+      f"({t_con.data_vencimento} vs {t_con.fechamento_cliente})")
+check("empresa sem marco não inventa data", t_sem and t_sem.fechamento_cliente is None,
+      f"({t_sem and t_sem.fechamento_cliente})")
+
+# a foto não se reescreve: mudar o marco não mexe em tarefa já criada
+com_marco.fechamento_dia = 20
+db.commit()
+db.refresh(t_bal)
+check("mudar o marco depois não altera a tarefa já gerada",
+      t_bal.fechamento_cliente.isoformat() == "2026-09-15",
+      f"({t_bal.fechamento_cliente})")
+db.close()
+
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

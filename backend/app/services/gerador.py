@@ -265,7 +265,8 @@ def _empresa_atende(db: Session, empresa_id: int, setor_id) -> bool:
 
 
 def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
-                          competencia: str, prazo: date, vencimento: date = None) -> bool:
+                          competencia: str, prazo: date, vencimento: date = None,
+                          fechamento: date = None) -> bool:
     """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
     Retorna True se criou, False se já existia (dedupe)."""
     # Empresa não atende (não contratou) o setor desta obrigação → não gera.
@@ -308,6 +309,7 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
         status=StatusTarefa.PENDENTE,
         data_prazo=prazo,
         data_vencimento=vencimento,
+        fechamento_cliente=fechamento,
         gera_multa=bool(o.passivel_multa),
     )
     if resp:
@@ -337,7 +339,9 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
             vencimento = calc_vencimento(o, emp, mes_entrega, ano_entrega)
             prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
                                                o.tipo_dias, bool(o.sabado_util))
-            if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento):
+            fechamento = calc_marco_fechamento(emp, mes_entrega, ano_entrega, bool(o.sabado_util))
+            if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento,
+                                     fechamento):
                 criadas += 1
                 n_o += 1
             else:
@@ -372,7 +376,9 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
         vencimento = calc_vencimento(o, empresa, mes_entrega, ano_entrega)
         prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
                                            o.tipo_dias, bool(o.sabado_util))
-        if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo_interno, vencimento):
+        fechamento = calc_marco_fechamento(empresa, mes_entrega, ano_entrega, bool(o.sabado_util))
+        if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo_interno, vencimento,
+                                 fechamento):
             criadas += 1
         else:
             puladas += 1

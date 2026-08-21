@@ -173,6 +173,11 @@ class Tarefa(Base):
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"), index=True)
     obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=True, index=True)  # de qual modelo veio
     competencia = Column(String(7), index=True)  # "MM/AAAA" — chave de baixa do e-validador
+    # Fechamento contábil DO CLIENTE no mês desta tarefa, gravado na geração.
+    # Fica no card para dar a régua: "vence dia 10, e o cliente fecha dia 15".
+    # Gravado, e não calculado na hora, porque é a foto do que valia quando a
+    # tarefa nasceu -- mudar o marco da empresa depois não reescreve o passado.
+    fechamento_cliente = Column(Date)
     # Baixa pelo e-validador (comprovante de entrega)
     protocolo_entrega = Column(String(120))
     data_entrega = Column(DateTime(timezone=True))
