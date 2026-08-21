@@ -578,8 +578,14 @@ export default function Obrigacoes() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo</label>
+                  <div className={form.ancora === 'fechamento' ? 'opacity-45' : ''}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo
+                      {form.ancora === 'fechamento' && (
+                        <span className="ml-1 font-normal text-[11px] text-amber-700">
+                          — ignorada: o prazo vem do fechamento da empresa
+                        </span>
+                      )}
+                    </label>
                     <select value={form.regra_prazo_tipo} onChange={(e) => set('regra_prazo_tipo', e.target.value)} className="input-field">
                       <option value="ultimo_dia_util">Último dia útil</option>
                       <option value="primeiro_dia_util">Primeiro dia útil</option>
