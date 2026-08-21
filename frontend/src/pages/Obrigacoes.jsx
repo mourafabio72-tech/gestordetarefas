@@ -674,27 +674,11 @@ export default function Obrigacoes() {
                   const soVinculadas = form.alvo_modo === 'vinculadas';
                   return (
                 <div className="space-y-3">
-                  {/* Duas perguntas diferentes: "que PERFIL de empresa" e "quais
-                      empresas". Com regra vazia significando TODOS, não havia
-                      como dizer "só estes clientes" — o vínculo apenas somava. */}
-                  <div className="bg-gray-50 rounded px-3 py-2 space-y-1.5">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="radio" name="alvo_modo" className="h-4 w-4"
-                        checked={!soVinculadas} onChange={() => set('alvo_modo', 'regra')} />
-                      <span className="font-medium text-gray-700">Por perfil de empresa</span>
-                      <span className="text-gray-400 text-xs">(regime e segmento, mais as vinculadas)</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="radio" name="alvo_modo" className="h-4 w-4"
-                        checked={soVinculadas} onChange={() => set('alvo_modo', 'vinculadas')} />
-                      <span className="font-medium text-gray-700">Somente as empresas vinculadas</span>
-                      <span className="text-gray-400 text-xs">(obrigação de cliente específico)</span>
-                    </label>
-                  </div>
                   {soVinculadas && (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
-                      Só as empresas vinculadas abaixo recebem esta obrigação. Sem nenhuma
-                      vinculada, ela não gera tarefa nenhuma.
+                      Esta obrigação está em <strong>somente as empresas vinculadas</strong>:
+                      regime e segmento são ignorados. Para mudar, veja
+                      <strong> Empresas vinculadas</strong>, abaixo.
                     </p>
                   )}
                   {!soVinculadas && (
@@ -775,6 +759,7 @@ export default function Obrigacoes() {
                   {secoes.empresas ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Empresas vinculadas <span className="text-gray-400 font-normal ml-1">(exceções/inclusões diretas)</span>
                 </button>
                 {secoes.empresas && (() => {
+                  const soVinc = form.alvo_modo === 'vinculadas';
                   const termo = buscaEmp.trim().toLowerCase();
                   const filtradas = termo
                     ? empresas.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
@@ -783,6 +768,29 @@ export default function Obrigacoes() {
                   const marcarTodas = () => set('empresa_ids', [...new Set([...form.empresa_ids, ...idsFiltrados])]);
                   return (
                     <>
+                  {/* O interruptor mora AQUI, junto da lista que ele governa.
+                      Estava noutra seção, fechada por padrão: dava para vincular
+                      três empresas achando que restringia, e a obrigação seguia
+                      alcançando o escritório inteiro. */}
+                  <div className="bg-gray-50 rounded px-3 py-2 space-y-1.5 mb-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="alvo_modo_emp" className="h-4 w-4"
+                        checked={!soVinc} onChange={() => set('alvo_modo', 'regra')} />
+                      <span className="font-medium text-gray-700">Somar ao perfil</span>
+                      <span className="text-gray-400 text-xs">as marcadas entram ALÉM das que casam regime/segmento</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="alvo_modo_emp" className="h-4 w-4"
+                        checked={soVinc} onChange={() => set('alvo_modo', 'vinculadas')} />
+                      <span className="font-medium text-gray-700">Somente estas</span>
+                      <span className="text-gray-400 text-xs">só as marcadas recebem; o perfil é ignorado</span>
+                    </label>
+                    <p className="text-xs text-gray-500 pt-0.5">
+                      {soVinc
+                        ? `${form.empresa_ids.length} empresa(s) receberão esta obrigação.`
+                        : 'Sem marcar nenhuma e sem restringir o perfil, a obrigação alcança TODAS as empresas.'}
+                    </p>
+                  </div>
                       <div className="flex items-center gap-2 mb-2">
                         <p className="text-xs text-gray-400 flex-1">{form.empresa_ids.length} selecionada(s)</p>
                         <button type="button" onClick={marcarTodas}
