@@ -577,12 +577,20 @@ export default function Obrigacoes() {
                         </span>
                       </div>
                     )}
+                    {form.ancora === 'fechamento' && (
+                      <p className="text-xs text-gray-600 mt-2 border-t border-primary-200 pt-2">
+                        A data sai do <strong>Fechamento contábil</strong> de cada empresa, no
+                        cadastro dela. Empresa que não tiver esse campo preenchido usa a
+                        <strong> Regra de prazo</strong> ao lado — assim a tarefa nasce com data
+                        de qualquer jeito, em vez de nascer sem prazo.
+                      </p>
+                    )}
                   </div>
-                  <div className={form.ancora === 'fechamento' ? 'opacity-45' : ''}>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo
                       {form.ancora === 'fechamento' && (
                         <span className="ml-1 font-normal text-[11px] text-amber-700">
-                          — ignorada: o prazo vem do fechamento da empresa
+                          — só para empresa sem fechamento definido
                         </span>
                       )}
                     </label>
