@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from ..database import get_db
 from ..models import Empresa, Usuario, Setor, EmpresaSetorResponsavel
 from ..schemas import EmpresaCreate, EmpresaResponse
@@ -28,6 +28,19 @@ class BloquearRequest(BaseModel):
 class RespSetorItem(BaseModel):
     setor_id: int
     responsavel_id: Optional[int] = None   # None = atende, mas sem dono ainda
+
+    @field_validator("responsavel_id", mode="before")
+    @classmethod
+    def _sem_dono(cls, v):
+        """Select sem escolha manda "" — isso é "sem dono ainda", não erro.
+
+        Mesmo caso do marco de fechamento na empresa: campo vazio de formulário
+        chegava como texto num campo inteiro e derrubava o salvamento inteiro
+        num 422, que a tela mostrava como "[object Object]".
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 class RespSetorBody(BaseModel):

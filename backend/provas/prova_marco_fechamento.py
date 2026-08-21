@@ -134,5 +134,14 @@ check("marco preenchido continua chegando como número", e2.fechamento_dia == 10
 e3 = EmpresaCreate(razao_social="T", fechamento_tipo="  ", fechamento_dia=None)
 check("só espaço também conta como em branco", e3.fechamento_tipo is None)
 
+print("\n=== 9. campo de formulário vazio nunca derruba o salvamento ===")
+# Mesmo padrão em toda parte: select sem escolha manda "", e "" num campo
+# inteiro virava 422 -- que a tela mostrava como "[object Object]".
+from app.routes.empresas import RespSetorItem                            # noqa: E402
+i = RespSetorItem(setor_id=1, responsavel_id="")
+check("setor que atende sem dono é aceito", i.responsavel_id is None)
+check("com dono continua chegando número",
+      RespSetorItem(setor_id=1, responsavel_id="7").responsavel_id == 7)
+
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)
