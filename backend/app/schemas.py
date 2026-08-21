@@ -220,6 +220,22 @@ class ObrigacaoBase(BaseModel):
     tempo_previsto_min: Optional[int] = None
     regra_prazo_tipo: str = "ultimo_dia_util"
     alvo_modo: Optional[str] = "regra"           # regra|vinculadas
+
+    @field_validator("regra_prazo_dia", "ancora_dias_antes", "tempo_previsto_min",
+                     "lembrar_dias_antes", mode="before")
+    @classmethod
+    def _numero_em_branco(cls, v):
+        """Campo numérico vazio no formulário é "não informado", não erro.
+
+        Terceira vez que este mesmo padrão aparece (marco da empresa, responsável
+        por setor, e agora aqui): o formulário manda "" e o campo espera número,
+        e o 422 derruba o salvamento INTEIRO -- inclusive de quem mexeu noutro
+        campo. Aqui doía especialmente: trocar a regra para "N-ésimo dia útil"
+        sem digitar o dia recusava o cadastro em vez de deixar em branco.
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
     ancora: Optional[str] = None                 # NULL|fechamento
     ancora_dias_antes: Optional[int] = 0
     ancora_tipo_dias: Optional[str] = "uteis"

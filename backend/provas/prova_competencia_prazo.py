@@ -92,5 +92,28 @@ check("os dois caem em dia útil", p5.weekday() < 5 and p5u.weekday() < 5)
 check("zero dias antes = o próprio vencimento",
       calc_prazo_interno(venc, 0, "corridos", False) == venc)
 
+print("\n=== 7. campo numérico em branco não derruba o cadastro ===")
+# Terceira vez que este padrão aparece. Trocar a regra para "N-ésimo dia útil"
+# sem digitar o dia recusava o cadastro inteiro num 422 -- que a tela mostrava
+# como "[object Object]", sem dizer qual campo.
+from app.schemas import ObrigacaoCreate                                   # noqa: E402
+o = ObrigacaoCreate(nome="X", regra_prazo_tipo="dia_util", regra_prazo_dia="")
+check("dia em branco é aceito", o.regra_prazo_dia is None)
+check("dia preenchido chega como número",
+      ObrigacaoCreate(nome="X", regra_prazo_dia="10").regra_prazo_dia == 10)
+check("vale para os outros numéricos",
+      ObrigacaoCreate(nome="X", ancora_dias_antes="", tempo_previsto_min="  ")
+      .ancora_dias_antes is None)
+
+print("\n=== 8. sem o dia, o N-ésimo dia útil cai no primeiro ===")
+# Foi o que aconteceu em produção: o campo ficou vazio e o vencimento saiu
+# 01/09 em vez de 14/09. A regra não quebra -- mas a data fica errada em
+# silêncio, então vale saber que é este o comportamento.
+d = calc_prazo(9, 2026, "dia_util", None, "antecipar", False)
+check("sem dia informado, vira o 1º dia útil", d.isoformat() == "2026-09-01", f"({d})")
+d10 = calc_prazo(9, 2026, "dia_util", 10, "antecipar", False)
+check("com 10, vira o 10º", d10.isoformat() == "2026-09-14", f"({d10})")
+check("são datas bem diferentes — 13 dias", (d10 - d).days == 13)
+
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

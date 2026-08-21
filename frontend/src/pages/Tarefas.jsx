@@ -118,6 +118,7 @@ export default function Tarefas() {
     empresa_id: '',
     setor_id: '',
     obrigacao_id: '',
+    competencia: '',
     responsavel_ids: [],
     supervisor_id: '',
     prioridade: 'media',
@@ -166,6 +167,7 @@ export default function Tarefas() {
         empresa_id: parseInt(formData.empresa_id),
         setor_id: formData.setor_id ? parseInt(formData.setor_id) : null,
         obrigacao_id: formData.obrigacao_id ? parseInt(formData.obrigacao_id) : null,
+        competencia: formData.competencia.trim() || null,
         responsavel_ids: (formData.responsavel_ids || []).map(Number),
         supervisor_id: formData.supervisor_id ? parseInt(formData.supervisor_id) : null,
         data_prazo: new Date(formData.data_prazo).toISOString(),
@@ -195,6 +197,7 @@ export default function Tarefas() {
       empresa_id: tarefa.empresa_id,
       setor_id: tarefa.setor_id || '',
       obrigacao_id: tarefa.obrigacao_id || '',
+      competencia: tarefa.competencia || '',
       responsavel_ids: (tarefa.responsaveis || []).map((r) => r.id),
       supervisor_id: tarefa.supervisor?.id || '',
       prioridade: tarefa.prioridade,
@@ -864,6 +867,22 @@ export default function Tarefas() {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Competência</label>
+                <input
+                  type="text"
+                  value={formData.competencia}
+                  onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
+                  className="input-field"
+                  placeholder="MM/AAAA"
+                  pattern="\\d{2}/\\d{4}"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Mês do fato gerador — julho é <code>07/2026</code>. É por ela que o e-validador
+                  encontra a tarefa ao ler o comprovante. Em tarefa gerada por obrigação, vem
+                  calculada; em tarefa avulsa, fica em branco.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
