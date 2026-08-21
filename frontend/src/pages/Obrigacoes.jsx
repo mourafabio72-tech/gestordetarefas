@@ -94,18 +94,27 @@ export default function Obrigacoes() {
     catch { alert('Erro ao limpar'); }
   };
   const [gerando, setGerando] = useState(false);
+  // Mês da geração: escolhido, não imposto. O botão usava o mês corrente e
+  // pronto -- gerar setembro no fim de agosto, que é a rotina do escritório,
+  // era impossível pela tela (o backend sempre aceitou mês e ano).
+  const _hj = new Date();
+  const [showGerar, setShowGerar] = useState(false);
+  const [gerMes, setGerMes] = useState(_hj.getMonth() + 1);
+  const [gerAno, setGerAno] = useState(_hj.getFullYear());
   const MESES_NOME = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const gerarTarefas = async () => {
-    const hoje = new Date();
-    const mes = hoje.getMonth() + 1, ano = hoje.getFullYear();
-    if (!confirm(`Gerar as tarefas de ${MESES_NOME[mes - 1]}/${ano} para TODAS as empresas, a partir das obrigações ativas?\n\nNão duplica o que já existe.`)) return;
     setGerando(true);
     try {
-      const { data } = await obrigacoesAPI.gerar(mes, ano);
+      const { data } = await obrigacoesAPI.gerar(gerMes, gerAno);
+      setShowGerar(false);
       alert(`Tarefas de ${data.mes_entrega}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
     } catch (e) {
       alert(mensagemDeErro(e, 'Erro ao gerar tarefas.'));
     } finally { setGerando(false); }
+  };
+  const pularMes = (n) => {
+    const d = new Date(gerAno, gerMes - 1 + n, 1);
+    setGerMes(d.getMonth() + 1); setGerAno(d.getFullYear());
   };
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
@@ -261,8 +270,8 @@ export default function Obrigacoes() {
             title="Remove o vínculo de uma empresa das obrigações (não apaga nada além do vínculo)">
             <Unlink size={18} /> Desvincular empresa
           </button>
-          <button onClick={gerarTarefas} disabled={gerando} className="btn-secondary flex items-center gap-2"
-            title="Cria as tarefas do mês atual para todas as empresas, a partir das obrigações ativas">
+          <button onClick={() => setShowGerar(true)} disabled={gerando} className="btn-secondary flex items-center gap-2"
+            title="Cria as tarefas de um mês para todas as empresas, a partir das obrigações ativas">
             <Zap size={18} /> {gerando ? 'Gerando…' : 'Gerar tarefas do mês'}
           </button>
           <button onClick={abrirNovo} className="btn-primary flex items-center gap-2">
@@ -808,6 +817,55 @@ export default function Obrigacoes() {
                 <button type="submit" className="btn-primary flex-1">{editing ? 'Salvar' : 'Cadastrar'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showGerar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Gerar tarefas do mês</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Cria as tarefas de <strong>todas as obrigações ativas</strong> do mês escolhido,
+                para as empresas que cada uma alcança. Não duplica o que já existe.
+              </p>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mês de entrega</label>
+                  <select value={gerMes} onChange={(e) => setGerMes(parseInt(e.target.value))} className="input-field">
+                    {MESES_NOME.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+                  <input type="number" min="2000" max="2100" value={gerAno}
+                    onChange={(e) => setGerAno(parseInt(e.target.value) || _hj.getFullYear())}
+                    className="input-field" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => pularMes(-1)} className="btn-secondary text-xs px-3 py-1">← mês anterior</button>
+                <button type="button" onClick={() => { setGerMes(_hj.getMonth() + 1); setGerAno(_hj.getFullYear()); }}
+                  className="btn-secondary text-xs px-3 py-1">mês atual</button>
+                <button type="button" onClick={() => pularMes(1)} className="btn-secondary text-xs px-3 py-1">próximo mês →</button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Mês de <strong>entrega</strong>, não de competência. Cada obrigação calcula a
+                competência dela a partir daqui — a de 2 meses antes, gerada em setembro, nasce
+                com competência de julho.
+              </p>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => setShowGerar(false)} className="btn-secondary">Cancelar</button>
+              <button onClick={gerarTarefas} disabled={gerando} className="btn-primary">
+                {gerando ? 'Gerando…' : `Gerar ${String(gerMes).padStart(2, '0')}/${gerAno}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
