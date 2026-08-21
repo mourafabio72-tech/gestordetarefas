@@ -387,9 +387,25 @@ def delete_tarefa(
     if not db_tarefa or not _no_escopo(db_tarefa, db, current_user):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
+    # Dois passos, de propósito: a primeira vez CANCELA (reversível, e o
+    # histórico fica); a segunda, numa tarefa já cancelada, EXCLUI de vez.
+    # Antes só existia o primeiro passo, e tarefa cancelada não tinha saída --
+    # a lixeira prometia excluir e cancelava de novo, para sempre.
+    if db_tarefa.status == StatusTarefa.CANCELADA:
+        from ..services import upload as up
+        arquivo = db_tarefa.anexo_nome
+        db_tarefa.responsaveis = []          # solta a associação antes
+        db.delete(db_tarefa)
+        db.commit()
+        # o comprovante sai do volume junto: sem a tarefa, ninguém mais o acha
+        removido = up.remover_arquivo(arquivo)
+        return {"message": "Tarefa excluída definitivamente.",
+                "excluida": True, "anexo_removido": removido}
+
     db_tarefa.status = StatusTarefa.CANCELADA
     db.commit()
-    return {"message": "Tarefa cancelada com sucesso"}
+    return {"message": "Tarefa cancelada. Para excluir de vez, use a lixeira de novo.",
+            "excluida": False}
 
 
 class ExcluirCompetenciaBody(BaseModel):

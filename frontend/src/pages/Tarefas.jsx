@@ -206,14 +206,18 @@ export default function Tarefas() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('Tem certeza que deseja cancelar esta tarefa?')) {
-      try {
-        await tarefasAPI.delete(id);
-        loadData();
-      } catch (error) {
-        alert('Erro ao cancelar tarefa');
-      }
+  // Dois passos: cancelar (reversível) e, na tarefa já cancelada, excluir de vez.
+  const handleDelete = async (tarefa) => {
+    const cancelada = tarefa.status === 'cancelada';
+    const pergunta = cancelada
+      ? `Excluir "${tarefa.titulo}" definitivamente?\n\nIsso apaga a tarefa e o comprovante anexado, se houver. Não dá para desfazer.`
+      : `Cancelar "${tarefa.titulo}"?\n\nEla continua na lista como cancelada. Para excluir de vez, use a lixeira de novo depois.`;
+    if (!confirm(pergunta)) return;
+    try {
+      await tarefasAPI.delete(tarefa.id);
+      loadData();
+    } catch (error) {
+      alert(mensagemDeErro(error, cancelada ? 'Erro ao excluir a tarefa.' : 'Erro ao cancelar a tarefa.'));
     }
   };
 
@@ -523,7 +527,9 @@ export default function Tarefas() {
                   <button onClick={() => handleEdit(tarefa)} title="Editar" className="p-1 rounded hover:bg-[#dcefed]" style={{ color: '#3a7d76' }}>
                     <Edit2 size={14} />
                   </button>
-                  <button onClick={() => handleDelete(tarefa.id)} title="Cancelar" className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
+                  <button onClick={() => handleDelete(tarefa)}
+                    title={tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar'}
+                    className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
                     <Trash2 size={14} />
                   </button>
                 </div>

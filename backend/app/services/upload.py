@@ -36,6 +36,26 @@ def _seguro(nome: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", nome)[:120] or "arquivo"
 
 
+def remover_arquivo(nome: str) -> bool:
+    """Apaga um comprovante do volume. Devolve se havia algo para apagar.
+
+    Chamado quando a tarefa é excluída DE VEZ. Sem isso o arquivo fica no
+    volume para sempre, sem nada no banco apontando para ele -- lixo que não dá
+    nem para achar depois. `basename` impede que um nome guardado com ".." saia
+    apagando fora da pasta.
+    """
+    if not nome:
+        return False
+    caminho = os.path.join(UPLOAD_DIR, os.path.basename(nome))
+    try:
+        if os.path.isfile(caminho):
+            os.remove(caminho)
+            return True
+    except OSError:
+        pass          # arquivo em uso ou permissão: a tarefa some do mesmo jeito
+    return False
+
+
 def salvar_arquivo(token: str, filename: str, conteudo: bytes) -> str:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     nome = f"{token}_{_seguro(filename)}"
