@@ -218,6 +218,7 @@ class ObrigacaoBase(BaseModel):
     supervisor_id: Optional[int] = None
     tempo_previsto_min: Optional[int] = None
     regra_prazo_tipo: str = "ultimo_dia_util"
+    alvo_modo: Optional[str] = "regra"           # regra|vinculadas
     ancora: Optional[str] = None                 # NULL|fechamento
     ancora_dias_antes: Optional[int] = 0
     ancora_tipo_dias: Optional[str] = "uteis"
@@ -249,6 +250,7 @@ class ObrigacaoUpdate(BaseModel):
     supervisor_id: Optional[int] = None
     tempo_previsto_min: Optional[int] = None
     regra_prazo_tipo: Optional[str] = None
+    alvo_modo: Optional[str] = None
     ancora: Optional[str] = None
     ancora_dias_antes: Optional[int] = None
     ancora_tipo_dias: Optional[str] = None

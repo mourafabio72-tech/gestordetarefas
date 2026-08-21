@@ -196,7 +196,19 @@ def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
 
 
 def empresas_alvo(db: Session, o: Obrigacao):
-    """Empresas ativas que casam a regra (regime/segmento) ∪ vínculos explícitos."""
+    """Empresas que esta obrigação alcança.
+
+    Dois modos, porque as duas perguntas existem no escritório:
+
+    · 'regra' (padrão) -- empresas que casam regime/segmento UNIÃO as vinculadas
+      à mão. É como sempre funcionou. Campo de regra vazio quer dizer TODOS.
+    · 'vinculadas' -- SOMENTE as vinculadas. Para obrigação que é de um cliente
+      específico, e não de um perfil. Antes isso era impossível: com a regra
+      vazia a obrigação pegava todo mundo, e vincular empresas só somava.
+    """
+    if (o.alvo_modo or "regra") == "vinculadas":
+        return [e for e in o.empresas if e.ativo and not e.bloqueado]
+
     alvo = {}
     for e in db.query(Empresa).filter(Empresa.ativo == True, Empresa.bloqueado == False).all():
         if _no_alvo(o, e):

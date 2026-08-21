@@ -37,7 +37,7 @@ const emptyForm = {
   sabado_util: false, competencia_ref: 'mes_anterior',
   ancora: '', ancora_dias_antes: 0, ancora_tipo_dias: 'uteis',
   exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
-  comentario_padrao: '', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
+  comentario_padrao: '', alvo_modo: 'regra', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
 };
 
 const csvToSet = (s) => new Set((s || '').split(',').map((x) => x.trim()).filter(Boolean));
@@ -158,6 +158,7 @@ export default function Obrigacoes() {
       ...emptyForm, ...o,
       setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
       tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
+      alvo_modo: o.alvo_modo || 'regra',
       aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
       empresa_ids: o.empresa_ids || [],
     });
@@ -174,6 +175,7 @@ export default function Obrigacoes() {
       setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
       supervisor_id: o.supervisor_id || '',
       tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
+      alvo_modo: o.alvo_modo || 'regra',
       aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
       empresa_ids: o.empresa_ids || [],
     });
@@ -667,15 +669,41 @@ export default function Obrigacoes() {
                 </button>
                 {secoes.publico && (() => {
                   const aplicaTodas = !form.aplica_regimes && !form.aplica_segmentos;
+                  const soVinculadas = form.alvo_modo === 'vinculadas';
                   return (
                 <div className="space-y-3">
+                  {/* Duas perguntas diferentes: "que PERFIL de empresa" e "quais
+                      empresas". Com regra vazia significando TODOS, não havia
+                      como dizer "só estes clientes" — o vínculo apenas somava. */}
+                  <div className="bg-gray-50 rounded px-3 py-2 space-y-1.5">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="alvo_modo" className="h-4 w-4"
+                        checked={!soVinculadas} onChange={() => set('alvo_modo', 'regra')} />
+                      <span className="font-medium text-gray-700">Por perfil de empresa</span>
+                      <span className="text-gray-400 text-xs">(regime e segmento, mais as vinculadas)</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="alvo_modo" className="h-4 w-4"
+                        checked={soVinculadas} onChange={() => set('alvo_modo', 'vinculadas')} />
+                      <span className="font-medium text-gray-700">Somente as empresas vinculadas</span>
+                      <span className="text-gray-400 text-xs">(obrigação de cliente específico)</span>
+                    </label>
+                  </div>
+                  {soVinculadas && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
+                      Só as empresas vinculadas abaixo recebem esta obrigação. Sem nenhuma
+                      vinculada, ela não gera tarefa nenhuma.
+                    </p>
+                  )}
+                  {!soVinculadas && (
                   <label className="flex items-center gap-2 text-sm cursor-pointer bg-gray-50 rounded px-3 py-2">
                     <input type="checkbox" checked={aplicaTodas} className="h-4 w-4"
                       onChange={(e) => { if (e.target.checked) { set('aplica_regimes', ''); set('aplica_segmentos', ''); } else { set('aplica_regimes', REGIMES[0][0]); } }} />
                     <span className="font-medium text-gray-700">Aplicar a todas as empresas</span>
                     <span className="text-gray-400 text-xs">(desmarque para restringir por regime/segmento)</span>
                   </label>
-                  {!aplicaTodas && (
+                  )}
+                  {!soVinculadas && !aplicaTodas && (
                   <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Regimes <span className="text-gray-400">(vazio = todos)</span></p>

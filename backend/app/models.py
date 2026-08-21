@@ -247,6 +247,13 @@ class Obrigacao(Base):
     ativa = Column(Boolean, default=True)
     comentario_padrao = Column(Text)
 
+    # Como a obrigação encontra as empresas:
+    #   'regra'      (padrão) empresas que casam regime/segmento UNIÃO as vinculadas
+    #   'vinculadas' SOMENTE as vinculadas explicitamente
+    # Sem o segundo modo não havia como dizer "só estes clientes": campo de regra
+    # vazio significa TODOS, então o vínculo só somava e nunca restringia.
+    alvo_modo = Column(String(12), default="regra")
+
     # Público-alvo por regra (CSV; vazio = todos)
     aplica_regimes = Column(String(120))
     aplica_segmentos = Column(String(120))
