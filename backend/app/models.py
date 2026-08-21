@@ -130,10 +130,15 @@ class Setor(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
     descricao = Column(Text)
+    # Gestor do departamento. Vira supervisor das tarefas do setor quando o
+    # responsável não tem gestor próprio — um cadastro por setor cobre a equipe
+    # inteira, em vez de depender do gestor_id estar preenchido pessoa a pessoa.
+    gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     ativo = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    gestor = relationship("Usuario", foreign_keys=[gestor_id])
     tarefas = relationship("Tarefa", back_populates="setor")
 
 

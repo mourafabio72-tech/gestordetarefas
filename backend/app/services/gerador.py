@@ -219,6 +219,15 @@ def _resp_do_setor(db: Session, empresa_id: int, setor_id):
     return vin.responsavel if (vin and vin.responsavel) else None
 
 
+def _gestor_do_setor(db: Session, setor_id):
+    """Gestor cadastrado no setor, ou None."""
+    if not setor_id:
+        return None
+    from ..models import Setor
+    s = db.query(Setor.gestor_id).filter(Setor.id == setor_id).first()
+    return s[0] if s else None
+
+
 def _detalhe_empresa(db: Session, empresa_id: int, obrigacao_id: int):
     """Detalhe/complemento fixo desta empresa nesta obrigação (ou None)."""
     from ..models import EmpresaObrigacaoDetalhe
@@ -260,7 +269,16 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     # Responsável = analista da empresa no setor da obrigação (matriz); fallback
     # no responsável padrão da obrigação. Supervisor = gestor desse responsável.
     resp = _resp_do_setor(db, emp.id, o.setor_id) or o.responsavel
-    sup_id = (resp.gestor_id if resp else None) or o.supervisor_id
+    # Supervisor, do mais específico ao mais geral -- a mesma escada que o app
+    # já usa para o responsável (matriz da empresa vence o padrão da obrigação):
+    #   1. gestor da própria pessoa;
+    #   2. gestor do SETOR, que cobre a equipe inteira com um cadastro só;
+    #   3. supervisor padrão da obrigação.
+    # Sem o degrau do meio, quem não tem gestor_id preenchido gerava tarefa sem
+    # supervisor -- e ninguém era avisado do atraso.
+    sup_id = ((resp.gestor_id if resp else None)
+              or _gestor_do_setor(db, o.setor_id)
+              or o.supervisor_id)
     # Detalhe fixo da empresa nesta obrigação (ex.: "Banco Itaú") entra na descrição.
     descricao = o.comentario_padrao or ""
     det = _detalhe_empresa(db, emp.id, o.id)

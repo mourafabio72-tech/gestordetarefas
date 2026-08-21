@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { setoresAPI } from '../services/api';
+import { setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 
@@ -8,15 +8,17 @@ export default function Setores() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSetor, setEditingSetor] = useState(null);
-  const [formData, setFormData] = useState({ nome: '', descricao: '' });
+  const [formData, setFormData] = useState({ nome: '', descricao: '', gestor_id: '' });
+  const [usuarios, setUsuarios] = useState([]);
   const [mostrarInativos, setMostrarInativos] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
-      const res = await setoresAPI.list(true);
+      const [res, resUsers] = await Promise.all([setoresAPI.list(true), usuariosAPI.list()]);
       setSetores(res.data);
+      setUsuarios(resUsers.data.filter((u) => !u.bloqueado));
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -34,7 +36,7 @@ export default function Setores() {
       }
       setShowModal(false);
       setEditingSetor(null);
-      setFormData({ nome: '', descricao: '' });
+      setFormData({ nome: '', descricao: '', gestor_id: '' });
       loadData();
     } catch (error) {
       alert(mensagemDeErro(error, 'Erro ao salvar setor'));
@@ -43,7 +45,8 @@ export default function Setores() {
 
   const handleEdit = (setor) => {
     setEditingSetor(setor);
-    setFormData({ nome: setor.nome, descricao: setor.descricao || '' });
+    setFormData({ nome: setor.nome, descricao: setor.descricao || '',
+                  gestor_id: setor.gestor_id ?? '' });
     setShowModal(true);
   };
 
@@ -84,7 +87,7 @@ export default function Setores() {
           <button
             onClick={() => {
               setEditingSetor(null);
-              setFormData({ nome: '', descricao: '' });
+              setFormData({ nome: '', descricao: '', gestor_id: '' });
               setShowModal(true);
             }}
             className="btn-primary flex items-center gap-2"
@@ -108,6 +111,7 @@ export default function Setores() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left font-semibold text-gray-600">Nome</th>
                   <th className="text-left font-semibold text-gray-600">Descrição</th>
+                  <th className="text-left font-semibold text-gray-600">Gestor</th>
                   <th className="text-left font-semibold text-gray-600">Situação</th>
                   <th className="text-right font-semibold text-gray-600">Ações</th>
                 </tr>
@@ -117,6 +121,10 @@ export default function Setores() {
                   <tr key={setor.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="font-medium">{setor.nome}</td>
                     <td className="text-gray-500">{setor.descricao || '-'}</td>
+                    <td className="text-gray-500">
+                      {usuarios.find((u) => u.id === setor.gestor_id)?.nome
+                        || <span className="text-amber-600" title="Sem gestor: as tarefas deste setor só terão supervisor se o responsável tiver gestor próprio">— definir</span>}
+                    </td>
                     <td>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${setor.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>
                         {setor.ativo === false ? 'Inativo' : 'Ativo'}
@@ -180,6 +188,23 @@ export default function Setores() {
                   className="input-field"
                   rows={3}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gestor do setor</label>
+                <select
+                  value={formData.gestor_id}
+                  onChange={(e) => setFormData({ ...formData, gestor_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Nenhum</option>
+                  {usuarios.map((u) => (
+                    <option key={u.id} value={u.id}>{u.nome}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Vira supervisor das tarefas deste setor quando o responsável não tem gestor
+                  próprio. Um cadastro aqui cobre a equipe inteira.
+                </p>
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">

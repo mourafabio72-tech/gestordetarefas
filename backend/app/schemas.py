@@ -133,6 +133,7 @@ class EmpresaResponse(EmpresaBase):
 class SetorBase(BaseModel):
     nome: str
     descricao: Optional[str] = None
+    gestor_id: Optional[int] = None
 
 class SetorCreate(SetorBase):
     pass
