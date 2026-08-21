@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { cronogramaAPI, empresasAPI, setoresAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const SETORES_PADRAO = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
@@ -73,7 +74,7 @@ export default function ImportarCronograma() {
       setItens(pre);
       setEntidades(data.entidades || []);
     } catch (e) {
-      alert(e.response?.data?.detail || 'Não consegui ler o cronograma.');
+      alert(mensagemDeErro(e, 'Não consegui ler o cronograma.'));
     } finally { setBusy(false); }
   };
 
@@ -89,7 +90,7 @@ export default function ImportarCronograma() {
       setResultado(data);
       setItens(null);
     } catch (e) {
-      alert(e.response?.data?.detail || 'Erro ao importar.');
+      alert(mensagemDeErro(e, 'Erro ao importar.'));
     } finally { setBusy(false); }
   };
 

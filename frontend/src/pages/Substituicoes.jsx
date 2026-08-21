@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { substituicoesAPI, usuariosAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { UserCog, Plus, X, Plane, LogOut } from 'lucide-react';
 
 const FORM_VAZIO = {
@@ -50,7 +51,7 @@ export default function Substituicoes() {
       await substituicoesAPI.create(payload);
       setShowModal(false); setForm(FORM_VAZIO); load();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao salvar substituição');
+      alert(mensagemDeErro(err, 'Erro ao salvar substituição'));
     } finally { setSaving(false); }
   };
 

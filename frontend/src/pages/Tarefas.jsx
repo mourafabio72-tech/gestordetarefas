@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2 } from 'lucide-react';
@@ -182,7 +183,7 @@ export default function Tarefas() {
       resetForm();
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar tarefa');
+      alert(mensagemDeErro(error, 'Erro ao salvar tarefa'));
     }
   };
 
@@ -227,7 +228,7 @@ export default function Tarefas() {
       await tarefasAPI.update(tarefa.id, { status: newStatus });
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao atualizar status');
+      alert(mensagemDeErro(error, 'Erro ao atualizar status'));
     }
   };
 
@@ -272,7 +273,7 @@ export default function Tarefas() {
       setCopyOrigem(''); setCopyDestinos([]); setCopyBusca(''); setCopyRegime(''); setCopyGrupo('');
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao copiar tarefas');
+      alert(mensagemDeErro(error, 'Erro ao copiar tarefas'));
     }
   };
 
@@ -288,7 +289,7 @@ export default function Tarefas() {
       setShowExcluirMes(false);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao excluir tarefas do mês.');
+      alert(mensagemDeErro(error, 'Erro ao excluir tarefas do mês.'));
     } finally { setExcluindoMes(false); }
   };
 
@@ -302,7 +303,7 @@ export default function Tarefas() {
         prompt('Copie o link de envio do comprovante:', data.link);
       }
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao gerar o link');
+      alert(mensagemDeErro(error, 'Erro ao gerar o link'));
     }
   };
 
@@ -314,7 +315,7 @@ export default function Tarefas() {
       setTransferResp('');
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao transferir tarefa');
+      alert(mensagemDeErro(error, 'Erro ao transferir tarefa'));
     }
   };
 

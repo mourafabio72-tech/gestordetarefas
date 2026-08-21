@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { evalidadorAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react';
 
 const STATUS = {
@@ -36,7 +37,7 @@ export default function EValidador() {
       const r = await evalidadorAPI.processar(files);
       setResultado(r.data);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao processar');
+      alert(mensagemDeErro(err, 'Erro ao processar'));
     } finally { setProcessing(false); }
   };
 

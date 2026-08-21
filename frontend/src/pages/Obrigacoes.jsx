@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 
 const AJUDA_IDENTIFICADORES =
@@ -103,7 +104,7 @@ export default function Obrigacoes() {
       const { data } = await obrigacoesAPI.gerar(mes, ano);
       alert(`Tarefas de ${data.mes_entrega}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
     } catch (e) {
-      alert(e.response?.data?.detail || 'Erro ao gerar tarefas.');
+      alert(mensagemDeErro(e, 'Erro ao gerar tarefas.'));
     } finally { setGerando(false); }
   };
   const [showCopy, setShowCopy] = useState(false);
@@ -122,7 +123,7 @@ export default function Obrigacoes() {
       const { data } = await obrigacoesAPI.analisarModelo(file);
       setModelo(data);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Não consegui ler o PDF modelo');
+      alert(mensagemDeErro(err, 'Não consegui ler o PDF modelo'));
     } finally { setAnalisando(false); }
   };
 
@@ -193,7 +194,7 @@ export default function Obrigacoes() {
       await obrigacoesAPI.setDetalhes(obrigId, detalhes.map((d) => ({ empresa_id: d.empresa_id, observacao: d.observacao })));
       setShowModal(false); loadData();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao salvar obrigação');
+      alert(mensagemDeErro(err, 'Erro ao salvar obrigação'));
     }
   };
 
@@ -215,7 +216,7 @@ export default function Obrigacoes() {
       alert(r.data?.message || 'Copiado.');
       setShowCopy(false); setCopyOrigem(''); setCopyDestino(''); loadData();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao copiar');
+      alert(mensagemDeErro(err, 'Erro ao copiar'));
     }
   };
 
@@ -232,7 +233,7 @@ export default function Obrigacoes() {
       alert(r.data?.desvinculadas != null ? `${r.data.desvinculadas} obrigação(ões) desvinculada(s) de "${nome}".` : 'Desvinculado.');
       setShowDesvincular(false); setDesvincEmpresa(''); loadData();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao desvincular');
+      alert(mensagemDeErro(err, 'Erro ao desvincular'));
     } finally { setDesvinculando(false); }
   };
 

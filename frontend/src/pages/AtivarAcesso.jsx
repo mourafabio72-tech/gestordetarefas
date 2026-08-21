@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { publicoAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { KeyRound, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function AtivarAcesso() {
@@ -15,7 +16,7 @@ export default function AtivarAcesso() {
   useEffect(() => {
     publicoAPI.ativarContexto(token)
       .then((r) => setCtx(r.data))
-      .catch((e) => setErro(e.response?.data?.detail || 'Convite inválido ou já utilizado.'));
+      .catch((e) => setErro(mensagemDeErro(e, 'Convite inválido ou já utilizado.')));
   }, [token]);
 
   const ativar = async (e) => {
@@ -28,7 +29,7 @@ export default function AtivarAcesso() {
       await publicoAPI.ativar(token, senha);
       setPronto(true);
     } catch (e) {
-      setErro(e.response?.data?.detail || 'Não consegui ativar o acesso.');
+      setErro(mensagemDeErro(e, 'Não consegui ativar o acesso.'));
     } finally { setSalvando(false); }
   };
 

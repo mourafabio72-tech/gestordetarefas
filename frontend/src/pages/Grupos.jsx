@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { usuariosAPI, gruposAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { useAuth } from '../contexts/AuthContext';
 import { ShieldCheck, ShieldAlert, SlidersHorizontal, Plus, Lock, Unlock, Trash2 } from 'lucide-react';
 import {
@@ -126,7 +127,7 @@ export default function Grupos() {
       setModalGrupo(null);
       await loadTudo();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar grupo');
+      alert(mensagemDeErro(error, 'Erro ao salvar grupo'));
     } finally { setSavingGrupo(false); }
   };
 
@@ -135,7 +136,7 @@ export default function Grupos() {
       await gruposAPI.setAtivo(g.slug, !g.ativo);
       await loadTudo();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao alterar o grupo');
+      alert(mensagemDeErro(error, 'Erro ao alterar o grupo'));
     }
   };
 
@@ -145,7 +146,7 @@ export default function Grupos() {
       await gruposAPI.delete(g.slug);
       await loadTudo();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao excluir o grupo');
+      alert(mensagemDeErro(error, 'Erro ao excluir o grupo'));
     }
   };
 
@@ -156,7 +157,7 @@ export default function Grupos() {
       await usuariosAPI.update(usuario.id, { grupo: novoGrupo });
       await loadTudo();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao alterar papel');
+      alert(mensagemDeErro(error, 'Erro ao alterar papel'));
     } finally { setSavingId(null); }
   };
 
@@ -181,7 +182,7 @@ export default function Grupos() {
       setModalUser(null);
       await loadTudo();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar permissões');
+      alert(mensagemDeErro(error, 'Erro ao salvar permissões'));
     } finally { setSaving(false); }
   };
 

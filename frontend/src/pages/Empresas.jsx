@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { empresasAPI, usuariosAPI, setoresAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
 
 const EMPRESA_VAZIA = {
@@ -78,7 +79,7 @@ export default function Empresas() {
       setImportResult(data);
       loadEmpresas();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao importar a planilha.');
+      alert(mensagemDeErro(err, 'Erro ao importar a planilha.'));
     } finally {
       setImporting(false);
     }
@@ -100,7 +101,7 @@ export default function Empresas() {
       alert(msg);
       loadEmpresas();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao importar responsáveis.');
+      alert(mensagemDeErro(err, 'Erro ao importar responsáveis.'));
     } finally {
       setImportandoResp(false);
     }
@@ -153,7 +154,7 @@ export default function Empresas() {
       loadEmpresas();
     } catch (error) {
       console.error('Erro empresa:', error.response?.data || error.message);
-      alert(error.response?.data?.detail || error.response?.data?.message || JSON.stringify(error.response?.data) || 'Erro ao salvar empresa');
+      alert(mensagemDeErro(error, 'Erro ao salvar empresa'));
     }
   };
 

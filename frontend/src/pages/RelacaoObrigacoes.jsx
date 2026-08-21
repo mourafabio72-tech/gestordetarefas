@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { FileStack, Download, Unlink } from 'lucide-react';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -61,7 +62,7 @@ export default function RelacaoObrigacoes() {
       alert(r.data?.desvinculadas != null ? `${r.data.desvinculadas} obrigação(ões) desvinculada(s) de "${nome}".` : 'Desvinculado.');
       setShowDesvincular(false); setDesvincEmpresa(''); load();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao desvincular');
+      alert(mensagemDeErro(err, 'Erro ao desvincular'));
     } finally { setDesvinculando(false); }
   };
 

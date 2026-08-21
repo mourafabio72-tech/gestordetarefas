@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { setoresAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, FolderOpen, Ban, CheckCircle2 } from 'lucide-react';
 
 export default function Setores() {
@@ -36,7 +37,7 @@ export default function Setores() {
       setFormData({ nome: '', descricao: '' });
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar setor');
+      alert(mensagemDeErro(error, 'Erro ao salvar setor'));
     }
   };
 
@@ -53,7 +54,7 @@ export default function Setores() {
       if (data?.message) alert(data.message);
       loadData();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao excluir setor');
+      alert(mensagemDeErro(error, 'Erro ao excluir setor'));
     }
   };
 

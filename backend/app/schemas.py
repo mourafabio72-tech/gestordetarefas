@@ -104,6 +104,19 @@ class EmpresaBase(BaseModel):
     fechamento_tipo: Optional[str] = None
     fechamento_dia: Optional[int] = None
 
+    @field_validator("fechamento_dia", "fechamento_tipo", mode="before")
+    @classmethod
+    def _vazio_e_nada(cls, v):
+        """Campo em branco no formulário chega como "" e não como ausente.
+
+        Sem isto, salvar a empresa com o marco de fechamento vazio derrubava o
+        cadastro INTEIRO num 422 -- inclusive quem só queria trocar o segmento,
+        porque o formulário envia todos os campos de uma vez.
+        """
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
 class EmpresaCreate(EmpresaBase):
     pass
 

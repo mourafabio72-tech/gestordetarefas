@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicoAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Upload, CheckCircle2, FileCheck2, AlertTriangle } from 'lucide-react';
 
 export default function EnviarComprovante() {
@@ -14,7 +15,7 @@ export default function EnviarComprovante() {
   useEffect(() => {
     publicoAPI.contexto(token)
       .then((r) => { setCtx(r.data); setEnviado(r.data.ja_enviado); })
-      .catch((e) => setErro(e.response?.data?.detail || 'Link inválido ou expirado.'));
+      .catch((e) => setErro(mensagemDeErro(e, 'Link inválido ou expirado.')));
   }, [token]);
 
   const enviar = async (file) => {
@@ -24,7 +25,7 @@ export default function EnviarComprovante() {
       await publicoAPI.enviar(token, file);
       setEnviado(true);
     } catch (e) {
-      setErro(e.response?.data?.detail || 'Não consegui enviar o arquivo.');
+      setErro(mensagemDeErro(e, 'Não consegui enviar o arquivo.'));
     } finally { setEnviando(false); }
   };
 

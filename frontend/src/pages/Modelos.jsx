@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 
 const TIPOS = {
@@ -64,7 +65,7 @@ export default function Modelos() {
         if (data.resumo.salvos) await carregar();  // já mostra os salvos automaticamente
       }
     } catch (err) {
-      alert(err.response?.data?.detail || 'Não consegui ler os arquivos.');
+      alert(mensagemDeErro(err, 'Não consegui ler os arquivos.'));
     } finally { setBusy(false); }
   };
 
@@ -77,7 +78,7 @@ export default function Modelos() {
       setFila((f) => f.slice(1));
       await carregar();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao salvar o modelo.');
+      alert(mensagemDeErro(err, 'Erro ao salvar o modelo.'));
     } finally { setBusy(false); }
   };
 

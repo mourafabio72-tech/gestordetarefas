@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usuariosAPI, empresasAPI, setoresAPI, gruposAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download, Send } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,7 +65,7 @@ export default function Usuarios() {
       alert(msg);
       loadUsuarios();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao importar usuários.');
+      alert(mensagemDeErro(err, 'Erro ao importar usuários.'));
     } finally { setImportando(false); }
   };
 
@@ -77,7 +78,7 @@ export default function Usuarios() {
       alert(`Convite enviado a ${usuario.nome} por ${data.canal === 'whatsapp' ? 'WhatsApp' : 'e-mail'}.`);
       loadUsuarios();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Não consegui enviar o convite.');
+      alert(mensagemDeErro(err, 'Não consegui enviar o convite.'));
     } finally { setConvidandoId(null); }
   };
   const convidarPendentes = async () => {
@@ -90,7 +91,7 @@ export default function Usuarios() {
       alert(msg);
       loadUsuarios();
     } catch (err) {
-      alert(err.response?.data?.detail || 'Erro ao enviar convites.');
+      alert(mensagemDeErro(err, 'Erro ao enviar convites.'));
     } finally { setConvidandoLote(false); }
   };
 
@@ -135,7 +136,7 @@ export default function Usuarios() {
       setFormData(FORM_VAZIO);
       loadUsuarios();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao salvar usuário');
+      alert(mensagemDeErro(error, 'Erro ao salvar usuário'));
     }
   };
 
@@ -160,7 +161,7 @@ export default function Usuarios() {
     if (usuario.bloqueado) {
       if (!confirm('Desbloquear este usuário?')) return;
       try { await usuariosAPI.bloquear(usuario.id, false); loadUsuarios(); }
-      catch (error) { alert(error.response?.data?.detail || 'Erro ao desbloquear'); }
+      catch (error) { alert(mensagemDeErro(error, 'Erro ao desbloquear')); }
       return;
     }
     // Bloqueando: verifica se há carga em aberto para oferecer transferência.
@@ -175,7 +176,7 @@ export default function Usuarios() {
         loadUsuarios();
       }
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao verificar carga do usuário');
+      alert(mensagemDeErro(error, 'Erro ao verificar carga do usuário'));
     }
   };
 
@@ -187,7 +188,7 @@ export default function Usuarios() {
       setBloqModal(null);
       loadUsuarios();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao bloquear usuário');
+      alert(mensagemDeErro(error, 'Erro ao bloquear usuário'));
     }
   };
 
@@ -198,7 +199,7 @@ export default function Usuarios() {
       if (data?.message) alert(data.message);
       loadUsuarios();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Erro ao excluir usuário');
+      alert(mensagemDeErro(error, 'Erro ao excluir usuário'));
     }
   };
 

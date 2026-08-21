@@ -114,5 +114,25 @@ m = calc_marco_fechamento(B, 11, 2026)
 check("5º dia útil de nov/2026 = 06/11", m.isoformat() == "2026-11-06", f"({m})")
 check("é dia útil", m.weekday() < 5)
 
+print("\n=== 8. marco em branco não derruba o cadastro da empresa ===")
+# O formulário envia TODOS os campos de uma vez. Com o marco vazio, o "" chegava
+# num campo inteiro e o 422 derrubava o salvamento inteiro -- inclusive de quem
+# só queria trocar o segmento.
+from app.schemas import EmpresaCreate                                    # noqa: E402
+try:
+    e = EmpresaCreate(razao_social="TESTE", segmento="comercio",
+                      fechamento_tipo="", fechamento_dia="")
+    check("marco em branco é aceito", True)
+    check("vira ausente, não string vazia",
+          e.fechamento_tipo is None and e.fechamento_dia is None,
+          f"({e.fechamento_tipo!r}, {e.fechamento_dia!r})")
+except Exception as ex:
+    check("marco em branco é aceito", False, f"({type(ex).__name__})")
+e2 = EmpresaCreate(razao_social="T", fechamento_tipo="dia_util", fechamento_dia="10")
+check("marco preenchido continua chegando como número", e2.fechamento_dia == 10,
+      f"({e2.fechamento_dia!r})")
+e3 = EmpresaCreate(razao_social="T", fechamento_tipo="  ", fechamento_dia=None)
+check("só espaço também conta como em branco", e3.fechamento_tipo is None)
+
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { configuracaoAPI } from '../services/api';
+import { mensagemDeErro } from '../services/erroApi';
 import { Bell, Mail, MessageCircle, Clock, Save, Send, Sparkles } from 'lucide-react';
 
 export default function Notificacoes() {
@@ -35,7 +36,7 @@ export default function Notificacoes() {
       setCfg(data);
       setMsg({ ok: true, txt: 'Configuração salva. Os horários já valem para os próximos disparos.' });
     } catch (e) {
-      setMsg({ ok: false, txt: e.response?.data?.detail || 'Erro ao salvar' });
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao salvar') });
     } finally { setSaving(false); }
   };
 
@@ -60,7 +61,7 @@ export default function Notificacoes() {
         ? { ok: true, txt: `E-mail de teste enviado para ${email}. Confira a caixa de entrada (e o spam).` }
         : { ok: false, txt: `Não enviou: ${data.error || 'verifique o SMTP'}` });
     } catch (e) {
-      setMsg({ ok: false, txt: e.response?.data?.detail || 'Erro ao testar' });
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao testar') });
     }
   };
 
@@ -78,7 +79,7 @@ export default function Notificacoes() {
         ? { ok: true, txt: `IA respondeu (${data.modelo}): "${data.resposta}". Chave OK ✅` }
         : { ok: false, txt: `IA não respondeu: ${data.erro || 'verifique a chave/modelo'}` });
     } catch (e) {
-      setMsg({ ok: false, txt: e.response?.data?.detail || 'Erro ao testar IA' });
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao testar IA') });
     }
   };
 
@@ -100,7 +101,7 @@ export default function Notificacoes() {
         ? { ok: true, txt: `WhatsApp de teste enviado para ${numero}.` }
         : { ok: false, txt: `Não enviou: ${data.error || 'verifique o WhatsApp/ZAP'}` });
     } catch (e) {
-      setMsg({ ok: false, txt: e.response?.data?.detail || 'Erro ao testar WhatsApp' });
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao testar WhatsApp') });
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { mensagemDeErro } from '../services/erroApi';
 import { useAuth } from '../contexts/AuthContext';
 import { Lock, User } from 'lucide-react';
 
@@ -18,7 +19,7 @@ export default function Login() {
     try {
       await login(email, senha);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erro ao fazer login');
+      setError(mensagemDeErro(err, 'Erro ao fazer login'));
     } finally {
       setLoading(false);
     }
