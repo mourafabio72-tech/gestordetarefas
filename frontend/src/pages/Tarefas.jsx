@@ -5,9 +5,10 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { mensagemDeErro } from '../services/erroApi';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag} from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
+import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -86,6 +87,29 @@ const setorCores = [
 ];
 const corDoSetor = (nome) => (setorCores.find((s) => s.re.test(nome || ''))?.cor) || '#c9bfa8';
 
+// Um controle da barra de filtros. Verde na borda quando está filtrando algo:
+// com oito campos numa faixa só, é o que responde "por que a lista está assim?"
+// sem obrigar a ler campo por campo.
+const ctrl = (ativo) =>
+  `w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none transition-colors
+   focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
+     ativo ? 'border-primary-400 text-primary-800 font-medium' : 'border-gray-300 text-gray-800'}`;
+
+// Campo com rótulo fixo por cima. O desenho anterior usava a opção vazia do
+// próprio select como nome ("Todas as empresas"), e o nome sumia no instante em
+// que você escolhia uma empresa -- restava um select com uma razão social e
+// nenhuma pista do que ele filtra.
+function Campo({ rotulo, dica, largura = '', children }) {
+  return (
+    <label className={`flex flex-col gap-1 ${largura}`} title={dica}>
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+        {rotulo}
+      </span>
+      {children}
+    </label>
+  );
+}
+
 export default function Tarefas() {
   const { user } = useAuth();
   const ehAdmin = user?.grupo === 'admin';
@@ -158,6 +182,20 @@ export default function Tarefas() {
   const aplicarPreset = (p) => setFiltros({ ...filtros, venc_de: p.de, venc_ate: p.ate });
   const presetAtivo = (p) => filtros.venc_de === p.de && filtros.venc_ate === p.ate;
   const temFiltro = temFiltroAtivo(filtros);
+
+  // Como a lista se organiza. Guardado no navegador porque é preferência de
+  // quem abre a tela todo dia -- o fiscal quer por setor, o gestor por empresa
+  // -- e reescolher a cada visita é atrito à toa.
+  const [agrupar, setAgrupar] = useState(() => {
+    try { const v = localStorage.getItem('tarefas.agrupar'); return v === null ? 'empresa' : v; }
+    catch { return 'empresa'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('tarefas.agrupar', agrupar); } catch { /* modo anônimo */ }
+  }, [agrupar]);
+  const [recolhidos, setRecolhidos] = useState([]);
+  const alternarGrupo = (chave) =>
+    setRecolhidos((r) => (r.includes(chave) ? r.filter((c) => c !== chave) : [...r, chave]));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -334,11 +372,124 @@ export default function Tarefas() {
     return <div className="flex items-center justify-center h-64">Carregando...</div>;
   }
 
+  // Nome para o cabeçalho de grupo. Devolve vazio (e não "-") quando o cadastro
+  // sumiu: o agrupador troca isso por "Sem classificação", que é o que a pessoa
+  // entende num título de seção.
+  const grupos = agruparTarefas(filteredTarefas, agrupar, {
+    empresa: (id) => empresas.find((e) => e.id === id)?.razao_social || '',
+    setor: (id) => setores.find((x) => x.id === id)?.nome || '',
+  });
+
+  // Um card. Extraído do JSX da lista porque agora ele é desenhado dentro de
+  // cada grupo, e aninhado em dois maps o bloco ficava ilegível.
+  // Some do card o que já está no cabeçalho do grupo: agrupando por empresa, a
+  // razão social não se repete em cada um dos cards dela; por setor, idem.
+  const cartao = (tarefa) => {
+    const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
+    // Fechamento do cliente naquele mês. `fechamento_cliente` vem como
+    // "AAAA-MM-DD" puro: passar por new Date() o interpretaria como UTC e
+    // mostraria o dia anterior aqui no fuso de Brasília.
+    const fech = tarefa.fechamento_cliente || null;
+    const fechBr = fech ? `${fech.slice(8, 10)}/${fech.slice(5, 7)}` : null;
+    const venc = (tarefa.data_vencimento || '').slice(0, 10);
+    const encerra = fech && venc && fech === venc;
+    const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+    const st = statusSage[tarefa.status] || statusSage.pendente;
+    const pr = prioSage[tarefa.prioridade] || prioSage.media;
+    const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+    const setorNome = tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null;
+    const corSet = corDoSetor(setorNome);
+    const empresaNome = getEmpresaNome(tarefa.empresa_id);
+    return (
+      <div key={tarefa.id} className="rounded-lg border p-3 flex flex-col transition-shadow hover:shadow-sm"
+        style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border, borderLeft: `4px solid ${corSet}` }}>
+        <div className="flex items-start gap-1 mb-1.5">
+          {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
+          <h3 className="text-sm font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
+            {tarefa.titulo}
+          </h3>
+        </div>
+        {setorNome && agrupar !== 'setor' && (
+          <span className="self-start px-1.5 py-0.5 rounded text-[10px] font-medium mb-1.5"
+            style={{ background: corSet + '22', color: corSet }}>{setorNome}</span>
+        )}
+        <div className="text-[11px] leading-snug space-y-0.5 mb-2" style={{ color: SAGE.txt3 }}>
+          {agrupar !== 'empresa' && (
+            <p className="truncate" title={empresaNome}>{empresaNome}</p>
+          )}
+          {tarefa.responsaveis?.length > 0 && (
+            <p className="truncate" title={tarefa.responsaveis.map(r => r.nome).join(', ')}>
+              Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
+            </p>
+          )}
+          <p className="flex items-center gap-1">
+            <Clock size={11} />
+            {prazoDate ? format(prazoDate, "dd/MM/yy", { locale: ptBR }) : 'sem prazo'}
+            {tarefa.competencia && <span className="tabular-nums" title="Competência do fato gerador">· {tarefa.competencia}</span>}
+            {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
+          </p>
+          {fechBr && (
+            encerra ? (
+              <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
+                 title={`Esta tarefa vence no próprio dia do fechamento de ${empresaNome} — é a última do processo.`}>
+                <Flag size={11} /> encerra o fechamento
+              </p>
+            ) : (
+              <p className="flex items-center gap-1" style={{ color: '#8a8378' }}
+                 title={`${empresaNome} fecha o mês em ${fechBr}. Esta tarefa vem antes.`}>
+                <Flag size={11} /> cliente fecha {fechBr}
+              </p>
+            )
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mb-2">
+          <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
+          <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
+        </div>
+        <div className="mt-auto flex items-center gap-1">
+          {ativa && (
+            <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
+              className="flex-1 min-w-0 text-[11px] border rounded px-1 py-1 bg-white" style={{ borderColor: SAGE.border, color: '#55614e' }}>
+              <option value="pendente">Pendente</option>
+              <option value="em_andamento">Em Andamento</option>
+              <option value="concluida" disabled={bloqueiaBaixaManual(tarefa)}>
+                {bloqueiaBaixaManual(tarefa) ? 'Concluída (só e-validador)' : 'Concluída'}
+              </option>
+            </select>
+          )}
+          {ativa && (
+            <button onClick={() => handleCopiarLink(tarefa)} title="Copiar link de envio do comprovante" className="p-1 rounded hover:bg-[#e7eef6]" style={{ color: '#2f6fb0' }}>
+              <Link2 size={14} />
+            </button>
+          )}
+          {ativa && (
+            <button onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }} title="Transferir" className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: '#8a6a2e' }}>
+              <ArrowRightLeft size={14} />
+            </button>
+          )}
+          <button onClick={() => handleEdit(tarefa)} title="Editar" className="p-1 rounded hover:bg-[#dcefed]" style={{ color: '#3a7d76' }}>
+            <Edit2 size={14} />
+          </button>
+          <button onClick={() => handleDelete(tarefa)}
+            title={tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar'}
+            className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Tarefas</h1>
-        <div className="flex gap-2">
+      <div className="flex justify-between items-start gap-4 mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Tarefas</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            As obrigações do mês, por empresa. O prazo mostrado é o interno.
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
           {ehAdmin && (
             <button
               onClick={() => setShowExcluirMes(true)}
@@ -370,213 +521,160 @@ export default function Tarefas() {
         </div>
       </div>
 
-      {/* Barra de filtros — uma faixa única de controles, lado a lado.
-          O rótulo de cada select é a própria opção "Todas/Todos", em vez de um
-          label acima: label empilhado dobra a altura da barra e é o que fazia
-          ela ocupar dois andares. Os selects longos dividem a sobra entre si
-          (é a razão social da empresa que estica e quebrava a linha); data e
-          atalhos ficam fixos, porque não encolhem sem cortar conteúdo. */}
-      <div className="flex items-center gap-1 mb-5 text-xs overflow-x-auto">
-        <input
-          type="search"
-          value={filtros.texto}
-          onChange={(e) => setFiltros({ ...filtros, texto: e.target.value })}
-          placeholder="Buscar tarefa..."
-          className={`flex-1 min-w-[120px] h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-            filtros.texto ? 'border-primary-400' : 'border-gray-300'}`}
-        />
-        <select
-          value={filtros.usuario_id}
-          onChange={(e) => setFiltros({ ...filtros, usuario_id: e.target.value })}
-          title="Responsável ou supervisor da tarefa"
-          className={`flex-1 min-w-[92px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-            filtros.usuario_id ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
-        >
-          <option value="">Todas as pessoas</option>
-          {usuarios.filter((u) => !u.bloqueado).map((u) => (
-            <option key={u.id} value={u.id}>{u.nome}</option>
-          ))}
-        </select>
-        {[
-          { chave: 'empresa_id', vazio: 'Todas as empresas',
-            opcoes: empresas.map(e => ({ v: e.id, t: e.razao_social })) },
-          { chave: 'setor_id', vazio: 'Todos os setores',
-            opcoes: setores.map(x => ({ v: x.id, t: x.nome })) },
-          { chave: 'status', vazio: 'Todos os status',
-            opcoes: Object.entries(statusLabels).map(([v, t]) => ({ v, t })) },
-        ].map(f => (
-          <select
-            key={f.chave}
-            value={filtros[f.chave]}
-            onChange={(e) => setFiltros({ ...filtros, [f.chave]: e.target.value })}
-            className={`flex-1 min-w-[92px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-              filtros[f.chave] ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
-          >
-            <option value="">{f.vazio}</option>
-            {f.opcoes.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
-          </select>
-        ))}
-
-        <select
-          value={filtros.competencia}
-          onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
-          className={`shrink-0 w-[118px] h-8 pl-1.5 pr-0.5 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-            filtros.competencia ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}
-          title="Competência do fato gerador — MM/AAAA"
-        >
-          <option value="">Toda competência</option>
-          {competenciasDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
-          <option value={SEM_COMPETENCIA}>— avulsas</option>
-        </select>
-
-        <span className="shrink-0 text-[11px] text-gray-500 pl-1">Vence</span>
-        <input
-          type="date"
-          value={filtros.venc_de}
-          onChange={(e) => setFiltros({ ...filtros, venc_de: e.target.value })}
-          title="Vencimento a partir de"
-          className={`shrink-0 w-[118px] h-8 px-1 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-            filtros.venc_de ? 'border-primary-400' : 'border-gray-300'}`}
-        />
-        <span className="shrink-0 text-[11px] text-gray-500">a</span>
-        <input
-          type="date"
-          value={filtros.venc_ate}
-          onChange={(e) => setFiltros({ ...filtros, venc_ate: e.target.value })}
-          title="Vencimento até"
-          className={`shrink-0 w-[118px] h-8 px-1 text-xs border rounded-md bg-[#fffdf9] outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
-            filtros.venc_ate ? 'border-primary-400' : 'border-gray-300'}`}
-        />
-
-        <div className="flex shrink-0 ml-1">
-          {presetsVencimento().map((p, i, arr) => (
-            <button
-              key={p.rotulo}
-              type="button"
-              onClick={() => aplicarPreset(p)}
-              title={p.titulo}
-              className={`h-8 px-2 text-[11px] font-medium border whitespace-nowrap transition
-                ${i === 0 ? 'rounded-l-md' : '-ml-px'} ${i === arr.length - 1 ? 'rounded-r-md' : ''}
-                ${presetAtivo(p)
-                  ? 'bg-primary-100 border-primary-400 text-primary-800 relative z-10'
-                  : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'}`}
-            >
-              {p.rotulo}
-            </button>
+      {/* Filtros — painel em duas faixas: em cima O QUE se procura, embaixo
+          QUANDO vence. Antes era uma fita única de doze controles com rolagem
+          lateral: cabia na linha, mas o nome de cada filtro era a opção vazia
+          dentro dele ("Todas as empresas") e sumia no instante em que você
+          escolhia alguma coisa -- restava um select com uma razão social e
+          nenhuma pista do que ele filtrava. Agora o rótulo fica fixo por cima. */}
+      <div className="mb-5 rounded-xl border border-gray-200 p-3" style={{ background: '#faf7f0' }}>
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+          <Campo rotulo="Tarefa" largura="flex-[2] min-w-[150px]">
+            <input
+              type="search"
+              value={filtros.texto}
+              onChange={(e) => setFiltros({ ...filtros, texto: e.target.value })}
+              placeholder="parte do nome"
+              className={ctrl(filtros.texto)}
+            />
+          </Campo>
+          {[
+            { chave: 'empresa_id', rotulo: 'Empresa', vazio: 'Todas', largura: 'flex-[2] min-w-[150px]',
+              opcoes: empresas.map((e) => ({ v: e.id, t: e.razao_social })) },
+            { chave: 'setor_id', rotulo: 'Setor', vazio: 'Todos', largura: 'flex-1 min-w-[110px]',
+              opcoes: setores.map((x) => ({ v: x.id, t: x.nome })) },
+            { chave: 'usuario_id', rotulo: 'Pessoa', vazio: 'Qualquer uma', largura: 'flex-1 min-w-[120px]',
+              dica: 'Responsável ou supervisor da tarefa',
+              opcoes: usuarios.filter((u) => !u.bloqueado).map((u) => ({ v: u.id, t: u.nome })) },
+            { chave: 'status', rotulo: 'Situação', vazio: 'Todas', largura: 'flex-1 min-w-[110px]',
+              opcoes: Object.entries(statusLabels).map(([v, t]) => ({ v, t })) },
+          ].map((f) => (
+            <Campo key={f.chave} rotulo={f.rotulo} dica={f.dica} largura={f.largura}>
+              <select
+                value={filtros[f.chave]}
+                onChange={(e) => setFiltros({ ...filtros, [f.chave]: e.target.value })}
+                className={ctrl(filtros[f.chave])}
+              >
+                <option value="">{f.vazio}</option>
+                {f.opcoes.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
+              </select>
+            </Campo>
           ))}
         </div>
 
-        {temFiltro && (
-          <button
-            type="button"
-            onClick={() => setFiltros(filtrosVazios())}
-            title="Limpar todos os filtros"
-            className="shrink-0 h-8 px-1.5 text-[11px] text-gray-500 underline hover:text-gray-700 whitespace-nowrap"
-          >
-            Limpar
-          </button>
-        )}
-        <span className="shrink-0 text-[11px] text-gray-500 whitespace-nowrap tabular-nums pl-1">
-          {filteredTarefas.length}/{tarefas.length}
-        </span>
+        <div className="mt-2.5 flex flex-wrap items-end gap-x-3 gap-y-2">
+          <Campo rotulo="Competência" dica="Mês do fato gerador — MM/AAAA. Não é o vencimento." largura="w-[124px]">
+            <select
+              value={filtros.competencia}
+              onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
+              className={ctrl(filtros.competencia)}
+            >
+              <option value="">Todas</option>
+              {competenciasDisponiveis.map((c) => <option key={c} value={c}>{c}</option>)}
+              <option value={SEM_COMPETENCIA}>— avulsas</option>
+            </select>
+          </Campo>
+          <Campo rotulo="Vence de" largura="w-[130px]">
+            <input
+              type="date"
+              value={filtros.venc_de}
+              onChange={(e) => setFiltros({ ...filtros, venc_de: e.target.value })}
+              className={ctrl(filtros.venc_de)}
+            />
+          </Campo>
+          <Campo rotulo="até" largura="w-[130px]">
+            <input
+              type="date"
+              value={filtros.venc_ate}
+              onChange={(e) => setFiltros({ ...filtros, venc_ate: e.target.value })}
+              className={ctrl(filtros.venc_ate)}
+            />
+          </Campo>
+          <Campo rotulo="Atalhos" largura="shrink-0">
+            <div className="flex h-8">
+              {presetsVencimento().map((p, i, arr) => (
+                <button
+                  key={p.rotulo}
+                  type="button"
+                  onClick={() => aplicarPreset(p)}
+                  title={p.titulo}
+                  className={`h-8 px-2.5 text-[11px] font-medium border whitespace-nowrap transition
+                    ${i === 0 ? 'rounded-l-md' : '-ml-px'} ${i === arr.length - 1 ? 'rounded-r-md' : ''}
+                    ${presetAtivo(p)
+                      ? 'bg-primary-100 border-primary-400 text-primary-800 relative z-10'
+                      : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'}`}
+                >
+                  {p.rotulo}
+                </button>
+              ))}
+            </div>
+          </Campo>
+          <Campo rotulo="Agrupar por" dica="Como a lista se organiza. Fica guardado neste navegador." largura="w-[124px]">
+            <select value={agrupar} onChange={(e) => setAgrupar(e.target.value)} className={ctrl(false)}>
+              {AGRUPAMENTOS.map((a) => <option key={a.valor} value={a.valor}>{a.rotulo}</option>)}
+            </select>
+          </Campo>
+
+          <div className="ml-auto flex items-center gap-3 pb-1">
+            <span className="text-[11px] text-gray-500 whitespace-nowrap tabular-nums">
+              {temFiltro
+                ? <><strong className="text-gray-700">{filteredTarefas.length}</strong> de {tarefas.length}</>
+                : <>{tarefas.length} {tarefas.length === 1 ? 'tarefa' : 'tarefas'}</>}
+            </span>
+            {temFiltro && (
+              <button
+                type="button"
+                onClick={() => setFiltros(filtrosVazios())}
+                className="text-[11px] text-gray-500 underline hover:text-gray-700 whitespace-nowrap"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {filteredTarefas.length === 0 ? (
         <div className="card text-center py-12">
           <ListTodo size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">Nenhuma tarefa encontrada</p>
+          {temFiltro && (
+            <button type="button" onClick={() => setFiltros(filtrosVazios())}
+              className="mt-2 text-xs text-primary-700 underline">
+              Limpar os filtros
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {filteredTarefas.map((tarefa) => {
-            const prazoDate = tarefa.data_prazo ? new Date(tarefa.data_prazo) : null;
-            // Fechamento do cliente naquele mês. `fechamento_cliente` vem como
-            // "AAAA-MM-DD" puro: passar por new Date() o interpretaria como UTC
-            // e mostraria o dia anterior aqui no fuso de Brasília.
-            const fech = tarefa.fechamento_cliente || null;
-            const fechBr = fech ? `${fech.slice(8, 10)}/${fech.slice(5, 7)}` : null;
-            const venc = (tarefa.data_vencimento || '').slice(0, 10);
-            const encerra = fech && venc && fech === venc;
-            const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
-            const st = statusSage[tarefa.status] || statusSage.pendente;
-            const pr = prioSage[tarefa.prioridade] || prioSage.media;
-            const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
-            const setorNome = tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null;
-            const corSet = corDoSetor(setorNome);
+        <div className="space-y-4">
+          {grupos.map((g) => {
+            const aberto = !recolhidos.includes(g.chave);
             return (
-              <div key={tarefa.id} className="rounded-lg border p-2.5 flex flex-col"
-                style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border, borderLeft: `4px solid ${corSet}` }}>
-                <div className="flex items-start gap-1 mb-1">
-                  {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
-                  <h3 className="text-[13px] font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
-                    {tarefa.titulo}
-                  </h3>
-                </div>
-                {setorNome && (
-                  <span className="self-start px-1.5 py-0.5 rounded text-[10px] font-medium mb-1"
-                    style={{ background: corSet + '22', color: corSet }}>{setorNome}</span>
+              <section key={g.chave}>
+                {g.titulo && (
+                  <button
+                    type="button"
+                    onClick={() => alternarGrupo(g.chave)}
+                    className="w-full flex items-center gap-2 mb-2 px-1.5 py-1 rounded-lg text-left transition-colors hover:bg-[#e4dac6]"
+                  >
+                    <ChevronDown size={15} className={`shrink-0 transition-transform ${aberto ? '' : '-rotate-90'}`}
+                      style={{ color: SAGE.txt3 }} />
+                    <h2 className="text-sm font-semibold truncate" style={{ color: SAGE.txt }} title={g.titulo}>
+                      {g.titulo}
+                    </h2>
+                    <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium tabular-nums"
+                      style={{ background: '#e2ebde', color: '#566450' }}>
+                      {g.tarefas.length}
+                    </span>
+                    <span className="flex-1 border-b" style={{ borderColor: '#d8ccb4' }} />
+                  </button>
                 )}
-                <div className="text-[11px] leading-snug space-y-0.5 mb-1.5" style={{ color: SAGE.txt3 }}>
-                  <p className="truncate" title={getEmpresaNome(tarefa.empresa_id)}>{getEmpresaNome(tarefa.empresa_id)}</p>
-                  {tarefa.responsaveis?.length > 0 && (
-                    <p className="truncate" title={tarefa.responsaveis.map(r => r.nome).join(', ')}>
-                      Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
-                    </p>
-                  )}
-                  <p className="flex items-center gap-1">
-                    <Clock size={11} />
-                    {prazoDate ? format(prazoDate, "dd/MM/yy", { locale: ptBR }) : 'sem prazo'}
-                    {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
-                  </p>
-                  {fechBr && (
-                    encerra ? (
-                      <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
-                         title={`Esta tarefa vence no próprio dia do fechamento de ${getEmpresaNome(tarefa.empresa_id)} — é a última do processo.`}>
-                        <Flag size={11} /> encerra o fechamento
-                      </p>
-                    ) : (
-                      <p className="flex items-center gap-1" style={{ color: '#8a8378' }}
-                         title={`${getEmpresaNome(tarefa.empresa_id)} fecha o mês em ${fechBr}. Esta tarefa vem antes.`}>
-                        <Flag size={11} /> cliente fecha {fechBr}
-                      </p>
-                    )
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
-                </div>
-                <div className="mt-auto flex items-center gap-1">
-                  {ativa && (
-                    <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
-                      className="flex-1 text-[11px] border rounded px-1 py-1 bg-white" style={{ borderColor: SAGE.border, color: '#55614e' }}>
-                      <option value="pendente">Pendente</option>
-                      <option value="em_andamento">Em Andamento</option>
-                      <option value="concluida" disabled={bloqueiaBaixaManual(tarefa)}>
-                        {bloqueiaBaixaManual(tarefa) ? 'Concluída (só e-validador)' : 'Concluída'}
-                      </option>
-                    </select>
-                  )}
-                  {ativa && (
-                    <button onClick={() => handleCopiarLink(tarefa)} title="Copiar link de envio do comprovante" className="p-1 rounded hover:bg-[#e7eef6]" style={{ color: '#2f6fb0' }}>
-                      <Link2 size={14} />
-                    </button>
-                  )}
-                  {ativa && (
-                    <button onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }} title="Transferir" className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: '#8a6a2e' }}>
-                      <ArrowRightLeft size={14} />
-                    </button>
-                  )}
-                  <button onClick={() => handleEdit(tarefa)} title="Editar" className="p-1 rounded hover:bg-[#dcefed]" style={{ color: '#3a7d76' }}>
-                    <Edit2 size={14} />
-                  </button>
-                  <button onClick={() => handleDelete(tarefa)}
-                    title={tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar'}
-                    className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
+                {aberto && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {g.tarefas.map(cartao)}
+                  </div>
+                )}
+              </section>
             );
           })}
         </div>
