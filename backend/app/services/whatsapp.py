@@ -275,6 +275,29 @@ def urgencia_curta(dias: int) -> tuple:
     return ("📋", f"faltam {dias} dias")
 
 
+def folego_ate_vencer(venc_dias, venc_data=None) -> str:
+    """Quanto ainda há entre o atraso interno e o prazo legal.
+
+    Só faz sentido para tarefa atrasada no PRAZO INTERNO: "atrasada há 3 dias"
+    soa igual quer o vencimento legal seja amanhã ou daqui a duas semanas, e
+    não é a mesma coisa -- um caso é correr, o outro é multa a caminho. A frase
+    diz de qual dos dois se trata.
+
+    Devolve "" quando não há o que dizer, para o bloco não ganhar linha vazia.
+    """
+    if venc_dias is None:
+        return ""
+    data = f" ({venc_data})" if venc_data else ""
+    if venc_dias > 1:
+        return f"⏳ ainda dá: vence em {venc_dias} dias{data}"
+    if venc_dias == 1:
+        return f"⏳ atenção: vence amanhã{data}"
+    if venc_dias == 0:
+        return f"❗ o vencimento é HOJE{data}"
+    n = abs(venc_dias)
+    return f"❗ vencimento passou há {n} dia" + ("s" if n > 1 else "") + data
+
+
 LIMITE_RESUMO = 3200   # WhatsApp corta perto de 4096; sobra folga para o rodapé
 
 
@@ -322,6 +345,12 @@ def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO,
             bloco += f" · prazo {i['prazo']}"
         if i.get("multa"):
             bloco += " · ⚠️ gera multa"
+        # Só para o que já estourou o prazo interno: nas outras faixas a data
+        # legal ainda não é a pergunta, e a linha só encheria a lista.
+        if (i.get("dias") is not None) and i["dias"] < 0:
+            folego = folego_ate_vencer(i.get("venc_dias"), i.get("venc_data"))
+            if folego:
+                bloco += f"\n{folego}"
         if i.get("link"):
             bloco += f"\n📎 {i['link']}"
         bloco += "\n"
@@ -606,6 +635,12 @@ async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: 
         item = {"titulo": tarefa.titulo, "empresa": empresa_nome, "dias": dias,
                 "prazo": base.strftime("%d/%m"), "multa": bool(tarefa.gera_multa),
                 "link": link}
+        # Fôlego até o prazo legal. Só quando o interno é que comandou o alerta:
+        # se a tarefa não tem prazo interno, `base` JÁ é o vencimento, e repetir
+        # a mesma contagem com outro nome confundiria em vez de informar.
+        if tarefa.data_prazo and tarefa.data_vencimento:
+            item["venc_dias"] = (tarefa.data_vencimento.date() - now.date()).days
+            item["venc_data"] = tarefa.data_vencimento.strftime("%d/%m")
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis, zap, incluir_cliente):

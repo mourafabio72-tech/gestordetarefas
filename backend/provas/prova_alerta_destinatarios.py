@@ -20,7 +20,7 @@ from app.services.whatsapp import (destinatarios_alerta,  # noqa: E402
                                    normalizar_telefone, mapa_numero_por_email,
                                    mapa_userid_por_email, eh_cliente,
                                    montar_payload_zap, montar_resumo, urgencia_curta,
-                                   faixa_da_tarefa, FAIXAS)
+                                   faixa_da_tarefa, FAIXAS, folego_ate_vencer)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -247,6 +247,29 @@ check("uma tarefa gigante sozinha ainda sai",
       "Tarefa 0" in montar_resumo("X", [muitas[0]], limite=10))
 
 check("sem prazo não vira data zero", urgencia_curta(None) == ("📋", "sem prazo"))
+
+print("\n=== 3e. atrasada no prazo interno: quanto falta para o prazo LEGAL ===")
+# "Atrasada há 3 dias" soa igual quer o vencimento seja amanhã ou daqui a duas
+# semanas. Um caso é correr, o outro é multa a caminho.
+check("ainda há fôlego", folego_ate_vencer(4, "15/09") == "⏳ ainda dá: vence em 4 dias (15/09)")
+check("véspera do legal", folego_ate_vencer(1, "15/09") == "⏳ atenção: vence amanhã (15/09)")
+check("o legal é hoje", folego_ate_vencer(0, "14/09") == "❗ o vencimento é HOJE (14/09)")
+check("o legal já passou", folego_ate_vencer(-2, "12/09") == "❗ vencimento passou há 2 dias (12/09)")
+check("um dia no singular", folego_ate_vencer(-1) == "❗ vencimento passou há 1 dia")
+check("sem vencimento não inventa linha", folego_ate_vencer(None) == "")
+check("funciona sem a data entre parênteses", folego_ate_vencer(3) == "⏳ ainda dá: vence em 3 dias")
+
+# A linha só aparece para quem estourou o prazo interno.
+atrasada = [{"titulo": "T", "dias": -3, "venc_dias": 4, "venc_data": "15/09"}]
+check("atrasada mostra o fôlego", "ainda dá" in montar_resumo("X", atrasada, faixa="atrasada"))
+a_vencer = [{"titulo": "T", "dias": 3, "venc_dias": 10, "venc_data": "15/09"}]
+check("a vencer NÃO mostra — a data legal ainda não é a pergunta",
+      "ainda dá" not in montar_resumo("X", a_vencer, faixa="a_vencer"))
+hoje = [{"titulo": "T", "dias": 0, "venc_dias": 6, "venc_data": "15/09"}]
+check("vence hoje também não mostra", "ainda dá" not in montar_resumo("X", hoje, faixa="vence_hoje"))
+sem_venc = [{"titulo": "T", "dias": -3}]
+check("atrasada sem vencimento cadastrado não ganha linha vazia",
+      "⏳" not in montar_resumo("X", sem_venc, faixa="atrasada"))
 check("um dia de atraso no singular", urgencia_curta(-1)[1] == "atrasada há 1 dia")
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
