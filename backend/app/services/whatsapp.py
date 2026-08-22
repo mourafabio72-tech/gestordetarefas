@@ -271,16 +271,25 @@ def _canal_da_pessoa(u, zap: dict = None) -> tuple:
     return (None, None)
 
 
-def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
-                        zap: dict = None) -> list:
-    """Quem recebe o alerta e por qual canal:
-    - gente do escritório (responsáveis, a cadeia de gestores deles, supervisor)
-      -> WhatsApp, no número que o ZapContábil tem para aquele e-mail; e-mail só
-      como reserva de quem não tem número em lugar nenhum
-    - cliente (a empresa da tarefa) -> e-mail e/ou WhatsApp, conforme o que
-      estiver preenchido no cadastro dela
-    `subs_map` {ausente_id: substituto}: quem está de férias/doença é trocado pelo substituto
-    (mas o gestor do ausente continua na cópia).
+def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
+                        zap: dict = None, incluir_cliente: bool = False) -> list:
+    """Quem recebe o alerta e por qual canal.
+
+    O alerta é acompanhamento de tarefa: vai para quem executa e para quem
+    supervisiona, que é o par que a tarefa já tem gravado. Por isso o padrão é
+    responsável (ou substituto) + supervisor, e nada além disso.
+
+    Os dois alargamentos ficam desligados por padrão, cada um pela sua razão:
+    - `niveis` sobe a cadeia de gestores acima do responsável. Zero porque
+      cobrança em cópia para a diretoria é decisão de gestão, não default.
+    - `incluir_cliente` avisa a empresa da tarefa por e-mail e/ou WhatsApp.
+      Desligado porque ligado sem querer manda mensagem para cliente real.
+
+    Canal: WhatsApp, no número que o ZapContábil tem para aquele e-mail; e-mail
+    só como reserva de quem não tem número em lugar nenhum.
+
+    `subs_map` {ausente_id: substituto}: quem está de férias/doença é trocado
+    pelo substituto (e o gestor do ausente continua na cópia, quando ligada).
     """
     subs_map = subs_map or {}
     dest = []
@@ -309,7 +318,7 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
             juntar("gestor", g)
     juntar("supervisor", tarefa.supervisor)
 
-    empresa = tarefa.empresa
+    empresa = tarefa.empresa if incluir_cliente else None
     if empresa:
         tel = normalizar_telefone(empresa.telefone)
         if tel and tel not in vistos:
@@ -349,9 +358,10 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
     except (TypeError, ValueError):
         dias_antes = 3
     try:
-        niveis = int(cfg.get("alert_gestor_niveis") or 2)
+        niveis = int(cfg.get("alert_gestor_niveis") or 0)
     except (TypeError, ValueError):
-        niveis = 2
+        niveis = 0
+    incluir_cliente = cfgmod.ativo(cfg, "alert_cliente")
 
     alerts_sent = []
     now = datetime.now()
@@ -389,7 +399,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         message = format_task_message(tarefa, days_remaining, responsavel) + rodape
 
         despachos = []
-        for d in destinatarios_alerta(tarefa, subs_map, niveis, zap):
+        for d in destinatarios_alerta(tarefa, subs_map, niveis, zap, incluir_cliente):
             # O nome de quem está sendo avisado abre a mensagem. No painel
             # compartilhado é o que separa o aviso do Fulano do da Ciclana.
             texto = format_task_message(tarefa, days_remaining, responsavel, para=d["nome"]) + rodape

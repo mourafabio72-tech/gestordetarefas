@@ -59,6 +59,40 @@ def migrate():
                     print(f"Erro na coluna '{col_name}': {e}")
 
 
+def alcance_do_alerta():
+    """Fecha o alcance do alerta para responsável + supervisor. Roda uma vez.
+
+    Precisa existir porque a configuração vive no BANCO: mudar o default no
+    código não alcança quem já salvou a tela alguma vez, e em produção estava
+    gravado `alert_gestor_niveis=2`. Sem isto, o novo padrão valeria só para
+    instalação nova.
+
+    A chave `alert_cliente` é o marcador de que esta leva já passou: existindo
+    ela, nada é tocado -- assim quem depois decidir religar a cópia dos gestores
+    não vê a escolha ser desfeita no próximo deploy.
+    """
+    db = SessionLocal()
+    try:
+        from .models import Configuracao
+        ja_rodou = db.query(Configuracao).filter(Configuracao.chave == "alert_cliente").first()
+        if ja_rodou:
+            return
+        db.add(Configuracao(chave="alert_cliente", valor="0"))
+        niveis = db.query(Configuracao).filter(
+            Configuracao.chave == "alert_gestor_niveis").first()
+        if niveis:
+            niveis.valor = "0"
+        else:
+            db.add(Configuracao(chave="alert_gestor_niveis", valor="0"))
+        db.commit()
+        print("Alcance do alerta fechado em responsável + supervisor.")
+    except Exception as e:
+        print(f"Erro ao ajustar o alcance do alerta: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def criar_indices():
     """Índices das colunas por que se filtra e se ordena.
 

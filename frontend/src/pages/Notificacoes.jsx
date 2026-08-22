@@ -173,7 +173,18 @@ export default function Notificacoes() {
             <Campo chave="horarios_principal" label="Horários principais" ph="09:30,17:45" hint="Avisam N dias antes, 1 dia antes, no dia e atrasadas." />
             <Campo chave="horarios_extra" label="Horários extras" ph="14:30,16:00" hint="Avisam só no dia do prazo e atrasadas." />
             <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Quantos dias antes do prazo começar a avisar." />
-            <Campo chave="alert_gestor_niveis" label="Níveis de gestor na cópia" tipo="number" hint="Ex.: 2 = gestor direto + gestor do gestor." />
+            <Campo chave="alert_gestor_niveis" label="Níveis de gestor na cópia" tipo="number" hint="0 = ninguém acima do responsável. 2 = gestor direto + gestor do gestor." />
+          </div>
+          <div className="border-t border-gray-100 mt-4 pt-3">
+            <p className="text-xs text-gray-500 mb-2">
+              O alerta é acompanhamento de tarefa: por padrão vai só para o <strong>responsável</strong>{' '}
+              e o <strong>supervisor</strong>, que é o par que a tarefa já tem gravado.
+            </p>
+            <Toggle chave="alert_cliente" label="Avisar também a empresa cliente (e-mail e/ou WhatsApp do cadastro dela)" />
+            <p className="text-xs text-gray-400 mt-1">
+              Ligado, cada alerta sai também para o cliente. Confira no ensaio antes — é mensagem para
+              cliente real.
+            </p>
           </div>
         </div>
 
@@ -336,11 +347,11 @@ export default function Notificacoes() {
             <strong> sem enviar nada</strong>. É assim que se confere a régua sem disparar mensagem para cliente real.
           </p>
           <p className="text-xs text-gray-500 mb-3">
-            <MessageCircle size={12} className="inline text-green-600" /> Quem é do escritório
-            (responsável, gestores e supervisor) recebe por <strong>WhatsApp</strong>, no número que o
-            ZapContábil tem para o e-mail dele; o e-mail entra só como reserva de quem não tem número.{' '}
-            <Mail size={12} className="inline text-blue-600" /> O <strong>cliente</strong> recebe
-            por e-mail e/ou WhatsApp, conforme o que estiver preenchido na empresa.
+            <MessageCircle size={12} className="inline text-green-600" /> Vai para o{' '}
+            <strong>responsável</strong> e o <strong>supervisor</strong> da tarefa, por WhatsApp, no
+            número que o ZapContábil tem para o e-mail deles; o e-mail entra só como reserva de quem
+            não tem número. A cadeia de gestores e o cliente ficam de fora, salvo se você ligar em
+            “Agendamento e regras”.
           </p>
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <select value={slotEnsaio} onChange={(e) => setSlotEnsaio(e.target.value)}

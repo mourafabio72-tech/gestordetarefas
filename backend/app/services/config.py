@@ -17,7 +17,13 @@ DEFAULTS = {
     "zap_phone": os.getenv("ZAP_PHONE", "5521971985815"),
     "zap_connection_from": os.getenv("ZAP_CONNECTION_FROM", "0"),
     "alert_dias_antes": os.getenv("ALERT_DAYS_BEFORE", "3"),
-    "alert_gestor_niveis": os.getenv("ALERT_GESTOR_NIVEIS", "2"),
+    # Zero por padrão: o alerta é acompanhamento de tarefa entre quem executa e
+    # quem supervisiona, não comunicado geral. Quem quiser a diretoria na cópia
+    # sobe o número na tela.
+    "alert_gestor_niveis": os.getenv("ALERT_GESTOR_NIVEIS", "0"),
+    # Desligado por padrão: avisar o cliente é decisão de relacionamento, não de
+    # controle interno, e ligado sem querer manda mensagem para cliente real.
+    "alert_cliente": os.getenv("ALERT_CLIENTE", "0"),
     "horarios_principal": "09:30,17:45",
     "horarios_extra": "14:30,16:00",
     "public_url": os.getenv("PUBLIC_URL", "https://gestordetarefas.zoaria.com.br"),

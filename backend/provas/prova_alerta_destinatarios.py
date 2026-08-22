@@ -64,24 +64,34 @@ check("ramal de 4 dígitos é lixo, volta vazio", normalizar_telefone("4523") ==
 check("vazio e nulo não quebram", normalizar_telefone("") == "" and normalizar_telefone(None) == "")
 check("texto sem dígito volta vazio", normalizar_telefone("não tem") == "")
 
-print("\n=== 3. canais: escritório no WhatsApp, cliente conforme o cadastro ===")
+print("\n=== 3. alcance: responsável e supervisor, e mais ninguém por padrão ===")
 diretor = U(1, "Diretor", "diretor@bps4.com", telefone="21988880001")
 gerente = U(2, "Gerente", "gerente@bps4.com", gestor=diretor, telefone="21988880002")
 analista = U(3, "Analista", "analista@bps4.com", gestor=gerente, telefone="(21) 98888-0003")
 sup = U(4, "Supervisor", "sup@bps4.com", telefone="21988880004")
 cli = E("Mark Building", email="fin@mark.com", telefone="5521977770000")
 
-d = destinatarios_alerta(T([analista], sup, cli), {}, niveis=2)
+# O padrão: só quem executa e quem supervisiona.
+d = destinatarios_alerta(T([analista], sup, cli))
 trio = [(x["papel"], x["canal"], x["endereco"]) for x in d]
 check("colaborador vai por WhatsApp", ("colaborador", "whatsapp", "5521988880003") in trio, str(trio))
-check("gestor também por WhatsApp", ("gestor", "whatsapp", "5521988880002") in trio)
-check("o gestor do gestor idem", ("gestor", "whatsapp", "5521988880001") in trio)
 check("supervisor por WhatsApp", ("supervisor", "whatsapp", "5521988880004") in trio)
-check("cliente por WhatsApp", ("cliente", "whatsapp", "5521977770000") in trio)
-check("cliente TAMBÉM por e-mail", ("cliente", "email", "fin@mark.com") in trio)
-check("nenhum e-mail para o escritório",
-      [x for x in d if x["canal"] == "email" and x["papel"] != "cliente"] == [])
-check("seis destinatários no total", len(d) == 6, f"({len(d)})")
+check("só esses dois", len(d) == 2, f"({len(d)})")
+check("gestor NÃO entra por padrão", not any(x["papel"] == "gestor" for x in d))
+check("cliente NÃO entra por padrão", not any(x["papel"] == "cliente" for x in d))
+check("nenhum e-mail: todo mundo tem número", [x for x in d if x["canal"] == "email"] == [])
+
+# Os dois alargamentos, quando ligados na tela.
+d = destinatarios_alerta(T([analista], sup, cli), {}, niveis=2)
+papeis = [x["papel"] for x in d]
+check("com níveis=2, os dois gestores entram", papeis.count("gestor") == 2, str(papeis))
+check("mas o cliente continua fora", "cliente" not in papeis)
+
+d = destinatarios_alerta(T([analista], sup, cli), {}, 0, incluir_cliente=True)
+trio = [(x["papel"], x["canal"], x["endereco"]) for x in d]
+check("com o cliente ligado, ele recebe por WhatsApp", ("cliente", "whatsapp", "5521977770000") in trio)
+check("e também por e-mail", ("cliente", "email", "fin@mark.com") in trio)
+check("sem trazer gestor junto", not any(x["papel"] == "gestor" for x in d))
 
 print("\n=== 3b. o número vem dos CONTATOS do Zap, casado pelo e-mail ===")
 # Contact tem number e email; User tem email e id, mas NÃO tem telefone.
@@ -132,8 +142,8 @@ check("domínio diferente não casa e cai no e-mail", d[0]["canal"] == "email")
 check("destinatário por e-mail nunca leva userId", "zap_user_id" not in d[0])
 
 # Cliente é contato, não atendente: nunca recebe atribuição de atendimento.
-d = destinatarios_alerta(T([], None, cli), {}, 0, zap=zap)
-check("cliente não leva userId", all("zap_user_id" not in x for x in d))
+d = destinatarios_alerta(T([], None, cli), {}, 0, zap=zap, incluir_cliente=True)
+check("cliente não leva userId", d and all("zap_user_id" not in x for x in d))
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
 semtel = U(7, "Sem Telefone", "semtel@bps4.com")
@@ -169,10 +179,10 @@ d = destinatarios_alerta(T([analista, outro], None, None), {}, niveis=1)
 check("gestor comum a dois responsáveis não duplica",
       [x["endereco"] for x in d].count("5521988880002") == 1)
 so_email = E("Só E-mail", email="c@x.com")
-canais = [x["canal"] for x in destinatarios_alerta(T([], None, so_email), {}, 0)]
+canais = [x["canal"] for x in destinatarios_alerta(T([], None, so_email), {}, 0, incluir_cliente=True)]
 check("empresa sem telefone não gera WhatsApp", canais == ["email"], str(canais))
 so_zap = E("Só Zap", telefone="21977776666")
-canais = [x["canal"] for x in destinatarios_alerta(T([], None, so_zap), {}, 0)]
+canais = [x["canal"] for x in destinatarios_alerta(T([], None, so_zap), {}, 0, incluir_cliente=True)]
 check("empresa sem e-mail não gera e-mail", canais == ["whatsapp"], str(canais))
 check("tarefa sem empresa não quebra", destinatarios_alerta(T([analista], None, None), {}, 0) != [])
 a = U(20, "A", "a@x.com", telefone="21911110001")
@@ -184,7 +194,7 @@ check("ciclo de gestores não trava", len(destinatarios_alerta(T([a], None, None
 # e suprimir isso esconderia da empresa um aviso que é dela.
 dono = U(30, "Dono", "dono@x.com", telefone="21955554444")
 emp = E("Empresa do Dono", email="dono@x.com", telefone="21955554444")
-d = destinatarios_alerta(T([dono], None, emp), {}, 0)
+d = destinatarios_alerta(T([dono], None, emp), {}, 0, incluir_cliente=True)
 end = [x["endereco"] for x in d]
 check("nenhum endereço repetido", len(end) == len(set(end)), str(end))
 check("o mesmo número não recebe duas vezes", end.count("5521955554444") == 1)
