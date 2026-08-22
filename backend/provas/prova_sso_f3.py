@@ -166,7 +166,6 @@ casos = {
     "sem cadastro": (bilhete("ninguem@exemplo.com"), "10.0.0.26"),
     "bloqueada": (bilhete("bloqueada@bps4.com.br"), "10.0.0.27"),
     "inativa": (bilhete("inativa@bps4.com.br"), "10.0.0.28"),
-    "convite pendente": (bilhete("pendente@bps4.com.br"), "10.0.0.29"),
 }
 respostas = {nome: entrar(b, ip=ip) for nome, (b, ip) in casos.items()}
 
@@ -177,9 +176,22 @@ checa(6, "todas as recusas devolvem o MESMO corpo, sem dizer o motivo",
 checa(7, "a mensagem não revela se o problema é o bilhete ou a conta",
       all(p not in respostas["sem cadastro"].text.lower()
           for p in ("cadastr", "bloquead", "inativ", "expirad", "usado")))
-checa(8, "conta bloqueada, inativa e com convite pendente são barradas",
-      all(respostas[k].status_code == 404
-          for k in ("bloqueada", "inativa", "convite pendente")))
+checa(8, "conta bloqueada e inativa são barradas",
+      all(respostas[k].status_code == 404 for k in ("bloqueada", "inativa")))
+
+# 8b. Convite pendente NÃO barra: o Hub já autenticou, e o convite existe para
+# criar senha, que a entrada por bilhete não usa. O primeiro acesso ativa.
+r_pend = entrar(bilhete("pendente@bps4.com.br"), ip="10.0.0.29")
+checa("8b", f"convite pendente entra pelo Hub (HTTP {r_pend.status_code})",
+      r_pend.status_code == 200)
+_db = SessionLocal()
+try:
+    _u = _db.query(Usuario).filter(Usuario.email == "pendente@bps4.com.br").first()
+    checa("8c", "e a conta fica ativada depois disso", _u.ativado is True)
+    checa("8d", "o convite continua de pé para quem quiser senha própria",
+          not getattr(_u, "senha_hash", None) is None)
+finally:
+    _db.close()
 
 # 9. Tamanho recusado ANTES de consultar o banco.
 _queries["n"] = 0

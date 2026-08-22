@@ -179,8 +179,16 @@ def entrar_por_sso(body: SSORequest, request: Request, db: Session = Depends(get
         raise _recusa_sso(db, email, ip, "bloqueado")
     if not user.ativo:
         raise _recusa_sso(db, email, ip, "inativo")
+    # Convite pendente NÃO barra a entrada pelo Hub: ele existe para a pessoa
+    # criar uma SENHA, e quem entra por bilhete não usa senha. Exigir a ativação
+    # antes seria atrito sem ganho — a liberação do card no Hub já é a decisão
+    # de quem pode entrar, e o Hub já autenticou. O primeiro acesso pelo card
+    # ativa a conta; o token de convite continua de pé para quem depois quiser
+    # senha própria.
     if user.ativado is False:
-        raise _recusa_sso(db, email, ip, "convite_pendente")
+        user.ativado = True
+        db.commit()
+        log_event("SSO_ATIVOU_CONTA", email=email, ip=ip, usuario_id=user.id)
 
     # 6. O MESMO token do login por senha, com a MESMA validade. Entrar pelo
     #    Hub não compra sessão mais longa.
