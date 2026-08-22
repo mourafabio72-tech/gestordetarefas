@@ -82,17 +82,35 @@ export default function Layout() {
     return novo;
   });
 
-  const [colapsado, setColapsado] = useState(() => localStorage.getItem('menuColapsado') === '1');
-  const toggleColapsado = () => setColapsado((c) => {
+  // `fixado` é a escolha guardada: a barra fica recolhida. `sobreMouse` é
+  // momentâneo. A barra está estreita quando está fixada E o mouse não está
+  // nela -- é isso que faz o menu abrir ao aproximar e fechar ao sair, sem
+  // perder a preferência de quem quer a barra sempre aberta.
+  const [fixado, setFixado] = useState(() => localStorage.getItem('menuColapsado') === '1');
+  const [sobreMouse, setSobreMouse] = useState(false);
+  const colapsado = fixado && !sobreMouse;
+  const toggleColapsado = () => setFixado((c) => {
     localStorage.setItem('menuColapsado', c ? '0' : '1');
+    setSobreMouse(false);   // ao fixar, recolhe já; sem isto ficaria aberta até tirar o mouse
     return !c;
   });
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <aside className={`
+      {/* Espaçador do tamanho da barra recolhida. Enquanto ela estiver fixada,
+          a barra sai do fluxo para poder crescer POR CIMA do conteúdo: sem
+          isto, abrir no hover empurraria a página inteira para a direita a
+          cada vez que o mouse passasse perto. */}
+      {fixado && <div className="hidden lg:block w-16 shrink-0" />}
+      <aside
+        onMouseEnter={() => fixado && setSobreMouse(true)}
+        onMouseLeave={() => setSobreMouse(false)}
+        className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#2f3b2f] text-white transform transition-all duration-200 ease-in-out
-        lg:relative lg:translate-x-0 flex flex-col ${colapsado ? 'lg:w-16' : ''}
+        lg:translate-x-0 flex flex-col
+        ${fixado ? 'lg:absolute lg:z-40' : 'lg:relative'}
+        ${colapsado ? 'lg:w-16' : ''}
+        ${fixado && sobreMouse ? 'lg:w-64 lg:shadow-2xl' : ''}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between border-b border-white/10 p-4">
@@ -104,16 +122,13 @@ export default function Layout() {
           {/* recolher/expandir barra, só desktop */}
           <button onClick={toggleColapsado}
             className={`hidden lg:block text-white/50 hover:text-white ${colapsado ? 'lg:hidden' : ''}`}
-            title="Recolher menu">
-            <ChevronLeft size={18} />
+            title={fixado ? 'Manter o menu sempre aberto' : 'Recolher o menu (abre ao passar o mouse)'}>
+            {fixado ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
-        {colapsado && (
-          <button onClick={toggleColapsado} title="Expandir menu"
-            className="hidden lg:flex justify-center py-2 text-white/50 hover:text-white border-b border-white/10">
-            <ChevronRight size={18} />
-          </button>
-        )}
+        {/* A barra estreita não precisa mais de um botão para abrir: basta o
+            mouse chegar nela. A seta do cabeçalho continua, para FIXAR aberta
+            quem não quiser depender do hover. */}
 
         <nav className="px-2 py-3 flex-1 overflow-y-auto">
           {menuGroups.map((group) => {
