@@ -157,32 +157,40 @@ export default function Layout() {
           })}
         </nav>
 
-        <div className="w-full border-t border-white/10 p-3">
-          <div className={`flex items-center gap-3 mb-3 px-2 ${colapsado ? 'lg:hidden' : ''}`}>
-            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shrink-0">
+        {/* Rodapé com as MESMAS medidas dos itens do menu: ícone 16, gap-2.5,
+            py-1.5, text-sm. Antes eram quatro diferenças acumuladas — ícone 18,
+            gap-2, py-2 e a fonte herdada de 16px — e o resultado é que "Voltar
+            ao Hub" e "Sair" pareciam de outro menu, colados no fim deste. */}
+        <div className="w-full border-t border-white/10 p-2">
+          {/* O avatar é maior que os ícones do menu, então o texto nunca vai
+              cair na mesma coluna. Em vez de fingir alinhamento, o bloco vira
+              um card: fica claro que é outra coisa, e não um item torto. */}
+          <div className={`flex items-center gap-2.5 mb-2 p-2 rounded-lg bg-white/[0.06] ${
+            colapsado ? 'lg:hidden' : ''}`}>
+            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shrink-0 text-sm">
               {user?.nome?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.nome}</p>
-              <p className="text-xs text-primary-300 truncate capitalize">{grupo}</p>
+              <p className="text-sm font-medium truncate leading-tight">{user?.nome}</p>
+              <p className="text-xs text-primary-300 truncate capitalize leading-tight">{grupo}</p>
             </div>
           </div>
           <a
             href={HUB_URL}
             title="Voltar ao Hub"
-            className={`flex items-center gap-2 px-3 py-2 mb-1 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${
+            className={`flex items-center gap-2.5 px-3 py-1.5 mb-0.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors ${
               colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
-            <LayoutGrid size={18} />
+            <LayoutGrid size={16} />
             <span className={colapsado ? 'lg:hidden' : ''}>Voltar ao Hub</span>
           </a>
           <button
             onClick={logout}
             title="Sair"
-            className={`flex items-center w-full gap-2 px-3 py-2 text-white/70 hover:bg-white/10 rounded-lg transition-colors ${
+            className={`flex items-center w-full gap-2.5 px-3 py-1.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors ${
               colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             <span className={colapsado ? 'lg:hidden' : ''}>Sair</span>
           </button>
         </div>
