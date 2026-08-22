@@ -12,6 +12,7 @@ import Notificacoes from './pages/Notificacoes';
 import Grupos from './pages/Grupos';
 import Relatorios from './pages/Relatorios';
 import EValidador from './pages/EValidador';
+import Documentos from './pages/Documentos';
 import Modelos from './pages/Modelos';
 import EnviarComprovante from './pages/EnviarComprovante';
 import AtivarAcesso from './pages/AtivarAcesso';
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="grupos" element={<Grupos />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="evalidador" element={<EValidador />} />
+        <Route path="documentos" element={<Documentos />} />
         <Route path="modelos" element={<Modelos />} />
         <Route path="importar-cronograma" element={<ImportarCronograma />} />
         <Route path="relatorios/obrigacoes" element={<RelacaoObrigacoes />} />

@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .seguranca import aplicar_headers
-from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico
+from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos
 from .services.scheduler import start_scheduler
 from .init_db import (migrate, criar_indices, seed_admin, ensure_admin_grupo,
                       seed_grupos, alcance_do_alerta,
@@ -74,6 +74,7 @@ app.include_router(upload_publico.router, prefix="/api")
 app.include_router(cronograma.router, prefix="/api")
 app.include_router(grupos.router, prefix="/api")
 app.include_router(ativar_publico.router, prefix="/api")
+app.include_router(documentos.router, prefix="/api")
 
 
 @app.on_event("startup")

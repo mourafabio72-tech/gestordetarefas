@@ -9,7 +9,7 @@ import {
   FileStack,
   Library,
   BarChart3,
-  FileCheck2,
+  FileCheck2, FileArchive,
   ShieldCheck,
   Settings,
   UserCog,
@@ -34,6 +34,9 @@ const menuGroups = [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'gestor', 'usuario'] },
       { path: '/tarefas', label: 'Tarefas', icon: ListTodo, roles: ['admin', 'gestor', 'usuario'] },
       { path: '/evalidador', label: 'e-validador', icon: FileCheck2, roles: ['admin', 'gestor'] },
+      // Consulta do acervo. Fica no Operacional, junto de Tarefas: é ali que se
+      // procura comprovante no dia a dia, e não em Relatórios.
+      { path: '/documentos', label: 'Documentos', icon: FileArchive, roles: ['admin', 'gestor', 'usuario'] },
     ],
   },
   {

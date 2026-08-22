@@ -79,6 +79,7 @@ for t in (com_anexo, sem_anexo, sumido, travessia):
     t.responsaveis.append(dono)
 db.commit()
 ids = {t.titulo: t.id for t in (com_anexo, sem_anexo, sumido, travessia)}
+emp_id = emp.id          # guardado antes de fechar: depois o objeto desanexa
 db.close()
 
 print(f"\n(escopo do analista neste preset: {escopo_analista})")
@@ -130,6 +131,46 @@ checa("e nada do sistema vaza no corpo", b"root:" not in r.content)
 checa("caminho_do_anexo recusa a travessia direto",
       up.caminho_do_anexo("../../../../etc/passwd") is None)
 checa("e aceita o arquivo legítimo", up.caminho_do_anexo(guardado) is not None)
+
+print("\n=== 7. a consulta de documentos ===")
+def docs(email, **params):
+    return client.get("/api/documentos", params=params, headers=cabeca(email)).json()
+
+r = docs("admin@x.com")
+# Três das quatro tarefas têm anexo_nome — inclusive a de nome malicioso, que
+# existe para provar a travessia de caminho.
+checa("lista só quem TEM comprovante", r["mostrando"] == 3, f"({r['mostrando']} de {r['total']})")
+titulos = {d["titulo"] for d in r["documentos"]}
+checa("a tarefa sem anexo não aparece", "Sem comprovante" not in titulos, str(titulos))
+checa("a que aponta para arquivo sumido APARECE, marcada",
+      any(d["titulo"] == "Arquivo sumiu" and d["no_volume"] is False for d in r["documentos"]))
+checa("e a que tem arquivo vem marcada como presente",
+      any(d["titulo"] == "Com comprovante" and d["no_volume"] is True for d in r["documentos"]))
+checa("o nome exposto não traz o token do link público",
+      all("tok123" not in d["arquivo"] for d in r["documentos"]))
+
+if escopo_analista != "todas":
+    checa("quem não enxerga a tarefa não acha o documento dela",
+          docs("alheio@x.com")["mostrando"] == 0)
+
+checa("filtro por empresa", docs("admin@x.com", empresa_id=emp_id)["mostrando"] == 3)
+checa("empresa que não é a da tarefa devolve vazio",
+      docs("admin@x.com", empresa_id=emp_id + 999)["mostrando"] == 0)
+checa("busca por parte do título", docs("admin@x.com", texto="comprova")["mostrando"] == 1)
+checa("busca pelo nome do arquivo", docs("admin@x.com", texto="darf")["mostrando"] == 1)
+checa("busca sem resultado não quebra", docs("admin@x.com", texto="zzzz")["mostrando"] == 0)
+checa("filtro por extensão", docs("admin@x.com", extensao="pdf")["mostrando"] == 2)  # o /etc/passwd não é .pdf
+checa("extensão que ninguém tem", docs("admin@x.com", extensao="docx")["mostrando"] == 0)
+checa("data inválida no filtro é ignorada, não derruba a consulta",
+      docs("admin@x.com", entrega_de="não-é-data")["mostrando"] == 3)
+
+r = docs("admin@x.com", limite=1)
+checa("limite corta", r["mostrando"] == 1)
+checa("e o corte é declarado, não silencioso", r["cortou"] is True and r["total"] == 3)
+checa("sem corte, cortou é falso", docs("admin@x.com")["cortou"] is False)
+
+sem_sessao = client.get("/api/documentos")
+checa("sem sessão não lista", sem_sessao.status_code in (401, 403))
 
 import shutil                                        # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)

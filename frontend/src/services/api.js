@@ -230,6 +230,11 @@ export const gruposAPI = {
   delete: (slug) => api.delete(`/grupos/${slug}`),
 };
 
+export const documentosAPI = {
+  list: (params) => api.get('/documentos', { params }),
+  competencias: () => api.get('/documentos/competencias'),
+};
+
 export const alertasAPI = {
   // Sem `ensaio: false` explícito o backend só simula — o alerta de verdade sai
   // para o WhatsApp e o e-mail do cliente, e essa chamada não pode disparar sem
