@@ -251,22 +251,36 @@ check("sem prazo não vira data zero", urgencia_curta(None) == ("📋", "sem pra
 print("\n=== 3e. atrasada no prazo interno: quanto falta para o prazo LEGAL ===")
 # "Atrasada há 3 dias" soa igual quer o vencimento seja amanhã ou daqui a duas
 # semanas. Um caso é correr, o outro é multa a caminho.
-check("ainda há fôlego", folego_ate_vencer(4, "15/09") == "⏳ ainda dá: vence em 4 dias (15/09)")
-check("véspera do legal", folego_ate_vencer(1, "15/09") == "⏳ atenção: vence amanhã (15/09)")
+check("ainda há fôlego", folego_ate_vencer(4, "15/09") == "⏳ faltam 4 dias para o vencimento (15/09)",
+      folego_ate_vencer(4, "15/09"))
+# Um dia sai como "1 dia", não como "amanhã": a linha existe para comparar duas
+# contagens, e um advérbio no meio obriga a converter de cabeça.
+check("véspera do legal também em número",
+      folego_ate_vencer(1, "18/09") == "⏳ falta 1 dia para o vencimento (18/09)",
+      folego_ate_vencer(1, "18/09"))
 check("o legal é hoje", folego_ate_vencer(0, "14/09") == "❗ o vencimento é HOJE (14/09)")
 check("o legal já passou", folego_ate_vencer(-2, "12/09") == "❗ vencimento passou há 2 dias (12/09)")
 check("um dia no singular", folego_ate_vencer(-1) == "❗ vencimento passou há 1 dia")
 check("sem vencimento não inventa linha", folego_ate_vencer(None) == "")
-check("funciona sem a data entre parênteses", folego_ate_vencer(3) == "⏳ ainda dá: vence em 3 dias")
+check("funciona sem a data entre parênteses",
+      folego_ate_vencer(3) == "⏳ faltam 3 dias para o vencimento")
 
 # A linha só aparece para quem estourou o prazo interno.
 atrasada = [{"titulo": "T", "dias": -3, "venc_dias": 4, "venc_data": "15/09"}]
-check("atrasada mostra o fôlego", "ainda dá" in montar_resumo("X", atrasada, faixa="atrasada"))
+check("atrasada mostra o fôlego", "para o vencimento" in montar_resumo("X", atrasada, faixa="atrasada"))
 a_vencer = [{"titulo": "T", "dias": 3, "venc_dias": 10, "venc_data": "15/09"}]
 check("a vencer NÃO mostra — a data legal ainda não é a pergunta",
-      "ainda dá" not in montar_resumo("X", a_vencer, faixa="a_vencer"))
+      "para o vencimento" not in montar_resumo("X", a_vencer, faixa="a_vencer"))
 hoje = [{"titulo": "T", "dias": 0, "venc_dias": 6, "venc_data": "15/09"}]
-check("vence hoje também não mostra", "ainda dá" not in montar_resumo("X", hoje, faixa="vence_hoje"))
+check("vence hoje também não mostra",
+      "para o vencimento" not in montar_resumo("X", hoje, faixa="vence_hoje"))
+# O caso concreto: prazo interno 15, vencimento 18, hoje 17.
+caso = [{"titulo": "Balancete", "empresa": "Mark Building", "dias": -2, "prazo": "15/09",
+         "venc_dias": 1, "venc_data": "18/09"}]
+texto = montar_resumo("Fabio", caso, faixa="atrasada")
+check("diz os 2 dias de atraso interno", "atrasada há 2 dias" in texto, texto)
+check("e o 1 dia até o vencimento", "falta 1 dia para o vencimento (18/09)" in texto)
+
 sem_venc = [{"titulo": "T", "dias": -3}]
 check("atrasada sem vencimento cadastrado não ganha linha vazia",
       "⏳" not in montar_resumo("X", sem_venc, faixa="atrasada"))

@@ -288,10 +288,16 @@ def folego_ate_vencer(venc_dias, venc_data=None) -> str:
     if venc_dias is None:
         return ""
     data = f" ({venc_data})" if venc_data else ""
-    if venc_dias > 1:
-        return f"⏳ ainda dá: vence em {venc_dias} dias{data}"
-    if venc_dias == 1:
-        return f"⏳ atenção: vence amanhã{data}"
+    # Sempre em NÚMERO de dias, nunca em "amanhã": esta linha existe para
+    # comparar duas contagens na mesma frase -- quantos dias de atraso interno
+    # contra quantos dias até o prazo legal --, e trocar uma delas por advérbio
+    # obriga quem lê a converter de cabeça.
+    if venc_dias > 0:
+        # "faltam", não "faltas": o verbo é irregular e não leva o mesmo
+        # sufixo do substantivo.
+        verbo = "faltam" if venc_dias > 1 else "falta"
+        dias = "dias" if venc_dias > 1 else "dia"
+        return f"⏳ {verbo} {venc_dias} {dias} para o vencimento{data}"
     if venc_dias == 0:
         return f"❗ o vencimento é HOJE{data}"
     n = abs(venc_dias)
