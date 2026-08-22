@@ -2,9 +2,9 @@
 prova_alerta_destinatarios.py — quem recebe o alerta, por qual canal, e quando.
 
 Estas são as duas regras que decidem se um alerta sai certo ou errado, e as
-duas erram em silêncio: `should_notify` (a régua de proximidade do prazo) e
-`destinatarios_alerta` (a lista de quem recebe). Um erro aqui não derruba o
-sistema -- ele manda mensagem para o cliente errado, ou não manda para ninguém.
+duas erram em silêncio: `faixa_da_tarefa` (em que faixa de urgência a tarefa cai
+hoje) e `destinatarios_alerta` (a lista de quem recebe). Um erro aqui não derruba
+o sistema -- ele manda mensagem para o cliente errado, ou não manda para ninguém.
 
 Não toca no banco: monta dublês com os mesmos atributos que o código lê.
 
@@ -16,10 +16,11 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
-from app.services.whatsapp import (should_notify, destinatarios_alerta,  # noqa: E402
+from app.services.whatsapp import (destinatarios_alerta,  # noqa: E402
                                    normalizar_telefone, mapa_numero_por_email,
                                    mapa_userid_por_email, eh_cliente,
-                                   montar_payload_zap, montar_resumo, urgencia_curta)
+                                   montar_payload_zap, montar_resumo, urgencia_curta,
+                                   faixa_da_tarefa, FAIXAS)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -43,18 +44,24 @@ class T:
         self.responsaveis, self.supervisor, self.empresa = list(responsaveis), supervisor, empresa
 
 
-print("\n=== 1. régua: o que sai só no horário principal e o que sai sempre ===")
-check("3 dias antes (padrão) sai no principal", should_notify(3, "principal", 3))
-check("3 dias antes NÃO sai no extra", not should_notify(3, "extra", 3))
-check("1 dia antes sai no principal", should_notify(1, "principal", 3))
-check("1 dia antes NÃO sai no extra", not should_notify(1, "extra", 3))
-check("no dia do prazo sai no principal", should_notify(0, "principal", 3))
-check("no dia do prazo sai TAMBÉM no extra", should_notify(0, "extra", 3))
-check("atrasada sai em todo horário", should_notify(-5, "extra", 3))
-check("2 dias antes não sai (não é 1 nem 3)", not should_notify(2, "principal", 3))
-check("com dias_antes=5, o 5 passa a sair", should_notify(5, "principal", 5))
-check("com dias_antes=5, o 3 deixa de sair", not should_notify(3, "principal", 5))
-check("tarefa sem data não notifica", not should_notify(None, "principal", 3))
+print("\n=== 1. as três faixas de urgência ===")
+check("venceu ontem", faixa_da_tarefa(-1) == "atrasada")
+check("venceu faz um mês", faixa_da_tarefa(-30) == "atrasada")
+check("vence hoje", faixa_da_tarefa(0) == "vence_hoje")
+check("vence amanhã é a véspera", faixa_da_tarefa(1) == "a_vencer")
+check("a antecedência configurada", faixa_da_tarefa(3, 3) == "a_vencer")
+check("dois dias não é faixa nenhuma", faixa_da_tarefa(2, 3) is None)
+check("quarenta dias é ruído, não aviso", faixa_da_tarefa(40, 3) is None)
+check("com antecedência 5, o 5 avisa", faixa_da_tarefa(5, 5) == "a_vencer")
+check("com antecedência 5, o 3 cala", faixa_da_tarefa(3, 5) is None)
+check("a véspera avisa em qualquer antecedência", faixa_da_tarefa(1, 5) == "a_vencer")
+check("sem data não entra em faixa", faixa_da_tarefa(None) is None)
+check("são três faixas", FAIXAS == ("a_vencer", "vence_hoje", "atrasada"), str(FAIXAS))
+# A tarefa anda sozinha entre as faixas conforme o dia passa.
+check("a mesma tarefa muda de faixa sozinha",
+      [faixa_da_tarefa(d) for d in (1, 0, -1)] == ["a_vencer", "vence_hoje", "atrasada"])
+check("cada dia cai em uma faixa só",
+      all(sum(1 for f in FAIXAS if faixa_da_tarefa(d) == f) <= 1 for d in range(-10, 11)))
 
 print("\n=== 2. telefone do cadastro vira número que a API aceita ===")
 check("celular com máscara ganha o 55", normalizar_telefone("(21) 99999-9999") == "5521999999999",

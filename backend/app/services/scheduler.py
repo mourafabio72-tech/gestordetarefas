@@ -1,6 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from .whatsapp import check_and_send_alerts
+from .whatsapp import check_and_send_alerts, FAIXAS
 import logging
 
 try:
@@ -13,17 +13,17 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 
-async def scheduled_check(slot: str):
+async def scheduled_check(faixa: str):
     # importa aqui para evitar dependência de import no carregamento do módulo
     from ..database import SessionLocal
     db = SessionLocal()
     try:
-        logger.info(f"[{slot}] verificando tarefas...")
-        r = await check_and_send_alerts(db, slot=slot)
-        logger.info(f"[{slot}] {len(r['tarefas'])} tarefa(s) em "
+        logger.info(f"[{faixa}] verificando tarefas...")
+        r = await check_and_send_alerts(db, faixa=faixa)
+        logger.info(f"[{faixa}] {len(r['tarefas'])} tarefa(s) em "
                     f"{len(r['mensagens'])} mensagem(ns).")
     except Exception as e:
-        logger.error(f"Erro na verificação [{slot}]: {e}")
+        logger.error(f"Erro na verificação [{faixa}]: {e}")
     finally:
         db.close()
 
@@ -66,14 +66,14 @@ def _parse_horarios(csv: str):
 
 
 def _agendar_alertas(cfg: dict):
-    """(Re)cria os jobs de alerta a partir dos horários da config."""
+    """(Re)cria os jobs de alerta: um por horário de cada faixa de urgência."""
     for job in scheduler.get_jobs():
         if job.id.startswith("alerta_"):
             scheduler.remove_job(job.id)
-    for slot in ("principal", "extra"):
-        for hh, mm in _parse_horarios(cfg.get(f"horarios_{slot}", "")):
-            scheduler.add_job(scheduled_check, _cron(hh, mm), args=[slot],
-                              id=f"alerta_{slot}_{hh:02d}{mm:02d}", replace_existing=True)
+    for faixa in FAIXAS:
+        for hh, mm in _parse_horarios(cfg.get(f"horarios_{faixa}", "")):
+            scheduler.add_job(scheduled_check, _cron(hh, mm), args=[faixa],
+                              id=f"alerta_{faixa}_{hh:02d}{mm:02d}", replace_existing=True)
 
 
 def _cfg():
@@ -91,7 +91,8 @@ def reconfigurar_alertas(db=None):
     from . import config as cfgmod
     cfg = cfgmod.carregar(db) if db is not None else _cfg()
     _agendar_alertas(cfg)
-    logger.info(f"Alertas reagendados: principal={cfg.get('horarios_principal')} extra={cfg.get('horarios_extra')}")
+    logger.info("Alertas reagendados: " + " | ".join(
+        f"{f}={cfg.get('horarios_' + f)}" for f in FAIXAS))
 
 
 def start_scheduler():

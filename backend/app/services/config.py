@@ -24,8 +24,15 @@ DEFAULTS = {
     # Desligado por padrão: avisar o cliente é decisão de relacionamento, não de
     # controle interno, e ligado sem querer manda mensagem para cliente real.
     "alert_cliente": os.getenv("ALERT_CLIENTE", "0"),
-    "horarios_principal": "09:30,17:45",
-    "horarios_extra": "14:30,16:00",
+    # Um horário por FAIXA de urgência, não um horário para tudo. Cada faixa
+    # tem cadência natural própria: planejamento de manhã, o que vence hoje com
+    # insistência, e o atrasado uma vez por dia — martelar o atrasado quatro
+    # vezes ao dia é o que faz a pessoa parar de ler.
+    # Escalonados de propósito: horários iguais entregariam três mensagens de
+    # uma vez, que é pior que uma só.
+    "horarios_a_vencer": "09:00",
+    "horarios_vence_hoje": "09:30,15:00",
+    "horarios_atrasada": "17:45",
     "public_url": os.getenv("PUBLIC_URL", "https://gestordetarefas.zoaria.com.br"),
     # IA (reforço do e-validador) — OpenAI
     "ia_ativo": "1" if os.getenv("OPENAI_API_KEY") else "0",

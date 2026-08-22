@@ -93,6 +93,51 @@ def alcance_do_alerta():
         db.close()
 
 
+def horarios_por_faixa():
+    """Converte os horários antigos (principal/extra) para os das três faixas.
+
+    Roda uma vez, e preserva o que o escritório já tinha escolhido em vez de
+    impor o padrão novo: quem definiu "09:30,17:45" tinha razão para isso.
+    A conversão distribui esses mesmos horários pelo perfil de cada faixa --
+    planejamento no primeiro do dia, o que vence hoje em todos, cobrança no
+    último. Já reduz sozinha, porque os horários "extra" deixam de existir como
+    disparo separado de tudo.
+
+    A chave `horarios_a_vencer` marca que esta leva já passou, então quem depois
+    reajustar na tela não vê a escolha ser desfeita no próximo deploy.
+    """
+    db = SessionLocal()
+    try:
+        from .models import Configuracao
+        if db.query(Configuracao).filter(Configuracao.chave == "horarios_a_vencer").first():
+            return
+        antigos = {c.chave: c.valor for c in db.query(Configuracao).filter(
+            Configuracao.chave.in_(["horarios_principal", "horarios_extra"])).all()}
+        principais = [h.strip() for h in (antigos.get("horarios_principal") or "").split(",") if h.strip()]
+        if principais:
+            novos = {"horarios_a_vencer": principais[0],
+                     "horarios_vence_hoje": ",".join(principais),
+                     "horarios_atrasada": principais[-1]}
+        else:
+            novos = {"horarios_a_vencer": "09:00",
+                     "horarios_vence_hoje": "09:30,15:00",
+                     "horarios_atrasada": "17:45"}
+        for chave, valor in novos.items():
+            db.add(Configuracao(chave=chave, valor=valor))
+        # As chaves antigas não são mais lidas por ninguém; deixá-las no banco
+        # só confundiria quem for depurar a configuração amanhã.
+        for c in db.query(Configuracao).filter(
+                Configuracao.chave.in_(["horarios_principal", "horarios_extra"])).all():
+            db.delete(c)
+        db.commit()
+        print(f"Horários por faixa: {novos}")
+    except Exception as e:
+        print(f"Erro ao converter os horários por faixa: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def criar_indices():
     """Índices das colunas por que se filtra e se ordena.
 

@@ -10,7 +10,7 @@ router = APIRouter(prefix="/alertas", tags=["alertas"])
 
 @router.post("/verificar")
 async def verificar_tarefas(
-    slot: str = "principal",
+    faixa: str = "vence_hoje",
     ensaio: bool = True,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_admin),
@@ -22,12 +22,12 @@ async def verificar_tarefas(
     mensagem para cliente real. Para disparar mesmo, é preciso pedir
     explicitamente `ensaio=false`.
     """
-    r = await check_and_send_alerts(db, slot=slot, ensaio=ensaio)
+    r = await check_and_send_alerts(db, faixa=faixa, ensaio=ensaio)
     tarefas, mensagens = r["tarefas"], r["mensagens"]
     verbo = "sairiam" if ensaio else "saíram"
     return {
         "ensaio": ensaio,
-        "slot": slot,
+        "faixa": faixa,
         # Duas contagens diferentes: cada pessoa recebe UMA mensagem com a lista
         # dela, então 400 tarefas na régua podem virar 40 mensagens.
         "tarefas": len(tarefas),

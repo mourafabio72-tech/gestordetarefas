@@ -9,7 +9,7 @@ export default function Notificacoes() {
   const [saving, setSaving] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [msg, setMsg] = useState(null);
-  const [slotEnsaio, setSlotEnsaio] = useState('principal');
+  const [slotEnsaio, setSlotEnsaio] = useState('vence_hoje');
   const [ensaio, setEnsaio] = useState(null);
   const [ensaiando, setEnsaiando] = useState(false);
   const [msgAberta, setMsgAberta] = useState(null);
@@ -45,7 +45,7 @@ export default function Notificacoes() {
   const rodarEnsaio = async () => {
     setEnsaiando(true); setMsg(null); setMsgAberta(null);
     try {
-      const { data } = await alertasAPI.verificar({ slot: slotEnsaio, ensaio: true });
+      const { data } = await alertasAPI.verificar({ faixa: slotEnsaio, ensaio: true });
       setEnsaio(data);
     } catch (e) {
       setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao rodar o ensaio') });
@@ -168,11 +168,17 @@ export default function Notificacoes() {
       <div className="space-y-6">
         {/* Regras / agendamento */}
         <div className="card">
-          <div className="flex items-center gap-2 mb-4"><Clock size={18} className="text-primary-700" /><h2 className="font-semibold">Agendamento e regras</h2></div>
+          <div className="flex items-center gap-2 mb-1"><Clock size={18} className="text-primary-700" /><h2 className="font-semibold">Agendamento e regras</h2></div>
+          <p className="text-xs text-gray-500 mb-4">
+            Cada faixa de urgência tem os horários dela, e rende uma mensagem própria. A tarefa anda
+            sozinha entre as faixas conforme o dia passa. <strong>Escalone os horários</strong> — iguais,
+            a pessoa recebe três mensagens de uma vez, que é pior do que uma só.
+          </p>
           <div className="grid grid-cols-2 gap-4">
-            <Campo chave="horarios_principal" label="Horários principais" ph="09:30,17:45" hint="Avisam N dias antes, 1 dia antes, no dia e atrasadas." />
-            <Campo chave="horarios_extra" label="Horários extras" ph="14:30,16:00" hint="Avisam só no dia do prazo e atrasadas." />
-            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Quantos dias antes do prazo começar a avisar." />
+            <Campo chave="horarios_a_vencer" label="📋 A vencer" ph="09:00" hint="Planejamento: a antecedência abaixo e a véspera." />
+            <Campo chave="horarios_vence_hoje" label="⚠️ Vence hoje" ph="09:30,15:00" hint="Precisa de ação hoje — vale insistir." />
+            <Campo chave="horarios_atrasada" label="🚨 Atrasada" ph="17:45" hint="Cobrança. Uma vez por dia basta." />
+            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Quantos dias antes do prazo entrar em “a vencer”." />
             <Campo chave="alert_gestor_niveis" label="Níveis de gestor na cópia" tipo="number" hint="0 = ninguém acima do responsável. 2 = gestor direto + gestor do gestor." />
           </div>
           <div className="border-t border-gray-100 mt-4 pt-3">
@@ -368,8 +374,9 @@ export default function Notificacoes() {
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <select value={slotEnsaio} onChange={(e) => setSlotEnsaio(e.target.value)}
               className="input-field w-auto">
-              <option value="principal">Horário principal</option>
-              <option value="extra">Horário extra</option>
+              <option value="a_vencer">📋 A vencer</option>
+              <option value="vence_hoje">⚠️ Vence hoje</option>
+              <option value="atrasada">🚨 Atrasada</option>
             </select>
             <button onClick={rodarEnsaio} disabled={ensaiando} className="btn-secondary flex items-center gap-2">
               <PlayCircle size={16} /> {ensaiando ? 'Rodando…' : 'Ver o que sairia agora'}

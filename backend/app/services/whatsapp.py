@@ -204,19 +204,42 @@ def _base_date(tarefa: Tarefa):
     return tarefa.data_prazo or tarefa.data_vencimento
 
 
-def should_notify(days_remaining: int, slot: str, dias_antes: int = 3) -> bool:
-    """Regras de disparo por proximidade do prazo interno.
-    slot 'principal' = horários principais ; slot 'extra' = extras.
-      - `dias_antes` e 1 dia antes  -> só nos horários principais
-      - no dia do prazo e atrasada  -> em todos os horários
+# As três faixas de urgência. Cada uma é um disparo próprio, com horários
+# próprios, e rende uma mensagem própria — assim a cobrança do atrasado não
+# precisa acontecer na mesma cadência do que vence hoje.
+FAIXAS = ("a_vencer", "vence_hoje", "atrasada")
+
+TITULO_FAIXA = {
+    "a_vencer": ("📋", "a vencer"),
+    "vence_hoje": ("⚠️", "vencem hoje", "vence hoje"),
+    "atrasada": ("🚨", "atrasadas", "atrasada"),
+}
+
+
+def faixa_da_tarefa(dias_restantes, dias_antes: int = 3) -> str:
+    """Em que faixa esta tarefa cai hoje — ou None, se ainda não é hora.
+
+    A tarefa anda sozinha entre as faixas conforme o dia passa: hoje está em
+    "a vencer", amanhã em "vence hoje", depois em "atrasada". Ninguém precisa
+    reclassificar nada.
+
+    "A vencer" não é qualquer coisa no futuro: é a antecedência configurada e a
+    véspera. Uma tarefa que vence em 40 dias não é aviso, é ruído.
     """
-    if days_remaining is None:
-        return False
-    if days_remaining <= 0:  # vence hoje ou já atrasada -> todos os horários
-        return True
-    if slot == "principal" and days_remaining in (1, dias_antes):
-        return True
-    return False
+    if dias_restantes is None:
+        return None
+    if dias_restantes < 0:
+        return "atrasada"
+    if dias_restantes == 0:
+        return "vence_hoje"
+    if dias_restantes == 1 or dias_restantes == dias_antes:
+        return "a_vencer"
+    return None
+
+
+def should_notify(days_remaining, faixa: str, dias_antes: int = 3) -> bool:
+    """A tarefa entra no disparo desta faixa?"""
+    return faixa_da_tarefa(days_remaining, dias_antes) == faixa
 
 
 def urgencia(dias: int) -> str:
@@ -249,7 +272,8 @@ def urgencia_curta(dias: int) -> tuple:
 LIMITE_RESUMO = 3200   # WhatsApp corta perto de 4096; sobra folga para o rodapé
 
 
-def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO) -> str:
+def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO,
+                  faixa: str = None) -> str:
     """Uma mensagem com TODAS as tarefas daquela pessoa naquela varredura.
 
     Antes saía um aviso por tarefa. Numa varredura de mês fechado isso é uma
@@ -270,8 +294,17 @@ def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO) -> str:
     total = len(ordenados)
     if not total:
         return ""
-    plural = "tarefas pedindo atenção" if total > 1 else "tarefa pedindo atenção"
-    cabeca = f"👤 *{nome}*\n📌 *{total} {plural}*\n"
+    # O cabeçalho diz de que faixa é a leva. Quem recebe sabe, na primeira
+    # linha, se é planejamento, se é para hoje, ou se é cobrança.
+    marca = TITULO_FAIXA.get(faixa)
+    if marca:
+        icone = marca[0]
+        rotulo = marca[1] if total > 1 else marca[-1]
+        plural = "tarefas" if total > 1 else "tarefa"
+        cabeca = f"👤 *{nome}*\n{icone} *{total} {plural} {rotulo}*\n"
+    else:
+        plural = "tarefas pedindo atenção" if total > 1 else "tarefa pedindo atenção"
+        cabeca = f"👤 *{nome}*\n📌 *{total} {plural}*\n"
     partes, usados, mostradas = [], len(cabeca), 0
     for i in ordenados:
         icone, frase = urgencia_curta(i.get("dias"))
@@ -505,8 +538,11 @@ async def _enviar(canal: str, endereco: str, assunto: str, mensagem: str, cfg: d
     return {"success": False, "error": f"canal desconhecido: {canal}"}
 
 
-async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bool = False) -> dict:
+async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: bool = False) -> dict:
     """Varre as tarefas em aberto e avisa quem precisa saber.
+
+    Roda uma FAIXA por vez -- a vencer, vence hoje ou atrasada --, porque cada
+    uma tem seus horários. A tarefa anda sozinha entre elas conforme o dia passa.
 
     Devolve {"tarefas": [...], "mensagens": [...]}. São contagens diferentes de
     propósito: uma varredura de mês fechado pode ter 400 tarefas na régua e
@@ -550,7 +586,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         if not base:
             continue
         dias = (base.date() - now.date()).days
-        if not should_notify(dias, slot, dias_antes):
+        if faixa_da_tarefa(dias, dias_antes) != faixa:
             continue
 
         link = None
@@ -583,9 +619,11 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
     mensagens = []
     for caixa in caixas.values():
         d = caixa["dest"]
-        texto = montar_resumo(d["nome"], caixa["itens"])
+        texto = montar_resumo(d["nome"], caixa["itens"], faixa=faixa)
         quantas = len(caixa["itens"])
-        assunto = f"[Tareffas] {quantas} tarefa" + ("s" if quantas > 1 else "") + " pedindo atenção"
+        marca = TITULO_FAIXA.get(faixa)
+        rotulo = (marca[1] if quantas > 1 else marca[-1]) if marca else "pedindo atenção"
+        assunto = f"[Tareffas] {quantas} tarefa" + ("s" if quantas > 1 else "") + f" {rotulo}"
         registro = {**d, "tarefas": quantas}
         if ensaio:
             registro.update({"enviado": False, "skipped": False, "ensaio": True, "mensagem": texto})
