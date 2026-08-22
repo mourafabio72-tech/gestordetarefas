@@ -53,7 +53,7 @@ eq('atravessa fevereiro', alertaDaTarefa({ data_prazo: '2026-03-01' }, new Date(
 console.log('\n7) O fundo é degradê da cor do nível para o creme');
 eq('gradiente do vermelho',
    fundoDoAlerta(a({ data_prazo: '2026-09-20' })),
-   `linear-gradient(135deg, ${NIVEIS.atrasada.suave} 0%, #fffdf9 62%)`);
+   `linear-gradient(135deg, ${NIVEIS.atrasada.suave} 0%, #fffdf9 78%)`);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

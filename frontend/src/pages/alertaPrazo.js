@@ -14,12 +14,12 @@
  * vermelho de sistema, que berraria no meio do creme.
  */
 export const NIVEIS = {
-  atrasada:  { forte: '#a24a3a', suave: '#f6ded7' },
-  hoje:      { forte: '#b4622c', suave: '#fae6d6' },
-  proximo:   { forte: '#8a6a2e', suave: '#f7eed8' },
-  em_dia:    { forte: '#5f7057', suave: '#e6eee1' },
-  concluida: { forte: '#4d8a3f', suave: '#e9f0e4' },
-  neutro:    { forte: '#808a74', suave: '#efe9dc' },
+  atrasada:  { forte: '#a24a3a', suave: '#f0c3b5' },
+  hoje:      { forte: '#b4622c', suave: '#f6d4b4' },
+  proximo:   { forte: '#8a6a2e', suave: '#f2e0b2' },
+  em_dia:    { forte: '#5f7057', suave: '#d3e3c9' },
+  concluida: { forte: '#4d8a3f', suave: '#d7e8cc' },
+  neutro:    { forte: '#808a74', suave: '#e4dbc4' },
 };
 
 /** "AAAA-MM-DD..." -> dia em UTC, para subtrair sem esbarrar em horário de verão. */
@@ -63,7 +63,13 @@ export function alertaDaTarefa(tarefa, hoje = new Date()) {
   return { nivel: 'em_dia', dias, rotulo: `vence em ${dias} dias`, ...NIVEIS.em_dia };
 }
 
-/** Fundo do card: a cor do nível esmaecendo até o creme, na diagonal. */
+/**
+ * Fundo do card: a cor do nível esmaecendo até o creme, na diagonal.
+ *
+ * A parada em 78% é o que dá o realce. Em 62% o degradê morria cedo demais e a
+ * cor virava um sopro no canto -- de longe, os quatro níveis pareciam o mesmo
+ * card creme.
+ */
 export function fundoDoAlerta(alerta) {
-  return `linear-gradient(135deg, ${alerta.suave} 0%, #fffdf9 62%)`;
+  return `linear-gradient(135deg, ${alerta.suave} 0%, #fffdf9 78%)`;
 }
