@@ -104,7 +104,7 @@ const ctrl = (ativo) =>
 function Campo({ rotulo, dica, largura = '', children }) {
   return (
     <label className={`flex flex-col gap-1 ${largura}`} title={dica}>
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap text-center">
         {rotulo}
       </span>
       {children}
@@ -669,11 +669,8 @@ export default function Tarefas() {
                   <button
                     type="button"
                     onClick={() => alternarGrupo(g.chave)}
-                    className="w-full flex items-center gap-2 mb-2 py-1 rounded-lg transition-colors hover:bg-[#e4dac6]"
+                    className="w-full flex items-center gap-2 mb-2 py-1 rounded-lg text-left transition-colors hover:bg-[#e4dac6]"
                   >
-                    {/* Filete dos dois lados com o mesmo flex-1: o nome fica no
-                        centro da faixa qualquer que seja o tamanho dele. */}
-                    <span className="flex-1 border-b" style={{ borderColor: '#d8ccb4' }} />
                     <ChevronDown size={15} className={`shrink-0 transition-transform ${aberto ? '' : '-rotate-90'}`}
                       style={{ color: SAGE.txt3 }} />
                     <h2 className="text-sm font-semibold truncate min-w-0" style={{ color: SAGE.txt }} title={g.titulo}>
