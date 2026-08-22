@@ -3,12 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { format, isPast, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
+import { alertaDaTarefa, fundoDoAlerta } from './alertaPrazo';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -364,7 +366,11 @@ export default function Tarefas() {
     }
   };
 
-  const getEmpresaNome = (id) => empresas.find(e => e.id === id)?.razao_social || '-';
+  // Razão social sempre no padrão da MKB (Caixa de Título). O cadastro chega
+  // misturado -- uns em caixa alta, outros não -- e empilhados como cabeçalho
+  // de seção a diferença salta aos olhos.
+  const getEmpresaNome = (id) =>
+    formatarRazaoSocial(empresas.find(e => e.id === id)?.razao_social) || '-';
   const getSetorNome = (id) => setores.find(s => s.id === id)?.nome || '-';
   const getUsuarioNome = (id) => usuarios.find(u => u.id === id)?.nome || '-';
 
@@ -376,7 +382,7 @@ export default function Tarefas() {
   // sumiu: o agrupador troca isso por "Sem classificação", que é o que a pessoa
   // entende num título de seção.
   const grupos = agruparTarefas(filteredTarefas, agrupar, {
-    empresa: (id) => empresas.find((e) => e.id === id)?.razao_social || '',
+    empresa: (id) => formatarRazaoSocial(empresas.find((e) => e.id === id)?.razao_social),
     setor: (id) => setores.find((x) => x.id === id)?.nome || '',
   });
 
@@ -393,7 +399,9 @@ export default function Tarefas() {
     const fechBr = fech ? `${fech.slice(8, 10)}/${fech.slice(5, 7)}` : null;
     const venc = (tarefa.data_vencimento || '').slice(0, 10);
     const encerra = fech && venc && fech === venc;
-    const atrasada = prazoDate && isPast(prazoDate) && tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
+    // Semáforo: verde em dia, amarelo na semana, laranja hoje, vermelho atrasado.
+    const alerta = alertaDaTarefa(tarefa);
+    const atrasada = alerta.nivel === 'atrasada';
     const st = statusSage[tarefa.status] || statusSage.pendente;
     const pr = prioSage[tarefa.prioridade] || prioSage.media;
     const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
@@ -402,7 +410,8 @@ export default function Tarefas() {
     const empresaNome = getEmpresaNome(tarefa.empresa_id);
     return (
       <div key={tarefa.id} className="rounded-lg border p-3 flex flex-col transition-shadow hover:shadow-sm"
-        style={{ background: SAGE.cardBg, borderColor: atrasada ? SAGE.atrasBorder : SAGE.border, borderLeft: `4px solid ${corSet}` }}>
+        style={{ background: fundoDoAlerta(alerta), borderColor: SAGE.border,
+                 borderLeft: `4px solid ${alerta.forte}` }}>
         <div className="flex items-start gap-1 mb-1.5">
           {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
           <h3 className="text-sm font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
@@ -422,10 +431,15 @@ export default function Tarefas() {
               Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
             </p>
           )}
-          <p className="flex items-center gap-1">
+          {tarefa.competencia && (
+            <p className="tabular-nums" title="Competência do fato gerador">Comp. {tarefa.competencia}</p>
+          )}
+          {/* A data sozinha obriga a pessoa a fazer a conta de cabeça; o card diz
+              quantos dias faltam, e a cor repete o recado para quem só bate o olho. */}
+          <p className="flex flex-wrap items-center gap-x-1 font-medium" style={{ color: alerta.forte }}>
             <Clock size={11} />
-            {prazoDate ? format(prazoDate, "dd/MM/yy", { locale: ptBR }) : 'sem prazo'}
-            {tarefa.competencia && <span className="tabular-nums" title="Competência do fato gerador">· {tarefa.competencia}</span>}
+            {prazoDate && format(prazoDate, "dd/MM/yy", { locale: ptBR })}
+            <span>{prazoDate ? `· ${alerta.rotulo}` : alerta.rotulo}</span>
             {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
           </p>
           {fechBr && (
@@ -540,7 +554,7 @@ export default function Tarefas() {
           </Campo>
           {[
             { chave: 'empresa_id', rotulo: 'Empresa', vazio: 'Todas', largura: 'flex-[2] min-w-[150px]',
-              opcoes: empresas.map((e) => ({ v: e.id, t: e.razao_social })) },
+              opcoes: empresas.map((e) => ({ v: e.id, t: formatarRazaoSocial(e.razao_social) })) },
             { chave: 'setor_id', rotulo: 'Setor', vazio: 'Todos', largura: 'flex-1 min-w-[110px]',
               opcoes: setores.map((x) => ({ v: x.id, t: x.nome })) },
             { chave: 'usuario_id', rotulo: 'Pessoa', vazio: 'Qualquer uma', largura: 'flex-1 min-w-[120px]',
@@ -655,11 +669,14 @@ export default function Tarefas() {
                   <button
                     type="button"
                     onClick={() => alternarGrupo(g.chave)}
-                    className="w-full flex items-center gap-2 mb-2 px-1.5 py-1 rounded-lg text-left transition-colors hover:bg-[#e4dac6]"
+                    className="w-full flex items-center gap-2 mb-2 py-1 rounded-lg transition-colors hover:bg-[#e4dac6]"
                   >
+                    {/* Filete dos dois lados com o mesmo flex-1: o nome fica no
+                        centro da faixa qualquer que seja o tamanho dele. */}
+                    <span className="flex-1 border-b" style={{ borderColor: '#d8ccb4' }} />
                     <ChevronDown size={15} className={`shrink-0 transition-transform ${aberto ? '' : '-rotate-90'}`}
                       style={{ color: SAGE.txt3 }} />
-                    <h2 className="text-sm font-semibold truncate" style={{ color: SAGE.txt }} title={g.titulo}>
+                    <h2 className="text-sm font-semibold truncate min-w-0" style={{ color: SAGE.txt }} title={g.titulo}>
                       {g.titulo}
                     </h2>
                     <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium tabular-nums"
@@ -754,7 +771,7 @@ export default function Tarefas() {
                   <option value="">Selecione</option>
                   {empresas
                     .filter((e) => (!copyRegime || e.regime_tributario === copyRegime) && (!copyGrupo || e.segmento === copyGrupo))
-                    .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                    .map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
                 </select>
               </div>
               <div>
@@ -790,7 +807,7 @@ export default function Tarefas() {
                                 ? copyDestinos.filter((x) => x !== e.id)
                                 : [...copyDestinos, e.id])}
                               className="h-4 w-4" />
-                            {e.razao_social}
+                            {formatarRazaoSocial(e.razao_social)}
                             {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
                           </label>
                         ))}
@@ -885,7 +902,7 @@ export default function Tarefas() {
                   >
                     <option value="">Selecione</option>
                     {empresas.map(e => (
-                      <option key={e.id} value={e.id}>{e.razao_social}</option>
+                      <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>
                     ))}
                   </select>
                 </div>
