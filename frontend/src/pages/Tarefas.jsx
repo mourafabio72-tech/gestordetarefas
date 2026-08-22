@@ -418,21 +418,39 @@ export default function Tarefas() {
             {tarefa.titulo}
           </h3>
         </div>
-        {setorNome && agrupar !== 'setor' && (
-          <span className="self-start px-1.5 py-0.5 rounded text-[10px] font-medium mb-1.5"
-            style={{ background: corSet + '22', color: corSet }}>{setorNome}</span>
-        )}
+        {/* Setor à esquerda, situação e prioridade à direita, na mesma linha.
+            Eram três linhas empilhadas -- setor em cima, os dois selos lá
+            embaixo -- e o card ficava alto sem precisar. */}
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          {setorNome && agrupar !== 'setor' ? (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium truncate"
+              style={{ background: corSet + '22', color: corSet }} title={setorNome}>{setorNome}</span>
+          ) : <span />}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
+          </div>
+        </div>
         <div className="text-[11px] leading-snug space-y-0.5 mb-2" style={{ color: SAGE.txt3 }}>
           {agrupar !== 'empresa' && (
             <p className="truncate" title={empresaNome}>{empresaNome}</p>
           )}
-          {tarefa.responsaveis?.length > 0 && (
-            <p className="truncate" title={tarefa.responsaveis.map(r => r.nome).join(', ')}>
-              Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
+          {/* Responsável e competência dividem a linha. A competência vai
+              encostada à direita (ml-auto) para ficar na mesma coluna em todos
+              os cards, mesmo quando o nome do responsável varia de tamanho. */}
+          {(tarefa.responsaveis?.length > 0 || tarefa.competencia) && (
+            <p className="flex items-baseline gap-x-2 min-w-0">
+              {tarefa.responsaveis?.length > 0 && (
+                <span className="truncate" title={tarefa.responsaveis.map(r => r.nome).join(', ')}>
+                  Resp.: {tarefa.responsaveis.map(r => r.nome).join(', ')}
+                </span>
+              )}
+              {tarefa.competencia && (
+                <span className="shrink-0 ml-auto tabular-nums" title="Competência do fato gerador">
+                  Comp. {tarefa.competencia}
+                </span>
+              )}
             </p>
-          )}
-          {tarefa.competencia && (
-            <p className="tabular-nums" title="Competência do fato gerador">Comp. {tarefa.competencia}</p>
           )}
           {/* A data sozinha obriga a pessoa a fazer a conta de cabeça; o card diz
               quantos dias faltam, e a cor repete o recado para quem só bate o olho. */}
@@ -455,10 +473,6 @@ export default function Tarefas() {
               </p>
             )
           )}
-        </div>
-        <div className="flex flex-wrap gap-1 mb-2">
-          <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
-          <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
         </div>
         <div className="mt-auto flex items-center gap-1">
           {ativa && (
