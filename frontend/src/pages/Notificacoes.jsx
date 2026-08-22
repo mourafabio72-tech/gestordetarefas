@@ -180,10 +180,12 @@ export default function Notificacoes() {
               O alerta é acompanhamento de tarefa: por padrão vai só para o <strong>responsável</strong>{' '}
               e o <strong>supervisor</strong>, que é o par que a tarefa já tem gravado.
             </p>
-            <Toggle chave="alert_cliente" label="Avisar também a empresa cliente (e-mail e/ou WhatsApp do cadastro dela)" />
+            <Toggle chave="alert_cliente" label="Avisar também a EMPRESA (e-mail e/ou WhatsApp do cadastro dela)" />
             <p className="text-xs text-gray-400 mt-1">
-              Ligado, cada alerta sai também para o cliente. Confira no ensaio antes — é mensagem para
-              cliente real.
+              Isto é a pessoa jurídica, não o usuário do tipo cliente. O usuário-cliente que for
+              responsável por uma tarefa recebe sempre, pelos dois canais, independente deste
+              interruptor. Ligado, o alerta sai também para os contatos da empresa — confira no
+              ensaio antes, é mensagem para cliente real.
             </p>
           </div>
         </div>
@@ -347,10 +349,13 @@ export default function Notificacoes() {
             <strong> sem enviar nada</strong>. É assim que se confere a régua sem disparar mensagem para cliente real.
           </p>
           <p className="text-xs text-gray-500 mb-3">
-            <MessageCircle size={12} className="inline text-green-600" /> Vai para o{' '}
-            <strong>responsável</strong> e o <strong>supervisor</strong> da tarefa, por WhatsApp, no
-            número que o ZapContábil tem para o e-mail deles; o e-mail entra só como reserva de quem
-            não tem número. A cadeia de gestores e o cliente ficam de fora, salvo se você ligar em
+            <MessageCircle size={12} className="inline text-green-600" /> Gente do escritório
+            (<strong>responsável</strong> e <strong>supervisor</strong>) recebe por WhatsApp, no número
+            que o ZapContábil tem para o e-mail dela; o e-mail entra só como reserva de quem não tem
+            número.{' '}
+            <Mail size={12} className="inline text-blue-600" /> Usuário do tipo <strong>cliente</strong>{' '}
+            recebe pelos <strong>dois</strong> canais — ele não abre o painel e não tem supervisor de
+            rede. A cadeia de gestores e a empresa ficam de fora, salvo se você ligar em
             “Agendamento e regras”.
           </p>
           <div className="flex flex-wrap items-center gap-3 mb-1">

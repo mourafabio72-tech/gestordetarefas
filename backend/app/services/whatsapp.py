@@ -245,30 +245,63 @@ def _cadeia_gestores(usuario, niveis: int) -> list:
     return chain
 
 
-def _canal_da_pessoa(u, zap: dict = None) -> tuple:
-    """Canal de quem é do escritório: WhatsApp, com e-mail de reserva.
+def eh_cliente(u) -> bool:
+    """O usuário é do lado do cliente, não do escritório.
 
-    A ordem tem uma razão em cada degrau:
+    Olha `tipo` e `grupo`: o campo canônico é `tipo` ("colaborador"|"cliente"),
+    mas grupo é cadastro editável e nada impede alguém criar um grupo chamado
+    "cliente" e usar só ele. Aceitar os dois evita que um cliente cadastrado
+    pela outra convenção seja tratado como gente da casa.
+    """
+    for campo in ("tipo", "grupo"):
+        if str(getattr(u, campo, "") or "").strip().lower() == "cliente":
+            return True
+    return False
 
-    1. o número que está nos CONTATOS do ZapContábil, achado pelo e-mail. É lá
-       que o cadastro vive e é mantido; casar por e-mail evita redigitar
-       telefone aqui e ficar com duas verdades sobre o mesmo contato.
-    2. o telefone do cadastro do Tareffas, para quem ainda não está no Zap.
-    3. o e-mail. Não é a regra, é a rede: deixar de avisar quem tem a tarefa na
-       mão é falha pior do que avisar pelo canal errado.
 
-    Quem não tem nada disso fica de fora, e isso aparece no ensaio.
+def _numero_da_pessoa(u, zap: dict = None) -> str:
+    """Número de WhatsApp da pessoa, na ordem em que se deve confiar.
+
+    Primeiro o que está nos CONTATOS do ZapContábil, achado pelo e-mail: é lá
+    que o cadastro vive e é mantido, e casar por e-mail evita ficar com duas
+    verdades sobre o mesmo contato. Depois o telefone digitado aqui, para quem
+    ainda não está lá.
     """
     email = str(getattr(u, "email", None) or "").strip().lower()
     numeros = (zap or {}).get("numero") or {}
     if email and numeros.get(email):
-        return ("whatsapp", numeros[email])
-    tel = normalizar_telefone(getattr(u, "telefone", None))
-    if tel:
-        return ("whatsapp", tel)
+        return numeros[email]
+    return normalizar_telefone(getattr(u, "telefone", None))
+
+
+def canais_da_pessoa(u, zap: dict = None) -> list:
+    """Por onde avisar esta pessoa: lista de (canal, endereço).
+
+    Gente do escritório recebe por UM canal: WhatsApp, com e-mail de reserva
+    para quem não tem número em lugar nenhum. Um canal basta porque a pessoa
+    trabalha no sistema e vive no painel o dia inteiro; e-mail seria eco.
+
+    Usuário do lado do CLIENTE recebe pelos DOIS, quando tem os dois. Ele está
+    fora do escritório, não abre o painel e a tarefa dele costuma ser a que
+    trava o fechamento -- aqui a redundância é o objetivo, não desperdício. Ele
+    também não tem supervisor para servir de rede se o aviso se perder.
+
+    Quem não tem número nem e-mail fica de fora, e isso aparece no ensaio.
+    """
+    email = getattr(u, "email", None)
+    numero = _numero_da_pessoa(u, zap)
+    if eh_cliente(u):
+        vias = []
+        if numero:
+            vias.append(("whatsapp", numero))
+        if email:
+            vias.append(("email", email))
+        return vias
+    if numero:
+        return [("whatsapp", numero)]
     if email:
-        return ("email", getattr(u, "email"))
-    return (None, None)
+        return [("email", email)]
+    return []
 
 
 def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
@@ -282,8 +315,10 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
     Os dois alargamentos ficam desligados por padrão, cada um pela sua razão:
     - `niveis` sobe a cadeia de gestores acima do responsável. Zero porque
       cobrança em cópia para a diretoria é decisão de gestão, não default.
-    - `incluir_cliente` avisa a empresa da tarefa por e-mail e/ou WhatsApp.
-      Desligado porque ligado sem querer manda mensagem para cliente real.
+    - `incluir_cliente` avisa a EMPRESA da tarefa por e-mail e/ou WhatsApp.
+      Desligado porque ligado sem querer manda mensagem para cliente real. Não
+      confundir com o usuário do tipo cliente: esse é pessoa, entra como
+      responsável da tarefa e recebe sempre, pelos dois canais.
 
     Canal: WhatsApp, no número que o ZapContábil tem para aquele e-mail; e-mail
     só como reserva de quem não tem número em lugar nenhum.
@@ -298,18 +333,21 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
     def juntar(papel, pessoa):
         if not pessoa:
             return
-        canal, endereco = _canal_da_pessoa(pessoa, zap)
-        # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
-        # supervisor, por exemplo) recebe uma mensagem só.
-        if not endereco or endereco in vistos:
-            return
-        vistos.add(endereco)
-        item = {"papel": papel, "nome": pessoa.nome, "canal": canal, "endereco": endereco}
-        # O atendimento nasce na conta desta pessoa no Zap, quando ela tem uma.
-        uid = ((zap or {}).get("user_id") or {}).get(str(getattr(pessoa, "email", "") or "").strip().lower())
-        if canal == "whatsapp" and uid not in (None, ""):
-            item["zap_user_id"] = uid
-        dest.append(item)
+        cliente = eh_cliente(pessoa)
+        for canal, endereco in canais_da_pessoa(pessoa, zap):
+            # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
+            # supervisor, por exemplo) recebe uma mensagem só por via.
+            if not endereco or endereco in vistos:
+                continue
+            vistos.add(endereco)
+            item = {"papel": "cliente" if cliente else papel, "nome": pessoa.nome,
+                    "canal": canal, "endereco": endereco}
+            # O atendimento nasce na conta desta pessoa no Zap, quando ela é
+            # atendente lá. Cliente nunca é: ele é atendido, não atende.
+            uid = ((zap or {}).get("user_id") or {}).get(str(getattr(pessoa, "email", "") or "").strip().lower())
+            if canal == "whatsapp" and not cliente and uid not in (None, ""):
+                item["zap_user_id"] = uid
+            dest.append(item)
 
     for u in list(tarefa.responsaveis):
         alvo = subs_map.get(u.id, u)  # ausente -> substituto recebe no lugar
@@ -323,11 +361,11 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
         tel = normalizar_telefone(empresa.telefone)
         if tel and tel not in vistos:
             vistos.add(tel)
-            dest.append({"papel": "cliente", "nome": empresa.razao_social,
+            dest.append({"papel": "empresa", "nome": empresa.razao_social,
                          "canal": "whatsapp", "endereco": tel})
         if empresa.email and empresa.email not in vistos:
             vistos.add(empresa.email)
-            dest.append({"papel": "cliente", "nome": empresa.razao_social,
+            dest.append({"papel": "empresa", "nome": empresa.razao_social,
                          "canal": "email", "endereco": empresa.email})
     return dest
 

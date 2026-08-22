@@ -18,7 +18,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.services.whatsapp import (should_notify, destinatarios_alerta,  # noqa: E402
                                    normalizar_telefone, mapa_numero_por_email,
-                                   mapa_userid_por_email)
+                                   mapa_userid_por_email, eh_cliente)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -28,9 +28,10 @@ def check(nome, cond, extra=""):
 
 
 class U:
-    def __init__(self, id, nome, email=None, gestor=None, telefone=None):
+    def __init__(self, id, nome, email=None, gestor=None, telefone=None,
+                 tipo="colaborador", grupo="analista"):
         self.id, self.nome, self.email, self.gestor = id, nome, email, gestor
-        self.telefone = telefone
+        self.telefone, self.tipo, self.grupo = telefone, tipo, grupo
 
 class E:
     def __init__(self, razao_social, email=None, telefone=None):
@@ -78,19 +79,19 @@ check("colaborador vai por WhatsApp", ("colaborador", "whatsapp", "5521988880003
 check("supervisor por WhatsApp", ("supervisor", "whatsapp", "5521988880004") in trio)
 check("só esses dois", len(d) == 2, f"({len(d)})")
 check("gestor NÃO entra por padrão", not any(x["papel"] == "gestor" for x in d))
-check("cliente NÃO entra por padrão", not any(x["papel"] == "cliente" for x in d))
+check("empresa NÃO entra por padrão", not any(x["papel"] == "empresa" for x in d))
 check("nenhum e-mail: todo mundo tem número", [x for x in d if x["canal"] == "email"] == [])
 
 # Os dois alargamentos, quando ligados na tela.
 d = destinatarios_alerta(T([analista], sup, cli), {}, niveis=2)
 papeis = [x["papel"] for x in d]
 check("com níveis=2, os dois gestores entram", papeis.count("gestor") == 2, str(papeis))
-check("mas o cliente continua fora", "cliente" not in papeis)
+check("mas a empresa continua fora", "empresa" not in papeis)
 
 d = destinatarios_alerta(T([analista], sup, cli), {}, 0, incluir_cliente=True)
 trio = [(x["papel"], x["canal"], x["endereco"]) for x in d]
-check("com o cliente ligado, ele recebe por WhatsApp", ("cliente", "whatsapp", "5521977770000") in trio)
-check("e também por e-mail", ("cliente", "email", "fin@mark.com") in trio)
+check("com a empresa ligada, ela recebe por WhatsApp", ("empresa", "whatsapp", "5521977770000") in trio)
+check("e também por e-mail", ("empresa", "email", "fin@mark.com") in trio)
 check("sem trazer gestor junto", not any(x["papel"] == "gestor" for x in d))
 
 print("\n=== 3b. o número vem dos CONTATOS do Zap, casado pelo e-mail ===")
@@ -143,7 +144,7 @@ check("destinatário por e-mail nunca leva userId", "zap_user_id" not in d[0])
 
 # Cliente é contato, não atendente: nunca recebe atribuição de atendimento.
 d = destinatarios_alerta(T([], None, cli), {}, 0, zap=zap, incluir_cliente=True)
-check("cliente não leva userId", d and all("zap_user_id" not in x for x in d))
+check("empresa não leva userId", d and all("zap_user_id" not in x for x in d))
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
 semtel = U(7, "Sem Telefone", "semtel@bps4.com")
@@ -154,6 +155,43 @@ check("sem telefone e sem e-mail fica de fora", destinatarios_alerta(T([sonome],
 lixo = U(11, "Telefone Podre", "podre@bps4.com", telefone="1234")
 d = destinatarios_alerta(T([lixo], None, None), {}, 0)
 check("telefone impossível não vira WhatsApp — usa o e-mail", d[0]["canal"] == "email")
+
+print("\n=== 4b. usuário do lado do cliente recebe pelos DOIS canais ===")
+# Ele está fora do escritório, não abre o painel, e não tem supervisor de rede.
+cliente_u = U(50, "Dona da Empresa", "dona@markbuilding.com",
+              telefone="21966665555", tipo="cliente", grupo="cliente")
+d = destinatarios_alerta(T([cliente_u], None, None))
+canais = sorted(x["canal"] for x in d)
+check("recebe por WhatsApp e por e-mail", canais == ["email", "whatsapp"], str(canais))
+check("marcado como cliente", all(x["papel"] == "cliente" for x in d), str([x["papel"] for x in d]))
+check("colaborador continua com um canal só",
+      len(destinatarios_alerta(T([analista], None, None))) == 1)
+
+# As duas convenções de marcação, cada uma sozinha.
+check("tipo=cliente basta", eh_cliente(U(51, "A", "a@x.com", tipo="cliente", grupo="analista")))
+check("grupo=cliente basta", eh_cliente(U(52, "B", "b@x.com", tipo="colaborador", grupo="cliente")))
+check("colaborador comum não é cliente", not eh_cliente(analista))
+check("maiúscula e espaço não enganam", eh_cliente(U(53, "C", "c@x.com", tipo=" Cliente ")))
+check("usuário sem os campos não quebra", not eh_cliente(type("V", (), {"nome": "x"})()))
+
+# Cliente sem um dos dois cai no que tem.
+so_zap_u = U(54, "Só Zap", None, telefone="21966664444", tipo="cliente")
+check("cliente sem e-mail vai só no WhatsApp",
+      [x["canal"] for x in destinatarios_alerta(T([so_zap_u], None, None))] == ["whatsapp"])
+so_mail_u = U(55, "Só E-mail", "so@x.com", tipo="cliente")
+check("cliente sem telefone vai só no e-mail",
+      [x["canal"] for x in destinatarios_alerta(T([so_mail_u], None, None))] == ["email"])
+
+# Cliente não é atendente do Zap: não pode levar atribuição de atendimento.
+zap_com_cliente = {"numero": {"dona@markbuilding.com": "5521966665555"},
+                   "user_id": {"dona@markbuilding.com": 99}}
+d = destinatarios_alerta(T([cliente_u], None, None), {}, 0, zap=zap_com_cliente)
+check("cliente nunca leva userId, mesmo constando como atendente",
+      all("zap_user_id" not in x for x in d))
+
+# Cliente como responsável não tem supervisor — e o alerta não inventa um.
+d = destinatarios_alerta(T([cliente_u], None, None))
+check("nenhum supervisor aparece do nada", not any(x["papel"] == "supervisor" for x in d))
 
 print("\n=== 5. níveis de gestor limitam a subida ===")
 d1 = destinatarios_alerta(T([analista], None, None), {}, niveis=1)
