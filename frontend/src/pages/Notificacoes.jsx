@@ -175,10 +175,10 @@ export default function Notificacoes() {
             a pessoa recebe três mensagens de uma vez, que é pior do que uma só.
           </p>
           <div className="grid grid-cols-2 gap-4">
-            <Campo chave="horarios_a_vencer" label="📋 A vencer" ph="09:00" hint="Planejamento: a antecedência abaixo e a véspera." />
+            <Campo chave="horarios_a_vencer" label="📋 A vencer" ph="09:00" hint="Planejamento: no dia da antecedência e na véspera." />
             <Campo chave="horarios_vence_hoje" label="⚠️ Vence hoje" ph="09:30,15:00" hint="Precisa de ação hoje — vale insistir." />
             <Campo chave="horarios_atrasada" label="🚨 Atrasada" ph="17:45" hint="Cobrança. Uma vez por dia basta." />
-            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Quantos dias antes do prazo entrar em “a vencer”." />
+            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Dois toques: neste dia e na véspera — com 3, avisa faltando 3 e faltando 1, e cala no 2. Conta do PRAZO INTERNO, não do vencimento legal." />
             <Campo chave="alert_gestor_niveis" label="Níveis de gestor na cópia" tipo="number" hint="0 = ninguém acima do responsável. 2 = gestor direto + gestor do gestor." />
           </div>
           <div className="border-t border-gray-100 mt-4 pt-3">

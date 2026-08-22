@@ -223,8 +223,14 @@ def faixa_da_tarefa(dias_restantes, dias_antes: int = 3) -> str:
     "a vencer", amanhã em "vence hoje", depois em "atrasada". Ninguém precisa
     reclassificar nada.
 
-    "A vencer" não é qualquer coisa no futuro: é a antecedência configurada e a
-    véspera. Uma tarefa que vence em 40 dias não é aviso, é ruído.
+    "A vencer" são DOIS TOQUES, não uma contagem regressiva: o dia da
+    antecedência e a véspera. Com antecedência 3, avisa faltando 3 e faltando 1,
+    e cala no 2 -- dois lembretes espaçados em vez de um martelo diário. Uma
+    tarefa que vence em 40 dias não é aviso, é ruído.
+
+    E conta do PRAZO INTERNO, não do vencimento legal: de nada adianta avisar
+    três dias antes do prazo da Receita se o time precisava ter terminado uma
+    semana antes. Quem chama esta função já resolveu isso em `_base_date`.
     """
     if dias_restantes is None:
         return None
