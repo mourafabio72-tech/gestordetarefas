@@ -47,6 +47,77 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict) -> dict:
         return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}
 
 
+# O schema `User` do ZapContábil não está documentado campo a campo, e o nome do
+# telefone varia entre instalações. Em vez de fixar um palpite, tentamos os
+# candidatos em ordem — o primeiro que virar número válido vence.
+CAMPOS_NUMERO_ZAP = ("number", "whatsapp", "whatsappNumber", "phone", "phoneNumber",
+                     "celular", "telefone", "contactNumber", "wa_number", "mobile")
+
+
+async def usuarios_zap(cfg: dict) -> list:
+    """`GET /api/users` do ZapContábil — os colaboradores cadastrados lá.
+
+    Devolve lista vazia em qualquer contratempo (canal desligado, sem chave, API
+    fora do ar, resposta estranha). É de propósito: esta consulta enriquece o
+    alerta, não o autoriza. Se ela falhar, o disparo segue pelo telefone do
+    cadastro do Tareffas ou pelo e-mail, em vez de a varredura inteira morrer.
+    """
+    api_key = (cfg.get("zap_api_key") or "").strip()
+    if not cfgmod.ativo(cfg, "whatsapp_ativo") or not api_key:
+        return []
+    url = cfg.get("zap_url") or "https://api-bps4.zapcontabil.chat"
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{url}/api/users",
+                                 headers={"Authorization": f"Bearer {api_key}",
+                                          "accept": "application/json"}, timeout=20.0)
+        if r.status_code != 200:
+            return []
+        dados = r.json()
+    except Exception:
+        return []
+    # A resposta pode vir como lista pura ou embrulhada — `UserList` no swagger.
+    if isinstance(dados, dict):
+        for chave in ("users", "data", "rows", "items", "records"):
+            if isinstance(dados.get(chave), list):
+                return dados[chave]
+        return []
+    return dados if isinstance(dados, list) else []
+
+
+def numero_do_usuario_zap(u: dict) -> str:
+    """Primeiro campo do usuário do Zap que vira telefone utilizável."""
+    if not isinstance(u, dict):
+        return ""
+    for campo in CAMPOS_NUMERO_ZAP:
+        numero = normalizar_telefone(u.get(campo))
+        if numero:
+            return numero
+    return ""
+
+
+def mapa_por_email(usuarios: list) -> dict:
+    """{e-mail em minúsculas: número} a partir da lista de usuários do Zap.
+
+    O e-mail é a chave porque é o login do colaborador lá e o mesmo que ele tem
+    aqui — é o que liga um cadastro ao outro sem obrigar a redigitar telefone.
+    Separado da chamada HTTP para poder ser provado sem rede.
+    """
+    saida = {}
+    for u in usuarios or []:
+        if not isinstance(u, dict):
+            continue
+        email = str(u.get("email") or "").strip().lower()
+        numero = numero_do_usuario_zap(u)
+        if email and numero:
+            saida[email] = numero
+    return saida
+
+
+async def mapa_zap_por_email(cfg: dict) -> dict:
+    return mapa_por_email(await usuarios_zap(cfg))
+
+
 def _base_date(tarefa: Tarefa):
     """O prazo interno comanda os alertas; se não houver, cai no vencimento."""
     return tarefa.data_prazo or tarefa.data_vencimento
@@ -132,26 +203,39 @@ def _cadeia_gestores(usuario, niveis: int) -> list:
     return chain
 
 
-def _canal_da_pessoa(u) -> tuple:
+def _canal_da_pessoa(u, zap_por_email: dict = None) -> tuple:
     """Canal de quem é do escritório: WhatsApp, com e-mail de reserva.
 
-    A regra do escritório é avisar o colaborador por WhatsApp. Sem telefone no
-    cadastro, o alerta vai por e-mail em vez de não ir -- deixar de avisar quem
-    tem a tarefa é pior falha do que avisar pelo canal errado. Quem não tem nem
-    telefone nem e-mail fica de fora, e isso aparece no ensaio.
+    A ordem tem uma razão em cada degrau:
+
+    1. o número que está no ZapContábil, achado pelo e-mail. É lá que o cadastro
+       do colaborador vive e é mantido; casar por e-mail evita redigitar
+       telefone aqui e ficar com duas verdades sobre o mesmo contato.
+    2. o telefone do cadastro do Tareffas, para quem ainda não está no Zap.
+    3. o e-mail. Não é a regra, é a rede: deixar de avisar quem tem a tarefa na
+       mão é falha pior do que avisar pelo canal errado.
+
+    Quem não tem nada disso fica de fora, e isso aparece no ensaio.
     """
+    email = getattr(u, "email", None)
+    if zap_por_email and email:
+        numero = zap_por_email.get(str(email).strip().lower())
+        if numero:
+            return ("whatsapp", numero)
     tel = normalizar_telefone(getattr(u, "telefone", None))
     if tel:
         return ("whatsapp", tel)
-    if getattr(u, "email", None):
-        return ("email", u.email)
+    if email:
+        return ("email", email)
     return (None, None)
 
 
-def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2) -> list:
+def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
+                        zap_por_email: dict = None) -> list:
     """Quem recebe o alerta e por qual canal:
     - gente do escritório (responsáveis, a cadeia de gestores deles, supervisor)
-      -> WhatsApp; e-mail só como reserva de quem não tem telefone
+      -> WhatsApp, no número que o ZapContábil tem para aquele e-mail; e-mail só
+      como reserva de quem não tem número em lugar nenhum
     - cliente (a empresa da tarefa) -> e-mail e/ou WhatsApp, conforme o que
       estiver preenchido no cadastro dela
     `subs_map` {ausente_id: substituto}: quem está de férias/doença é trocado pelo substituto
@@ -164,7 +248,7 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2)
     def juntar(papel, pessoa):
         if not pessoa:
             return
-        canal, endereco = _canal_da_pessoa(pessoa)
+        canal, endereco = _canal_da_pessoa(pessoa, zap_por_email)
         # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
         # supervisor, por exemplo) recebe uma mensagem só.
         if not endereco or endereco in vistos:
@@ -225,6 +309,8 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
     alerts_sent = []
     now = datetime.now()
     subs_map = mapa_substitutos(db)
+    # Uma consulta por varredura, não uma por destinatário.
+    zap_por_email = await mapa_zap_por_email(cfg)
 
     # Bloqueados somem dos alertas também (empresa ou responsável principal bloqueado).
     tarefas = (db.query(Tarefa)
@@ -256,7 +342,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         message = format_task_message(tarefa, days_remaining, responsavel) + rodape
 
         despachos = []
-        for d in destinatarios_alerta(tarefa, subs_map, niveis):
+        for d in destinatarios_alerta(tarefa, subs_map, niveis, zap_por_email):
             # O nome de quem está sendo avisado abre a mensagem. No painel
             # compartilhado é o que separa o aviso do Fulano do da Ciclana.
             texto = format_task_message(tarefa, days_remaining, responsavel, para=d["nome"]) + rodape

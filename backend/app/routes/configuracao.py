@@ -74,6 +74,49 @@ async def testar_whatsapp(
     )
 
 
+@router.get("/notificacoes/zap-usuarios")
+async def zap_usuarios(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_admin),
+):
+    """Cruza os colaboradores do Tareffas com os usuários do ZapContábil.
+
+    O alerta do time sai pelo número que o Zap tem para aquele e-mail. Sem esta
+    conferência, um e-mail escrito diferente nos dois cadastros joga a pessoa
+    silenciosamente para o canal de reserva -- ela recebe por e-mail e ninguém
+    percebe que o WhatsApp nunca chegou.
+    """
+    from ..services.whatsapp import usuarios_zap, mapa_por_email, CAMPOS_NUMERO_ZAP
+    cfg = cfgmod.carregar(db)
+    lista = await usuarios_zap(cfg)
+    mapa = mapa_por_email(lista)
+    emails_zap = {str(u.get("email") or "").strip().lower()
+                  for u in lista if isinstance(u, dict)}
+
+    casaram, sem_numero, fora = [], [], []
+    for u in db.query(Usuario).filter(Usuario.bloqueado != True).all():
+        email = (u.email or "").strip().lower()
+        item = {"nome": u.nome, "email": u.email}
+        if email in mapa:
+            casaram.append({**item, "numero": mapa[email]})
+        elif email in emails_zap:
+            sem_numero.append(item)
+        else:
+            fora.append({**item, "telefone_no_tareffas": bool(u.telefone)})
+
+    return {
+        "no_zap": len(lista),
+        "com_numero": len(mapa),
+        # As chaves que a API devolveu — serve para descobrir em qual campo o
+        # telefone vem nesta instalação, se nenhum dos candidatos acertar.
+        "campos": sorted({k for u in lista if isinstance(u, dict) for k in u}),
+        "campos_procurados": list(CAMPOS_NUMERO_ZAP),
+        "casaram": casaram,
+        "no_zap_sem_numero": sem_numero,
+        "fora_do_zap": fora,
+    }
+
+
 @router.post("/notificacoes/testar-ia")
 def testar_ia(
     db: Session = Depends(get_db),

@@ -13,6 +13,8 @@ export default function Notificacoes() {
   const [ensaio, setEnsaio] = useState(null);
   const [ensaiando, setEnsaiando] = useState(false);
   const [msgAberta, setMsgAberta] = useState(null);
+  const [zap, setZap] = useState(null);
+  const [conferindoZap, setConferindoZap] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -27,6 +29,17 @@ export default function Notificacoes() {
 
   const set = (k, v) => setCfg((c) => ({ ...c, [k]: v }));
   const bool = (v) => String(v) === '1' || v === true;
+
+  // Cruza os colaboradores daqui com os usuários cadastrados no ZapContábil.
+  const conferirZap = async () => {
+    setConferindoZap(true); setMsg(null);
+    try {
+      const { data } = await configuracaoAPI.zapUsuarios();
+      setZap(data);
+    } catch (e) {
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao consultar o ZapContábil') });
+    } finally { setConferindoZap(false); }
+  };
 
   // Ensaio: roda a verificação de agora e mostra o que sairia, sem enviar.
   const rodarEnsaio = async () => {
@@ -247,6 +260,65 @@ export default function Notificacoes() {
           </div>
         </div>
 
+        {/* Conferência do cadastro. O alerta do time sai pelo número que o Zap
+            tem para aquele e-mail; e-mail escrito diferente nos dois cadastros
+            joga a pessoa em silêncio para o canal de reserva -- ela recebe por
+            e-mail e ninguém percebe que o WhatsApp nunca chegou. */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <MessageCircle size={18} className="text-green-600" />
+            <h2 className="text-xl font-semibold">Colaboradores no ZapContábil</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            O aviso do time vai para o número que o ZapContábil tem cadastrado, encontrado pelo
+            <strong> e-mail</strong> — o mesmo que a pessoa usa para logar lá e aqui.
+            Quem não casar recebe por e-mail, sem avisar ninguém: é por isso que existe esta conferência.
+          </p>
+          <button onClick={conferirZap} disabled={conferindoZap} className="btn-secondary flex items-center gap-2">
+            <MessageCircle size={16} /> {conferindoZap ? 'Consultando…' : 'Conferir cadastro'}
+          </button>
+
+          {zap && (
+            <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
+              <p className="mb-2">
+                <strong>{zap.no_zap}</strong> usuário(s) no ZapContábil,{' '}
+                <strong>{zap.com_numero}</strong> com número aproveitável.
+              </p>
+              {zap.no_zap === 0 && (
+                <p className="text-xs text-red-700">
+                  A API não devolveu ninguém. Confira a chave e se o canal está ativo — sem isso
+                  o time todo cai no e-mail.
+                </p>
+              )}
+              {zap.no_zap > 0 && zap.com_numero === 0 && (
+                <p className="text-xs text-red-700">
+                  Os usuários vieram, mas o telefone não está em nenhum dos campos que procuramos
+                  ({zap.campos_procurados.join(', ')}). Os campos que a API devolveu são:{' '}
+                  <span className="font-mono">{zap.campos.join(', ')}</span> — me diga qual deles
+                  é o número que eu ligo.
+                </p>
+              )}
+              {zap.casaram?.length > 0 && (
+                <p className="text-xs text-green-800 mb-1">
+                  ✓ {zap.casaram.length} colaborador(es) casados: {zap.casaram.map((c) => c.nome).join(', ')}
+                </p>
+              )}
+              {zap.no_zap_sem_numero?.length > 0 && (
+                <p className="text-xs text-amber-700 mb-1">
+                  ⚠ Estão no Zap mas sem número lá — vão por e-mail:{' '}
+                  {zap.no_zap_sem_numero.map((c) => c.nome).join(', ')}
+                </p>
+              )}
+              {zap.fora_do_zap?.length > 0 && (
+                <p className="text-xs text-gray-600">
+                  Não achei no Zap (confira a grafia do e-mail):{' '}
+                  {zap.fora_do_zap.map((c) => `${c.nome}${c.telefone_no_tareffas ? ' (usa o telefone daqui)' : ' (vai por e-mail)'}`).join(', ')}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Ensaio. Existe porque o alerta de verdade sai para o WhatsApp e o
             e-mail do CLIENTE: conferir a régua em produção, sem isto, seria
             mandar mensagem para cliente real. Roda a mesma lógica do horário
@@ -262,8 +334,8 @@ export default function Notificacoes() {
           </p>
           <p className="text-xs text-gray-500 mb-3">
             <MessageCircle size={12} className="inline text-green-600" /> Quem é do escritório
-            (responsável, gestores e supervisor) recebe por <strong>WhatsApp</strong>; o e-mail
-            entra só como reserva de quem não tem telefone no cadastro.{' '}
+            (responsável, gestores e supervisor) recebe por <strong>WhatsApp</strong>, no número que o
+            ZapContábil tem para o e-mail dele; o e-mail entra só como reserva de quem não tem número.{' '}
             <Mail size={12} className="inline text-blue-600" /> O <strong>cliente</strong> recebe
             por e-mail e/ou WhatsApp, conforme o que estiver preenchido na empresa.
           </p>

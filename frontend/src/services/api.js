@@ -214,6 +214,7 @@ export const configuracaoAPI = {
   testarEmail: (para) => api.post('/configuracao/notificacoes/testar-email', { para }),
   testarWhatsapp: (para) => api.post('/configuracao/notificacoes/testar-whatsapp', { para }),
   testarIA: () => api.post('/configuracao/notificacoes/testar-ia'),
+  zapUsuarios: () => api.get('/configuracao/notificacoes/zap-usuarios'),
 };
 
 export const gruposAPI = {
