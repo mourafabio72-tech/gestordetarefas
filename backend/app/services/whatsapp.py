@@ -67,7 +67,17 @@ def should_notify(days_remaining: int, slot: str, dias_antes: int = 3) -> bool:
     return False
 
 
-def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuario = None) -> str:
+def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuario = None,
+                       para: str = None) -> str:
+    """Monta o texto do alerta.
+
+    `para` põe o nome do destinatário na PRIMEIRA linha. Vale quando a mensagem
+    cai num painel compartilhado -- caso do ZapContábil, em que a linha é uma só
+    para o escritório inteiro: sem o nome no topo, quem abre o painel vê uma
+    pilha de avisos e não sabe qual é o seu. O nome do responsável continua no
+    corpo, que é outra informação: quem responde pela tarefa, não quem está
+    sendo avisado (o gestor recebe o aviso de uma tarefa que não é dele).
+    """
     empresa_nome = tarefa.empresa.razao_social or tarefa.empresa.nome_fantasia
     setor_nome = tarefa.setor.nome if tarefa.setor else "Não definido"
 
@@ -83,7 +93,10 @@ def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuari
     base = _base_date(tarefa)
     prazo_str = base.strftime("%d/%m/%Y %H:%M") if base else "-"
 
-    linhas = [
+    linhas = []
+    if para:
+        linhas += [f"👤 *{para}*"]
+    linhas += [
         urgency, "",
         f"*Tarefa:* {tarefa.titulo}",
         f"*Empresa:* {empresa_nome}",
@@ -232,21 +245,25 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         if tarefa.responsavel_id:
             responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
 
-        message = format_task_message(tarefa, days_remaining, responsavel)
+        rodape = ""
         try:
             from .upload import link_publico
-            link = link_publico(cfg, tarefa, db)
-            message += f"\n\n📎 Enviar o comprovante: {link}"
+            rodape = f"\n\n📎 Enviar o comprovante: {link_publico(cfg, tarefa, db)}"
         except Exception:
             pass
         assunto = f"[Tareffas] {tarefa.titulo} - {tarefa.empresa.razao_social}"
+        # Guardado para o ensaio mostrar o texto-base sem repetir por destinatário.
+        message = format_task_message(tarefa, days_remaining, responsavel) + rodape
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis):
+            # O nome de quem está sendo avisado abre a mensagem. No painel
+            # compartilhado é o que separa o aviso do Fulano do da Ciclana.
+            texto = format_task_message(tarefa, days_remaining, responsavel, para=d["nome"]) + rodape
             if ensaio:
                 despachos.append({**d, "enviado": False, "skipped": False, "ensaio": True})
                 continue
-            r = await _enviar(d["canal"], d["endereco"], assunto, message, cfg)
+            r = await _enviar(d["canal"], d["endereco"], assunto, texto, cfg)
             despachos.append({**d, "enviado": r.get("success", False),
                               "skipped": r.get("skipped", False), "detalhe": r})
 
