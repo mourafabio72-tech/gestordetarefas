@@ -230,6 +230,28 @@ check("leva o link de comprovante", "http://x/1" in r)
 check("uma tarefa fica no singular", "*1 tarefa pedindo atenção*" in montar_resumo("X", itens[:1]))
 check("lista vazia devolve vazio", montar_resumo("X", []) == "" and montar_resumo("X", None) == "")
 
+# Na faixa atrasada, quem manda é o vencimento LEGAL: todas já estouraram o
+# interno, e o que decide entre elas é qual vira multa primeiro.
+tres = [
+    {"titulo": "EFD", "empresa": "Gnileb", "dias": -8, "venc_dias": -3},
+    {"titulo": "Conciliar", "empresa": "TROPS", "dias": -5, "venc_dias": 4},
+    {"titulo": "Balancete", "empresa": "Mark", "dias": -2, "venc_dias": 1},
+]
+t = montar_resumo("X", tres, faixa="atrasada")
+check("o que já venceu vem primeiro", t.index("EFD") < t.index("Balancete"))
+check("e o de 1 dia vem antes do de 4, mesmo estando menos atrasado",
+      t.index("Balancete") < t.index("Conciliar"))
+# Nas outras faixas continua sendo o prazo interno que ordena.
+duas = [{"titulo": "Longe", "dias": 1, "venc_dias": 0}, {"titulo": "Perto", "dias": 3, "venc_dias": 30}]
+t2 = montar_resumo("X", duas, faixa="a_vencer")
+check("a vencer ordena pelo prazo interno", t2.index("Longe") < t2.index("Perto"))
+# Atrasada sem vencimento cadastrado não sai da ordem.
+mistas = [{"titulo": "ComVenc", "dias": -1, "venc_dias": 5},
+          {"titulo": "SemVenc", "dias": -9}]
+t3 = montar_resumo("X", mistas, faixa="atrasada")
+check("sem vencimento, cai no prazo interno e não fica de fora",
+      t3.index("SemVenc") < t3.index("ComVenc"), t3)
+
 # Empate de prazo desempata pela empresa: a lista sai igual entre varreduras.
 empate = [{"titulo": "T", "empresa": "Zebra", "dias": 0}, {"titulo": "T", "empresa": "Alfa", "dias": 0}]
 check("empate ordena por empresa", montar_resumo("X", empate).index("Alfa") <

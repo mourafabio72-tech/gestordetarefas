@@ -316,16 +316,29 @@ def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO,
     e o efeito de uma rajada é a pessoa parar de ler. Uma mensagem com a lista
     ordenada por urgência é o mesmo conteúdo em algo que se lê.
 
-    Ordena pelo que corre mais: o atrasado no topo, o folgado no fim. Empate de
-    prazo desempata pelo nome da empresa, para a lista sair estável entre
+    Ordena pelo que corre mais, e o que "corre mais" muda com a faixa. Nas duas
+    primeiras é o prazo interno, que é o que se persegue. Na faixa ATRASADA é o
+    vencimento LEGAL: todas ali já estouraram o prazo interno, e o que decide a
+    urgência entre elas é qual vira multa primeiro -- uma atrasada há 2 dias que
+    vence amanhã corre mais que uma atrasada há 5 que vence só na semana que vem.
+
+    Empate desempata pelo nome da empresa, para a lista sair estável entre
     varreduras e a pessoa reconhecer o que já viu.
 
     Corta pelo TAMANHO, não pela quantidade: o WhatsApp trunca perto de 4096
     caracteres, e uma mensagem cortada no meio perderia justamente os links de
     comprovante do fim. O que não coube vira uma linha dizendo quantas faltam.
     """
-    ordenados = sorted(itens or [], key=lambda i: (i.get("dias") if i.get("dias") is not None else 9999,
-                                                   (i.get("empresa") or "")))
+    def ordem(i):
+        # Na faixa atrasada manda o vencimento legal. Sem vencimento cadastrado,
+        # cai no prazo interno: as duas contagens são dias relativos a hoje, então
+        # a escala é a mesma e a tarefa não fica de fora da ordem.
+        chave = i.get("venc_dias") if faixa == "atrasada" else None
+        if chave is None:
+            chave = i.get("dias")
+        return (chave if chave is not None else 9999, (i.get("empresa") or ""))
+
+    ordenados = sorted(itens or [], key=ordem)
     total = len(ordenados)
     if not total:
         return ""
