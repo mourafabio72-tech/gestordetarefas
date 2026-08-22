@@ -199,6 +199,90 @@ async def carregar_zap(cfg: dict) -> dict:
             "user_id": mapa_userid_por_email(await usuarios_zap(cfg))}
 
 
+async def send_whatsapp_document(phone: str, nome: str, conteudo: bytes, legenda: str,
+                                 cfg: dict, user_id=None) -> dict:
+    """Envia um arquivo pelo ZapContábil — `POST /api/send/document/{to}`.
+
+    Multipart, não JSON: o corpo leva o arquivo, e os campos de roteamento vão
+    junto como texto. `ticketStrategy` não existe neste endpoint, então o
+    atendimento nasce pelo `userId` e pronto.
+
+    A legenda só se aplica a imagem, segundo a doc. Para documento ela viaja
+    como mensagem separada logo depois — sem isso a guia chegaria sem dizer de
+    que empresa e competência é.
+    """
+    if not cfgmod.ativo(cfg, "whatsapp_ativo"):
+        return {"success": False, "error": "WhatsApp desativado", "skipped": True}
+    api_key = (cfg.get("zap_api_key") or "").strip()
+    if not api_key:
+        return {"success": False, "error": "ZAP_API_KEY não configurada", "skipped": True}
+    numero = normalizar_telefone(phone)
+    if not numero:
+        return {"success": False, "error": f"telefone inválido: {phone!r}"}
+    url = cfg.get("zap_url") or "https://api-bps4.zapcontabil.chat"
+    try:
+        conn_from = int(cfg.get("zap_connection_from") or 0)
+    except (TypeError, ValueError):
+        conn_from = 0
+
+    dados = {"connectionFrom": str(conn_from)}
+    if user_id not in (None, ""):
+        dados["userId"] = str(user_id)
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"{url}/api/send/document/{numero}",
+                headers={"Authorization": f"Bearer {api_key}"},
+                files={"media": (nome, conteudo)}, data=dados, timeout=60.0)
+            ok = r.status_code == 200
+            if ok and legenda:
+                # Best-effort: a guia já foi. Falhar aqui não desfaz o envio do
+                # arquivo, então o resultado continua sendo sucesso.
+                try:
+                    await client.post(f"{url}/api/send/{numero}",
+                                      headers={"Authorization": f"Bearer {api_key}",
+                                               "Content-Type": "application/json"},
+                                      json=montar_payload_zap(legenda, conn_from, user_id),
+                                      timeout=30.0)
+                except Exception:
+                    pass
+            return {"success": ok, "status_code": r.status_code, "response": r.text}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def destinatarios_cliente(db, tarefa) -> list:
+    """Para quem o escritório entrega o documento daquela tarefa.
+
+    Os contatos da EMPRESA e os USUÁRIOS do tipo cliente vinculados a ela. Os
+    dois, porque empresa que só tem o contato geral precisa funcionar e empresa
+    com pessoas cadastradas precisa alcançar cada uma.
+
+    Deduplicado por endereço: o sócio cadastrado como usuário costuma ser o
+    mesmo e-mail que está na ficha da empresa, e receber a guia duas vezes
+    parece defeito.
+    """
+    from ..models import Usuario as U
+    empresa = tarefa.empresa
+    if not empresa:
+        return []
+    dest, vistos = [], set()
+
+    def juntar(nome, canal, endereco):
+        if not endereco or endereco in vistos:
+            return
+        vistos.add(endereco)
+        dest.append({"nome": nome, "canal": canal, "endereco": endereco})
+
+    juntar(empresa.razao_social, "whatsapp", normalizar_telefone(empresa.telefone))
+    juntar(empresa.razao_social, "email", empresa.email)
+    for u in db.query(U).filter(U.empresa_id == empresa.id, U.tipo == "cliente",
+                                U.bloqueado != True, U.ativo == True).all():
+        juntar(u.nome, "whatsapp", normalizar_telefone(u.telefone))
+        juntar(u.nome, "email", u.email)
+    return dest
+
+
 def _base_date(tarefa: Tarefa):
     """O prazo interno comanda os alertas; se não houver, cai no vencimento."""
     return tarefa.data_prazo or tarefa.data_vencimento

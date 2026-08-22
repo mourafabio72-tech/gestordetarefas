@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_, func, case
@@ -361,6 +361,192 @@ def baixar_anexo(
     disposicao = "attachment" if (baixar or ext not in _INLINE) else "inline"
     return FileResponse(caminho, media_type=tipo, filename=nome,
                         content_disposition_type=disposicao)
+
+
+# ── Documento que o escritório ENTREGA ao cliente ────────────────────────────
+#
+# O caminho contrário do e-validador: em vez de esperar o comprovante do
+# cliente, a tarefa carrega uma guia, um boleto ou um relatório e o envia.
+# Guia do Simples é o caso típico, e é recorrente como qualquer outra obrigação.
+
+EXT_SAIDA_OK = {".pdf", ".xlsx", ".xls", ".png", ".jpg", ".jpeg", ".xml", ".zip", ".csv", ".txt"}
+MAX_SAIDA = 15 * 1024 * 1024
+
+
+def _tarefa_no_escopo(db, user, tarefa_id):
+    t = (_aplicar_escopo(db.query(Tarefa), db, user)
+         .filter(Tarefa.id == tarefa_id).first())
+    if not t:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    return t
+
+
+@router.post("/{tarefa_id}/saida")
+async def anexar_saida(
+    tarefa_id: int,
+    arquivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Anexa à tarefa o documento que será entregue ao cliente.
+
+    Anexar NÃO envia. São dois passos porque mandar documento para cliente é
+    irreversível: uma guia errada que sai não volta, e o intervalo entre anexar
+    e enviar é onde se confere o arquivo.
+    """
+    import os
+    from ..services import upload as up
+
+    tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
+    nome = arquivo.filename or "documento"
+    ext = os.path.splitext(nome)[1].lower()
+    if ext not in EXT_SAIDA_OK:
+        raise HTTPException(status_code=400,
+                            detail=f"Tipo não aceito ({ext or 'sem extensão'}). "
+                                   f"Aceitos: {', '.join(sorted(EXT_SAIDA_OK))}")
+    conteudo = await arquivo.read()
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+    if len(conteudo) > MAX_SAIDA:
+        raise HTTPException(status_code=400,
+                            detail=f"Arquivo acima de {MAX_SAIDA // (1024 * 1024)} MB.")
+
+    # Trocar o documento apaga o anterior: guia retificada substitui a errada, e
+    # deixar as duas no volume só cria dúvida sobre qual é a boa.
+    if tarefa.saida_nome and tarefa.saida_nome != nome:
+        up.remover_arquivo(tarefa.saida_nome)
+    tarefa.saida_nome = up.salvar_saida(tarefa.id, nome, conteudo)
+    db.commit()
+    return {"arquivo": up.nome_de_exibicao(tarefa.saida_nome), "bytes": len(conteudo)}
+
+
+@router.get("/{tarefa_id}/saida")
+def baixar_saida(
+    tarefa_id: int,
+    baixar: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Devolve o documento anexado para entrega — para conferir antes de enviar."""
+    import os
+    from ..services import upload as up
+
+    tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
+    if not tarefa.saida_nome:
+        raise HTTPException(status_code=404, detail="Nenhum documento anexado")
+    caminho = up.caminho_do_anexo(tarefa.saida_nome)
+    if not caminho:
+        raise HTTPException(status_code=410, detail="O arquivo não está mais no armazenamento.")
+    nome = up.nome_de_exibicao(tarefa.saida_nome)
+    ext = os.path.splitext(nome)[1].lower()
+    tipo = _INLINE.get(ext, "application/octet-stream")
+    return FileResponse(caminho, media_type=tipo, filename=nome,
+                        content_disposition_type="attachment" if (baixar or ext not in _INLINE) else "inline")
+
+
+@router.get("/{tarefa_id}/envios")
+def historico_envios(
+    tarefa_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Toda vez que o documento saiu, com data, canal e destinatário."""
+    from ..models import TarefaEnvio
+    _tarefa_no_escopo(db, current_user, tarefa_id)
+    envios = (db.query(TarefaEnvio).filter(TarefaEnvio.tarefa_id == tarefa_id)
+              .order_by(TarefaEnvio.enviado_em.desc()).all())
+    return [{"id": e.id, "arquivo": e.arquivo, "canal": e.canal, "endereco": e.endereco,
+             "destinatario": e.destinatario, "sucesso": e.sucesso, "detalhe": e.detalhe,
+             "enviado_em": e.enviado_em} for e in envios]
+
+
+@router.post("/{tarefa_id}/enviar-cliente")
+async def enviar_ao_cliente(
+    tarefa_id: int,
+    ensaio: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Entrega o documento anexado ao cliente e conclui a tarefa.
+
+    Vai para os contatos da EMPRESA e para os USUÁRIOS do tipo cliente ligados
+    a ela, sem repetir endereço.
+
+    A tarefa só é concluída se ALGUÉM recebeu. Concluir com todos os envios
+    falhando registraria como entregue um documento que não chegou a ninguém —
+    e o erro só apareceria quando o cliente reclamasse da multa.
+
+    `ensaio=true` mostra a lista de destinatários sem enviar nada.
+    """
+    from ..models import TarefaEnvio
+    from ..services import upload as up, config as cfgmod
+    from ..services.whatsapp import (destinatarios_cliente, send_whatsapp_document,
+                                     carregar_zap)
+    from ..services.email import send_email
+    from datetime import datetime
+
+    tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
+    if not tarefa.saida_nome:
+        raise HTTPException(status_code=400, detail="Anexe o documento antes de enviar.")
+    try:
+        conteudo = up.ler_arquivo_salvo(tarefa.saida_nome)
+    except FileNotFoundError:
+        raise HTTPException(status_code=410, detail="O arquivo não está mais no armazenamento.")
+
+    destinos = destinatarios_cliente(db, tarefa)
+    if not destinos:
+        raise HTTPException(
+            status_code=400,
+            detail="A empresa não tem e-mail nem telefone, e não há usuário do tipo "
+                   "cliente vinculado a ela. Sem isso não há para onde enviar.")
+    if ensaio:
+        return {"ensaio": True, "arquivo": up.nome_de_exibicao(tarefa.saida_nome),
+                "destinatarios": destinos}
+
+    cfg = cfgmod.carregar(db)
+    nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)
+    empresa = tarefa.empresa.razao_social if tarefa.empresa else ""
+    comp = f" — {tarefa.competencia}" if tarefa.competencia else ""
+    assunto = f"[BPS4] {tarefa.titulo}{comp}"
+    texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
+             f"Arquivo: {nome_arquivo}\n\nQualquer dúvida, estamos à disposição.")
+    # O documento do cliente não vai para atendente do escritório: quem recebe é
+    # o cliente, e o atendimento nasce na fila padrão da conexão.
+    zap = await carregar_zap(cfg)
+
+    resultados = []
+    for d in destinos:
+        if d["canal"] == "whatsapp":
+            r = await send_whatsapp_document(d["endereco"], nome_arquivo, conteudo,
+                                             texto, cfg)
+        else:
+            r = send_email(d["endereco"], assunto, texto, cfg,
+                           anexos=[(nome_arquivo, conteudo)])
+        ok = bool(r.get("success"))
+        db.add(TarefaEnvio(tarefa_id=tarefa.id, arquivo=nome_arquivo, canal=d["canal"],
+                           endereco=d["endereco"], destinatario=d["nome"], sucesso=ok,
+                           detalhe=None if ok else str(r.get("error") or r.get("response") or "")[:500],
+                           enviado_por=current_user.id))
+        resultados.append({**d, "enviado": ok, "detalhe": r})
+
+    entregou = any(r["enviado"] for r in resultados)
+    if entregou:
+        tarefa.status = StatusTarefa.CONCLUIDA
+        tarefa.data_conclusao = datetime.utcnow()
+        tarefa.data_entrega = tarefa.data_entrega or datetime.utcnow()
+    db.commit()
+
+    enviados = sum(1 for r in resultados if r["enviado"])
+    return {
+        "arquivo": nome_arquivo,
+        "enviados": enviados,
+        "falhas": len(resultados) - enviados,
+        "concluiu": entregou,
+        "message": (f"{enviados} de {len(resultados)} envio(s) concluído(s)."
+                    + (" Tarefa concluída." if entregou
+                       else " Nenhum envio funcionou — a tarefa segue aberta.")),
+        "resultados": resultados,
+    }
 
 
 @router.post("/copiar")

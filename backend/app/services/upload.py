@@ -78,6 +78,11 @@ def nome_de_exibicao(nome: str) -> str:
     tarefa existir, deixa qualquer um substituir o comprovante.
     """
     base = os.path.basename(nome or "")
+    # Documento de saída é "saida_{id}_{arquivo}": duas partes a descartar, não
+    # uma. Cortar só a primeira deixaria o id da tarefa colado no nome.
+    if base.startswith("saida_"):
+        partes = base.split("_", 2)
+        return partes[2] if len(partes) == 3 else base
     return base.split("_", 1)[1] if "_" in base else (base or "comprovante")
 
 
@@ -87,6 +92,29 @@ def salvar_arquivo(token: str, filename: str, conteudo: bytes) -> str:
     with open(os.path.join(UPLOAD_DIR, nome), "wb") as f:
         f.write(conteudo)
     return nome
+
+
+def salvar_saida(tarefa_id: int, filename: str, conteudo: bytes) -> str:
+    """Guarda o documento que o escritório vai ENTREGAR ao cliente.
+
+    Prefixo "saida_" no nome para o arquivo se distinguir do comprovante que o
+    cliente sobe, que fica na mesma pasta. Olhar o volume e não saber o que
+    entra e o que sai é o tipo de coisa que só atrapalha no dia da urgência.
+    """
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    nome = f"saida_{tarefa_id}_{_seguro(filename)}"
+    with open(os.path.join(UPLOAD_DIR, nome), "wb") as f:
+        f.write(conteudo)
+    return nome
+
+
+def ler_arquivo_salvo(nome: str) -> bytes:
+    """Conteúdo de um arquivo do volume. Levanta se não existir."""
+    caminho = caminho_do_anexo(nome)
+    if not caminho:
+        raise FileNotFoundError(nome)
+    with open(caminho, "rb") as f:
+        return f.read()
 
 
 def registrar_baixa(db, tarefa: Tarefa, filename: str, conteudo: bytes) -> dict:

@@ -213,6 +213,7 @@ class TarefaResponse(BaseModel):
 # Obrigação (modelo recorrente)
 class ObrigacaoBase(BaseModel):
     nome: str
+    sentido: Optional[str] = "receber"   # receber (comprovante do cliente) | entregar (guia ao cliente)
     mininome: Optional[str] = None
     identificadores: Optional[str] = None
     setor_id: Optional[int] = None

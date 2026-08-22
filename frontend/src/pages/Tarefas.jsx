@@ -5,7 +5,8 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { mensagemDeErro } from '../services/erroApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download,
+         Send, Upload, X, MessageCircle, Mail } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
@@ -210,6 +211,8 @@ export default function Tarefas() {
   const [recolhidos, setRecolhidos] = useState([]);
   // Qual card está com o menu de ações aberto (um por vez).
   const [menuAberto, setMenuAberto] = useState(null);
+  // Entrega ao cliente: uma tarefa por vez, com o ensaio carregado antes.
+  const [entrega, setEntrega] = useState(null);   // { tarefa, ensaio, enviando, resultado }
   useEffect(() => {
     if (menuAberto === null) return;
     const fechar = () => setMenuAberto(null);
@@ -392,6 +395,57 @@ export default function Tarefas() {
     }
   };
 
+  // ── Entrega de documento ao cliente ───────────────────────────────────────
+  // Conferir o que vai sair antes de mandar. Mesmo caminho por blob do
+  // comprovante: a rota exige cabeçalho de sessão, e <a href> não manda.
+  const abrirSaida = async (tarefa) => {
+    try {
+      const { data } = await tarefasAPI.saida(tarefa.id, false);
+      const url = URL.createObjectURL(data);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      alert(mensagemDeErro(error, 'Não foi possível abrir o documento'));
+    }
+  };
+
+  const abrirEntrega = async (tarefa) => {
+    setEntrega({ tarefa, ensaio: null, enviando: false, resultado: null, erro: null });
+    try {
+      const { data } = await tarefasAPI.enviarCliente(tarefa.id, true);
+      setEntrega((e) => (e && e.tarefa.id === tarefa.id ? { ...e, ensaio: data } : e));
+    } catch (error) {
+      // Sem documento anexado ou empresa sem contato: o backend explica o quê.
+      setEntrega((e) => (e && e.tarefa.id === tarefa.id
+        ? { ...e, erro: mensagemDeErro(error, 'Não foi possível preparar o envio') } : e));
+    }
+  };
+
+  const anexarSaida = async (arquivo) => {
+    if (!arquivo || !entrega) return;
+    setEntrega((e) => ({ ...e, enviando: true, erro: null }));
+    try {
+      await tarefasAPI.anexarSaida(entrega.tarefa.id, arquivo);
+      const { data } = await tarefasAPI.enviarCliente(entrega.tarefa.id, true);
+      setEntrega((e) => ({ ...e, ensaio: data, enviando: false, erro: null }));
+    } catch (error) {
+      setEntrega((e) => ({ ...e, enviando: false,
+        erro: mensagemDeErro(error, 'Não foi possível anexar o documento') }));
+    }
+  };
+
+  const confirmarEnvio = async () => {
+    setEntrega((e) => ({ ...e, enviando: true, erro: null }));
+    try {
+      const { data } = await tarefasAPI.enviarCliente(entrega.tarefa.id, false);
+      setEntrega((e) => ({ ...e, enviando: false, resultado: data }));
+      loadData();
+    } catch (error) {
+      setEntrega((e) => ({ ...e, enviando: false,
+        erro: mensagemDeErro(error, 'Falha ao enviar') }));
+    }
+  };
+
   const handleCopiarLink = async (tarefa) => {
     try {
       const { data } = await tarefasAPI.linkEnvio(tarefa.id);
@@ -571,6 +625,11 @@ export default function Tarefas() {
                 {tarefa.anexo_nome && (
                   <ItemMenu icone={Download} onClick={() => { setMenuAberto(null); abrirAnexo(tarefa, true); }}>
                     Baixar comprovante
+                  </ItemMenu>
+                )}
+                {ativa && (
+                  <ItemMenu icone={Send} onClick={() => { setMenuAberto(null); abrirEntrega(tarefa); }}>
+                    Enviar documento ao cliente
                   </ItemMenu>
                 )}
                 {ativa && (
@@ -794,6 +853,112 @@ export default function Tarefas() {
               </section>
             );
           })}
+        </div>
+      )}
+
+      {/* Entrega ao cliente. Anexar e enviar são dois passos de propósito:
+          documento que sai para cliente não volta, e o intervalo entre um e
+          outro é onde se confere o arquivo e a lista de quem vai receber. */}
+      {entrega && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold">Enviar ao cliente</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {entrega.tarefa.titulo}
+                  {entrega.tarefa.competencia && <> · {entrega.tarefa.competencia}</>}
+                  <br />{getEmpresaNome(entrega.tarefa.empresa_id)}
+                </p>
+              </div>
+              <button onClick={() => setEntrega(null)} className="text-gray-400 hover:text-gray-700">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              {entrega.erro && (
+                <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{entrega.erro}</div>
+              )}
+
+              {entrega.resultado ? (
+                <>
+                  <div className={`px-3 py-2 rounded-lg text-sm ${
+                    entrega.resultado.concluiu ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-800'}`}>
+                    {entrega.resultado.message}
+                  </div>
+                  <ul className="text-xs space-y-1">
+                    {entrega.resultado.resultados.map((r, i) => (
+                      <li key={i} className="flex items-center gap-1.5">
+                        {r.canal === 'whatsapp'
+                          ? <MessageCircle size={12} className="text-green-600" /> : <Mail size={12} className="text-blue-600" />}
+                        <span className={r.enviado ? 'text-gray-700' : 'text-red-700 line-through'}>
+                          {r.nome} · {r.endereco}
+                        </span>
+                        {!r.enviado && <span className="text-red-700">falhou</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <button onClick={() => setEntrega(null)} className="btn-secondary w-full">Fechar</button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Documento</label>
+                    {entrega.tarefa.saida_nome || entrega.ensaio?.arquivo ? (
+                      <p className="text-sm flex items-center gap-2 text-gray-700">
+                        <Paperclip size={14} className="text-primary-700" />
+                        {entrega.ensaio?.arquivo || entrega.tarefa.saida_nome}
+                        <button type="button" onClick={() => abrirSaida(entrega.tarefa)}
+                          className="text-xs text-primary-700 underline">conferir</button>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">Nenhum documento anexado ainda.</p>
+                    )}
+                    <label className="btn-secondary inline-flex items-center gap-2 mt-2 cursor-pointer text-sm">
+                      <Upload size={15} />
+                      {entrega.ensaio?.arquivo ? 'Trocar documento' : 'Anexar documento'}
+                      <input type="file" className="hidden"
+                        onChange={(e) => anexarSaida(e.target.files?.[0])} />
+                    </label>
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-3">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Vai para</p>
+                    {entrega.ensaio ? (
+                      <ul className="text-xs space-y-1">
+                        {entrega.ensaio.destinatarios.map((d, i) => (
+                          <li key={i} className="flex items-center gap-1.5 text-gray-600">
+                            {d.canal === 'whatsapp'
+                              ? <MessageCircle size={12} className="text-green-600" /> : <Mail size={12} className="text-blue-600" />}
+                            {d.nome} <span className="text-gray-400">{d.endereco}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        {entrega.erro ? '—' : 'Carregando…'}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-gray-400 mt-2">
+                      Contatos da empresa e usuários do tipo cliente ligados a ela. Enviar conclui a tarefa.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setEntrega(null)} className="btn-secondary flex-1">
+                      Cancelar
+                    </button>
+                    <button type="button" onClick={confirmarEnvio}
+                      disabled={entrega.enviando || !entrega.ensaio?.destinatarios?.length}
+                      className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40">
+                      <Send size={16} /> {entrega.enviando ? 'Enviando…' : 'Enviar agora'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

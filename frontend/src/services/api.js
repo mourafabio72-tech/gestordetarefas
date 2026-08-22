@@ -128,6 +128,18 @@ export const tarefasAPI = {
   anexo: (id, baixar) => api.get(`/tarefas/${id}/anexo`, {
     params: baixar ? { baixar: true } : {}, responseType: 'blob',
   }),
+  // Documento que o escritório ENTREGA ao cliente (guia, boleto, relatório).
+  anexarSaida: (id, arquivo) => {
+    const fd = new FormData();
+    fd.append('arquivo', arquivo);
+    return api.post(`/tarefas/${id}/saida`, fd);
+  },
+  saida: (id, baixar) => api.get(`/tarefas/${id}/saida`, {
+    params: baixar ? { baixar: true } : {}, responseType: 'blob',
+  }),
+  enviarCliente: (id, ensaio) => api.post(`/tarefas/${id}/enviar-cliente`, null,
+    { params: ensaio ? { ensaio: true } : {} }),
+  envios: (id) => api.get(`/tarefas/${id}/envios`),
   update: (id, data) => api.put(`/tarefas/${id}`, data),
   delete: (id) => api.delete(`/tarefas/${id}`),
   dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),

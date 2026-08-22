@@ -18,6 +18,8 @@ def migrate():
         ("obrigacao_id", "ALTER TABLE tarefas ADD COLUMN obrigacao_id INTEGER REFERENCES obrigacoes(id)"),
         ("competencia", "ALTER TABLE tarefas ADD COLUMN competencia VARCHAR(7)"),
         ("identificadores", "ALTER TABLE obrigacoes ADD COLUMN identificadores VARCHAR(200)"),
+        ("sentido", "ALTER TABLE obrigacoes ADD COLUMN sentido VARCHAR(10) DEFAULT 'receber'"),
+        ("saida_nome", "ALTER TABLE tarefas ADD COLUMN saida_nome VARCHAR(200)"),
         ("protocolo_entrega", "ALTER TABLE tarefas ADD COLUMN protocolo_entrega VARCHAR(120)"),
         ("data_entrega", "ALTER TABLE tarefas ADD COLUMN data_entrega TIMESTAMP"),
         ("anexo_nome", "ALTER TABLE tarefas ADD COLUMN anexo_nome VARCHAR(200)"),

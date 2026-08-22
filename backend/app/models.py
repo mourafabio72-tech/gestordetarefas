@@ -122,6 +122,28 @@ class EmpresaObrigacaoDetalhe(Base):
     observacao = Column(Text)
 
 
+class TarefaEnvio(Base):
+    """Cada vez que um documento saiu do escritório para o cliente.
+
+    Tabela em vez de campos na tarefa porque reenvio acontece — o cliente
+    perdeu, o número estava errado, a guia foi retificada — e sobrescrever o
+    registro anterior apagaria justamente a prova de que a primeira via foi
+    entregue no prazo.
+    """
+    __tablename__ = "tarefa_envios"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tarefa_id = Column(Integer, ForeignKey("tarefas.id"), nullable=False, index=True)
+    arquivo = Column(String(200))
+    canal = Column(String(20))                 # whatsapp | email
+    endereco = Column(String(200))
+    destinatario = Column(String(200))         # nome de quem recebeu, para o histórico ler bem
+    sucesso = Column(Boolean, default=False)
+    detalhe = Column(Text)                     # erro do provedor, quando falha
+    enviado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    enviado_em = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class Setor(Base):
     __tablename__ = "setores"
 
@@ -183,6 +205,11 @@ class Tarefa(Base):
     data_entrega = Column(DateTime(timezone=True))
     anexo_nome = Column(String(200))
     upload_token = Column(String(64), unique=True, index=True)  # link público de envio do comprovante
+    # Documento que o ESCRITÓRIO entrega ao cliente (guia, boleto, relatório).
+    # Campo separado do `anexo_nome` de propósito: um é o que entra, outro é o
+    # que sai, e misturar os dois faria a tela mostrar comprovante de pagamento
+    # onde deveria mostrar a guia a pagar.
+    saida_nome = Column(String(200))
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE, index=True)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
@@ -257,6 +284,11 @@ class Obrigacao(Base):
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
+    # Para que lado o documento anda. "receber" é o padrão histórico: o cliente
+    # manda o comprovante e a tarefa baixa pelo e-validador. "entregar" é o
+    # contrário — o escritório anexa a guia e envia ao cliente, e é o envio que
+    # conclui a tarefa. Guia do Simples, DARF e boleto são deste segundo tipo.
+    sentido = Column(String(10), default="receber")   # receber | entregar
     passivel_multa = Column(Boolean, default=False)
     alerta_guia_nao_lida = Column(Boolean, default=False)
     ativa = Column(Boolean, default=True)
