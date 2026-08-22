@@ -26,6 +26,36 @@ def normalizar_telefone(valor) -> str:
     return d if 12 <= len(d) <= 15 else ""
 
 
+def montar_payload_zap(mensagem: str, conn_from: int = 0, user_id=None) -> dict:
+    """Corpo do POST /api/send. Em função à parte para ser provado sem rede.
+
+    Duas coisas andam juntas quando o aviso é para alguém do escritório:
+
+    `userId` faz o atendimento nascer na conta daquele atendente e em aberto.
+    Vai como INTEIRO -- o swagger declara `User.id` como string e o `userId` do
+    SendMessage como integer, e mandar "12" onde se espera 12 é o tipo de
+    incompatibilidade que a API recusa, ou pior, aceita e ignora.
+
+    `ticketStrategy: "create"` abre um atendimento novo a cada aviso. Sem ele o
+    Zap reaproveita o atendimento que já existe para aquele contato -- e como
+    todo o escritório recebe na MESMA linha, os avisos do time inteiro caíam num
+    fio só, com o `userId` de cada envio reatribuindo o fio para a próxima
+    pessoa. No fim da varredura o atendimento inteiro ficava na conta de quem
+    foi o último, e ninguém achava o seu.
+
+    Para o cliente não vai nenhum dos dois: ele tem contato próprio, e criar
+    atendimento novo a cada aviso picotaria a conversa dele em pedaços.
+    """
+    payload = {"body": mensagem, "connectionFrom": conn_from}
+    if user_id not in (None, ""):
+        try:
+            payload["userId"] = int(user_id)
+        except (TypeError, ValueError):
+            payload["userId"] = user_id
+        payload["ticketStrategy"] = "create"
+    return payload
+
+
 async def send_whatsapp_message(phone: str, message: str, cfg: dict, user_id=None) -> dict:
     if not cfgmod.ativo(cfg, "whatsapp_ativo"):
         return {"success": False, "error": "WhatsApp desativado", "skipped": True}
@@ -41,19 +71,7 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict, user_id=Non
     if not numero:
         return {"success": False, "error": f"telefone inválido: {phone!r}"}
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"body": message, "connectionFrom": conn_from}
-    # `userId` faz o atendimento nascer na conta daquele atendente e em aberto.
-    # Sem ele, a linha única do escritório vira um balaio: todo aviso cai no
-    # mesmo lugar e ninguém sabe qual é o seu.
-    #
-    # Vai como INTEIRO. O swagger declara `User.id` como string e o `userId` do
-    # SendMessage como integer -- mandar "12" onde se espera 12 é o tipo de
-    # incompatibilidade que a API recusa com 400, ou pior, aceita e ignora.
-    if user_id not in (None, ""):
-        try:
-            payload["userId"] = int(user_id)
-        except (TypeError, ValueError):
-            payload["userId"] = user_id
+    payload = montar_payload_zap(message, conn_from, user_id)
     async with httpx.AsyncClient() as client:
         response = await client.post(f"{url}/api/send/{numero}", json=payload, headers=headers, timeout=30.0)
         return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}

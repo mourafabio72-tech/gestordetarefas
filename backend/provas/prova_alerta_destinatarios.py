@@ -18,7 +18,8 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.services.whatsapp import (should_notify, destinatarios_alerta,  # noqa: E402
                                    normalizar_telefone, mapa_numero_por_email,
-                                   mapa_userid_por_email, eh_cliente)
+                                   mapa_userid_por_email, eh_cliente,
+                                   montar_payload_zap)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -186,6 +187,26 @@ check("destinatário por e-mail nunca leva userId", "zap_user_id" not in d[0])
 # Cliente é contato, não atendente: nunca recebe atribuição de atendimento.
 d = destinatarios_alerta(T([], None, cli), {}, 0, zap=zap, incluir_cliente=True)
 check("empresa não leva userId", d and all("zap_user_id" not in x for x in d))
+
+print("\n=== 3c. o payload do envio ao Zap ===")
+# Aviso do escritório: atendimento novo, na conta do atendente.
+p = montar_payload_zap("oi", 0, 7)
+check("leva o userId", p.get("userId") == 7)
+check("como inteiro, não texto", isinstance(p["userId"], int))
+check("id em texto também vira inteiro", montar_payload_zap("oi", 0, "7")["userId"] == 7)
+check("abre atendimento novo", p.get("ticketStrategy") == "create")
+check("mantém body e connectionFrom", p["body"] == "oi" and p["connectionFrom"] == 0)
+
+# Sem atendente (cliente, empresa): continua a conversa que já existe.
+p = montar_payload_zap("oi", 2)
+check("cliente não leva userId", "userId" not in p)
+check("nem ticketStrategy — a conversa dele não pode ser picotada",
+      "ticketStrategy" not in p, str(p))
+check("connectionFrom é respeitado", p["connectionFrom"] == 2)
+check("userId vazio conta como ausente", "userId" not in montar_payload_zap("oi", 0, ""))
+check("userId nulo conta como ausente", "userId" not in montar_payload_zap("oi", 0, None))
+check("id que não é número passa como veio",
+      montar_payload_zap("oi", 0, "abc")["userId"] == "abc")
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
 semtel = U(7, "Sem Telefone", "semtel@bps4.com")
