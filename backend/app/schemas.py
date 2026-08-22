@@ -187,6 +187,7 @@ class TarefaResponse(BaseModel):
     descricao: Optional[str] = None
     empresa_id: int
     setor_id: Optional[int] = None
+    setor_nome: Optional[str] = None            # vem do relacionamento; vale para setor inativo
     obrigacao_id: Optional[int] = None
     competencia: Optional[str] = None
     fechamento_cliente: Optional[date] = None   # marco do cliente no mês desta tarefa

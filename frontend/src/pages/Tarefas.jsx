@@ -429,10 +429,11 @@ export default function Tarefas() {
     const st = statusSage[tarefa.status] || statusSage.pendente;
     const pr = prioSage[tarefa.prioridade] || prioSage.media;
     const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
-    // `getSetorNome` devolve "-" quando o setor saiu do cadastro ou não veio na
-    // listagem. Num badge colorido isso vira um traço solto sob o título, que
-    // parece defeito de renderização — melhor não desenhar o badge.
-    const setorAchado = tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null;
+    // O nome vem na própria tarefa. A listagem de setores só traz os ATIVOS, e
+    // desativar um setor apagava o badge de todas as tarefas dele — o dado
+    // estava no banco, só não chegava na tela. A lista fica como reserva, para
+    // registro antigo que ainda não traga o campo.
+    const setorAchado = tarefa.setor_nome || (tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null);
     const setorNome = setorAchado && setorAchado !== '-' ? setorAchado : null;
     const corSet = corDoSetor(setorNome);
     const empresaNome = getEmpresaNome(tarefa.empresa_id);

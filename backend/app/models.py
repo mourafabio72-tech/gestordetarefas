@@ -196,6 +196,16 @@ class Tarefa(Base):
 
     empresa = relationship("Empresa", back_populates="tarefas")
     setor = relationship("Setor", back_populates="tarefas")
+
+    @property
+    def setor_nome(self):
+        """Nome do setor para a resposta da API.
+
+        A tela não pode depender da listagem de setores para isto: aquela rota
+        só devolve os ATIVOS, e desativar um setor apagaria o nome dele de todas
+        as tarefas já existentes — o dado continua no banco, mas some da tela.
+        """
+        return self.setor.nome if self.setor else None
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id], back_populates="tarefas")
     supervisor = relationship("Usuario", foreign_keys=[supervisor_id])
     responsaveis = relationship("Usuario", secondary=tarefa_responsaveis)

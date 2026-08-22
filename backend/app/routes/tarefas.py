@@ -213,6 +213,7 @@ def list_tarefas(
     return (query
             .options(
                 joinedload(Tarefa.obrigacao),      # exige_documento lê a obrigação
+                joinedload(Tarefa.setor),          # setor_nome, idem
                 joinedload(Tarefa.supervisor),
                 selectinload(Tarefa.responsaveis),
             )
