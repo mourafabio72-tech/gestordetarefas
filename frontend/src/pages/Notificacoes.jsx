@@ -283,11 +283,11 @@ export default function Notificacoes() {
             <h2 className="text-xl font-semibold">Colaboradores no ZapContábil</h2>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            São dois cadastros lá, e cada um responde por uma coisa. O <strong>contato</strong> dá o
-            número para onde a mensagem vai; o <strong>atendente</strong> dá o id que faz o atendimento
-            nascer na conta da pessoa, em vez de cair num balaio comum. O <strong>e-mail</strong> liga
-            os três cadastros. Quem não casar recebe por e-mail sem avisar ninguém — é por isso que
-            esta conferência existe.
+            O aviso do time vai para a linha única do escritório levando o <strong>login</strong> do
+            colaborador — é o que faz o atendimento nascer na conta dele em vez de cair num balaio comum.
+            O login é o <strong>atendente</strong> no Zap, achado pelo e-mail. O <strong>contato</strong>{' '}
+            só entra como reserva, para quem não tem login lá. Quem não casar em nenhum dos dois recebe
+            por e-mail sem avisar ninguém — é por isso que esta conferência existe.
           </p>
           <button onClick={conferirZap} disabled={conferindoZap} className="btn-secondary flex items-center gap-2">
             <MessageCircle size={16} /> {conferindoZap ? 'Consultando…' : 'Conferir cadastro'}
@@ -296,31 +296,37 @@ export default function Notificacoes() {
           {zap && (
             <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
               <p className="mb-2">
-                <strong>{zap.contatos}</strong> contato(s) no Zap,{' '}
-                <strong>{zap.contatos_com_numero}</strong> com número •{' '}
-                <strong>{zap.atendentes}</strong> atendente(s).
+                <strong>{zap.atendentes}</strong> atendente(s) no Zap •{' '}
+                <strong>{zap.contatos_com_numero}</strong> contato(s) com número • linha do escritório:{' '}
+                <span className="font-mono">{zap.linha || '— não configurada'}</span>
               </p>
-              {zap.contatos === 0 && (
+              {zap.atendentes === 0 && (
                 <p className="text-xs text-red-700 mb-1">
-                  A API não devolveu contato nenhum. Confira a chave e se o canal está ativo —
-                  sem isso o time todo cai no e-mail.
+                  A API não devolveu atendente nenhum. Confira a chave e se o canal está ativo —
+                  sem isso ninguém do time recebe pelo painel.
                 </p>
               )}
-              {zap.casaram?.length > 0 && (
+              {!zap.linha && (
+                <p className="text-xs text-red-700 mb-1">
+                  O “número de origem” está vazio no bloco do WhatsApp. É a linha para onde o aviso do
+                  time vai — sem ela, cada um cai no telefone do próprio cadastro.
+                </p>
+              )}
+              {zap.com_login?.length > 0 && (
                 <p className="text-xs text-green-800 mb-1">
-                  ✓ {zap.casaram.length} com WhatsApp e atendimento direcionado:{' '}
-                  {zap.casaram.map((c) => c.nome).join(', ')}
+                  ✓ {zap.com_login.length} com login no Zap — o aviso cai na conta de cada um:{' '}
+                  {zap.com_login.map((c) => c.nome).join(', ')}
                 </p>
               )}
-              {zap.so_numero?.length > 0 && (
+              {zap.so_contato?.length > 0 && (
                 <p className="text-xs text-amber-700 mb-1">
-                  ⚠ Recebem o WhatsApp, mas o atendimento não vai para a conta deles
-                  (são contato, não atendente): {zap.so_numero.map((c) => c.nome).join(', ')}
+                  ⚠ Sem login, só contato — recebem no número próprio, sem atendimento direcionado:{' '}
+                  {zap.so_contato.map((c) => c.nome).join(', ')}
                 </p>
               )}
               {zap.fora_do_zap?.length > 0 && (
                 <p className="text-xs text-gray-600 mb-1">
-                  Não achei nos contatos (confira a grafia do e-mail):{' '}
+                  Não achei no Zap (confira a grafia do e-mail):{' '}
                   {zap.fora_do_zap.map((c) => `${c.nome}${c.telefone_no_tareffas ? ' (usa o telefone daqui)' : ' (vai por e-mail)'}`).join(', ')}
                 </p>
               )}
@@ -350,9 +356,10 @@ export default function Notificacoes() {
           </p>
           <p className="text-xs text-gray-500 mb-3">
             <MessageCircle size={12} className="inline text-green-600" /> Gente do escritório
-            (<strong>responsável</strong> e <strong>supervisor</strong>) recebe por WhatsApp, no número
-            que o ZapContábil tem para o e-mail dela; o e-mail entra só como reserva de quem não tem
-            número.{' '}
+            (<strong>responsável</strong> e <strong>supervisor</strong>) recebe na <strong>linha única</strong>{' '}
+            do escritório: o aviso vai com o <em>login</em> dela no ZapContábil — achado pelo e-mail — e o
+            atendimento nasce na conta dela. Quem não tem login lá cai no telefone do cadastro e, faltando
+            ele, no e-mail.{' '}
             <Mail size={12} className="inline text-blue-600" /> Usuário do tipo <strong>cliente</strong>{' '}
             recebe pelos <strong>dois</strong> canais — ele não abre o painel e não tem supervisor de
             rede. A cadeia de gestores e a empresa ficam de fora, salvo se você ligar em

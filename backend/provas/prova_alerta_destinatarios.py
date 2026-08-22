@@ -82,6 +82,40 @@ check("gestor NÃO entra por padrão", not any(x["papel"] == "gestor" for x in d
 check("empresa NÃO entra por padrão", not any(x["papel"] == "empresa" for x in d))
 check("nenhum e-mail: todo mundo tem número", [x for x in d if x["canal"] == "email"] == [])
 
+print("\n=== 3a. o escritório recebe na LINHA ÚNICA, separado pelo userId ===")
+# É assim de verdade: o colaborador não tem WhatsApp próprio no Zap, tem login.
+LINHA = "5521971985815"
+zap_linha = {"linha": LINHA, "numero": {},
+             "user_id": {"analista@bps4.com": 3, "sup@bps4.com": 4}}
+d = destinatarios_alerta(T([analista], sup, None), {}, 0, zap=zap_linha)
+check("os dois vão para o mesmo número", [x["endereco"] for x in d] == [LINHA, LINHA], str(d))
+check("mas em contas diferentes", [x.get("zap_user_id") for x in d] == [3, 4])
+check("são dois despachos, não um", len(d) == 2, f"({len(d)})")
+check("o e-mail do colaborador não vira endereço de entrega",
+      not any(x["canal"] == "email" for x in d))
+
+# Sem login no Zap não há como direcionar: vale o número do cadastro.
+d = destinatarios_alerta(T([sup], None, None), {}, 0,
+                         zap={"linha": LINHA, "numero": {}, "user_id": {}})
+check("sem login, cai no telefone do cadastro", d[0]["endereco"] == "5521988880004")
+check("e sem userId", "zap_user_id" not in d[0])
+# Sem login e sem telefone: e-mail.
+semtel2 = U(60, "Sem Nada No Zap", "semzap@bps4.com")
+d = destinatarios_alerta(T([semtel2], None, None), {}, 0,
+                         zap={"linha": LINHA, "numero": {}, "user_id": {}})
+check("sem login e sem telefone, vai por e-mail", d[0]["canal"] == "email")
+# Linha não configurada: não inventa destino.
+d = destinatarios_alerta(T([analista], None, None), {}, 0,
+                         zap={"linha": "", "user_id": {"analista@bps4.com": 3}, "numero": {}})
+check("sem a linha configurada, usa o telefone do cadastro", d[0]["endereco"] == "5521988880003")
+
+# Duas pessoas SEM login no Zap e com o mesmo telefone: aí sim é um só.
+gemeo_a = U(61, "Gêmeo A", "a1@bps4.com", telefone="21955551111")
+gemeo_b = U(62, "Gêmeo B", "b1@bps4.com", telefone="21955551111")
+d = destinatarios_alerta(T([gemeo_a, gemeo_b], None, None), {}, 0,
+                         zap={"linha": LINHA, "numero": {}, "user_id": {}})
+check("mesmo número sem atendente não duplica", len(d) == 1, f"({len(d)})")
+
 # Os dois alargamentos, quando ligados na tela.
 d = destinatarios_alerta(T([analista], sup, cli), {}, niveis=2)
 papeis = [x["papel"] for x in d]
@@ -122,7 +156,8 @@ check("atendente desabilitado fica de fora", "off@bps4.com" not in uid)
 check("sem e-mail fica de fora", "5" not in str(uid.values()))
 check("sem o campo enabled é tratado como ativo", uid.get("legado@bps4.com") == 6)
 
-zap = {"numero": num, "user_id": uid}
+# Sem linha configurada: o teste isola a via do número de contato.
+zap = {"linha": "", "numero": num, "user_id": uid}
 
 # O número do Zap tem precedência sobre o telefone digitado no Tareffas, e o
 # atendimento nasce na conta do atendente.

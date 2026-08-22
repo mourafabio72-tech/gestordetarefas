@@ -81,15 +81,16 @@ async def zap_usuarios(
 ):
     """Cruza os colaboradores do Tareffas com o cadastro do ZapContábil.
 
-    São dois cadastros lá, e cada um responde por uma coisa: o CONTATO dá o
-    número para onde a mensagem vai; o USUÁRIO dá o id que faz o atendimento
-    nascer na conta da pessoa. O e-mail é o que liga os três.
+    O que importa para o time é o LOGIN: o aviso vai para a linha única do
+    escritório levando o id do atendente, e é ele que faz a mensagem cair na
+    conta da pessoa em vez de num balaio comum. O CONTATO só entra como reserva,
+    para quem não tem login lá. O e-mail é o que liga os três cadastros.
 
     Sem esta conferência, um e-mail escrito diferente joga a pessoa em silêncio
     para o canal de reserva: ela recebe por e-mail e ninguém percebe que o
     WhatsApp nunca chegou.
     """
-    from ..services.whatsapp import (contatos_zap, usuarios_zap,
+    from ..services.whatsapp import (contatos_zap, usuarios_zap, normalizar_telefone,
                                      mapa_numero_por_email, mapa_userid_por_email)
     cfg = cfgmod.carregar(db)
     contatos = await contatos_zap(cfg)
@@ -97,18 +98,22 @@ async def zap_usuarios(
     numeros = mapa_numero_por_email(contatos)
     uids = mapa_userid_por_email(atendentes)
 
-    casaram, so_numero, fora = [], [], []
+    # O que decide o caminho de cada um é TER LOGIN. Com login, o aviso vai para
+    # a linha do escritório e cai na conta da pessoa; sem login, sobra o número
+    # do contato e, faltando ele, o e-mail.
+    com_login, so_contato, fora = [], [], []
     for u in db.query(Usuario).filter(Usuario.bloqueado != True).all():
         email = (u.email or "").strip().lower()
         item = {"nome": u.nome, "email": u.email}
-        if email in numeros and email in uids:
-            casaram.append({**item, "numero": numeros[email], "zap_user_id": uids[email]})
+        if email in uids:
+            com_login.append({**item, "zap_user_id": uids[email]})
         elif email in numeros:
-            so_numero.append(item)
+            so_contato.append({**item, "numero": numeros[email]})
         else:
             fora.append({**item, "telefone_no_tareffas": bool(u.telefone)})
 
     return {
+        "linha": normalizar_telefone(cfg.get("zap_phone")),
         "contatos": len(contatos),
         "contatos_com_numero": len(numeros),
         "atendentes": len(atendentes),
@@ -116,8 +121,8 @@ async def zap_usuarios(
         # diagnóstico aparece aqui em vez de virar investigação.
         "campos_contato": sorted({k for c in contatos for k in c}),
         "campos_usuario": sorted({k for a in atendentes for k in a}),
-        "casaram": casaram,
-        "so_numero": so_numero,
+        "com_login": com_login,
+        "so_contato": so_contato,
         "fora_do_zap": fora,
     }
 

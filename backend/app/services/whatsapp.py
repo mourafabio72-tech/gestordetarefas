@@ -155,8 +155,15 @@ def mapa_userid_por_email(usuarios: list) -> dict:
 
 
 async def carregar_zap(cfg: dict) -> dict:
-    """Os dois mapas de uma vez, para a varredura consultar o Zap só uma vez."""
-    return {"numero": mapa_numero_por_email(await contatos_zap(cfg)),
+    """Tudo que a varredura precisa do Zap, numa consulta só.
+
+    `linha` é o número único do escritório. É para lá que vai o aviso do time:
+    o colaborador não tem WhatsApp próprio cadastrado no Zap, ele tem um LOGIN
+    (o e-mail). Quem separa um aviso do outro é o `userId`, que faz o
+    atendimento nascer na conta da pessoa.
+    """
+    return {"linha": normalizar_telefone(cfg.get("zap_phone")),
+            "numero": mapa_numero_por_email(await contatos_zap(cfg)),
             "user_id": mapa_userid_por_email(await usuarios_zap(cfg))}
 
 
@@ -275,32 +282,47 @@ def _numero_da_pessoa(u, zap: dict = None) -> str:
 
 
 def canais_da_pessoa(u, zap: dict = None) -> list:
-    """Por onde avisar esta pessoa: lista de (canal, endereço).
+    """Por onde avisar esta pessoa: lista de (canal, endereço, id do atendente).
 
-    Gente do escritório recebe por UM canal: WhatsApp, com e-mail de reserva
-    para quem não tem número em lugar nenhum. Um canal basta porque a pessoa
-    trabalha no sistema e vive no painel o dia inteiro; e-mail seria eco.
+    GENTE DO ESCRITÓRIO não tem WhatsApp próprio no Zap — tem um login, que é o
+    e-mail. A mensagem vai para a linha única do escritório levando o `userId`
+    daquele login, e o atendimento nasce na conta da pessoa. O e-mail dela não
+    é endereço de entrega aqui, é a chave que encontra o login.
 
-    Usuário do lado do CLIENTE recebe pelos DOIS, quando tem os dois. Ele está
-    fora do escritório, não abre o painel e a tarefa dele costuma ser a que
-    trava o fechamento -- aqui a redundância é o objetivo, não desperdício. Ele
-    também não tem supervisor para servir de rede se o aviso se perder.
+    Sem login no Zap não há como direcionar, e mandar para a linha comum sem
+    atribuição só encheria o balaio: nesse caso vale o número que o cadastro
+    tiver e, faltando ele, o e-mail — deixar de avisar quem tem a tarefa na mão
+    é falha pior do que avisar pelo canal errado.
 
-    Quem não tem número nem e-mail fica de fora, e isso aparece no ensaio.
+    USUÁRIO DO LADO DO CLIENTE é outra coisa: ele tem WhatsApp próprio e recebe
+    nele, mais o e-mail. Está fora do escritório, não abre o painel, e não tem
+    supervisor para servir de rede se o aviso se perder.
+
+    Quem não tem por onde ser avisado fica de fora, e isso aparece no ensaio.
     """
     email = getattr(u, "email", None)
+    chave = str(email or "").strip().lower()
     numero = _numero_da_pessoa(u, zap)
+
     if eh_cliente(u):
         vias = []
         if numero:
-            vias.append(("whatsapp", numero))
+            vias.append(("whatsapp", numero, None))
         if email:
-            vias.append(("email", email))
+            vias.append(("email", email, None))
         return vias
+
+    linha = (zap or {}).get("linha")
+    uid = ((zap or {}).get("user_id") or {}).get(chave)
+    if linha and uid not in (None, ""):
+        return [("whatsapp", linha, uid)]
+    # Sem a linha, mas com número próprio: vale mandar para lá, e a atribuição
+    # ao atendente continua valendo se ele existir -- o ticket cai na conta
+    # dele, seja qual for o número por onde a mensagem entrou.
     if numero:
-        return [("whatsapp", numero)]
+        return [("whatsapp", numero, uid or None)]
     if email:
-        return [("email", email)]
+        return [("email", email, None)]
     return []
 
 
@@ -334,18 +356,18 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
         if not pessoa:
             return
         cliente = eh_cliente(pessoa)
-        for canal, endereco in canais_da_pessoa(pessoa, zap):
-            # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
-            # supervisor, por exemplo) recebe uma mensagem só por via.
-            if not endereco or endereco in vistos:
+        for canal, endereco, uid in canais_da_pessoa(pessoa, zap):
+            # A chave inclui o atendente, não só o endereço. Todo o escritório
+            # recebe no MESMO número (a linha única), e uma chave só de endereço
+            # colapsaria responsável e supervisor numa mensagem — dois avisos que
+            # precisam cair em duas contas diferentes.
+            marca = f"{canal}:{endereco}:{uid or ''}"
+            if not endereco or marca in vistos:
                 continue
-            vistos.add(endereco)
+            vistos.add(marca)
             item = {"papel": "cliente" if cliente else papel, "nome": pessoa.nome,
                     "canal": canal, "endereco": endereco}
-            # O atendimento nasce na conta desta pessoa no Zap, quando ela é
-            # atendente lá. Cliente nunca é: ele é atendido, não atende.
-            uid = ((zap or {}).get("user_id") or {}).get(str(getattr(pessoa, "email", "") or "").strip().lower())
-            if canal == "whatsapp" and not cliente and uid not in (None, ""):
+            if uid not in (None, ""):
                 item["zap_user_id"] = uid
             dest.append(item)
 
@@ -359,12 +381,12 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
     empresa = tarefa.empresa if incluir_cliente else None
     if empresa:
         tel = normalizar_telefone(empresa.telefone)
-        if tel and tel not in vistos:
-            vistos.add(tel)
+        if tel and f"whatsapp:{tel}:" not in vistos:
+            vistos.add(f"whatsapp:{tel}:")
             dest.append({"papel": "empresa", "nome": empresa.razao_social,
                          "canal": "whatsapp", "endereco": tel})
-        if empresa.email and empresa.email not in vistos:
-            vistos.add(empresa.email)
+        if empresa.email and f"email:{empresa.email}:" not in vistos:
+            vistos.add(f"email:{empresa.email}:")
             dest.append({"papel": "empresa", "nome": empresa.razao_social,
                          "canal": "email", "endereco": empresa.email})
     return dest
