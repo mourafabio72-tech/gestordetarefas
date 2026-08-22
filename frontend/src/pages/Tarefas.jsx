@@ -557,7 +557,7 @@ export default function Tarefas() {
               opcoes: empresas.map((e) => ({ v: e.id, t: formatarRazaoSocial(e.razao_social) })) },
             { chave: 'setor_id', rotulo: 'Setor', vazio: 'Todos', largura: 'flex-1 min-w-[110px]',
               opcoes: setores.map((x) => ({ v: x.id, t: x.nome })) },
-            { chave: 'usuario_id', rotulo: 'Pessoa', vazio: 'Qualquer uma', largura: 'flex-1 min-w-[120px]',
+            { chave: 'usuario_id', rotulo: 'Colaborador', vazio: 'Todos', largura: 'flex-1 min-w-[130px]',
               dica: 'Responsável ou supervisor da tarefa',
               opcoes: usuarios.filter((u) => !u.bloqueado).map((u) => ({ v: u.id, t: u.nome })) },
             { chave: 'status', rotulo: 'Situação', vazio: 'Todas', largura: 'flex-1 min-w-[110px]',
