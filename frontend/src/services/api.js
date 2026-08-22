@@ -123,6 +123,11 @@ export const tarefasAPI = {
   list: (params) => api.get('/tarefas', { params }),
   get: (id) => api.get(`/tarefas/${id}`),
   create: (data) => api.post('/tarefas', data),
+  // O comprovante exige o cabeçalho de sessão, então não dá para apontar um
+  // <a href> para ele: vem como blob e a tela abre a partir daí.
+  anexo: (id, baixar) => api.get(`/tarefas/${id}/anexo`, {
+    params: baixar ? { baixar: true } : {}, responseType: 'blob',
+  }),
   update: (id, data) => api.put(`/tarefas/${id}`, data),
   delete: (id) => api.delete(`/tarefas/${id}`),
   dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),

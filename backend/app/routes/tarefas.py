@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_, func, case
 from typing import List
@@ -310,6 +311,57 @@ def update_tarefa(
     db.commit()
     db.refresh(db_tarefa)
     return db_tarefa
+
+# Aberto no navegador x salvo em disco. PDF e imagem são para conferir na hora;
+# planilha o navegador não renderiza, então baixar é o único desfecho útil.
+_INLINE = {".pdf": "application/pdf", ".png": "image/png",
+           ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+
+
+@router.get("/{tarefa_id}/anexo")
+def baixar_anexo(
+    tarefa_id: int,
+    baixar: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Devolve o comprovante que baixou a tarefa.
+
+    Até aqui o arquivo entrava e não saía: ficava no volume, com o nome no
+    banco, e nenhuma rota o servia. Era a prova da entrega guardada num lugar de
+    onde ninguém tirava — e prova de entrega é justamente o que se pede numa
+    fiscalização.
+
+    O escopo é o MESMO da listagem de tarefas: quem enxerga a tarefa enxerga o
+    comprovante dela. Não há permissão nova a administrar, e ninguém passa a ver
+    documento de tarefa que já não podia ver.
+
+    Tarefa fora do escopo e tarefa inexistente saem pela mesma porta (404). Um
+    403 aqui contaria a quem não deveria que aquela tarefa existe.
+    """
+    import os
+    from ..services import upload as up
+
+    tarefa = (_aplicar_escopo(db.query(Tarefa), db, current_user)
+              .filter(Tarefa.id == tarefa_id).first())
+    if not tarefa or not tarefa.anexo_nome:
+        raise HTTPException(status_code=404, detail="Comprovante não encontrado")
+
+    caminho = up.caminho_do_anexo(tarefa.anexo_nome)
+    if not caminho:
+        # O banco aponta para um arquivo que não está mais no volume. Dizer isso
+        # em vez de um 404 seco: some depois de restaurar backup sem o volume, e
+        # o time precisa saber que é o arquivo que sumiu, não a tarefa.
+        raise HTTPException(status_code=410,
+                            detail="O arquivo não está mais no armazenamento.")
+
+    nome = up.nome_de_exibicao(tarefa.anexo_nome)
+    ext = os.path.splitext(nome)[1].lower()
+    tipo = _INLINE.get(ext, "application/octet-stream")
+    disposicao = "attachment" if (baixar or ext not in _INLINE) else "inline"
+    return FileResponse(caminho, media_type=tipo, filename=nome,
+                        content_disposition_type=disposicao)
+
 
 @router.post("/copiar")
 def copiar_tarefas(

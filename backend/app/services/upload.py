@@ -56,6 +56,31 @@ def remover_arquivo(nome: str) -> bool:
     return False
 
 
+def caminho_do_anexo(nome: str):
+    """Caminho absoluto do comprovante no volume, ou None se não houver arquivo.
+
+    `basename` antes de juntar: o nome vem do banco, mas um registro antigo ou
+    adulterado com ".." leria arquivo fora da pasta de uploads. A checagem é
+    barata e a consequência de não fazer é servir qualquer arquivo do container.
+    """
+    if not nome:
+        return None
+    caminho = os.path.join(UPLOAD_DIR, os.path.basename(nome))
+    return caminho if os.path.isfile(caminho) else None
+
+
+def nome_de_exibicao(nome: str) -> str:
+    """O nome que o arquivo tinha quando foi enviado.
+
+    No volume ele é guardado como "{token}_{arquivo}", e o token é a credencial
+    do link público de envio. Devolvê-lo no cabeçalho do download vazaria por
+    histórico do navegador e pasta de downloads — e aquele link, enquanto a
+    tarefa existir, deixa qualquer um substituir o comprovante.
+    """
+    base = os.path.basename(nome or "")
+    return base.split("_", 1)[1] if "_" in base else (base or "comprovante")
+
+
 def salvar_arquivo(token: str, filename: str, conteudo: bytes) -> str:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     nome = f"{token}_{_seguro(filename)}"

@@ -5,7 +5,7 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { mensagemDeErro } from '../services/erroApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
@@ -364,6 +364,34 @@ export default function Tarefas() {
     } finally { setExcluindoMes(false); }
   };
 
+  // Abre o comprovante numa aba (PDF e imagem) ou salva em disco.
+  //
+  // Passa por blob porque a rota exige `Authorization`, e um <a href> não manda
+  // cabeçalho. O objeto de URL é revogado depois de um minuto: revogar na hora
+  // fecharia a aba que acabou de abrir, e nunca revogar seguraria o arquivo
+  // inteiro na memória da aba enquanto ela estivesse viva.
+  const abrirAnexo = async (tarefa, baixar = false) => {
+    try {
+      const { data } = await tarefasAPI.anexo(tarefa.id, baixar);
+      const url = URL.createObjectURL(data);
+      if (baixar) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = tarefa.anexo_nome ? tarefa.anexo_nome.split('_').slice(1).join('_') : 'comprovante';
+        a.click();
+      } else {
+        window.open(url, '_blank', 'noopener');
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      // O corpo do erro vem como blob por causa do responseType; sem ler o
+      // texto, o 410 de "arquivo sumiu" viraria um alerta genérico.
+      let texto = '';
+      try { texto = JSON.parse(await error?.response?.data?.text()).detail; } catch { /* não era JSON */ }
+      alert(texto || mensagemDeErro(error, 'Não foi possível abrir o comprovante'));
+    }
+  };
+
   const handleCopiarLink = async (tarefa) => {
     try {
       const { data } = await tarefasAPI.linkEnvio(tarefa.id);
@@ -488,6 +516,13 @@ export default function Tarefas() {
             {prazoDate && format(prazoDate, "dd/MM/yy", { locale: ptBR })}
             <span>{prazoDate ? `· ${alerta.rotulo}` : alerta.rotulo}</span>
             {tarefa.gera_multa && <AlertTriangle size={10} style={{ color: '#a24a3a' }} title="Gera multa" />}
+            {tarefa.anexo_nome && (
+              <button type="button" onClick={() => abrirAnexo(tarefa)}
+                title="Ver o comprovante que baixou esta tarefa"
+                className="inline-flex items-center hover:underline" style={{ color: '#2f6fb0' }}>
+                <Paperclip size={10} />
+              </button>
+            )}
           </p>
           {fechBr && (
             encerra ? (
@@ -528,6 +563,16 @@ export default function Tarefas() {
             {menuAberto === tarefa.id && (
               <div className="absolute right-0 bottom-full mb-1 z-20 rounded-lg border py-1 shadow-lg"
                 style={{ background: SAGE.cardBg, borderColor: SAGE.border }}>
+                {tarefa.anexo_nome && (
+                  <ItemMenu icone={Paperclip} onClick={() => { setMenuAberto(null); abrirAnexo(tarefa); }}>
+                    Ver comprovante
+                  </ItemMenu>
+                )}
+                {tarefa.anexo_nome && (
+                  <ItemMenu icone={Download} onClick={() => { setMenuAberto(null); abrirAnexo(tarefa, true); }}>
+                    Baixar comprovante
+                  </ItemMenu>
+                )}
                 {ativa && (
                   <ItemMenu icone={Link2} onClick={() => { setMenuAberto(null); handleCopiarLink(tarefa); }}>
                     Copiar link de envio
