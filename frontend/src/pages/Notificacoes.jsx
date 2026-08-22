@@ -270,9 +270,11 @@ export default function Notificacoes() {
             <h2 className="text-xl font-semibold">Colaboradores no ZapContábil</h2>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            O aviso do time vai para o número que o ZapContábil tem cadastrado, encontrado pelo
-            <strong> e-mail</strong> — o mesmo que a pessoa usa para logar lá e aqui.
-            Quem não casar recebe por e-mail, sem avisar ninguém: é por isso que existe esta conferência.
+            São dois cadastros lá, e cada um responde por uma coisa. O <strong>contato</strong> dá o
+            número para onde a mensagem vai; o <strong>atendente</strong> dá o id que faz o atendimento
+            nascer na conta da pessoa, em vez de cair num balaio comum. O <strong>e-mail</strong> liga
+            os três cadastros. Quem não casar recebe por e-mail sem avisar ninguém — é por isso que
+            esta conferência existe.
           </p>
           <button onClick={conferirZap} disabled={conferindoZap} className="btn-secondary flex items-center gap-2">
             <MessageCircle size={16} /> {conferindoZap ? 'Consultando…' : 'Conferir cadastro'}
@@ -281,40 +283,41 @@ export default function Notificacoes() {
           {zap && (
             <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
               <p className="mb-2">
-                <strong>{zap.no_zap}</strong> usuário(s) no ZapContábil,{' '}
-                <strong>{zap.com_numero}</strong> com número aproveitável.
+                <strong>{zap.contatos}</strong> contato(s) no Zap,{' '}
+                <strong>{zap.contatos_com_numero}</strong> com número •{' '}
+                <strong>{zap.atendentes}</strong> atendente(s).
               </p>
-              {zap.no_zap === 0 && (
-                <p className="text-xs text-red-700">
-                  A API não devolveu ninguém. Confira a chave e se o canal está ativo — sem isso
-                  o time todo cai no e-mail.
-                </p>
-              )}
-              {zap.no_zap > 0 && zap.com_numero === 0 && (
-                <p className="text-xs text-red-700">
-                  Os usuários vieram, mas o telefone não está em nenhum dos campos que procuramos
-                  ({zap.campos_procurados.join(', ')}). Os campos que a API devolveu são:{' '}
-                  <span className="font-mono">{zap.campos.join(', ')}</span> — me diga qual deles
-                  é o número que eu ligo.
+              {zap.contatos === 0 && (
+                <p className="text-xs text-red-700 mb-1">
+                  A API não devolveu contato nenhum. Confira a chave e se o canal está ativo —
+                  sem isso o time todo cai no e-mail.
                 </p>
               )}
               {zap.casaram?.length > 0 && (
                 <p className="text-xs text-green-800 mb-1">
-                  ✓ {zap.casaram.length} colaborador(es) casados: {zap.casaram.map((c) => c.nome).join(', ')}
+                  ✓ {zap.casaram.length} com WhatsApp e atendimento direcionado:{' '}
+                  {zap.casaram.map((c) => c.nome).join(', ')}
                 </p>
               )}
-              {zap.no_zap_sem_numero?.length > 0 && (
+              {zap.so_numero?.length > 0 && (
                 <p className="text-xs text-amber-700 mb-1">
-                  ⚠ Estão no Zap mas sem número lá — vão por e-mail:{' '}
-                  {zap.no_zap_sem_numero.map((c) => c.nome).join(', ')}
+                  ⚠ Recebem o WhatsApp, mas o atendimento não vai para a conta deles
+                  (são contato, não atendente): {zap.so_numero.map((c) => c.nome).join(', ')}
                 </p>
               )}
               {zap.fora_do_zap?.length > 0 && (
-                <p className="text-xs text-gray-600">
-                  Não achei no Zap (confira a grafia do e-mail):{' '}
+                <p className="text-xs text-gray-600 mb-1">
+                  Não achei nos contatos (confira a grafia do e-mail):{' '}
                   {zap.fora_do_zap.map((c) => `${c.nome}${c.telefone_no_tareffas ? ' (usa o telefone daqui)' : ' (vai por e-mail)'}`).join(', ')}
                 </p>
               )}
+              <details className="mt-2">
+                <summary className="text-xs text-gray-400 cursor-pointer">campos que a API devolveu</summary>
+                <p className="text-[11px] text-gray-500 font-mono mt-1">
+                  contato: {zap.campos_contato?.join(', ') || '—'}<br />
+                  usuário: {zap.campos_usuario?.join(', ') || '—'}
+                </p>
+              </details>
             </div>
           )}
         </div>

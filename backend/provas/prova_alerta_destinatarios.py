@@ -17,8 +17,8 @@ sys.path.insert(0, RAIZ)
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 from app.services.whatsapp import (should_notify, destinatarios_alerta,  # noqa: E402
-                                   normalizar_telefone, numero_do_usuario_zap,
-                                   mapa_por_email)
+                                   normalizar_telefone, mapa_numero_por_email,
+                                   mapa_userid_por_email)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -83,36 +83,57 @@ check("nenhum e-mail para o escritório",
       [x for x in d if x["canal"] == "email" and x["papel"] != "cliente"] == [])
 check("seis destinatários no total", len(d) == 6, f"({len(d)})")
 
-print("\n=== 3b. o número vem do cadastro do ZapContábil, casado pelo e-mail ===")
-# A API devolve o telefone em campo de nome variável; tentamos vários.
-check("campo 'number'", numero_do_usuario_zap({"number": "21988887777"}) == "5521988887777")
-check("campo 'whatsapp'", numero_do_usuario_zap({"whatsapp": "(21) 98888-6666"}) == "5521988886666")
-check("campo 'phoneNumber'", numero_do_usuario_zap({"phoneNumber": "5521988885555"}) == "5521988885555")
-check("nenhum campo conhecido volta vazio", numero_do_usuario_zap({"nome": "X"}) == "")
-check("resposta que não é dicionário não quebra", numero_do_usuario_zap("lixo") == "")
-
-zap = mapa_por_email([
-    {"id": 1, "name": "Analista", "email": "ANALISTA@bps4.com", "number": "21977771111"},
-    {"id": 2, "name": "Sem Numero", "email": "semnum@bps4.com"},
-    {"id": 3, "name": "Sem Email", "number": "21977772222"},
+print("\n=== 3b. o número vem dos CONTATOS do Zap, casado pelo e-mail ===")
+# Contact tem number e email; User tem email e id, mas NÃO tem telefone.
+contatos = [
+    {"id": 7, "name": "Analista", "email": "ANALISTA@bps4.com", "number": "21977771111"},
+    {"id": 8, "name": "Bloqueado", "email": "bloq@bps4.com", "number": "21977772222", "blocked": True},
+    {"id": 9, "name": "Sem Numero", "email": "semnum@bps4.com"},
+    {"id": 10, "name": "Sem Email", "number": "21977773333"},
     "linha inválida",
-])
-check("e-mail vira chave em minúsculas", "analista@bps4.com" in zap, str(zap))
-check("usuário do Zap sem número fica de fora", "semnum@bps4.com" not in zap)
-check("usuário sem e-mail fica de fora", len(zap) == 1)
-check("lista vazia ou nula não quebra", mapa_por_email([]) == {} and mapa_por_email(None) == {})
+]
+num = mapa_numero_por_email(contatos)
+check("e-mail vira chave em minúsculas", "analista@bps4.com" in num, str(num))
+check("contato bloqueado fica de fora", "bloq@bps4.com" not in num)
+check("contato sem número fica de fora", "semnum@bps4.com" not in num)
+check("contato sem e-mail fica de fora", len(num) == 1)
+check("lista vazia ou nula não quebra", mapa_numero_por_email([]) == {} and mapa_numero_por_email(None) == {})
 
-# O número do Zap tem precedência sobre o telefone digitado no Tareffas.
-d = destinatarios_alerta(T([analista], None, None), {}, 0, zap_por_email=zap)
-check("o número do Zap vence o do cadastro local",
+usuarios = [
+    {"id": 3, "name": "Analista", "email": "analista@bps4.com", "enabled": True},
+    {"id": 4, "name": "Desligado", "email": "off@bps4.com", "enabled": False},
+    {"id": 5, "name": "Sem Email", "enabled": True},
+    {"id": 6, "name": "Legado", "email": "legado@bps4.com"},
+]
+uid = mapa_userid_por_email(usuarios)
+check("atendente ativo entra", uid.get("analista@bps4.com") == 3, str(uid))
+check("atendente desabilitado fica de fora", "off@bps4.com" not in uid)
+check("sem e-mail fica de fora", "5" not in str(uid.values()))
+check("sem o campo enabled é tratado como ativo", uid.get("legado@bps4.com") == 6)
+
+zap = {"numero": num, "user_id": uid}
+
+# O número do Zap tem precedência sobre o telefone digitado no Tareffas, e o
+# atendimento nasce na conta do atendente.
+d = destinatarios_alerta(T([analista], None, None), {}, 0, zap=zap)
+check("o número do contato do Zap vence o do cadastro local",
       (d[0]["canal"], d[0]["endereco"]) == ("whatsapp", "5521977771111"), str(d))
-# Quem não está no Zap cai no telefone local.
-d = destinatarios_alerta(T([sup], None, None), {}, 0, zap_por_email=zap)
-check("quem não está no Zap usa o telefone do Tareffas", d[0]["endereco"] == "5521988880004")
-# E-mail escrito diferente nos dois cadastros não casa — vai para a reserva.
+check("vai com o userId do atendente", d[0].get("zap_user_id") == 3)
+
+# Quem não está nos contatos cai no telefone local — e sem userId.
+d = destinatarios_alerta(T([sup], None, None), {}, 0, zap=zap)
+check("quem não é contato usa o telefone do Tareffas", d[0]["endereco"] == "5521988880004")
+check("e vai sem userId, porque não é atendente lá", "zap_user_id" not in d[0])
+
+# E-mail com grafia diferente não casa: cai na reserva.
 outro_email = U(40, "Grafia Diferente", "analista@BPS4.com.br")
-d = destinatarios_alerta(T([outro_email], None, None), {}, 0, zap_por_email=zap)
-check("e-mail com domínio diferente não casa e cai no e-mail", d[0]["canal"] == "email")
+d = destinatarios_alerta(T([outro_email], None, None), {}, 0, zap=zap)
+check("domínio diferente não casa e cai no e-mail", d[0]["canal"] == "email")
+check("destinatário por e-mail nunca leva userId", "zap_user_id" not in d[0])
+
+# Cliente é contato, não atendente: nunca recebe atribuição de atendimento.
+d = destinatarios_alerta(T([], None, cli), {}, 0, zap=zap)
+check("cliente não leva userId", all("zap_user_id" not in x for x in d))
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
 semtel = U(7, "Sem Telefone", "semtel@bps4.com")

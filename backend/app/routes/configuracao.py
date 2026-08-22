@@ -79,40 +79,45 @@ async def zap_usuarios(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_admin),
 ):
-    """Cruza os colaboradores do Tareffas com os usuários do ZapContábil.
+    """Cruza os colaboradores do Tareffas com o cadastro do ZapContábil.
 
-    O alerta do time sai pelo número que o Zap tem para aquele e-mail. Sem esta
-    conferência, um e-mail escrito diferente nos dois cadastros joga a pessoa
-    silenciosamente para o canal de reserva -- ela recebe por e-mail e ninguém
-    percebe que o WhatsApp nunca chegou.
+    São dois cadastros lá, e cada um responde por uma coisa: o CONTATO dá o
+    número para onde a mensagem vai; o USUÁRIO dá o id que faz o atendimento
+    nascer na conta da pessoa. O e-mail é o que liga os três.
+
+    Sem esta conferência, um e-mail escrito diferente joga a pessoa em silêncio
+    para o canal de reserva: ela recebe por e-mail e ninguém percebe que o
+    WhatsApp nunca chegou.
     """
-    from ..services.whatsapp import usuarios_zap, mapa_por_email, CAMPOS_NUMERO_ZAP
+    from ..services.whatsapp import (contatos_zap, usuarios_zap,
+                                     mapa_numero_por_email, mapa_userid_por_email)
     cfg = cfgmod.carregar(db)
-    lista = await usuarios_zap(cfg)
-    mapa = mapa_por_email(lista)
-    emails_zap = {str(u.get("email") or "").strip().lower()
-                  for u in lista if isinstance(u, dict)}
+    contatos = await contatos_zap(cfg)
+    atendentes = await usuarios_zap(cfg)
+    numeros = mapa_numero_por_email(contatos)
+    uids = mapa_userid_por_email(atendentes)
 
-    casaram, sem_numero, fora = [], [], []
+    casaram, so_numero, fora = [], [], []
     for u in db.query(Usuario).filter(Usuario.bloqueado != True).all():
         email = (u.email or "").strip().lower()
         item = {"nome": u.nome, "email": u.email}
-        if email in mapa:
-            casaram.append({**item, "numero": mapa[email]})
-        elif email in emails_zap:
-            sem_numero.append(item)
+        if email in numeros and email in uids:
+            casaram.append({**item, "numero": numeros[email], "zap_user_id": uids[email]})
+        elif email in numeros:
+            so_numero.append(item)
         else:
             fora.append({**item, "telefone_no_tareffas": bool(u.telefone)})
 
     return {
-        "no_zap": len(lista),
-        "com_numero": len(mapa),
-        # As chaves que a API devolveu — serve para descobrir em qual campo o
-        # telefone vem nesta instalação, se nenhum dos candidatos acertar.
-        "campos": sorted({k for u in lista if isinstance(u, dict) for k in u}),
-        "campos_procurados": list(CAMPOS_NUMERO_ZAP),
+        "contatos": len(contatos),
+        "contatos_com_numero": len(numeros),
+        "atendentes": len(atendentes),
+        # As chaves que a API devolveu de fato — se um dia o schema mudar, o
+        # diagnóstico aparece aqui em vez de virar investigação.
+        "campos_contato": sorted({k for c in contatos for k in c}),
+        "campos_usuario": sorted({k for a in atendentes for k in a}),
         "casaram": casaram,
-        "no_zap_sem_numero": sem_numero,
+        "so_numero": so_numero,
         "fora_do_zap": fora,
     }
 

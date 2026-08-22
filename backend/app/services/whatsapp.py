@@ -26,7 +26,7 @@ def normalizar_telefone(valor) -> str:
     return d if 12 <= len(d) <= 15 else ""
 
 
-async def send_whatsapp_message(phone: str, message: str, cfg: dict) -> dict:
+async def send_whatsapp_message(phone: str, message: str, cfg: dict, user_id=None) -> dict:
     if not cfgmod.ativo(cfg, "whatsapp_ativo"):
         return {"success": False, "error": "WhatsApp desativado", "skipped": True}
     api_key = (cfg.get("zap_api_key") or "").strip()
@@ -42,80 +42,122 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict) -> dict:
         return {"success": False, "error": f"telefone inválido: {phone!r}"}
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"body": message, "connectionFrom": conn_from}
+    # `userId` faz o atendimento nascer na conta daquele atendente e em aberto.
+    # Sem ele, a linha única do escritório vira um balaio: todo aviso cai no
+    # mesmo lugar e ninguém sabe qual é o seu.
+    if user_id not in (None, ""):
+        payload["userId"] = user_id
     async with httpx.AsyncClient() as client:
         response = await client.post(f"{url}/api/send/{numero}", json=payload, headers=headers, timeout=30.0)
         return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}
 
 
-# O schema `User` do ZapContábil não está documentado campo a campo, e o nome do
-# telefone varia entre instalações. Em vez de fixar um palpite, tentamos os
-# candidatos em ordem — o primeiro que virar número válido vence.
-CAMPOS_NUMERO_ZAP = ("number", "whatsapp", "whatsappNumber", "phone", "phoneNumber",
-                     "celular", "telefone", "contactNumber", "wa_number", "mobile")
+# ── ZapContábil: quem é quem lá dentro ───────────────────────────────────────
+#
+# Dois cadastros distintos, e a diferença importa:
+#   Contact = quem RECEBE mensagem. Tem `number` e `email`.
+#   User    = quem ATENDE. Tem `email`, NÃO tem telefone.
+#
+# Por isso o número sai dos contatos, e dos usuários vem só o `id` — que serve
+# para o `userId` do envio, o campo que faz o atendimento nascer na conta do
+# colaborador certo. É ele que responde "como o Zap sabe que este aviso é do
+# Fulano" quando a linha é uma só para o escritório inteiro.
+#
+# O e-mail liga os três cadastros (Tareffas, Contact e User) porque é o login
+# da pessoa em todos eles.
+
+PAGINA_ZAP = 100          # teto documentado por página
+MAX_PAGINAS_ZAP = 20      # trava de segurança: 2000 registros bastam e sobram
 
 
-async def usuarios_zap(cfg: dict) -> list:
-    """`GET /api/users` do ZapContábil — os colaboradores cadastrados lá.
+async def _zap_paginado(cfg: dict, caminho: str, chave: str) -> list:
+    """Percorre um endpoint paginado do Zap e devolve todos os registros.
 
-    Devolve lista vazia em qualquer contratempo (canal desligado, sem chave, API
-    fora do ar, resposta estranha). É de propósito: esta consulta enriquece o
-    alerta, não o autoriza. Se ela falhar, o disparo segue pelo telefone do
-    cadastro do Tareffas ou pelo e-mail, em vez de a varredura inteira morrer.
+    Lista vazia em qualquer contratempo — canal desligado, sem chave, API fora,
+    resposta estranha. É de propósito: esta consulta enriquece o alerta, não o
+    autoriza. Se ela cair, o disparo segue pelo telefone do cadastro local ou
+    pelo e-mail, em vez de a varredura inteira morrer.
+
+    Paginar não é zelo: o padrão do Zap é 20 registros por página, e sem isto o
+    escritório do 21º colaborador em diante cairia no e-mail sem ninguém notar.
     """
     api_key = (cfg.get("zap_api_key") or "").strip()
     if not cfgmod.ativo(cfg, "whatsapp_ativo") or not api_key:
         return []
     url = cfg.get("zap_url") or "https://api-bps4.zapcontabil.chat"
+    headers = {"Authorization": f"Bearer {api_key}", "accept": "application/json"}
+    saida, pagina = [], 1
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(f"{url}/api/users",
-                                 headers={"Authorization": f"Bearer {api_key}",
-                                          "accept": "application/json"}, timeout=20.0)
-        if r.status_code != 200:
-            return []
-        dados = r.json()
+            while pagina <= MAX_PAGINAS_ZAP:
+                r = await client.get(f"{url}{caminho}", headers=headers, timeout=20.0,
+                                     params={"page": pagina, "pageSize": PAGINA_ZAP})
+                if r.status_code != 200:
+                    break
+                dados = r.json()
+                if not isinstance(dados, dict):
+                    return dados if isinstance(dados, list) else saida
+                lote = dados.get(chave) or []
+                saida.extend(x for x in lote if isinstance(x, dict))
+                total = dados.get("pageCount") or 1
+                if pagina >= int(total) or not lote:
+                    break
+                pagina += 1
     except Exception:
-        return []
-    # A resposta pode vir como lista pura ou embrulhada — `UserList` no swagger.
-    if isinstance(dados, dict):
-        for chave in ("users", "data", "rows", "items", "records"):
-            if isinstance(dados.get(chave), list):
-                return dados[chave]
-        return []
-    return dados if isinstance(dados, list) else []
+        return saida
+    return saida
 
 
-def numero_do_usuario_zap(u: dict) -> str:
-    """Primeiro campo do usuário do Zap que vira telefone utilizável."""
-    if not isinstance(u, dict):
-        return ""
-    for campo in CAMPOS_NUMERO_ZAP:
-        numero = normalizar_telefone(u.get(campo))
-        if numero:
-            return numero
-    return ""
+async def contatos_zap(cfg: dict) -> list:
+    """`GET /api/contacts` — quem pode receber mensagem, com número e e-mail."""
+    return await _zap_paginado(cfg, "/api/contacts", "contacts")
 
 
-def mapa_por_email(usuarios: list) -> dict:
-    """{e-mail em minúsculas: número} a partir da lista de usuários do Zap.
+async def usuarios_zap(cfg: dict) -> list:
+    """`GET /api/users` — os atendentes. Daqui sai o `id`, não o telefone."""
+    return await _zap_paginado(cfg, "/api/users", "users")
 
-    O e-mail é a chave porque é o login do colaborador lá e o mesmo que ele tem
-    aqui — é o que liga um cadastro ao outro sem obrigar a redigitar telefone.
+
+def _email(registro: dict) -> str:
+    return str((registro or {}).get("email") or "").strip().lower()
+
+
+def mapa_numero_por_email(contatos: list) -> dict:
+    """{e-mail: número} a partir dos contatos do Zap.
+
+    Contato bloqueado fica de fora: mandar para ele é erro garantido.
     Separado da chamada HTTP para poder ser provado sem rede.
     """
     saida = {}
-    for u in usuarios or []:
-        if not isinstance(u, dict):
+    for c in contatos or []:
+        if not isinstance(c, dict) or c.get("blocked"):
             continue
-        email = str(u.get("email") or "").strip().lower()
-        numero = numero_do_usuario_zap(u)
+        email, numero = _email(c), normalizar_telefone(c.get("number"))
         if email and numero:
             saida[email] = numero
     return saida
 
 
-async def mapa_zap_por_email(cfg: dict) -> dict:
-    return mapa_por_email(await usuarios_zap(cfg))
+def mapa_userid_por_email(usuarios: list) -> dict:
+    """{e-mail: id do atendente} — o `userId` que direciona o atendimento.
+
+    Usuário desabilitado fica de fora: atribuir a ele esconderia o aviso numa
+    conta que ninguém abre.
+    """
+    saida = {}
+    for u in usuarios or []:
+        if not isinstance(u, dict) or u.get("enabled") is False:
+            continue
+        email, ident = _email(u), u.get("id")
+        if email and ident not in (None, ""):
+            saida[email] = ident
+    return saida
+
+
+async def carregar_zap(cfg: dict) -> dict:
+    """Os dois mapas de uma vez, para a varredura consultar o Zap só uma vez."""
+    return {"numero": mapa_numero_por_email(await contatos_zap(cfg)),
+            "user_id": mapa_userid_por_email(await usuarios_zap(cfg))}
 
 
 def _base_date(tarefa: Tarefa):
@@ -203,13 +245,13 @@ def _cadeia_gestores(usuario, niveis: int) -> list:
     return chain
 
 
-def _canal_da_pessoa(u, zap_por_email: dict = None) -> tuple:
+def _canal_da_pessoa(u, zap: dict = None) -> tuple:
     """Canal de quem é do escritório: WhatsApp, com e-mail de reserva.
 
     A ordem tem uma razão em cada degrau:
 
-    1. o número que está no ZapContábil, achado pelo e-mail. É lá que o cadastro
-       do colaborador vive e é mantido; casar por e-mail evita redigitar
+    1. o número que está nos CONTATOS do ZapContábil, achado pelo e-mail. É lá
+       que o cadastro vive e é mantido; casar por e-mail evita redigitar
        telefone aqui e ficar com duas verdades sobre o mesmo contato.
     2. o telefone do cadastro do Tareffas, para quem ainda não está no Zap.
     3. o e-mail. Não é a regra, é a rede: deixar de avisar quem tem a tarefa na
@@ -217,21 +259,20 @@ def _canal_da_pessoa(u, zap_por_email: dict = None) -> tuple:
 
     Quem não tem nada disso fica de fora, e isso aparece no ensaio.
     """
-    email = getattr(u, "email", None)
-    if zap_por_email and email:
-        numero = zap_por_email.get(str(email).strip().lower())
-        if numero:
-            return ("whatsapp", numero)
+    email = str(getattr(u, "email", None) or "").strip().lower()
+    numeros = (zap or {}).get("numero") or {}
+    if email and numeros.get(email):
+        return ("whatsapp", numeros[email])
     tel = normalizar_telefone(getattr(u, "telefone", None))
     if tel:
         return ("whatsapp", tel)
     if email:
-        return ("email", email)
+        return ("email", getattr(u, "email"))
     return (None, None)
 
 
 def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
-                        zap_por_email: dict = None) -> list:
+                        zap: dict = None) -> list:
     """Quem recebe o alerta e por qual canal:
     - gente do escritório (responsáveis, a cadeia de gestores deles, supervisor)
       -> WhatsApp, no número que o ZapContábil tem para aquele e-mail; e-mail só
@@ -248,13 +289,18 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
     def juntar(papel, pessoa):
         if not pessoa:
             return
-        canal, endereco = _canal_da_pessoa(pessoa, zap_por_email)
+        canal, endereco = _canal_da_pessoa(pessoa, zap)
         # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
         # supervisor, por exemplo) recebe uma mensagem só.
         if not endereco or endereco in vistos:
             return
         vistos.add(endereco)
-        dest.append({"papel": papel, "nome": pessoa.nome, "canal": canal, "endereco": endereco})
+        item = {"papel": papel, "nome": pessoa.nome, "canal": canal, "endereco": endereco}
+        # O atendimento nasce na conta desta pessoa no Zap, quando ela tem uma.
+        uid = ((zap or {}).get("user_id") or {}).get(str(getattr(pessoa, "email", "") or "").strip().lower())
+        if canal == "whatsapp" and uid not in (None, ""):
+            item["zap_user_id"] = uid
+        dest.append(item)
 
     for u in list(tarefa.responsaveis):
         alvo = subs_map.get(u.id, u)  # ausente -> substituto recebe no lugar
@@ -277,9 +323,10 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2,
     return dest
 
 
-async def _enviar(canal: str, endereco: str, assunto: str, mensagem: str, cfg: dict) -> dict:
+async def _enviar(canal: str, endereco: str, assunto: str, mensagem: str, cfg: dict,
+                  zap_user_id=None) -> dict:
     if canal == "whatsapp":
-        return await send_whatsapp_message(endereco, mensagem, cfg)
+        return await send_whatsapp_message(endereco, mensagem, cfg, user_id=zap_user_id)
     if canal == "email":
         return send_email(endereco, assunto, _texto_simples(mensagem), cfg)
     return {"success": False, "error": f"canal desconhecido: {canal}"}
@@ -310,7 +357,7 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
     now = datetime.now()
     subs_map = mapa_substitutos(db)
     # Uma consulta por varredura, não uma por destinatário.
-    zap_por_email = await mapa_zap_por_email(cfg)
+    zap = await carregar_zap(cfg)
 
     # Bloqueados somem dos alertas também (empresa ou responsável principal bloqueado).
     tarefas = (db.query(Tarefa)
@@ -342,14 +389,14 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         message = format_task_message(tarefa, days_remaining, responsavel) + rodape
 
         despachos = []
-        for d in destinatarios_alerta(tarefa, subs_map, niveis, zap_por_email):
+        for d in destinatarios_alerta(tarefa, subs_map, niveis, zap):
             # O nome de quem está sendo avisado abre a mensagem. No painel
             # compartilhado é o que separa o aviso do Fulano do da Ciclana.
             texto = format_task_message(tarefa, days_remaining, responsavel, para=d["nome"]) + rodape
             if ensaio:
                 despachos.append({**d, "enviado": False, "skipped": False, "ensaio": True})
                 continue
-            r = await _enviar(d["canal"], d["endereco"], assunto, texto, cfg)
+            r = await _enviar(d["canal"], d["endereco"], assunto, texto, cfg, d.get("zap_user_id"))
             despachos.append({**d, "enviado": r.get("success", False),
                               "skipped": r.get("skipped", False), "detalhe": r})
 
