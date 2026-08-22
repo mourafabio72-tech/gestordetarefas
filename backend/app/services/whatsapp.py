@@ -219,6 +219,85 @@ def should_notify(days_remaining: int, slot: str, dias_antes: int = 3) -> bool:
     return False
 
 
+def urgencia(dias: int) -> str:
+    """A primeira linha do aviso: o quanto isso corre."""
+    if dias is None:
+        return "📋 Sem prazo definido"
+    if dias < 0:
+        return f"🚨 *ATRASADA há {abs(dias)} dia(s)!*"
+    if dias == 0:
+        return "⚠️ *PRAZO INTERNO VENCE HOJE!*"
+    if dias == 1:
+        return "⏰ *Prazo interno vence amanhã!*"
+    return f"📋 Prazo interno em *{dias} dias*"
+
+
+def urgencia_curta(dias: int) -> tuple:
+    """(ícone, frase) para uma linha de lista, sem gritar."""
+    if dias is None:
+        return ("📋", "sem prazo")
+    if dias < 0:
+        n = abs(dias)
+        return ("🚨", f"atrasada há {n} dia" + ("s" if n > 1 else ""))
+    if dias == 0:
+        return ("⚠️", "vence hoje")
+    if dias == 1:
+        return ("⏰", "vence amanhã")
+    return ("📋", f"faltam {dias} dias")
+
+
+LIMITE_RESUMO = 3200   # WhatsApp corta perto de 4096; sobra folga para o rodapé
+
+
+def montar_resumo(nome: str, itens: list, limite: int = LIMITE_RESUMO) -> str:
+    """Uma mensagem com TODAS as tarefas daquela pessoa naquela varredura.
+
+    Antes saía um aviso por tarefa. Numa varredura de mês fechado isso é uma
+    rajada de dezenas de mensagens para a mesma pessoa, quatro vezes por dia --
+    e o efeito de uma rajada é a pessoa parar de ler. Uma mensagem com a lista
+    ordenada por urgência é o mesmo conteúdo em algo que se lê.
+
+    Ordena pelo que corre mais: o atrasado no topo, o folgado no fim. Empate de
+    prazo desempata pelo nome da empresa, para a lista sair estável entre
+    varreduras e a pessoa reconhecer o que já viu.
+
+    Corta pelo TAMANHO, não pela quantidade: o WhatsApp trunca perto de 4096
+    caracteres, e uma mensagem cortada no meio perderia justamente os links de
+    comprovante do fim. O que não coube vira uma linha dizendo quantas faltam.
+    """
+    ordenados = sorted(itens or [], key=lambda i: (i.get("dias") if i.get("dias") is not None else 9999,
+                                                   (i.get("empresa") or "")))
+    total = len(ordenados)
+    if not total:
+        return ""
+    plural = "tarefas pedindo atenção" if total > 1 else "tarefa pedindo atenção"
+    cabeca = f"👤 *{nome}*\n📌 *{total} {plural}*\n"
+    partes, usados, mostradas = [], len(cabeca), 0
+    for i in ordenados:
+        icone, frase = urgencia_curta(i.get("dias"))
+        bloco = f"\n{icone} *{i.get('titulo')}*"
+        if i.get("empresa"):
+            bloco += f" · {i['empresa']}"
+        bloco += f"\n{frase}"
+        if i.get("prazo"):
+            bloco += f" · prazo {i['prazo']}"
+        if i.get("multa"):
+            bloco += " · ⚠️ gera multa"
+        if i.get("link"):
+            bloco += f"\n📎 {i['link']}"
+        bloco += "\n"
+        if usados + len(bloco) > limite and mostradas:
+            break
+        partes.append(bloco)
+        usados += len(bloco)
+        mostradas += 1
+    corpo = "".join(partes)
+    if mostradas < total:
+        faltam = total - mostradas
+        corpo += f"\n…e mais {faltam} tarefa" + ("s" if faltam > 1 else "") + ". Veja a lista no Tareffas.\n"
+    return cabeca + corpo
+
+
 def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuario = None,
                        para: str = None) -> str:
     """Monta o texto do alerta.
@@ -233,14 +312,7 @@ def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuari
     empresa_nome = tarefa.empresa.razao_social or tarefa.empresa.nome_fantasia
     setor_nome = tarefa.setor.nome if tarefa.setor else "Não definido"
 
-    if days_remaining < 0:
-        urgency = f"🚨 *ATRASADA há {abs(days_remaining)} dia(s)!*"
-    elif days_remaining == 0:
-        urgency = "⚠️ *PRAZO INTERNO VENCE HOJE!*"
-    elif days_remaining == 1:
-        urgency = "⏰ *Prazo interno vence amanhã!*"
-    else:
-        urgency = f"📋 Prazo interno em *{days_remaining} dias*"
+    urgency = urgencia(days_remaining)
 
     base = _base_date(tarefa)
     prazo_str = base.strftime("%d/%m/%Y %H:%M") if base else "-"
@@ -433,15 +505,18 @@ async def _enviar(canal: str, endereco: str, assunto: str, mensagem: str, cfg: d
     return {"success": False, "error": f"canal desconhecido: {canal}"}
 
 
-async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bool = False) -> list:
-    """Varre tarefas em aberto (excluindo bloqueadas) e dispara alertas por canal.
+async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bool = False) -> dict:
+    """Varre as tarefas em aberto e avisa quem precisa saber.
 
-    Com `ensaio=True` percorre exatamente a mesma lógica -- as mesmas tarefas, a
-    mesma régua de proximidade, os mesmos destinatários, a mesma mensagem -- mas
-    NÃO envia nada. Existe porque o alerta de verdade sai para o WhatsApp e o
-    e-mail do CLIENTE: sem o ensaio, conferir a régua em produção significaria
-    disparar mensagem para cliente real. O ensaio devolve também o texto montado,
-    para revisar a mensagem antes de ela sair.
+    Devolve {"tarefas": [...], "mensagens": [...]}. São contagens diferentes de
+    propósito: uma varredura de mês fechado pode ter 400 tarefas na régua e
+    mandar 40 mensagens, porque cada pessoa recebe UMA com a lista dela. Antes
+    era um aviso por tarefa, o que numa rajada faz a pessoa parar de ler.
+
+    Com `ensaio=True` percorre a mesma lógica -- as mesmas tarefas, a mesma
+    régua, os mesmos destinatários, a mesma mensagem -- e não envia. Existe
+    porque o alerta de verdade pode sair para o cliente: sem o ensaio, conferir
+    a régua em produção significaria mandar mensagem para cliente real.
     """
     from .substituicao import mapa_substitutos
     cfg = cfgmod.carregar(db)
@@ -455,7 +530,6 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
         niveis = 0
     incluir_cliente = cfgmod.ativo(cfg, "alert_cliente")
 
-    alerts_sent = []
     now = datetime.now()
     subs_map = mapa_substitutos(db)
     # Uma consulta por varredura, não uma por destinatário.
@@ -468,51 +542,57 @@ async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bo
                        ~Tarefa.responsavel.has(Usuario.bloqueado == True))
                .all())
 
+    na_regua = []       # o que o ensaio mostra, tarefa a tarefa
+    caixas = {}         # marca do destinatário -> {dest, itens}
+
     for tarefa in tarefas:
         base = _base_date(tarefa)
         if not base:
             continue
-        days_remaining = (base.date() - now.date()).days
-        if not should_notify(days_remaining, slot, dias_antes):
+        dias = (base.date() - now.date()).days
+        if not should_notify(dias, slot, dias_antes):
             continue
 
-        responsavel = None
-        if tarefa.responsavel_id:
-            responsavel = db.query(Usuario).filter(Usuario.id == tarefa.responsavel_id).first()
-
-        rodape = ""
+        link = None
         try:
             from .upload import link_publico
-            rodape = f"\n\n📎 Enviar o comprovante: {link_publico(cfg, tarefa, db)}"
+            link = link_publico(cfg, tarefa, db)
         except Exception:
             pass
-        assunto = f"[Tareffas] {tarefa.titulo} - {tarefa.empresa.razao_social}"
-        # Guardado para o ensaio mostrar o texto-base sem repetir por destinatário.
-        message = format_task_message(tarefa, days_remaining, responsavel) + rodape
+
+        empresa_nome = tarefa.empresa.razao_social if tarefa.empresa else None
+        item = {"titulo": tarefa.titulo, "empresa": empresa_nome, "dias": dias,
+                "prazo": base.strftime("%d/%m"), "multa": bool(tarefa.gera_multa),
+                "link": link}
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis, zap, incluir_cliente):
-            # O nome de quem está sendo avisado abre a mensagem. No painel
-            # compartilhado é o que separa o aviso do Fulano do da Ciclana.
-            texto = format_task_message(tarefa, days_remaining, responsavel, para=d["nome"]) + rodape
-            if ensaio:
-                despachos.append({**d, "enviado": False, "skipped": False, "ensaio": True})
-                continue
-            r = await _enviar(d["canal"], d["endereco"], assunto, texto, cfg, d.get("zap_user_id"))
-            despachos.append({**d, "enviado": r.get("success", False),
-                              "skipped": r.get("skipped", False), "detalhe": r})
+            marca = f"{d['canal']}:{d['endereco']}:{d.get('zap_user_id') or ''}"
+            caixas.setdefault(marca, {"dest": d, "itens": []})["itens"].append(item)
+            despachos.append(d)
 
-        item = {
+        na_regua.append({
             "tarefa_id": tarefa.id,
             "tarefa_titulo": tarefa.titulo,
-            "empresa": tarefa.empresa.razao_social if tarefa.empresa else None,
-            "responsavel": responsavel.nome if responsavel else None,
-            "dias_restantes": days_remaining,
+            "empresa": empresa_nome,
+            "responsavel": (tarefa.responsaveis[0].nome if tarefa.responsaveis else None),
+            "dias_restantes": dias,
             "despachos": despachos,
-        }
-        if ensaio:
-            item["assunto"] = assunto
-            item["mensagem"] = message
-        alerts_sent.append(item)
+        })
 
-    return alerts_sent
+    mensagens = []
+    for caixa in caixas.values():
+        d = caixa["dest"]
+        texto = montar_resumo(d["nome"], caixa["itens"])
+        quantas = len(caixa["itens"])
+        assunto = f"[Tareffas] {quantas} tarefa" + ("s" if quantas > 1 else "") + " pedindo atenção"
+        registro = {**d, "tarefas": quantas}
+        if ensaio:
+            registro.update({"enviado": False, "skipped": False, "ensaio": True, "mensagem": texto})
+        else:
+            r = await _enviar(d["canal"], d["endereco"], assunto, texto, cfg, d.get("zap_user_id"))
+            registro.update({"enviado": r.get("success", False),
+                             "skipped": r.get("skipped", False), "detalhe": r})
+        mensagens.append(registro)
+
+    return {"tarefas": na_regua, "mensagens": mensagens}

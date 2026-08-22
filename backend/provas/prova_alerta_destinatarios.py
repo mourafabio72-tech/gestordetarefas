@@ -19,7 +19,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 from app.services.whatsapp import (should_notify, destinatarios_alerta,  # noqa: E402
                                    normalizar_telefone, mapa_numero_por_email,
                                    mapa_userid_por_email, eh_cliente,
-                                   montar_payload_zap)
+                                   montar_payload_zap, montar_resumo, urgencia_curta)
 
 ok = True
 def check(nome, cond, extra=""):
@@ -207,6 +207,40 @@ check("userId vazio conta como ausente", "userId" not in montar_payload_zap("oi"
 check("userId nulo conta como ausente", "userId" not in montar_payload_zap("oi", 0, None))
 check("id que não é número passa como veio",
       montar_payload_zap("oi", 0, "abc")["userId"] == "abc")
+
+print("\n=== 3d. o resumo: uma mensagem por pessoa, não uma por tarefa ===")
+itens = [
+    {"titulo": "DARF", "empresa": "Gnileb", "dias": 3, "prazo": "25/08"},
+    {"titulo": "EFD", "empresa": "Mark", "dias": -2, "prazo": "20/08", "link": "http://x/1", "multa": True},
+    {"titulo": "Balancete", "empresa": "TROPS", "dias": 0, "prazo": "22/08"},
+]
+r = montar_resumo("Fabio", itens)
+check("abre com o nome de quem recebe", r.startswith("👤 *Fabio*"))
+check("diz quantas são", "*3 tarefas pedindo atenção*" in r)
+check("o atrasado vem primeiro", r.index("EFD") < r.index("Balancete") < r.index("DARF"), )
+check("marca a multa", "gera multa" in r)
+check("leva o link de comprovante", "http://x/1" in r)
+check("uma tarefa fica no singular", "*1 tarefa pedindo atenção*" in montar_resumo("X", itens[:1]))
+check("lista vazia devolve vazio", montar_resumo("X", []) == "" and montar_resumo("X", None) == "")
+
+# Empate de prazo desempata pela empresa: a lista sai igual entre varreduras.
+empate = [{"titulo": "T", "empresa": "Zebra", "dias": 0}, {"titulo": "T", "empresa": "Alfa", "dias": 0}]
+check("empate ordena por empresa", montar_resumo("X", empate).index("Alfa") <
+      montar_resumo("X", empate).index("Zebra"))
+
+# Corta pelo tamanho, não pela quantidade -- o WhatsApp trunca perto de 4096.
+muitas = [{"titulo": f"Tarefa {i}", "empresa": "Empresa Com Nome Longo Ltda",
+           "dias": i, "prazo": "01/09", "link": "https://gestordetarefas.zoaria.com.br/enviar/" + "x" * 32}
+          for i in range(60)]
+grande = montar_resumo("Fabio", muitas)
+check("respeita o limite do WhatsApp", len(grande) <= 4096, f"({len(grande)} chars)")
+check("avisa o que ficou de fora", "e mais" in grande)
+check("mesmo assim diz o total no topo", "*60 tarefas pedindo atenção*" in grande)
+check("uma tarefa gigante sozinha ainda sai",
+      "Tarefa 0" in montar_resumo("X", [muitas[0]], limite=10))
+
+check("sem prazo não vira data zero", urgencia_curta(None) == ("📋", "sem prazo"))
+check("um dia de atraso no singular", urgencia_curta(-1)[1] == "atrasada há 1 dia")
 
 print("\n=== 4. e-mail é a reserva de quem não tem telefone ===")
 semtel = U(7, "Sem Telefone", "semtel@bps4.com")

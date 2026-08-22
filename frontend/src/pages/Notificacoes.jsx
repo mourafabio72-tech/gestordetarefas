@@ -378,10 +378,32 @@ export default function Notificacoes() {
 
           {ensaio && (
             <div className="mt-3 border-t border-gray-100 pt-3">
-              <p className="text-sm mb-2">
-                <strong>{ensaio.tarefas}</strong> tarefa(s) na régua,{' '}
-                <strong>{ensaio.destinatarios}</strong> destinatário(s).
+              <p className="text-sm mb-1">
+                <strong>{ensaio.tarefas}</strong> tarefa(s) na régua →{' '}
+                <strong>{ensaio.destinatarios}</strong> mensagem(ns).
               </p>
+              {ensaio.mensagens?.length > 0 && (
+                <div className="mb-3 text-xs text-gray-600">
+                  {/* Cada pessoa recebe UMA mensagem com a lista dela. Ver isso
+                      antes das tarefas responde a pergunta que se faz primeiro:
+                      quanta mensagem vai sair daqui. */}
+                  {ensaio.mensagens.map((m, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 mr-3">
+                      {m.canal === 'whatsapp'
+                        ? <MessageCircle size={11} className="text-green-600" />
+                        : <Mail size={11} className="text-blue-600" />}
+                      {m.nome} <span className="text-gray-400">({m.tarefas})</span>
+                    </span>
+                  ))}
+                  <button type="button" onClick={() => setMsgAberta(msgAberta === 'resumo' ? null : 'resumo')}
+                    className="text-primary-700 underline ml-1">
+                    {msgAberta === 'resumo' ? 'esconder as mensagens' : 'ver as mensagens'}
+                  </button>
+                  {msgAberta === 'resumo' && ensaio.mensagens.map((m, i) => (
+                    <pre key={i} className="mt-1 p-2 rounded-lg bg-gray-50 text-[11px] whitespace-pre-wrap font-sans text-gray-700">{m.mensagem}</pre>
+                  ))}
+                </div>
+              )}
               {ensaio.tarefas === 0 && (
                 <p className="text-xs text-gray-500">
                   Nenhuma tarefa se encaixa neste horário. A régua avisa com a antecedência configurada acima,
@@ -412,13 +434,7 @@ export default function Notificacoes() {
                       </li>
                     ))}
                   </ul>
-                  <button type="button" onClick={() => setMsgAberta(msgAberta === a.tarefa_id ? null : a.tarefa_id)}
-                    className="text-xs text-primary-700 underline mt-1">
-                    {msgAberta === a.tarefa_id ? 'esconder a mensagem' : 'ver a mensagem que sairia'}
-                  </button>
-                  {msgAberta === a.tarefa_id && (
-                    <pre className="mt-1 p-2 rounded-lg bg-gray-50 text-[11px] whitespace-pre-wrap font-sans text-gray-700">{a.mensagem}</pre>
-                  )}
+
                 </div>
               ))}
             </div>

@@ -19,8 +19,9 @@ async def scheduled_check(slot: str):
     db = SessionLocal()
     try:
         logger.info(f"[{slot}] verificando tarefas...")
-        alerts = await check_and_send_alerts(db, slot=slot)
-        logger.info(f"[{slot}] {len(alerts)} tarefa(s) notificada(s).")
+        r = await check_and_send_alerts(db, slot=slot)
+        logger.info(f"[{slot}] {len(r['tarefas'])} tarefa(s) em "
+                    f"{len(r['mensagens'])} mensagem(ns).")
     except Exception as e:
         logger.error(f"Erro na verificação [{slot}]: {e}")
     finally:

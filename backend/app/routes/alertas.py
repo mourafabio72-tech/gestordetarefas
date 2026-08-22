@@ -22,16 +22,19 @@ async def verificar_tarefas(
     mensagem para cliente real. Para disparar mesmo, é preciso pedir
     explicitamente `ensaio=false`.
     """
-    alertas = await check_and_send_alerts(db, slot=slot, ensaio=ensaio)
-    destinatarios = sum(len(a["despachos"]) for a in alertas)
-    verbo = "receberiam" if ensaio else "receberam"
+    r = await check_and_send_alerts(db, slot=slot, ensaio=ensaio)
+    tarefas, mensagens = r["tarefas"], r["mensagens"]
+    verbo = "sairiam" if ensaio else "saíram"
     return {
         "ensaio": ensaio,
         "slot": slot,
-        "tarefas": len(alertas),
-        "destinatarios": destinatarios,
-        "message": f"{len(alertas)} tarefa(s), {destinatarios} destinatário(s) {verbo} alerta.",
-        "alertas": alertas,
+        # Duas contagens diferentes: cada pessoa recebe UMA mensagem com a lista
+        # dela, então 400 tarefas na régua podem virar 40 mensagens.
+        "tarefas": len(tarefas),
+        "destinatarios": len(mensagens),
+        "message": f"{len(tarefas)} tarefa(s) na régua, {len(mensagens)} mensagem(ns) {verbo}.",
+        "alertas": tarefas,
+        "mensagens": mensagens,
     }
 
 
