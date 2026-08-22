@@ -155,6 +155,12 @@ check("atendente ativo entra", uid.get("analista@bps4.com") == 3, str(uid))
 check("atendente desabilitado fica de fora", "off@bps4.com" not in uid)
 check("sem e-mail fica de fora", "5" not in str(uid.values()))
 check("sem o campo enabled é tratado como ativo", uid.get("legado@bps4.com") == 6)
+# O swagger devolve o id como string e o envio quer inteiro.
+convertido = mapa_userid_por_email([{"id": "42", "email": "s@x.com"}])
+check("id em texto vira inteiro", convertido["s@x.com"] == 42 and isinstance(convertido["s@x.com"], int),
+      repr(convertido))
+esquisito = mapa_userid_por_email([{"id": "abc", "email": "e@x.com"}])
+check("id que não é número passa como veio", esquisito["e@x.com"] == "abc")
 
 # Sem linha configurada: o teste isola a via do número de contato.
 zap = {"linha": "", "numero": num, "user_id": uid}

@@ -45,8 +45,15 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict, user_id=Non
     # `userId` faz o atendimento nascer na conta daquele atendente e em aberto.
     # Sem ele, a linha única do escritório vira um balaio: todo aviso cai no
     # mesmo lugar e ninguém sabe qual é o seu.
+    #
+    # Vai como INTEIRO. O swagger declara `User.id` como string e o `userId` do
+    # SendMessage como integer -- mandar "12" onde se espera 12 é o tipo de
+    # incompatibilidade que a API recusa com 400, ou pior, aceita e ignora.
     if user_id not in (None, ""):
-        payload["userId"] = user_id
+        try:
+            payload["userId"] = int(user_id)
+        except (TypeError, ValueError):
+            payload["userId"] = user_id
     async with httpx.AsyncClient() as client:
         response = await client.post(f"{url}/api/send/{numero}", json=payload, headers=headers, timeout=30.0)
         return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}
@@ -149,8 +156,15 @@ def mapa_userid_por_email(usuarios: list) -> dict:
         if not isinstance(u, dict) or u.get("enabled") is False:
             continue
         email, ident = _email(u), u.get("id")
-        if email and ident not in (None, ""):
-            saida[email] = ident
+        if not email or ident in (None, ""):
+            continue
+        # O swagger devolve o id como string; o envio quer inteiro. Converte já
+        # aqui, para o mapa guardar o tipo que a API de envio espera.
+        try:
+            ident = int(ident)
+        except (TypeError, ValueError):
+            pass
+        saida[email] = ident
     return saida
 
 
