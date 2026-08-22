@@ -256,9 +256,16 @@ export default function Notificacoes() {
             <PlayCircle size={18} className="text-primary-700" />
             <h2 className="text-xl font-semibold">Ensaio do alerta</h2>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
+          <p className="text-xs text-gray-500 mb-2">
             Roda agora a mesma verificação do horário agendado e mostra quem receberia o quê —
             <strong> sem enviar nada</strong>. É assim que se confere a régua sem disparar mensagem para cliente real.
+          </p>
+          <p className="text-xs text-gray-500 mb-3">
+            <MessageCircle size={12} className="inline text-green-600" /> Quem é do escritório
+            (responsável, gestores e supervisor) recebe por <strong>WhatsApp</strong>; o e-mail
+            entra só como reserva de quem não tem telefone no cadastro.{' '}
+            <Mail size={12} className="inline text-blue-600" /> O <strong>cliente</strong> recebe
+            por e-mail e/ou WhatsApp, conforme o que estiver preenchido na empresa.
           </p>
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <select value={slotEnsaio} onChange={(e) => setSlotEnsaio(e.target.value)}

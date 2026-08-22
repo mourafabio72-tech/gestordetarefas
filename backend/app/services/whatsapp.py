@@ -7,6 +7,25 @@ from .email import send_email
 from . import config as cfgmod
 
 
+def normalizar_telefone(valor) -> str:
+    """Telefone do cadastro -> número que a API aceita. "" se não der para usar.
+
+    O campo é texto livre e chega como "(21) 99999-9999", "21 99999 9999" ou já
+    com o país. Sem esta passagem o envio falharia em silêncio, que é o pior
+    modo de falhar num alerta: ninguém recebe e ninguém fica sabendo.
+
+    DDD sem país (10 ou 11 dígitos) ganha o 55. Número que não chega a 12
+    dígitos nem passa de 15 é lixo de cadastro e volta vazio, para o
+    destinatário simplesmente não entrar na lista.
+    """
+    d = "".join(ch for ch in str(valor or "") if ch.isdigit())
+    if d.startswith("00"):
+        d = d[2:]
+    if len(d) in (10, 11):
+        d = "55" + d
+    return d if 12 <= len(d) <= 15 else ""
+
+
 async def send_whatsapp_message(phone: str, message: str, cfg: dict) -> dict:
     if not cfgmod.ativo(cfg, "whatsapp_ativo"):
         return {"success": False, "error": "WhatsApp desativado", "skipped": True}
@@ -18,10 +37,13 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict) -> dict:
         conn_from = int(cfg.get("zap_connection_from") or 0)
     except (TypeError, ValueError):
         conn_from = 0
+    numero = normalizar_telefone(phone)
+    if not numero:
+        return {"success": False, "error": f"telefone inválido: {phone!r}"}
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"body": message, "connectionFrom": conn_from}
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{url}/api/send/{phone}", json=payload, headers=headers, timeout=30.0)
+        response = await client.post(f"{url}/api/send/{numero}", json=payload, headers=headers, timeout=30.0)
         return {"success": response.status_code == 200, "status_code": response.status_code, "response": response.text}
 
 
@@ -97,38 +119,62 @@ def _cadeia_gestores(usuario, niveis: int) -> list:
     return chain
 
 
+def _canal_da_pessoa(u) -> tuple:
+    """Canal de quem é do escritório: WhatsApp, com e-mail de reserva.
+
+    A regra do escritório é avisar o colaborador por WhatsApp. Sem telefone no
+    cadastro, o alerta vai por e-mail em vez de não ir -- deixar de avisar quem
+    tem a tarefa é pior falha do que avisar pelo canal errado. Quem não tem nem
+    telefone nem e-mail fica de fora, e isso aparece no ensaio.
+    """
+    tel = normalizar_telefone(getattr(u, "telefone", None))
+    if tel:
+        return ("whatsapp", tel)
+    if getattr(u, "email", None):
+        return ("email", u.email)
+    return (None, None)
+
+
 def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 2) -> list:
     """Quem recebe o alerta e por qual canal:
-    - responsáveis + a cadeia de gestores deles (N níveis) + supervisor -> e-mail
-    - cliente (empresa da tarefa) -> WhatsApp + e-mail
+    - gente do escritório (responsáveis, a cadeia de gestores deles, supervisor)
+      -> WhatsApp; e-mail só como reserva de quem não tem telefone
+    - cliente (a empresa da tarefa) -> e-mail e/ou WhatsApp, conforme o que
+      estiver preenchido no cadastro dela
     `subs_map` {ausente_id: substituto}: quem está de férias/doença é trocado pelo substituto
     (mas o gestor do ausente continua na cópia).
     """
     subs_map = subs_map or {}
     dest = []
     vistos = set()
+
+    def juntar(papel, pessoa):
+        if not pessoa:
+            return
+        canal, endereco = _canal_da_pessoa(pessoa)
+        # A chave é o endereço: a mesma pessoa em dois papéis (responsável e
+        # supervisor, por exemplo) recebe uma mensagem só.
+        if not endereco or endereco in vistos:
+            return
+        vistos.add(endereco)
+        dest.append({"papel": papel, "nome": pessoa.nome, "canal": canal, "endereco": endereco})
+
     for u in list(tarefa.responsaveis):
         alvo = subs_map.get(u.id, u)  # ausente -> substituto recebe no lugar
-        if alvo and alvo.email and alvo.email not in vistos:
-            vistos.add(alvo.email)
-            dest.append({"papel": "substituto" if alvo.id != u.id else "colaborador",
-                         "nome": alvo.nome, "canal": "email", "endereco": alvo.email})
+        juntar("substituto" if alvo and alvo.id != u.id else "colaborador", alvo)
         for g in _cadeia_gestores(u, niveis):
-            if g.email and g.email not in vistos:
-                vistos.add(g.email)
-                dest.append({"papel": "gestor", "nome": g.nome,
-                             "canal": "email", "endereco": g.email})
-    sup = tarefa.supervisor
-    if sup and sup.email and sup.email not in vistos:
-        vistos.add(sup.email)
-        dest.append({"papel": "supervisor", "nome": sup.nome,
-                     "canal": "email", "endereco": sup.email})
+            juntar("gestor", g)
+    juntar("supervisor", tarefa.supervisor)
+
     empresa = tarefa.empresa
     if empresa:
-        if empresa.telefone:
+        tel = normalizar_telefone(empresa.telefone)
+        if tel and tel not in vistos:
+            vistos.add(tel)
             dest.append({"papel": "cliente", "nome": empresa.razao_social,
-                         "canal": "whatsapp", "endereco": empresa.telefone})
-        if empresa.email:
+                         "canal": "whatsapp", "endereco": tel})
+        if empresa.email and empresa.email not in vistos:
+            vistos.add(empresa.email)
             dest.append({"papel": "cliente", "nome": empresa.razao_social,
                          "canal": "email", "endereco": empresa.email})
     return dest
