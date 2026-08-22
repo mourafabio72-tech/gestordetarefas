@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { publicoAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { Upload, CheckCircle2, FileCheck2, AlertTriangle } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 export default function EnviarComprovante() {
   const { token } = useParams();
@@ -49,7 +50,7 @@ export default function EnviarComprovante() {
         {ctx && (
           <>
             <div className="text-sm text-gray-600 mb-4 space-y-0.5">
-              <p><span className="text-gray-400">Empresa:</span> <strong>{ctx.empresa || '-'}</strong></p>
+              <p><span className="text-gray-400">Empresa:</span> <strong>{formatarRazaoSocial(ctx.empresa) || '-'}</strong></p>
               <p><span className="text-gray-400">Obrigação:</span> {ctx.obrigacao || ctx.titulo}</p>
               {ctx.competencia && <p><span className="text-gray-400">Competência:</span> {ctx.competencia}</p>}
             </div>

@@ -3,6 +3,7 @@ import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services
 import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -228,7 +229,7 @@ export default function Obrigacoes() {
   const desvincularEmpresa = async () => {
     if (!desvincEmpresa) return;
     const eid = parseInt(desvincEmpresa);
-    const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
+    const nome = formatarRazaoSocial(empresas.find((e) => e.id === eid)?.razao_social) || `#${eid}`;
     const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
     if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
     if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo: não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
@@ -242,7 +243,7 @@ export default function Obrigacoes() {
     } finally { setDesvinculando(false); }
   };
 
-  const nomeEmpresa = (id) => empresas.find((e) => e.id === id)?.razao_social || `#${id}`;
+  const nomeEmpresa = (id) => formatarRazaoSocial(empresas.find((e) => e.id === id)?.razao_social) || `#${id}`;
 
   if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
 
@@ -282,7 +283,7 @@ export default function Obrigacoes() {
             value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
           <select className="input-field py-1.5 text-sm" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
             <option value="">Todas as empresas</option>
-            {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+            {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
           </select>
           <select className="input-field py-1.5 text-sm" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
             <option value="">Todos os setores</option>
@@ -374,7 +375,7 @@ export default function Obrigacoes() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
                 <select value={desvincEmpresa} onChange={(e) => setDesvincEmpresa(e.target.value)} className="input-field">
                   <option value="">Selecione</option>
-                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
                 </select>
                 {eid > 0 && (
                   <p className="text-xs text-gray-500 mt-1">Vinculada a <strong>{qtd}</strong> obrigação(ões).</p>
@@ -406,7 +407,7 @@ export default function Obrigacoes() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Empresa de origem *</label>
                 <select value={copyOrigem} onChange={(e) => setCopyOrigem(e.target.value)} className="input-field">
                   <option value="">Selecione</option>
-                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
                 </select>
               </div>
               <div>
@@ -414,7 +415,7 @@ export default function Obrigacoes() {
                 <select value={copyDestino} onChange={(e) => setCopyDestino(e.target.value)} className="input-field">
                   <option value="">Selecione</option>
                   {empresas.filter((e) => String(e.id) !== copyOrigem).map((e) => (
-                    <option key={e.id} value={e.id}>{e.razao_social}</option>
+                    <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>
                   ))}
                 </select>
               </div>
@@ -734,7 +735,7 @@ export default function Obrigacoes() {
                   <div className="space-y-2">
                     {detalhes.map((d, i) => (
                       <div key={i} className="flex items-start gap-2">
-                        <span className="text-sm text-gray-600 w-40 shrink-0 pt-1 truncate" title={d.empresa_nome}>{d.empresa_nome}</span>
+                        <span className="text-sm text-gray-600 w-40 shrink-0 pt-1 truncate" title={d.empresa_nome}>{formatarRazaoSocial(d.empresa_nome)}</span>
                         <input value={d.observacao}
                           onChange={(e) => setDetalhes((arr) => arr.map((x, j) => j === i ? { ...x, observacao: e.target.value } : x))}
                           className="input-field py-1 text-sm flex-1" placeholder="Ex.: Empréstimo do Banco Itaú, conta 123" />
@@ -753,7 +754,7 @@ export default function Obrigacoes() {
                       className="input-field py-1 text-sm">
                       <option value="">+ adicionar empresa…</option>
                       {empresas.filter((e) => !detalhes.some((d) => d.empresa_id === e.id))
-                        .map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                        .map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
                     </select>
                     <p className="text-xs text-gray-500">O texto entra na descrição de toda tarefa gerada dessa obrigação para a empresa.</p>
                   </div>
@@ -768,7 +769,7 @@ export default function Obrigacoes() {
                   const soVinc = form.alvo_modo === 'vinculadas';
                   const termo = buscaEmp.trim().toLowerCase();
                   const filtradas = termo
-                    ? empresas.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
+                    ? empresas.filter((e) => `${e.razao_social} ${formatarRazaoSocial(e.razao_social)} ${e.grupo || ''}`.toLowerCase().includes(termo))
                     : empresas;
                   const idsFiltrados = filtradas.map((e) => e.id);
                   const marcarTodas = () => set('empresa_ids', [...new Set([...form.empresa_ids, ...idsFiltrados])]);
@@ -820,7 +821,7 @@ export default function Obrigacoes() {
                                 ? form.empresa_ids.filter((x) => x !== e.id)
                                 : [...form.empresa_ids, e.id])}
                               className="h-4 w-4" />
-                            {e.razao_social}
+                            {formatarRazaoSocial(e.razao_social)}
                             {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
                           </label>
                         ))}

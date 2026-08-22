@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { empresasAPI, usuariosAPI, setoresAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const EMPRESA_VAZIA = {
   razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
@@ -327,8 +328,12 @@ export default function Empresas() {
                 {empresasFiltradas.map((empresa) => (
                   <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="text-gray-500 font-mono">#{empresa.id}</td>
-                    <td>
-                      {empresa.razao_social}
+                    {/* Esta é a tela onde a razão social é editada, e o
+                        formulário abre com o valor cru. O title revela como
+                        está no cadastro, para ninguém achar que a lista mostra
+                        uma coisa e o campo, outra. */}
+                    <td title={`Cadastrado como: ${empresa.razao_social}`}>
+                      {formatarRazaoSocial(empresa.razao_social)}
                       {empresa.bloqueado && (
                         <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">Bloqueada</span>
                       )}

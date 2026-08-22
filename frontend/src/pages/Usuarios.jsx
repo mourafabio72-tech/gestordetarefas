@@ -4,6 +4,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, Users as UsersIcon, Lock, Unlock, Upload, Download, Send } from 'lucide-react';
 import { CARGOS } from '../permissoes';
 import { useAuth } from '../contexts/AuthContext';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const FORM_VAZIO = {
   nome: '', email: '', senha: '', cargo: '', grupo: 'analista', telefone: '',
@@ -439,7 +440,7 @@ export default function Usuarios() {
                   >
                     <option value="">Selecione</option>
                     {empresas.map((e) => (
-                      <option key={e.id} value={e.id}>{e.razao_social}</option>
+                      <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">Os alertas usam o WhatsApp e o e-mail cadastrados nesta empresa.</p>

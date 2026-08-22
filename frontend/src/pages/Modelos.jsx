@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const TIPOS = {
   recibo_entrega: 'Recibo de entrega',
@@ -140,7 +141,7 @@ export default function Modelos() {
               {resumo.salvos.map((s) => (
                 <li key={s.id} className="flex items-center gap-1">
                   <CheckCircle2 size={12} className="text-green-600" />
-                  <span className="truncate">{s.nome_arquivo} → {s.empresa_nome} · {s.obrigacao_nome}</span>
+                  <span className="truncate">{s.nome_arquivo} → {formatarRazaoSocial(s.empresa_nome)} · {s.obrigacao_nome}</span>
                 </li>
               ))}
             </ul>
@@ -176,7 +177,7 @@ export default function Modelos() {
               <select className="input-field" value={form.empresa_id}
                 onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}>
                 <option value="">(não vinculada)</option>
-                {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
               </select>
               <p className="text-xs text-gray-400 mt-1">
                 {atual.cnpj
@@ -270,7 +271,7 @@ export default function Modelos() {
                     <td className="pr-4 text-gray-700 max-w-[16rem] truncate" title={m.nome_arquivo}>{m.nome_arquivo}</td>
                     <td className="pr-4">
                       {m.empresa_nome
-                        ? <span className="flex items-center gap-1 text-gray-700"><Building2 size={13} className="text-gray-400" />{m.empresa_nome}</span>
+                        ? <span className="flex items-center gap-1 text-gray-700"><Building2 size={13} className="text-gray-400" />{formatarRazaoSocial(m.empresa_nome)}</span>
                         : <span className="text-amber-600 text-xs">{m.razao_social_extraida || m.cnpj || '-'}</span>}
                     </td>
                     <td className="pr-4">

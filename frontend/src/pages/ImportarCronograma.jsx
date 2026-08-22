@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { cronogramaAPI, empresasAPI, setoresAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { CalendarClock, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const SETORES_PADRAO = ['Contabilidade', 'Fiscal', 'DP', 'Financeiro'];
 const primeiroToken = (s) => ((s || '').toUpperCase().match(/[A-Z0-9]+/) || [''])[0];
@@ -212,7 +213,7 @@ export default function ImportarCronograma() {
                     <td className="pr-3">
                       <div className="flex flex-wrap gap-1 items-center">
                         {(it.empresa_ids || []).map((id) => (
-                          <span key={id} title={empresaById[id]?.razao_social}
+                          <span key={id} title={formatarRazaoSocial(empresaById[id]?.razao_social)}
                             className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5">
                             {rotuloEmpresa(empresaById[id])}
                             <button type="button" onClick={() => remEmp(idx, id)} className="text-primary-400 hover:text-red-600">×</button>

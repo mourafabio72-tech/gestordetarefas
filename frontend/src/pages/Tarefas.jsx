@@ -780,7 +780,7 @@ export default function Tarefas() {
                   const termo = copyBusca.trim().toLowerCase();
                   const destinos = empresas.filter((e) => String(e.id) !== copyOrigem);
                   const filtradas = termo
-                    ? destinos.filter((e) => `${e.razao_social} ${e.grupo || ''}`.toLowerCase().includes(termo))
+                    ? destinos.filter((e) => `${e.razao_social} ${formatarRazaoSocial(e.razao_social)} ${e.grupo || ''}`.toLowerCase().includes(termo))
                     : destinos;
                   const idsFiltrados = filtradas.map((e) => e.id);
                   return (

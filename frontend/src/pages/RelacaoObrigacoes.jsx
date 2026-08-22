@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { FileStack, Download, Unlink } from 'lucide-react';
+import { formatarRazaoSocial } from './razaoSocial';
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 // Rótulo da competência de referência. O campo aceita apelido (o formato
@@ -52,7 +53,7 @@ export default function RelacaoObrigacoes() {
   const desvincularEmpresa = async () => {
     if (!desvincEmpresa) return;
     const eid = parseInt(desvincEmpresa);
-    const nome = empresas.find((e) => e.id === eid)?.razao_social || `#${eid}`;
+    const nome = formatarRazaoSocial(empresas.find((e) => e.id === eid)?.razao_social) || `#${eid}`;
     const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
     if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
     if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo: não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
@@ -79,7 +80,7 @@ export default function RelacaoObrigacoes() {
     return true;
   });
 
-  const nomesEmpresas = (o) => (o.empresa_ids || []).map((id) => empresaById[id]?.razao_social).filter(Boolean);
+  const nomesEmpresas = (o) => (o.empresa_ids || []).map((id) => formatarRazaoSocial(empresaById[id]?.razao_social)).filter(Boolean);
 
   if (loading) return <div className="flex items-center justify-center h-64">Carregando...</div>;
 
@@ -119,7 +120,7 @@ export default function RelacaoObrigacoes() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
                 <select value={desvincEmpresa} onChange={(e) => setDesvincEmpresa(e.target.value)} className="input-field">
                   <option value="">Selecione</option>
-                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
                 </select>
                 {eid > 0 && (
                   <p className="text-xs text-gray-500 mt-1">Vinculada a <strong>{qtd}</strong> obrigação(ões).</p>
@@ -143,7 +144,7 @@ export default function RelacaoObrigacoes() {
             value={filtros.obrigacao} onChange={(e) => setFiltros({ ...filtros, obrigacao: e.target.value })} />
           <select className="input-field" value={filtros.empresa} onChange={(e) => setFiltros({ ...filtros, empresa: e.target.value })}>
             <option value="">Todas as empresas</option>
-            {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+            {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
           </select>
           <select className="input-field" value={filtros.setor} onChange={(e) => setFiltros({ ...filtros, setor: e.target.value })}>
             <option value="">Todos os setores</option>
