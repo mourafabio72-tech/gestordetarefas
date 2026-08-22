@@ -519,6 +519,7 @@ export default function Tarefas() {
     const setorNome = setorAchado && setorAchado !== '-' ? setorAchado : null;
     const corSet = corDoSetor(setorNome);
     const empresaNome = getEmpresaNome(tarefa.empresa_id);
+    const entregaCliente = tarefa.sentido === 'entregar';
     return (
       <div key={tarefa.id} className="rounded-lg border p-2 flex flex-col transition-shadow hover:shadow-sm"
         style={{ background: fundoDoAlerta(alerta), borderColor: SAGE.border,
@@ -578,6 +579,18 @@ export default function Tarefas() {
               </button>
             )}
           </p>
+          {/* Tarefa de ENTREGA: o que importa é se a guia já saiu e se o
+              cliente pegou. "Enviado mas não baixado" é a linha que vira
+              cobrança no fim do mês. */}
+          {entregaCliente && (
+            <p className="flex items-center gap-1 font-medium"
+               style={{ color: tarefa.saida_downloads ? '#4d8a3f' : (tarefa.saida_nome ? '#8a6a2e' : '#808a74') }}>
+              <Send size={10} />
+              {tarefa.saida_downloads
+                ? `cliente baixou${tarefa.saida_baixada_em ? ' ' + tarefa.saida_baixada_em.slice(8, 10) + '/' + tarefa.saida_baixada_em.slice(5, 7) : ''}`
+                : tarefa.saida_nome ? 'guia anexada, não enviada' : 'guia a anexar'}
+            </p>
+          )}
           {fechBr && (
             encerra ? (
               <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
@@ -597,7 +610,16 @@ export default function Tarefas() {
             lado no card estreito; viraram um menu, e o select coube num tamanho
             que não disputa mais espaço com eles. */}
         <div className="mt-auto flex items-center gap-1">
-          {ativa && (
+          {ativa && entregaCliente ? (
+            // Na tarefa de entrega, enviar É a ação principal — deixá-la no
+            // menu de três pontos esconderia justamente o que se faz ali.
+            <button type="button" onClick={() => abrirEntrega(tarefa)}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1 text-[10px] font-medium
+                         border rounded px-1 py-0.5 transition-colors"
+              style={{ borderColor: '#5f7057', color: '#3f4a3c', background: '#e6eee1' }}>
+              <Send size={11} /> Enviar ao cliente
+            </button>
+          ) : ativa && (
             <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
               className="w-[6.6rem] text-[10px] border rounded px-1 py-0.5 bg-white"
               style={{ borderColor: SAGE.border, color: '#55614e' }}>

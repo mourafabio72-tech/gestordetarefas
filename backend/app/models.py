@@ -122,6 +122,22 @@ class EmpresaObrigacaoDetalhe(Base):
     observacao = Column(Text)
 
 
+class SaidaAcesso(Base):
+    """Cada abertura do link do documento pelo cliente.
+
+    O contador e a data ficam na tarefa para a tela mostrar sem consultar isto;
+    aqui fica o detalhe de auditoria, que é o que responde "quem baixou e
+    quando" quando o cliente diz que nunca recebeu.
+    """
+    __tablename__ = "saida_acessos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tarefa_id = Column(Integer, ForeignKey("tarefas.id"), nullable=False, index=True)
+    ip = Column(String(60))
+    user_agent = Column(String(300))
+    quando = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class TarefaEnvio(Base):
     """Cada vez que um documento saiu do escritório para o cliente.
 
@@ -210,6 +226,13 @@ class Tarefa(Base):
     # que sai, e misturar os dois faria a tela mostrar comprovante de pagamento
     # onde deveria mostrar a guia a pagar.
     saida_nome = Column(String(200))
+    # Link público do documento de saída. Existe para o WhatsApp levar um
+    # endereço em vez do arquivo -- e, de quebra, é o que torna o download
+    # rastreável: anexo sai do nosso alcance no instante do envio, link é uma
+    # requisição ao nosso servidor.
+    saida_token = Column(String(64), unique=True, index=True)
+    saida_baixada_em = Column(DateTime(timezone=True))   # último acesso
+    saida_downloads = Column(Integer, default=0)
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE, index=True)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
@@ -223,6 +246,17 @@ class Tarefa(Base):
 
     empresa = relationship("Empresa", back_populates="tarefas")
     setor = relationship("Setor", back_populates="tarefas")
+
+    @property
+    def sentido(self) -> str:
+        """"receber" (comprovante do cliente) ou "entregar" (guia ao cliente).
+
+        Sai da obrigação. Tarefa avulsa, sem obrigação, é "receber": é o
+        comportamento que o sistema sempre teve, e mudar o padrão faria toda
+        tarefa solta pedir um documento para enviar.
+        """
+        o = self.obrigacao
+        return (o.sentido or "receber") if o else "receber"
 
     @property
     def setor_nome(self):

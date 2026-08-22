@@ -413,9 +413,20 @@ async def anexar_saida(
 
     # Trocar o documento apaga o anterior: guia retificada substitui a errada, e
     # deixar as duas no volume só cria dúvida sobre qual é a boa.
-    if tarefa.saida_nome and tarefa.saida_nome != nome:
+    trocou = bool(tarefa.saida_nome)
+    if tarefa.saida_nome:
         up.remover_arquivo(tarefa.saida_nome)
     tarefa.saida_nome = up.salvar_saida(tarefa.id, nome, conteudo)
+    if trocou:
+        # Token novo REVOGA o link já enviado. Sem isso, a guia retificada
+        # entraria no lugar da errada e o link antigo passaria a servir o
+        # arquivo novo sem ninguém saber que mudou -- ou pior, se o nome fosse
+        # outro, continuaria apontando para o que foi apagado.
+        # O contador zera junto: baixaram o documento ANTERIOR, e somar os dois
+        # faria a tela dizer que o cliente já pegou a guia certa.
+        tarefa.saida_token = None
+        tarefa.saida_downloads = 0
+        tarefa.saida_baixada_em = None
     db.commit()
     return {"arquivo": up.nome_de_exibicao(tarefa.saida_nome), "bytes": len(conteudo)}
 
@@ -508,8 +519,13 @@ async def enviar_ao_cliente(
     empresa = tarefa.empresa.razao_social if tarefa.empresa else ""
     comp = f" — {tarefa.competencia}" if tarefa.competencia else ""
     assunto = f"[BPS4] {tarefa.titulo}{comp}"
+    # O link é o que dá rastreio. Vai nos dois canais: no WhatsApp sozinho (nada
+    # de arquivo, some o limite de tamanho e a dependência do provedor aceitar),
+    # no e-mail junto do anexo, porque o cliente arquiva a guia na caixa dele e
+    # tirar isso pioraria a vida dele.
+    link = up.link_saida(cfg, tarefa, db)
     texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
-             f"Arquivo: {nome_arquivo}\n\nQualquer dúvida, estamos à disposição.")
+             f"📎 {nome_arquivo}\n{link}\n\nQualquer dúvida, estamos à disposição.")
     # O documento do cliente não vai para atendente do escritório: quem recebe é
     # o cliente, e o atendimento nasce na fila padrão da conexão.
     zap = await carregar_zap(cfg)
@@ -517,8 +533,10 @@ async def enviar_ao_cliente(
     resultados = []
     for d in destinos:
         if d["canal"] == "whatsapp":
-            r = await send_whatsapp_document(d["endereco"], nome_arquivo, conteudo,
-                                             texto, cfg)
+            # Link, não arquivo: é o que se pode rastrear, e ainda dispensa o
+            # provedor aceitar o anexo.
+            from ..services.whatsapp import send_whatsapp_message
+            r = await send_whatsapp_message(d["endereco"], texto, cfg)
         else:
             r = send_email(d["endereco"], assunto, texto, cfg,
                            anexos=[(nome_arquivo, conteudo)])

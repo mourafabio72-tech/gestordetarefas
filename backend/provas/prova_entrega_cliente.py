@@ -56,8 +56,8 @@ enviados = []
 FALHA_ZAP = {"ok": True}
 FALHA_MAIL = {"ok": True}
 
-async def zap_falso(phone, nome, conteudo, legenda, cfg, user_id=None):
-    enviados.append(("whatsapp", phone, nome, len(conteudo)))
+async def zap_falso(phone, mensagem, cfg, user_id=None):
+    enviados.append(("whatsapp", phone, mensagem, 0))
     return {"success": FALHA_ZAP["ok"], "error": None if FALHA_ZAP["ok"] else "zap fora do ar"}
 
 def mail_falso(to, subject, body, cfg, anexos=None):
@@ -65,7 +65,7 @@ def mail_falso(to, subject, body, cfg, anexos=None):
     return {"success": FALHA_MAIL["ok"], "error": None if FALHA_MAIL["ok"] else "smtp recusou"}
 
 import app.routes.tarefas as rota_tarefas                  # noqa: E402
-zap.send_whatsapp_document = zap_falso
+zap.send_whatsapp_message = zap_falso
 mail.send_email = mail_falso
 
 async def zap_vazio(cfg):
@@ -140,9 +140,13 @@ r = client.post(f"/api/tarefas/{id_ok}/enviar-cliente", headers=cabeca()).json()
 checa("quatro envios", r["enviados"] == 4, str(r))
 checa("sem falhas", r["falhas"] == 0)
 checa("a tarefa conclui", r["concluiu"] is True)
-checa("o WhatsApp levou o arquivo, não só o texto",
-      any(c == "whatsapp" and n == "DAS_07-2026.pdf" and t > 0 for c, _, n, t in enviados),
-      str(enviados))
+# O WhatsApp leva LINK, não arquivo: é o que dá rastreio e dispensa o provedor
+# aceitar o anexo. O e-mail leva os dois — o cliente arquiva a guia na caixa.
+zaps = [m for c, _, m, _t in enviados if c == "whatsapp"]
+checa("o WhatsApp levou o link do documento",
+      all("/api/publico/baixar/" in m for m in zaps), str(zaps)[:120])
+checa("e o nome do arquivo na mensagem",
+      all("DAS_07-2026.pdf" in m for m in zaps))
 checa("o e-mail foi com anexo",
       any(c == "email" and n == "DAS_07-2026.pdf" for c, _, n, _q in enviados))
 db = SessionLocal()
@@ -154,6 +158,35 @@ db.close()
 h = client.get(f"/api/tarefas/{id_ok}/envios", headers=cabeca()).json()
 checa("o histórico traz canal, endereço e quem recebeu",
       all(e["canal"] and e["endereco"] and e["destinatario"] for e in h))
+
+print("\n=== 3b. trocar o documento revoga o link e zera o rastro ===")
+db = SessionLocal()
+t_antes = db.query(Tarefa).get(id_ok)
+token_antigo = t_antes.saida_token
+t_antes.saida_downloads, t_antes.saida_baixada_em = 3, None
+db.commit(); db.close()
+checa("o envio gerou token", bool(token_antigo))
+r = client.get(f"/api/publico/baixar/{token_antigo}")
+checa("o link público serve o documento sem login", r.status_code == 200, f"({r.status_code})")
+db = SessionLocal()
+checa("e o acesso é contado", db.query(Tarefa).get(id_ok).saida_downloads == 4)
+checa("com data", db.query(Tarefa).get(id_ok).saida_baixada_em is not None)
+from app.models import SaidaAcesso                        # noqa: E402
+checa("e vira linha de auditoria",
+      db.query(SaidaAcesso).filter(SaidaAcesso.tarefa_id == id_ok).count() == 1)
+db.close()
+
+client.post(f"/api/tarefas/{id_ok}/saida", headers=cabeca(),
+            files={"arquivo": ("DAS retificada.pdf", b"%PDF nova", "application/pdf")})
+db = SessionLocal()
+t_dep = db.query(Tarefa).get(id_ok)
+checa("token novo depois da troca", t_dep.saida_token != token_antigo)
+checa("contador zerado — baixaram o documento ANTERIOR", t_dep.saida_downloads == 0)
+checa("e a data também", t_dep.saida_baixada_em is None)
+db.close()
+checa("o link antigo morre", client.get(f"/api/publico/baixar/{token_antigo}").status_code == 404)
+checa("link inventado não abre nada",
+      client.get("/api/publico/baixar/nao-existe-esse-token").status_code == 404)
 
 print("\n=== 4. nenhum envio funcionou: a tarefa NÃO pode concluir ===")
 db = SessionLocal()

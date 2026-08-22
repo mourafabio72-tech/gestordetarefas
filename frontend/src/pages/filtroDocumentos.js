@@ -16,8 +16,8 @@ export const EXTENSOES = [
 ];
 
 /** Estado inicial, e o que o "Limpar" devolve. */
-export function filtrosVazios() {
-  return { empresa_id: '', setor_id: '', obrigacao_id: '', competencia: '',
+export function filtrosVazios(tipo = 'recebidos') {
+  return { tipo, baixado: '', empresa_id: '', setor_id: '', obrigacao_id: '', competencia: '',
            entrega_de: '', entrega_ate: '', usuario_id: '', texto: '', extensao: '' };
 }
 
@@ -32,9 +32,16 @@ export function paraConsulta(filtros, limite) {
   return saida;
 }
 
-/** Algum filtro ativo? Comanda o botão de limpar e o aviso de resultado parcial. */
+/**
+ * Algum filtro ativo? Comanda o botão de limpar e o aviso de resultado parcial.
+ *
+ * `tipo` não conta: ele escolhe QUAL acervo se olha, não filtra dentro dele.
+ * Contá-lo faria o "Limpar" aparecer sempre, e limpar não deveria trocar de
+ * acervo debaixo de quem está olhando.
+ */
 export function temFiltroAtivo(filtros) {
-  return Object.keys(paraConsulta(filtros)).length > 0;
+  const { tipo, ...resto } = filtros || {};
+  return Object.keys(paraConsulta(resto)).length > 0;
 }
 
 /** Atalhos de período de ENTREGA — as três perguntas que se faz num acervo. */
@@ -65,13 +72,18 @@ export function dataBr(iso) {
  * Aspas duplicadas e campo entre aspas: razão social com vírgula é comum, e sem
  * isso a planilha abriria com as colunas trocadas de lugar.
  */
-export function paraCSV(documentos) {
-  const col = ['Empresa', 'Obrigação', 'Tarefa', 'Competência', 'Entrega',
-               'Protocolo', 'Responsáveis', 'Arquivo', 'No armazenamento'];
+export function paraCSV(documentos, tipo = 'recebidos') {
+  const entregues = tipo === 'entregues';
+  const col = ['Empresa', 'Obrigação', 'Tarefa', 'Competência',
+               entregues ? 'Baixado em' : 'Entrega',
+               ...(entregues ? ['Downloads'] : ['Protocolo']),
+               'Responsáveis', 'Arquivo', 'No armazenamento'];
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const linhas = (documentos || []).map((d) => [
-    d.empresa, d.obrigacao, d.titulo, d.competencia, dataBr(d.data_entrega),
-    d.protocolo, (d.responsaveis || []).join(' / '), d.arquivo,
+    d.empresa, d.obrigacao, d.titulo, d.competencia,
+    entregues ? (dataBr(d.baixado_em) || 'não baixou') : dataBr(d.data_entrega),
+    entregues ? (d.downloads ?? 0) : d.protocolo,
+    (d.responsaveis || []).join(' / '), d.arquivo,
     d.no_volume ? 'sim' : 'NÃO',
   ].map(esc).join(','));
   return [col.map(esc).join(','), ...linhas].join('\n');

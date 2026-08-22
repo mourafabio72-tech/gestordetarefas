@@ -12,11 +12,13 @@ const eq = (nome, obtido, esperado) => {
 };
 
 console.log('\n1) Campo vazio não vira parâmetro — é o que devolve 422');
-eq('nada preenchido, nada na consulta', paraConsulta(filtrosVazios()), {});
+// `tipo` sempre acompanha: é o acervo que se está olhando, não um filtro.
+eq('só o acervo, nada mais', paraConsulta(filtrosVazios()), { tipo: 'recebidos' });
 eq('só o que tem valor', paraConsulta({ ...filtrosVazios(), empresa_id: '7', texto: '' }),
-   { empresa_id: '7' });
-eq('espaço em branco não conta', paraConsulta({ ...filtrosVazios(), texto: '   ' }), {});
-eq('texto é aparado', paraConsulta({ ...filtrosVazios(), texto: '  darf ' }), { texto: 'darf' });
+   { tipo: 'recebidos', empresa_id: '7' });
+eq('espaço em branco não conta', paraConsulta({ ...filtrosVazios(), texto: '   ' }), { tipo: 'recebidos' });
+eq('texto é aparado', paraConsulta({ ...filtrosVazios(), texto: '  darf ' }),
+   { tipo: 'recebidos', texto: 'darf' });
 eq('zero é valor legítimo, não vazio', paraConsulta({ usuario_id: 0 }), { usuario_id: 0 });
 eq('limite entra quando pedido', paraConsulta({}, 500), { limite: 500 });
 eq('entrada nula não quebra', paraConsulta(null), {});
@@ -24,6 +26,12 @@ eq('entrada nula não quebra', paraConsulta(null), {});
 console.log('\n2) Saber se há filtro comanda o limpar e o aviso de corte');
 eq('vazio não tem filtro', temFiltroAtivo(filtrosVazios()), false);
 eq('um campo já conta', temFiltroAtivo({ ...filtrosVazios(), competencia: '07/2026' }), true);
+// `tipo` escolhe o acervo, não filtra dentro dele: contá-lo faria o "Limpar"
+// aparecer sempre, e limpar não pode trocar de acervo debaixo de quem olha.
+eq('trocar de acervo não conta como filtro', temFiltroAtivo(filtrosVazios('entregues')), false);
+eq('mas vai para a consulta', paraConsulta(filtrosVazios('entregues')), { tipo: 'entregues' });
+eq('só não baixados', paraConsulta({ ...filtrosVazios('entregues'), baixado: 'nao' }),
+   { tipo: 'entregues', baixado: 'nao' });
 
 console.log('\n3) Períodos de entrega');
 const p = periodos(new Date(2026, 8, 17));            // 17/09/2026
@@ -52,6 +60,10 @@ eq('aspas do protocolo são escapadas', linhas[1].includes('"ABC ""123"""'), tru
 eq('responsáveis juntos numa célula', linhas[1].includes('"Ana / Bia"'), true);
 eq('data em formato brasileiro', linhas[1].includes('"14/09/2026"'), true);
 eq('arquivo fora do volume é marcado', paraCSV([{ no_volume: false }]).includes('"NÃO"'), true);
+// No acervo de entregues as colunas mudam: o que interessa é se o cliente pegou.
+const csvE = paraCSV([{ empresa: 'X', downloads: 0, baixado_em: null, arquivo: 'g.pdf' }], 'entregues');
+eq('coluna de download no lugar do protocolo', csvE.split('\n')[0].includes('"Downloads"'), true);
+eq('quem não pegou aparece dito', csvE.split('\n')[1].includes('"não baixou"'), true);
 eq('lista vazia devolve só o cabeçalho', paraCSV([]).split('\n').length, 1);
 eq('nula não quebra', paraCSV(null).split('\n').length, 1);
 

@@ -2,10 +2,12 @@
 O token é único por tarefa e não expõe dados sensíveis além do necessário
 para o cliente entender o que enviar."""
 import os
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from datetime import datetime
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Tarefa, Empresa, Obrigacao, StatusTarefa
+from ..models import Tarefa, Empresa, Obrigacao, StatusTarefa, SaidaAcesso
 from ..services import upload as up
 
 router = APIRouter(prefix="/publico", tags=["publico"])
@@ -48,3 +50,50 @@ async def enviar(token: str, arquivo: UploadFile = File(...), db: Session = Depe
         raise HTTPException(status_code=413, detail="Arquivo grande demais (máx. 15 MB).")
     res = up.registrar_baixa(db, t, arquivo.filename, conteudo)
     return {"ok": True, **res}
+
+
+# Tipos que o navegador abre sem baixar. PDF é o caso de 90% das guias, e abrir
+# na hora é o que o cliente espera de um link no WhatsApp.
+_ABRE_NO_NAVEGADOR = {".pdf": "application/pdf", ".png": "image/png",
+                      ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+
+
+@router.get("/baixar/{token}")
+def baixar_documento(
+    token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Entrega ao CLIENTE o documento da tarefa, pelo link que ele recebeu.
+
+    Sem login: quem tem o link entra, como no envio de comprovante. O token é
+    de 24 bytes e vale por tarefa — e trocar o documento gera token novo, o que
+    invalida o link anterior. É assim que uma guia retificada tira a errada de
+    circulação em vez de deixar as duas valendo.
+
+    Cada acesso é registrado, e é isto que responde a pergunta do fim do mês:
+    quais clientes ainda não pegaram a guia. Um anexo de e-mail sai do nosso
+    alcance no instante do envio; um link é uma requisição aqui.
+    """
+    tarefa = db.query(Tarefa).filter(Tarefa.saida_token == token).first()
+    if not tarefa or not tarefa.saida_nome:
+        raise HTTPException(status_code=404, detail="Documento não encontrado ou link expirado.")
+    caminho = up.caminho_do_anexo(tarefa.saida_nome)
+    if not caminho:
+        raise HTTPException(status_code=410, detail="O arquivo não está mais disponível.")
+
+    # Registra ANTES de servir: se o download falhar no meio, o acesso
+    # aconteceu do mesmo jeito, e é o acesso que se quer saber.
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
+        or (request.client.host if request.client else "")
+    db.add(SaidaAcesso(tarefa_id=tarefa.id, ip=ip[:60],
+                       user_agent=(request.headers.get("user-agent") or "")[:300]))
+    tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
+    tarefa.saida_baixada_em = datetime.utcnow()
+    db.commit()
+
+    nome = up.nome_de_exibicao(tarefa.saida_nome)
+    ext = os.path.splitext(nome)[1].lower()
+    tipo = _ABRE_NO_NAVEGADOR.get(ext, "application/octet-stream")
+    return FileResponse(caminho, media_type=tipo, filename=nome,
+                        content_disposition_type="inline" if ext in _ABRE_NO_NAVEGADOR else "attachment")

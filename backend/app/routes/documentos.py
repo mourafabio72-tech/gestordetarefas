@@ -44,6 +44,8 @@ def listar_documentos(
     usuario_id: int = None,
     texto: str = None,
     extensao: str = None,
+    tipo: str = "recebidos",        # recebidos (do cliente) | entregues (ao cliente)
+    baixado: str = None,            # entregues: "sim" | "nao"
     limite: int = Query(LIMITE_PADRAO, ge=1, le=LIMITE_MAXIMO),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
@@ -54,8 +56,17 @@ def listar_documentos(
     encontra o documento dela aqui. Sem isso, esta rota seria uma porta lateral
     para o acervo inteiro.
     """
+    # Dois acervos, não um: o que o cliente MANDOU (comprovante) e o que o
+    # escritório ENTREGOU (guia). Misturar os dois numa lista só faria a coluna
+    # "arquivo" significar coisas diferentes em linhas vizinhas.
+    entregues = (tipo or "recebidos").lower() == "entregues"
+    campo_arquivo = Tarefa.saida_nome if entregues else Tarefa.anexo_nome
     q = _aplicar_escopo(db.query(Tarefa), db, current_user).filter(
-        Tarefa.anexo_nome.isnot(None), Tarefa.anexo_nome != "")
+        campo_arquivo.isnot(None), campo_arquivo != "")
+    if entregues and baixado in ("sim", "nao"):
+        # A pergunta do fim do mês: quem ainda não pegou a guia.
+        q = q.filter((Tarefa.saida_downloads > 0) if baixado == "sim"
+                     else ((Tarefa.saida_downloads == 0) | (Tarefa.saida_downloads.is_(None))))
 
     if empresa_id:
         q = q.filter(Tarefa.empresa_id == empresa_id)
@@ -80,21 +91,23 @@ def listar_documentos(
         alvo = f"%{texto.strip().lower()}%"
         q = q.filter(or_(func.lower(Tarefa.titulo).like(alvo),
                          func.lower(Tarefa.protocolo_entrega).like(alvo),
-                         func.lower(Tarefa.anexo_nome).like(alvo)))
+                         func.lower(campo_arquivo).like(alvo)))
     if extensao:
-        q = q.filter(func.lower(Tarefa.anexo_nome).like(f"%.{extensao.strip().lower()}"))
+        q = q.filter(func.lower(campo_arquivo).like(f"%.{extensao.strip().lower()}"))
 
     total = q.count()
     linhas = (q.options(joinedload(Tarefa.empresa), joinedload(Tarefa.setor),
                         joinedload(Tarefa.obrigacao), selectinload(Tarefa.responsaveis))
               # Entrega mais recente primeiro; quem não tem data de entrega
               # (comprovante de antes do campo) cai para o fim pelo id.
-              .order_by(Tarefa.data_entrega.desc().nullslast(), Tarefa.id.desc())
+              .order_by((Tarefa.saida_baixada_em if entregues else Tarefa.data_entrega)
+                        .desc().nullslast(), Tarefa.id.desc())
               .limit(limite).all())
 
     docs = []
     for t in linhas:
-        nome = up.nome_de_exibicao(t.anexo_nome)
+        bruto = t.saida_nome if entregues else t.anexo_nome
+        nome = up.nome_de_exibicao(bruto)
         docs.append({
             "tarefa_id": t.id,
             "arquivo": nome,
@@ -108,12 +121,16 @@ def listar_documentos(
             "data_entrega": t.data_entrega,
             "protocolo": t.protocolo_entrega,
             "responsaveis": [u.nome for u in t.responsaveis],
+            # Só faz sentido no acervo de entregues, e é o que responde
+            # "o cliente pegou?".
+            "downloads": (t.saida_downloads or 0) if entregues else None,
+            "baixado_em": t.saida_baixada_em if entregues else None,
             # A tela precisa saber se o arquivo AINDA está no volume: um acervo
             # que lista documento que não abre é pior do que não listar.
-            "no_volume": bool(up.caminho_do_anexo(t.anexo_nome)),
+            "no_volume": bool(up.caminho_do_anexo(bruto)),
         })
 
-    return {"total": total, "mostrando": len(docs),
+    return {"total": total, "mostrando": len(docs), "tipo": "entregues" if entregues else "recebidos",
             "cortou": total > len(docs), "limite": limite, "documentos": docs}
 
 
@@ -129,7 +146,7 @@ def competencias_com_documento(
     frente de 01/2026.
     """
     q = _aplicar_escopo(db.query(Tarefa.competencia).distinct(), db, current_user).filter(
-        Tarefa.anexo_nome.isnot(None), Tarefa.anexo_nome != "",
+        or_(Tarefa.anexo_nome.isnot(None), Tarefa.saida_nome.isnot(None)),
         Tarefa.competencia.isnot(None))
     comps = [c for (c,) in q.all() if c]
     return sorted(comps, key=lambda c: (c.split("/")[1] + c.split("/")[0]) if "/" in c else c,

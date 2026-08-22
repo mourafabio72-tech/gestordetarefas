@@ -88,10 +88,10 @@ export default function Documentos() {
   // O CSV é do que está NA TELA, não da consulta inteira: exportar o que a
   // pessoa não viu esconderia o corte de resultados dentro do arquivo.
   const exportar = () => {
-    const csv = '﻿' + paraCSV(dados?.documentos || []);   // BOM: Excel abre com acento certo
+    const csv = '\ufeff' + paraCSV(dados?.documentos || [], filtros.tipo);   // BOM: Excel abre com acento certo
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
-    a.href = url; a.download = 'documentos.csv'; a.click();
+    a.href = url; a.download = `documentos-${filtros.tipo}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 

@@ -38,6 +38,7 @@ const emptyForm = {
   lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
   sabado_util: false, competencia_ref: 'mes_anterior',
   ancora: '', ancora_dias_antes: 0, ancora_tipo_dias: 'uteis',
+  sentido: 'receber',
   exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
   comentario_padrao: '', alvo_modo: 'regra', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
 };
@@ -835,15 +836,48 @@ export default function Obrigacoes() {
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.passivel_multa} onChange={(e) => set('passivel_multa', e.target.checked)} className="h-4 w-4" /> Passível de multa
                 </label>
+                {/* Para que lado o documento anda. Antes do resto porque
+                    muda o significado dos campos abaixo: numa obrigação de
+                    entregar, "exige documento" e os identificadores do
+                    e-validador não têm o que fazer. */}
+                <div className="col-span-2 border border-gray-200 rounded-lg p-2.5 bg-[#faf7f0]">
+                  <p className="text-sm font-medium text-gray-700 mb-1.5">O documento vai para que lado?</p>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input type="radio" name="sentido" className="mt-0.5"
+                        checked={(form.sentido || 'receber') === 'receber'}
+                        onChange={() => set('sentido', 'receber')} />
+                      <span>
+                        <strong>Receber</strong> do cliente
+                        <span className="block text-xs text-gray-500">
+                          O cliente envia o comprovante e a tarefa baixa pelo e-validador.
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input type="radio" name="sentido" className="mt-0.5"
+                        checked={form.sentido === 'entregar'}
+                        onChange={() => set('sentido', 'entregar')} />
+                      <span>
+                        <strong>Entregar</strong> ao cliente
+                        <span className="block text-xs text-gray-500">
+                          Guia, boleto ou relatório. Anexar e enviar conclui a tarefa.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700"
-                  title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
-                  <input type="checkbox"
-                    checked={form.exige_documento ?? !!(form.identificadores || '').trim()}
-                    onChange={(e) => set('exige_documento', e.target.checked)} className="h-4 w-4" /> Exige documento (baixa só pelo e-validador)
-                </label>
+                {form.sentido !== 'entregar' && (
+                  <label className="flex items-center gap-2 text-sm text-gray-700"
+                    title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
+                    <input type="checkbox"
+                      checked={form.exige_documento ?? !!(form.identificadores || '').trim()}
+                      onChange={(e) => set('exige_documento', e.target.checked)} className="h-4 w-4" /> Exige documento (baixa só pelo e-validador)
+                  </label>
+                )}
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.alerta_guia_nao_lida} onChange={(e) => set('alerta_guia_nao_lida', e.target.checked)} className="h-4 w-4" /> Alerta guia não-lida
                 </label>

@@ -94,6 +94,19 @@ def salvar_arquivo(token: str, filename: str, conteudo: bytes) -> str:
     return nome
 
 
+def token_saida(db, tarefa) -> str:
+    """Token do link público do documento de saída, criando se não houver."""
+    if not tarefa.saida_token:
+        tarefa.saida_token = secrets.token_urlsafe(24)
+        db.commit()
+    return tarefa.saida_token
+
+
+def link_saida(cfg: dict, tarefa, db) -> str:
+    base = (cfg.get("public_url") or "").rstrip("/")
+    return f"{base}/api/publico/baixar/{token_saida(db, tarefa)}"
+
+
 def salvar_saida(tarefa_id: int, filename: str, conteudo: bytes) -> str:
     """Guarda o documento que o escritório vai ENTREGAR ao cliente.
 

@@ -204,6 +204,11 @@ class TarefaResponse(BaseModel):
     protocolo_entrega: Optional[str] = None
     data_entrega: Optional[datetime] = None
     anexo_nome: Optional[str] = None
+    # Documento que o escritório ENTREGA ao cliente, e o rastro do link dele.
+    saida_nome: Optional[str] = None
+    saida_downloads: Optional[int] = 0          # quantas vezes o cliente abriu o link
+    saida_baixada_em: Optional[datetime] = None
+    sentido: Optional[str] = "receber"          # vem da obrigação: receber | entregar
     exige_documento: bool = False   # baixa só pelo e-validador (deriva da obrigação)
     created_at: datetime
 
