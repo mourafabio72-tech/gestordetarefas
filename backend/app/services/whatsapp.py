@@ -142,8 +142,16 @@ async def _enviar(canal: str, endereco: str, assunto: str, mensagem: str, cfg: d
     return {"success": False, "error": f"canal desconhecido: {canal}"}
 
 
-async def check_and_send_alerts(db: Session, slot: str = "principal") -> list:
-    """Varre tarefas em aberto (excluindo bloqueadas) e dispara alertas por canal."""
+async def check_and_send_alerts(db: Session, slot: str = "principal", ensaio: bool = False) -> list:
+    """Varre tarefas em aberto (excluindo bloqueadas) e dispara alertas por canal.
+
+    Com `ensaio=True` percorre exatamente a mesma lógica -- as mesmas tarefas, a
+    mesma régua de proximidade, os mesmos destinatários, a mesma mensagem -- mas
+    NÃO envia nada. Existe porque o alerta de verdade sai para o WhatsApp e o
+    e-mail do CLIENTE: sem o ensaio, conferir a régua em produção significaria
+    disparar mensagem para cliente real. O ensaio devolve também o texto montado,
+    para revisar a mensagem antes de ela sair.
+    """
     from .substituicao import mapa_substitutos
     cfg = cfgmod.carregar(db)
     try:
@@ -189,16 +197,24 @@ async def check_and_send_alerts(db: Session, slot: str = "principal") -> list:
 
         despachos = []
         for d in destinatarios_alerta(tarefa, subs_map, niveis):
+            if ensaio:
+                despachos.append({**d, "enviado": False, "skipped": False, "ensaio": True})
+                continue
             r = await _enviar(d["canal"], d["endereco"], assunto, message, cfg)
             despachos.append({**d, "enviado": r.get("success", False),
                               "skipped": r.get("skipped", False), "detalhe": r})
 
-        alerts_sent.append({
+        item = {
             "tarefa_id": tarefa.id,
             "tarefa_titulo": tarefa.titulo,
+            "empresa": tarefa.empresa.razao_social if tarefa.empresa else None,
             "responsavel": responsavel.nome if responsavel else None,
             "dias_restantes": days_remaining,
             "despachos": despachos,
-        })
+        }
+        if ensaio:
+            item["assunto"] = assunto
+            item["mensagem"] = message
+        alerts_sent.append(item)
 
     return alerts_sent

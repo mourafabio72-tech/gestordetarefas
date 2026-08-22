@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Usuario
-from ..auth import get_current_user
+from ..auth import get_current_user, require_admin
 from ..services.whatsapp import check_and_send_alerts
 
 router = APIRouter(prefix="/alertas", tags=["alertas"])
@@ -10,13 +10,28 @@ router = APIRouter(prefix="/alertas", tags=["alertas"])
 
 @router.post("/verificar")
 async def verificar_tarefas(
+    slot: str = "principal",
+    ensaio: bool = True,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(require_admin),
 ):
-    whatsapp_alerts = await check_and_send_alerts(db)
+    """Roda a verificação de alertas fora do horário agendado.
+
+    `ensaio=true` é o padrão de propósito: o alerta de verdade sai para o
+    WhatsApp e o e-mail do CLIENTE, e uma chamada acidental nesta rota mandaria
+    mensagem para cliente real. Para disparar mesmo, é preciso pedir
+    explicitamente `ensaio=false`.
+    """
+    alertas = await check_and_send_alerts(db, slot=slot, ensaio=ensaio)
+    destinatarios = sum(len(a["despachos"]) for a in alertas)
+    verbo = "receberiam" if ensaio else "receberam"
     return {
-        "message": f"WhatsApp: {len(whatsapp_alerts)} alertas enviados",
-        "whatsapp": whatsapp_alerts
+        "ensaio": ensaio,
+        "slot": slot,
+        "tarefas": len(alertas),
+        "destinatarios": destinatarios,
+        "message": f"{len(alertas)} tarefa(s), {destinatarios} destinatário(s) {verbo} alerta.",
+        "alertas": alertas,
     }
 
 

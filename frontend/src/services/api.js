@@ -225,7 +225,10 @@ export const gruposAPI = {
 };
 
 export const alertasAPI = {
-  verificar: () => api.post('/alertas/verificar'),
+  // Sem `ensaio: false` explícito o backend só simula — o alerta de verdade sai
+  // para o WhatsApp e o e-mail do cliente, e essa chamada não pode disparar sem
+  // querer.
+  verificar: (params = { ensaio: true }) => api.post('/alertas/verificar', null, { params }),
   enviar: (usuarioId) => api.post(`/alertas/enviar/${usuarioId}`),
 };
 

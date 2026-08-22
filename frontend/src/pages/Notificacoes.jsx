@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { configuracaoAPI } from '../services/api';
+import { configuracaoAPI, alertasAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { Bell, Mail, MessageCircle, Clock, Save, Send, Sparkles } from 'lucide-react';
+import { Bell, Mail, MessageCircle, Clock, Save, Send, Sparkles, PlayCircle } from 'lucide-react';
 
 export default function Notificacoes() {
   const [cfg, setCfg] = useState(null);
@@ -9,6 +9,10 @@ export default function Notificacoes() {
   const [saving, setSaving] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [msg, setMsg] = useState(null);
+  const [slotEnsaio, setSlotEnsaio] = useState('principal');
+  const [ensaio, setEnsaio] = useState(null);
+  const [ensaiando, setEnsaiando] = useState(false);
+  const [msgAberta, setMsgAberta] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -23,6 +27,17 @@ export default function Notificacoes() {
 
   const set = (k, v) => setCfg((c) => ({ ...c, [k]: v }));
   const bool = (v) => String(v) === '1' || v === true;
+
+  // Ensaio: roda a verificação de agora e mostra o que sairia, sem enviar.
+  const rodarEnsaio = async () => {
+    setEnsaiando(true); setMsg(null); setMsgAberta(null);
+    try {
+      const { data } = await alertasAPI.verificar({ slot: slotEnsaio, ensaio: true });
+      setEnsaio(data);
+    } catch (e) {
+      setMsg({ ok: false, txt: mensagemDeErro(e, 'Erro ao rodar o ensaio') });
+    } finally { setEnsaiando(false); }
+  };
 
   const salvar = async () => {
     setSaving(true); setMsg(null);
@@ -230,6 +245,79 @@ export default function Notificacoes() {
             </button>
             <span className="text-xs text-gray-400">Salva a chave e faz um ping na OpenAI (sem precisar de documento).</span>
           </div>
+        </div>
+
+        {/* Ensaio. Existe porque o alerta de verdade sai para o WhatsApp e o
+            e-mail do CLIENTE: conferir a régua em produção, sem isto, seria
+            mandar mensagem para cliente real. Roda a mesma lógica do horário
+            agendado e mostra o que sairia. */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <PlayCircle size={18} className="text-primary-700" />
+            <h2 className="text-xl font-semibold">Ensaio do alerta</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Roda agora a mesma verificação do horário agendado e mostra quem receberia o quê —
+            <strong> sem enviar nada</strong>. É assim que se confere a régua sem disparar mensagem para cliente real.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <select value={slotEnsaio} onChange={(e) => setSlotEnsaio(e.target.value)}
+              className="input-field w-auto">
+              <option value="principal">Horário principal</option>
+              <option value="extra">Horário extra</option>
+            </select>
+            <button onClick={rodarEnsaio} disabled={ensaiando} className="btn-secondary flex items-center gap-2">
+              <PlayCircle size={16} /> {ensaiando ? 'Rodando…' : 'Ver o que sairia agora'}
+            </button>
+          </div>
+
+          {ensaio && (
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              <p className="text-sm mb-2">
+                <strong>{ensaio.tarefas}</strong> tarefa(s) na régua,{' '}
+                <strong>{ensaio.destinatarios}</strong> destinatário(s).
+              </p>
+              {ensaio.tarefas === 0 && (
+                <p className="text-xs text-gray-500">
+                  Nenhuma tarefa se encaixa neste horário. A régua avisa com a antecedência configurada acima,
+                  no dia anterior, no dia do prazo e enquanto estiver atrasada — o horário extra só pega
+                  o que vence hoje ou já venceu.
+                </p>
+              )}
+              {ensaio.alertas.map((a) => (
+                <div key={a.tarefa_id} className="border-t border-gray-100 py-2 first:border-t-0">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <strong className="text-[13px] text-gray-800">{a.tarefa_titulo}</strong>
+                    <span className="text-xs text-gray-500">{a.empresa}</span>
+                    <span className="ml-auto text-xs text-gray-600 tabular-nums">
+                      {a.dias_restantes < 0 ? `atrasada há ${-a.dias_restantes} dia(s)`
+                        : a.dias_restantes === 0 ? 'vence hoje'
+                        : `faltam ${a.dias_restantes} dia(s)`}
+                    </span>
+                  </div>
+                  <ul className="mt-1 space-y-0.5">
+                    {a.despachos.map((d, i) => (
+                      <li key={i} className="text-xs text-gray-600 flex items-center gap-1.5">
+                        {d.canal === 'whatsapp'
+                          ? <MessageCircle size={12} className="shrink-0 text-green-600" />
+                          : <Mail size={12} className="shrink-0 text-blue-600" />}
+                        <span className="font-medium">{d.papel}</span>
+                        <span className="truncate">{d.nome}</span>
+                        <span className="text-gray-400 truncate">{d.endereco}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" onClick={() => setMsgAberta(msgAberta === a.tarefa_id ? null : a.tarefa_id)}
+                    className="text-xs text-primary-700 underline mt-1">
+                    {msgAberta === a.tarefa_id ? 'esconder a mensagem' : 'ver a mensagem que sairia'}
+                  </button>
+                  {msgAberta === a.tarefa_id && (
+                    <pre className="mt-1 p-2 rounded-lg bg-gray-50 text-[11px] whitespace-pre-wrap font-sans text-gray-700">{a.mensagem}</pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end">
