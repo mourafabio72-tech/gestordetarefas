@@ -5,7 +5,7 @@ import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from 
 import { mensagemDeErro } from '../services/erroApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento,
          filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
@@ -96,6 +96,18 @@ const ctrl = (ativo) =>
   `w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none transition-colors
    focus:ring-2 focus:ring-primary-400 focus:border-transparent ${
      ativo ? 'border-primary-400 text-primary-800 font-medium' : 'border-gray-300 text-gray-800'}`;
+
+// Uma linha do menu de ações do card.
+function ItemMenu({ icone: Icone, children, onClick, perigo }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-left whitespace-nowrap
+        ${perigo ? 'text-[#a24a3a] hover:bg-[#f7e7e3]' : 'text-[#55614e] hover:bg-[#e2ebde]'}`}>
+      <Icone size={13} className="shrink-0" />
+      {children}
+    </button>
+  );
+}
 
 // Campo com rótulo fixo por cima. O desenho anterior usava a opção vazia do
 // próprio select como nome ("Todas as empresas"), e o nome sumia no instante em
@@ -196,6 +208,18 @@ export default function Tarefas() {
     try { localStorage.setItem('tarefas.agrupar', agrupar); } catch { /* modo anônimo */ }
   }, [agrupar]);
   const [recolhidos, setRecolhidos] = useState([]);
+  // Qual card está com o menu de ações aberto (um por vez).
+  const [menuAberto, setMenuAberto] = useState(null);
+  useEffect(() => {
+    if (menuAberto === null) return;
+    const fechar = () => setMenuAberto(null);
+    // Clique em qualquer lugar fecha; o próprio menu para a propagação. Também
+    // fecha no Esc, que é o reflexo de quem abriu sem querer.
+    const tecla = (e) => { if (e.key === 'Escape') setMenuAberto(null); };
+    document.addEventListener('click', fechar);
+    document.addEventListener('keydown', tecla);
+    return () => { document.removeEventListener('click', fechar); document.removeEventListener('keydown', tecla); };
+  }, [menuAberto]);
   const alternarGrupo = (chave) =>
     setRecolhidos((r) => (r.includes(chave) ? r.filter((c) => c !== chave) : [...r, chave]));
 
@@ -409,19 +433,19 @@ export default function Tarefas() {
     const corSet = corDoSetor(setorNome);
     const empresaNome = getEmpresaNome(tarefa.empresa_id);
     return (
-      <div key={tarefa.id} className="rounded-lg border p-3 flex flex-col transition-shadow hover:shadow-sm"
+      <div key={tarefa.id} className="rounded-lg border p-2 flex flex-col transition-shadow hover:shadow-sm"
         style={{ background: fundoDoAlerta(alerta), borderColor: SAGE.border,
                  borderLeft: `4px solid ${alerta.forte}` }}>
-        <div className="flex items-start gap-1 mb-1.5">
-          {atrasada && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
-          <h3 className="text-sm font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
+        <div className="flex items-start gap-1 mb-1">
+          {atrasada && <AlertTriangle size={12} className="mt-0.5 shrink-0" style={{ color: '#a24a3a' }} />}
+          <h3 className="text-[13px] font-medium leading-tight line-clamp-2" style={{ color: SAGE.txt }} title={tarefa.titulo}>
             {tarefa.titulo}
           </h3>
         </div>
         {/* Setor à esquerda, situação e prioridade à direita, na mesma linha.
             Eram três linhas empilhadas -- setor em cima, os dois selos lá
             embaixo -- e o card ficava alto sem precisar. */}
-        <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center justify-between gap-1.5 mb-1">
           {setorNome && agrupar !== 'setor' ? (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-medium truncate"
               style={{ background: corSet + '22', color: corSet }} title={setorNome}>{setorNome}</span>
@@ -431,7 +455,7 @@ export default function Tarefas() {
             <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
           </div>
         </div>
-        <div className="text-[11px] leading-snug space-y-0.5 mb-2" style={{ color: SAGE.txt3 }}>
+        <div className="text-[10px] leading-snug space-y-px mb-1.5" style={{ color: SAGE.txt3 }}>
           {agrupar !== 'empresa' && (
             <p className="truncate" title={empresaNome}>{empresaNome}</p>
           )}
@@ -455,29 +479,34 @@ export default function Tarefas() {
           {/* A data sozinha obriga a pessoa a fazer a conta de cabeça; o card diz
               quantos dias faltam, e a cor repete o recado para quem só bate o olho. */}
           <p className="flex flex-wrap items-center gap-x-1 font-medium" style={{ color: alerta.forte }}>
-            <Clock size={11} />
+            <Clock size={10} />
             {prazoDate && format(prazoDate, "dd/MM/yy", { locale: ptBR })}
             <span>{prazoDate ? `· ${alerta.rotulo}` : alerta.rotulo}</span>
-            {tarefa.gera_multa && <AlertTriangle size={11} style={{ color: '#a24a3a' }} title="Gera multa" />}
+            {tarefa.gera_multa && <AlertTriangle size={10} style={{ color: '#a24a3a' }} title="Gera multa" />}
           </p>
           {fechBr && (
             encerra ? (
               <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
                  title={`Esta tarefa vence no próprio dia do fechamento de ${empresaNome} — é a última do processo.`}>
-                <Flag size={11} /> encerra o fechamento
+                <Flag size={10} /> encerra o fechamento
               </p>
             ) : (
               <p className="flex items-center gap-1" style={{ color: '#8a8378' }}
                  title={`${empresaNome} fecha o mês em ${fechBr}. Esta tarefa vem antes.`}>
-                <Flag size={11} /> cliente fecha {fechBr}
+                <Flag size={10} /> cliente fecha {fechBr}
               </p>
             )
           )}
         </div>
+        {/* Rodapé: só o que se usa em série -- mudar a situação -- fica à mostra.
+            Copiar link, transferir, editar e excluir eram quatro ícones lado a
+            lado no card estreito; viraram um menu, e o select coube num tamanho
+            que não disputa mais espaço com eles. */}
         <div className="mt-auto flex items-center gap-1">
           {ativa && (
             <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
-              className="flex-1 min-w-0 text-[11px] border rounded px-1 py-1 bg-white" style={{ borderColor: SAGE.border, color: '#55614e' }}>
+              className="w-[6.6rem] text-[10px] border rounded px-1 py-0.5 bg-white"
+              style={{ borderColor: SAGE.border, color: '#55614e' }}>
               <option value="pendente">Pendente</option>
               <option value="em_andamento">Em Andamento</option>
               <option value="concluida" disabled={bloqueiaBaixaManual(tarefa)}>
@@ -485,24 +514,34 @@ export default function Tarefas() {
               </option>
             </select>
           )}
-          {ativa && (
-            <button onClick={() => handleCopiarLink(tarefa)} title="Copiar link de envio do comprovante" className="p-1 rounded hover:bg-[#e7eef6]" style={{ color: '#2f6fb0' }}>
-              <Link2 size={14} />
+          <div className="relative ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button type="button" title="Ações"
+              onClick={() => setMenuAberto(menuAberto === tarefa.id ? null : tarefa.id)}
+              className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: SAGE.txt3 }}>
+              <MoreHorizontal size={14} />
             </button>
-          )}
-          {ativa && (
-            <button onClick={() => { setShowTransfer(tarefa); setTransferResp(''); }} title="Transferir" className="p-1 rounded hover:bg-[#e2ebde]" style={{ color: '#8a6a2e' }}>
-              <ArrowRightLeft size={14} />
-            </button>
-          )}
-          <button onClick={() => handleEdit(tarefa)} title="Editar" className="p-1 rounded hover:bg-[#dcefed]" style={{ color: '#3a7d76' }}>
-            <Edit2 size={14} />
-          </button>
-          <button onClick={() => handleDelete(tarefa)}
-            title={tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar'}
-            className="p-1 rounded hover:bg-[#f7e7e3]" style={{ color: '#a24a3a' }}>
-            <Trash2 size={14} />
-          </button>
+            {menuAberto === tarefa.id && (
+              <div className="absolute right-0 bottom-full mb-1 z-20 rounded-lg border py-1 shadow-lg"
+                style={{ background: SAGE.cardBg, borderColor: SAGE.border }}>
+                {ativa && (
+                  <ItemMenu icone={Link2} onClick={() => { setMenuAberto(null); handleCopiarLink(tarefa); }}>
+                    Copiar link de envio
+                  </ItemMenu>
+                )}
+                {ativa && (
+                  <ItemMenu icone={ArrowRightLeft} onClick={() => { setMenuAberto(null); setShowTransfer(tarefa); setTransferResp(''); }}>
+                    Transferir
+                  </ItemMenu>
+                )}
+                <ItemMenu icone={Edit2} onClick={() => { setMenuAberto(null); handleEdit(tarefa); }}>
+                  Editar
+                </ItemMenu>
+                <ItemMenu icone={Trash2} perigo onClick={() => { setMenuAberto(null); handleDelete(tarefa); }}>
+                  {tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar tarefa'}
+                </ItemMenu>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -698,7 +737,7 @@ export default function Tarefas() {
                   </button>
                 )}
                 {aberto && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
                     {g.tarefas.map(cartao)}
                   </div>
                 )}
