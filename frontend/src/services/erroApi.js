@@ -77,5 +77,15 @@ export function mensagemDeErro(erro, padrao = 'Não foi possível concluir. Tent
   if (erro?.response?.status === 403) return 'Você não tem permissão para isso.';
   if (erro?.response?.status === 404) return 'Não encontrado.';
   if (erro?.message === 'Network Error') return 'Sem conexão com o servidor.';
+
+  // Sem `detail` legível, o status é a única pista — e sem ele a pessoa fica
+  // com uma frase genérica que não permite nem pedir ajuda direito. Cada um
+  // desses tem causa e conserto diferentes.
+  const status = erro?.response?.status;
+  if (status === 413) return `${padrao} (413: os arquivos são grandes demais para uma vez só)`;
+  if (status === 502 || status === 504) return `${padrao} (${status}: o servidor demorou demais para responder)`;
+  if (status === 500) return `${padrao} (500: erro no servidor — veja os logs do serviço)`;
+  if (erro?.code === 'ECONNABORTED') return `${padrao} (o navegador desistiu de esperar)`;
+  if (status) return `${padrao} (HTTP ${status})`;
   return padrao;
 }

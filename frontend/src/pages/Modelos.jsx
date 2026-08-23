@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { separarAceitos, emRemessas, juntarResultados, EXTENSOES_ACEITAS }
@@ -47,6 +47,8 @@ export default function Modelos() {
   const [form, setForm] = useState(null);       // campos editáveis do item atual
   const [resumo, setResumo] = useState(null);   // resultado do último lote
   const [progresso, setProgresso] = useState(null);   // { feitos, total }
+  // Arquivos cuja remessa não chegou ao servidor, por nome, para reenviar.
+  const naoEnviados = useRef(new Map());
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -79,6 +81,7 @@ export default function Modelos() {
         // Em remessas: 36 arquivos numa requisição só não chegam ao servidor —
         // o proxy corta por tamanho ou por tempo, e o erro não diz qual foi.
         const remessas = emRemessas(aceitos);
+        naoEnviados.current.clear();
         const partes = [];
         let feitos = 0;
         setProgresso({ feitos: 0, total: aceitos.length });
@@ -92,6 +95,9 @@ export default function Modelos() {
             partes.push({ total: remessa.length,
                           erro: mensagemDeErro(err, 'Falhou ao enviar esta remessa'),
                           nomes: remessa.map((f) => f.name) });
+            // Guarda os File para o botão de tentar de novo: sem eles, a única
+            // saída seria arrastar a pasta inteira outra vez.
+            remessa.forEach((f) => naoEnviados.current.set(f.name, f));
           }
           feitos += remessa.length;
           setProgresso({ feitos, total: aceitos.length });
@@ -224,11 +230,30 @@ export default function Modelos() {
               <AlertTriangle size={13} /> {atual.motivo}
             </div>
           )}
+          {/* Item cuja remessa não chegou ao servidor: não há CNPJ, texto nem
+              candidatos para revisar — o formulário abaixo só produziria a
+              recusa "documento sem CNPJ nem razão social". O que cabe é
+              reenviar o arquivo. */}
           {atual.erro && (
-            <div className="mb-4 text-xs bg-red-50 text-red-600 rounded-lg px-3 py-2">{atual.erro}</div>
+            <div className="mb-4 bg-red-50 text-red-700 rounded-lg px-3 py-3">
+              <p className="text-sm font-medium">Este arquivo não chegou a ser lido.</p>
+              <p className="text-xs mt-1">{atual.erro}</p>
+              <div className="flex gap-2 mt-2">
+                {naoEnviados.current.has(atual.nome_arquivo) && (
+                  <button type="button" className="btn-secondary text-xs"
+                    onClick={() => processar([naoEnviados.current.get(atual.nome_arquivo)])}>
+                    Tentar este de novo
+                  </button>
+                )}
+                <button type="button" className="btn-secondary text-xs"
+                  onClick={() => setFila((f) => f.slice(1))}>
+                  Pular
+                </button>
+              </div>
+            </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className={`grid md:grid-cols-2 gap-4 ${atual.erro ? 'hidden' : ''}`}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
               <select className="input-field" value={form.empresa_id}
@@ -319,7 +344,7 @@ export default function Modelos() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mt-5">
+          <div className={`flex items-center gap-3 mt-5 ${atual.erro ? 'hidden' : ''}`}>
             <button onClick={salvar} disabled={busy} className="btn-primary">
               {busy ? 'Salvando…' : 'Salvar modelo'}
             </button>
