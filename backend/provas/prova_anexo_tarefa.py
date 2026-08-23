@@ -79,7 +79,7 @@ for t in (com_anexo, sem_anexo, sumido, travessia):
     t.responsaveis.append(dono)
 db.commit()
 ids = {t.titulo: t.id for t in (com_anexo, sem_anexo, sumido, travessia)}
-emp_id = emp.id          # guardado antes de fechar: depois o objeto desanexa
+emp_id, dono_id = emp.id, dono.id   # guardados antes de fechar: depois os objetos desanexam
 db.close()
 
 print(f"\n(escopo do analista neste preset: {escopo_analista})")
@@ -194,11 +194,14 @@ checa("e a rota de download passa a devolver 404",
                  headers=cabeca("admin@x.com")).status_code == 404)
 checa("some do acervo", docs("admin@x.com")["mostrando"] == 2)
 
+checa("a resposta avisa que a tarefa foi reaberta", r.json().get("tarefa_reaberta") is True)
 db = SessionLocal()
 t = db.query(Tarefa).get(ids["Com comprovante"])
 checa("o vínculo no banco é limpo", t.anexo_nome is None)
-# Apagar a prova não desfaz a entrega: a tarefa continua como estava.
-checa("a tarefa NÃO volta para pendente", t.status == StatusTarefa.CONCLUIDA)
+# Foi o documento que baixou a tarefa: sem ele, ela não está comprovada.
+checa("a tarefa VOLTA para pendente", t.status == StatusTarefa.PENDENTE, str(t.status))
+checa("e a data de conclusão é limpa", t.data_conclusao is None)
+checa("junto com o protocolo, que veio do documento", t.protocolo_entrega is None)
 db.close()
 
 checa("apagar duas vezes devolve 404",
@@ -209,6 +212,21 @@ checa("banco apontando para arquivo já sumido ainda limpa o vínculo",
       apagar("admin@x.com", ids["Arquivo sumiu"]).status_code == 200)
 checa("sem sessão não apaga",
       client.delete(f"/api/tarefas/{ids['Nome malicioso']}/documento").status_code in (401, 403))
+
+# Cancelada não foi concluída por documento nenhum: reabri-la ressuscitaria
+# trabalho que alguém decidiu não fazer.
+db = SessionLocal()
+tc = Tarefa(titulo="Cancelada com anexo", empresa_id=emp_id, responsavel_id=dono_id,
+            status=StatusTarefa.CANCELADA,
+            anexo_nome=up.salvar_arquivo("tokC", "x.pdf", b"%PDF"))
+db.add(tc); db.commit(); id_canc = tc.id; db.close()
+r = apagar("admin@x.com", id_canc)
+checa("cancelada: apaga o documento", r.status_code == 200)
+checa("mas NÃO é reaberta", r.json().get("tarefa_reaberta") is False, r.text[:80])
+db = SessionLocal()
+checa("continua cancelada no banco",
+      db.query(Tarefa).get(id_canc).status == StatusTarefa.CANCELADA)
+db.close()
 
 import shutil                                        # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)

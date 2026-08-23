@@ -34,6 +34,7 @@ export default function Documentos() {
   // do mesmo jeito: esconder na tela é conveniência, não é a trava.
   const podeApagar = Boolean(user?.permissoes_efetivas?.apagar_anexo);
   const [confirmando, setConfirmando] = useState(null);
+  const [aviso, setAviso] = useState(null);
   const [filtros, setFiltros] = useState(filtrosVazios());
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(false);
@@ -116,8 +117,14 @@ export default function Documentos() {
     }
     setConfirmando(null);
     try {
-      await tarefasAPI.excluirDocumento(doc.tarefa_id,
+      const { data } = await tarefasAPI.excluirDocumento(doc.tarefa_id,
         filtros.tipo === 'entregues' ? 'entregue' : 'recebido');
+      // A reabertura é efeito colateral e precisa ser dita: sem isso, a tarefa
+      // reaparece na fila de alguém e ninguém liga uma coisa à outra.
+      setAviso(data?.tarefa_reaberta
+        ? `“${doc.titulo}” voltou para pendente — era este documento que a concluía.`
+        : 'Documento excluído.');
+      setTimeout(() => setAviso(null), 8000);
       buscar();
     } catch (err) {
       setErro(mensagemDeErro(err, 'Não foi possível excluir o documento'));
@@ -252,6 +259,7 @@ export default function Documentos() {
       </div>
 
       {erro && <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700">{erro}</div>}
+      {aviso && <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-amber-50 text-amber-800">{aviso}</div>}
 
       {dados && (
         <>
@@ -339,8 +347,8 @@ export default function Documentos() {
                         {podeApagar && (
                           <button onClick={() => excluir(d)}
                             title={confirmando === d.tarefa_id
-                              ? 'Clique de novo para excluir de vez'
-                              : 'Excluir este documento'}
+                              ? 'Clique de novo para excluir de vez — a tarefa volta a pendente'
+                              : 'Excluir este documento (reabre a tarefa)'}
                             className={`p-1 rounded transition-colors ${
                               confirmando === d.tarefa_id
                                 ? 'bg-red-600 text-white'

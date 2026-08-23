@@ -383,10 +383,14 @@ def excluir_documento(
     Exige a flag `apagar_anexo`, que já existia e só o admin tem por padrão.
     Quem pode apagar é decidido no cadastro de Grupos, não aqui.
 
-    NÃO reabre a tarefa. Comprovante e conclusão são registros diferentes: a
-    entrega aconteceu, e apagar o arquivo não a desfaz. Reabrir automaticamente
-    devolveria à fila uma tarefa que ninguém precisa refazer — o que se perdeu
-    foi a prova, e é isso que o log diz.
+    REABRE a tarefa que o documento tinha concluído. Foi o documento que a
+    baixou; sem ele ela não está comprovada, e deixá-la concluída manteria no
+    sistema uma entrega que não se prova mais — some da fila e ninguém refaz.
+    Volta para PENDENTE e limpa o que veio do documento: data de conclusão,
+    protocolo e data de entrega.
+
+    Tarefa CANCELADA não é tocada: ela não foi concluída por documento nenhum,
+    e reabri-la ressuscitaria trabalho que alguém decidiu não fazer.
 
     No documento de ENTREGA, o token morre junto: o link que o cliente tem para
     de funcionar em vez de servir um arquivo que já não existe.
@@ -408,6 +412,14 @@ def excluir_documento(
         tarefa.saida_baixada_em = None
     else:
         tarefa.anexo_nome = None
+        tarefa.protocolo_entrega = None
+
+    # Sem o documento, a conclusão perde o que a sustentava.
+    reaberta = tarefa.status == StatusTarefa.CONCLUIDA
+    if reaberta:
+        tarefa.status = StatusTarefa.PENDENTE
+        tarefa.data_conclusao = None
+        tarefa.data_entrega = None
     db.commit()
 
     # Quem apagou, o quê e quando. Documento apagado sem rastro é o tipo de
@@ -415,9 +427,11 @@ def excluir_documento(
     log_event("DOCUMENTO_EXCLUIDO", level="WARN", email=current_user.email,
               usuario_id=current_user.id, tarefa_id=tarefa.id,
               arquivo=nome, tipo="entregue" if entregue else "recebido",
-              arquivo_existia=removido)
+              arquivo_existia=removido, tarefa_reaberta=reaberta)
     return {"excluido": True, "arquivo": up.nome_de_exibicao(nome),
-            "arquivo_existia": removido}
+            "arquivo_existia": removido, "tarefa_reaberta": reaberta,
+            "message": ("Documento excluído e tarefa reaberta como pendente."
+                        if reaberta else "Documento excluído.")}
 
 
 # ── Documento que o escritório ENTREGA ao cliente ────────────────────────────
