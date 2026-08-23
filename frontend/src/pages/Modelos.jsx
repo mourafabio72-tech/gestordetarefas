@@ -3,6 +3,7 @@ import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { separarAceitos, emRemessas, juntarResultados, EXTENSOES_ACEITAS }
   from './lotesModelos';
+import { conferirIdentificador } from './identificador';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
 
@@ -101,6 +102,9 @@ export default function Modelos() {
   };
 
   const onDrop = (ev) => { ev.preventDefault(); setDragOver(false); processar(ev.dataTransfer.files); };
+
+  // Confere o identificador digitado contra o texto extraído do documento.
+  const conferencia = conferirIdentificador(form?.identificador, atual?.texto_extraido);
 
   const salvar = async () => {
     setBusy(true);
@@ -257,11 +261,29 @@ export default function Modelos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Identificador (treina o e-validador)
+                Identificador — um trecho que EXISTE no documento
               </label>
-              <input className="input-field" value={form.identificador}
+              <p className="text-xs text-gray-500 mb-1">
+                É o texto que o e-validador vai procurar dentro do arquivo para saber que ele é
+                deste tipo. Não é uma descrição: copie um título ou cabeçalho escrito no documento.
+              </p>
+              <input className={`input-field ${
+                conferencia.estado === 'nao_achou' ? 'border-red-400' :
+                conferencia.estado === 'achou' ? 'border-green-500' : ''}`}
+                value={form.identificador}
                 onChange={(e) => setForm({ ...form, identificador: e.target.value })}
-                placeholder="trecho único do documento" />
+                placeholder="ex.: Apuração do IRPJ e CSLL" />
+              {/* O erro aqui é silencioso: identificador que não está no texto
+                  nunca casa, e a descoberta vem meses depois. */}
+              {conferencia.aviso && (
+                <p className={`text-xs mt-1 ${
+                  conferencia.estado === 'nao_achou' ? 'text-red-700' : 'text-amber-700'}`}>
+                  {conferencia.aviso}
+                </p>
+              )}
+              {conferencia.estado === 'achou' && (
+                <p className="text-xs mt-1 text-green-700">✓ Encontrei este trecho no documento.</p>
+              )}
               {atual.candidatos?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {atual.candidatos.map((c, i) => (
