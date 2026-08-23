@@ -62,13 +62,21 @@ async def analisar(
 @router.post("/lote")
 async def lote(
     arquivos: List[UploadFile] = File(...),
+    auto: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("evalidador", "editar")),
 ):
-    """Analisa vários documentos: salva sozinho os 100% reconhecidos (empresa casada
-    por CNPJ + obrigação sugerida + identificador livre de colisão) e devolve os demais
-    para revisão manual. Não salva automático se o identificador colidir, nem com os
-    existentes, nem com outro arquivo do mesmo lote (evita bagunçar o matcher)."""
+    """Analisa vários documentos e devolve todos com a sugestão preenchida.
+
+    O salvamento automático ficou DESLIGADO por padrão (`auto=false`), e a razão
+    veio do uso: o matcher casou quatro de seis arquivos com a obrigação errada
+    — PIS, ICMS e Simples entrando como IPI — porque um identificador genérico
+    salvo antes casava com toda guia. Cada acerto errado era salvo sozinho e
+    reforçava o erro, sem ninguém ver.
+
+    A sugestão continua: o formulário vem preenchido com empresa, obrigação e
+    identificador. O que mudou é que alguém confirma antes de virar treino.
+    """
     salvos, revisar = [], []
     usados = {}  # identificador_normalizado -> obrigacao_id já escolhido neste lote
 
@@ -97,13 +105,19 @@ async def lote(
         ident_norm = _norm(livre["texto"]) if livre else None
 
         pode_auto = (
-            a.get("empresa_id")
+            auto
+            and a.get("empresa_id")
             and a.get("obrigacao_sugerida_id")
             and livre
             and not (ident_norm in usados and usados[ident_norm] != a["obrigacao_sugerida_id"])
         )
 
         if pode_auto:
+          # O salvamento também precisa estar protegido: fora do try, um único
+          # arquivo que derruba o INSERT leva junto a remessa inteira — os
+          # outros quatro, que estavam bem, voltam como "falhou ao enviar" e a
+          # pessoa procura defeito onde não há.
+          try:
             m = salvar_modelo(db, {
                 "nome_arquivo": a["nome_arquivo"],
                 "cnpj": a["cnpj"],
@@ -118,9 +132,15 @@ async def lote(
             })
             usados[ident_norm] = a["obrigacao_sugerida_id"]
             salvos.append(_serializar(m))
+          except Exception as e:
+            db.rollback()
+            a["motivo"] = f"Falha ao salvar automaticamente: {e}"
+            revisar.append(a)
         else:
             # motivo curto para a UI
-            if not a.get("empresa_id"):
+            if not auto and a.get("empresa_id") and a.get("obrigacao_sugerida_id"):
+                a["motivo"] = "Reconhecido — confira e salve"
+            elif not a.get("empresa_id"):
                 a["motivo"] = "Empresa não reconhecida (CNPJ não cadastrado)"
             elif not a.get("obrigacao_sugerida_id"):
                 a["motivo"] = "Obrigação não reconhecida: escolha e defina o identificador"

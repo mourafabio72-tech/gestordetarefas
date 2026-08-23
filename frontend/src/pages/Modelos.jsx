@@ -159,7 +159,8 @@ export default function Modelos() {
         Suba um ou <strong>vários</strong> recibos/comprovantes/relatórios de exemplo. O sistema lê,
         identifica a <strong>empresa</strong> (pelo CNPJ) e o <strong>tipo</strong>, e liga a uma
         <strong> obrigação</strong>. Em lote, os 100% reconhecidos são <strong>salvos sozinhos</strong> e
-        só os pendentes entram na fila de revisão. Ao salvar, o identificador treina o e-validador.
+        todos entram na fila com a sugestão já preenchida. Ao salvar, o identificador treina o e-validador —
+        por isso cada um passa pela sua conferência antes.
       </p>
 
       {/* Upload */}
@@ -199,11 +200,13 @@ export default function Modelos() {
       {resumo && (
         <div className="card mb-6">
           <div className="flex flex-wrap gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
-              Salvos automaticamente: {resumo.resumo.salvos}
-            </span>
+            {resumo.resumo.salvos > 0 && (
+              <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                Salvos: {resumo.resumo.salvos}
+              </span>
+            )}
             <span className="px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700">
-              Para revisar: {resumo.resumo.revisar}
+              Para conferir: {resumo.resumo.revisar}
             </span>
             <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
               Total: {resumo.resumo.total}
@@ -235,7 +238,12 @@ export default function Modelos() {
             )}
           </div>
 
-          {atual.motivo && (
+          {atual.motivo === 'Reconhecido — confira e salve' ? (
+            <div className="mb-4 text-xs bg-green-50 text-green-800 rounded-lg px-3 py-2">
+              ✓ Empresa e obrigação reconhecidas. Confira o identificador — é ele que treina o
+              e-validador — e salve.
+            </div>
+          ) : atual.motivo && (
             <div className="mb-4 text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 flex items-center gap-1">
               <AlertTriangle size={13} /> {atual.motivo}
             </div>
