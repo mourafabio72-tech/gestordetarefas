@@ -4,6 +4,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { separarAceitos, emRemessas, juntarResultados, EXTENSOES_ACEITAS }
   from './lotesModelos';
 import { conferirIdentificador } from './identificador';
+import { estadoDoCandidato, explicar } from './colisaoIdentificador';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
 
@@ -105,6 +106,10 @@ export default function Modelos() {
 
   // Confere o identificador digitado contra o texto extraído do documento.
   const conferencia = conferirIdentificador(form?.identificador, atual?.texto_extraido);
+  // Nome da obrigação escolhida agora: é o que separa "variação do mesmo
+  // documento" de "conflito com outra obrigação".
+  const nomeObrigacaoEscolhida =
+    obrigacoes.find((o) => String(o.id) === String(form?.obrigacao_id))?.nome || '';
 
   const salvar = async () => {
     setBusy(true);
@@ -286,17 +291,25 @@ export default function Modelos() {
               )}
               {atual.candidatos?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {atual.candidatos.map((c, i) => (
-                    <button key={i} type="button"
-                      onClick={() => setForm({ ...form, identificador: c.texto })}
-                      className={`text-xs rounded-full px-2 py-1 border ${
-                        c.colide_com?.length
-                          ? 'border-amber-300 bg-amber-50 text-amber-700'
-                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-primary-400'}`}
-                      title={c.colide_com?.length ? `Colide com: ${c.colide_com.join(', ')}` : 'Livre'}>
-                      {c.texto}{c.colide_com?.length ? ' ⚠' : ''}
-                    </button>
-                  ))}
+                  {atual.candidatos.map((c, i) => {
+                    // Parecer com a PRÓPRIA obrigação não é colisão: é o segundo
+                    // layout do mesmo documento (Lucro Real e Presumido caindo
+                    // na mesma apuração). Só outra obrigação é problema.
+                    const { estado, outras } = estadoDoCandidato(c, nomeObrigacaoEscolhida);
+                    const cor = estado === 'conflito'
+                      ? 'border-amber-300 bg-amber-50 text-amber-700'
+                      : estado === 'variacao'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-primary-400';
+                    return (
+                      <button key={i} type="button"
+                        onClick={() => setForm({ ...form, identificador: c.texto })}
+                        className={`text-xs rounded-full px-2 py-1 border ${cor}`}
+                        title={explicar(estado, outras)}>
+                        {c.texto}{estado === 'conflito' ? ' ⚠' : ''}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

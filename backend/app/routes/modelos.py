@@ -80,8 +80,19 @@ async def lote(
                             "cnpj": None, "candidatos": []})
             continue
 
-        # candidato livre de colisão com os identificadores já cadastrados
-        livre = next((c for c in a.get("candidatos", []) if not c.get("colide_com")), None)
+        # Candidato utilizável: sem colisão, OU colidindo apenas com a própria
+        # obrigação sugerida — que é o caso do segundo layout do mesmo documento
+        # (Lucro Real e Presumido caindo na mesma apuração). Tratar isso como
+        # colisão mandaria para revisão manual justamente o que dá para resolver
+        # sozinho.
+        nome_sugerida = (a.get("obrigacao_sugerida_nome") or "").strip().lower()
+
+        def _utilizavel(c):
+            outras = [n for n in (c.get("colide_com") or [])
+                      if str(n).strip().lower() != nome_sugerida]
+            return not outras
+
+        livre = next((c for c in a.get("candidatos", []) if _utilizavel(c)), None)
         ident_norm = _norm(livre["texto"]) if livre else None
 
         pode_auto = (
