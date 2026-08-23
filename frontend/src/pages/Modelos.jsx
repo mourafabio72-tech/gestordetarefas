@@ -4,6 +4,8 @@ import { mensagemDeErro } from '../services/erroApi';
 import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, EXTENSOES_ACEITAS }
   from './lotesModelos';
 import { conferirIdentificador, trechoMovel } from './identificador';
+import { filtrosVazios as filtrosModelosVazios, temFiltroAtivo as temFiltroModelos,
+         filtrarModelos, valoresDe } from './filtroModelos';
 import { estadoDoCandidato, explicar } from './colisaoIdentificador';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward, Pencil } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
@@ -53,6 +55,7 @@ export default function Modelos() {
   const [resumo, setResumo] = useState(null);   // resultado do último lote
   const [progresso, setProgresso] = useState(null);   // { feitos, total }
   const [editandoId, setEditandoId] = useState(null); // modelo em edição, se houver
+  const [filtros, setFiltros] = useState(filtrosModelosVazios());
   // Arquivos cuja remessa não chegou ao servidor, por nome, para reenviar.
   const naoEnviados = useRef(new Map());
   const [busy, setBusy] = useState(false);
@@ -132,6 +135,7 @@ export default function Modelos() {
 
   // Confere o identificador digitado contra o texto extraído do documento.
   const conferencia = conferirIdentificador(form?.identificador, atual?.texto_extraido);
+  const filtrados = filtrarModelos(modelos, filtros);
   // Nome da obrigação escolhida agora: é o que separa "variação do mesmo
   // documento" de "conflito com outra obrigação".
   const nomeObrigacaoEscolhida =
@@ -423,9 +427,62 @@ export default function Modelos() {
 
       {/* Catálogo */}
       <div className="card">
-        <h2 className="font-semibold text-gray-800 mb-4">Repositório ({modelos.length})</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 className="font-semibold text-gray-800">
+            Repositório ({filtrados.length}{filtrados.length !== modelos.length && ` de ${modelos.length}`})
+          </h2>
+          {temFiltroModelos(filtros) && (
+            <button type="button" onClick={() => setFiltros(filtrosModelosVazios())}
+              className="text-[11px] text-gray-500 underline hover:text-gray-700">
+              Limpar filtros
+            </button>
+          )}
+        </div>
+
+        {/* Filtra a lista que já está na tela: o repositório é da ordem de
+            dezenas, e uma rota com filtros seria resposta grande demais. */}
+        {modelos.length > 0 && (
+          <div className="flex flex-wrap items-end gap-2 mb-4">
+            {[
+              { chave: 'empresa', rotulo: 'Empresa', campo: 'empresa_nome', largura: 'flex-[2] min-w-[150px]' },
+              { chave: 'obrigacao', rotulo: 'Obrigação', campo: 'obrigacao_nome', largura: 'flex-1 min-w-[130px]' },
+            ].map((f) => (
+              <label key={f.chave} className={`flex flex-col gap-1 ${f.largura}`}>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{f.rotulo}</span>
+                <select value={filtros[f.chave]} onChange={(e) => setFiltros({ ...filtros, [f.chave]: e.target.value })}
+                  className={`w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none ${
+                    filtros[f.chave] ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}>
+                  <option value="">Todas</option>
+                  {valoresDe(modelos, f.campo).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+            ))}
+            <label className="flex flex-col gap-1 w-[170px]">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Tipo</span>
+              <select value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
+                className={`w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none ${
+                  filtros.tipo ? 'border-primary-400 text-primary-800' : 'border-gray-300'}`}>
+                <option value="">Todos</option>
+                {valoresDe(modelos, 'tipo_documento').map((v) => (
+                  <option key={v} value={v}>{TIPOS[v] || v}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 flex-1 min-w-[150px]">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Identificador</span>
+              <input type="search" value={filtros.identificador}
+                onChange={(e) => setFiltros({ ...filtros, identificador: e.target.value })}
+                placeholder="parte do trecho"
+                className={`w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none ${
+                  filtros.identificador ? 'border-primary-400' : 'border-gray-300'}`} />
+            </label>
+          </div>
+        )}
+
         {modelos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum modelo ainda. Suba o primeiro documento acima.</p>
+        ) : filtrados.length === 0 ? (
+          <p className="text-sm text-gray-500">Nenhum modelo com esses filtros.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="table-app">
@@ -440,7 +497,7 @@ export default function Modelos() {
                 </tr>
               </thead>
               <tbody>
-                {modelos.map((m) => (
+                {filtrados.map((m) => (
                   <tr key={m.id} className="border-b border-gray-100">
                     <td className="pr-4 text-gray-700 max-w-[16rem] truncate" title={m.nome_arquivo}>{m.nome_arquivo}</td>
                     <td className="pr-4">
