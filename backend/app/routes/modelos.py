@@ -9,8 +9,9 @@ from ..services.validador import analisar_para_repositorio, salvar_modelo, _norm
 
 router = APIRouter(prefix="/modelos", tags=["modelos"])
 
-TIPOS = {"recibo_entrega": "Recibo de entrega",
+TIPOS = {"guia": "Guia a pagar (DARF, DAS, GPS…)",
          "comprovante_pagamento": "Comprovante de pagamento",
+         "recibo_entrega": "Recibo de entrega",
          "relatorio": "Relatório",
          "outro": "Outro"}
 

@@ -159,14 +159,35 @@ def extrair_razao_social(texto: str) -> str:
 
 
 def classificar_tipo(texto: str) -> str:
-    """Classifica grosseiramente o documento: recibo de entrega, comprovante de
-    pagamento, relatório — para organização do repositório."""
+    """Classifica o documento para organizar o repositório.
+
+    A ordem importa, e o par guia/comprovante é o que mais erra: um DARF em
+    branco é GUIA — documento a pagar, que o escritório entrega ao cliente. O
+    mesmo DARF com autenticação bancária é COMPROVANTE — prova de que foi pago,
+    que o cliente devolve. São papéis opostos no fluxo, e a versão anterior
+    chamava os dois de comprovante só porque a palavra "DARF" aparecia.
+
+    Por isso a marca de PAGAMENTO é testada primeiro: ela é o que distingue.
+    """
     t = _norm(texto)
-    if re.search(r"comprovante de pagamento|comprovante de arrecada|darf|documento de arrecada|autenticacao banc", t):
+    # 1. Pago: autenticação, data de pagamento, o próprio "comprovante".
+    if re.search(r"comprovante de pagamento|comprovante de arrecada|autenticacao banc"
+                 r"|autenticacao mecanica|pagamento efetuado|data (?:do |de )?pagamento", t):
         return "comprovante_pagamento"
+    # 2. Guia a pagar: o documento em si, sem marca de quitação.
+    #
+    # "DAS" fica FORA da lista de siglas soltas: "das" é preposição, e
+    # "apuração das contas" viraria guia — a prova pegou isso. Para o DAS do
+    # Simples, exige-se a sigla perto de "simples", que é como o documento
+    # sempre se apresenta.
+    if re.search(r"\bdarf\b|\bdarj\b|\bgps\b|\bgnre\b|\bdae\b|\bdam\b"
+                 r"|guia de recolhimento|guia de arrecada|documento de arrecada"
+                 r"|codigo de barras|linha digitavel|\bboleto\b"
+                 r"|\bdas\b[^\n]{0,40}simples|simples[^\n]{0,40}\bdas\b", t):
+        return "guia"
     if re.search(r"recibo de entrega|comprovante de entrega|recibo de transmiss|protocolo de entrega|recibo|transmiss", t):
         return "recibo_entrega"
-    if re.search(r"relatorio|demonstrativo|balancete|extrato", t):
+    if re.search(r"relatorio|demonstrativo|balancete|extrato|memoria de calculo|apuracao", t):
         return "relatorio"
     return "outro"
 
