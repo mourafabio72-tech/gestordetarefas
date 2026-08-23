@@ -634,7 +634,8 @@ async def enviar_ao_cliente(
 
     cfg = cfgmod.carregar(db)
     nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)
-    empresa = tarefa.empresa.razao_social if tarefa.empresa else ""
+    from ..services.razao_social import formatar as formatar_razao
+    empresa = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else ""
     comp = f" — {tarefa.competencia}" if tarefa.competencia else ""
     assunto = f"[BPS4] {tarefa.titulo}{comp}"
     # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz

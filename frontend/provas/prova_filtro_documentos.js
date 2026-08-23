@@ -1,7 +1,7 @@
 // Prova de frontend/src/pages/filtroDocumentos.js — Node puro, sem build.
 //   node frontend/provas/prova_filtro_documentos.js
 
-import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, paraCSV }
+import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, dataHoraBr, paraCSV }
   from '../src/pages/filtroDocumentos.js';
 
 let ok = 0, falhou = 0;
@@ -46,6 +46,23 @@ console.log('\n4) Data sem passar por new Date, que jogaria para o dia anterior'
 eq('ISO com hora', dataBr('2026-09-14T21:00:00'), '14/09/2026');
 eq('ISO puro', dataBr('2026-09-14'), '14/09/2026');
 eq('vazio e nulo', [dataBr(''), dataBr(null), dataBr('xx')], ['', '', '']);
+
+console.log('\n4b) Hora do servidor no fuso de quem lê');
+// O backend grava em UTC. Sem o "Z", o JavaScript lê a string como hora local
+// e a hora do acesso aparecia 3 horas adiantada.
+const emBrasilia = (iso) => {
+  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+eq('ISO sem fuso é tratado como UTC', dataHoraBr('2026-08-23T18:16:00'), emBrasilia('2026-08-23T18:16:00'));
+eq('ISO com Z dá o mesmo resultado', dataHoraBr('2026-08-23T18:16:00Z'), emBrasilia('2026-08-23T18:16:00'));
+eq('ISO com offset explícito é respeitado',
+   dataHoraBr('2026-08-23T15:16:00-03:00'), emBrasilia('2026-08-23T18:16:00'));
+eq('as três formas do mesmo instante viram a mesma hora',
+   new Set([dataHoraBr('2026-08-23T18:16:00'), dataHoraBr('2026-08-23T18:16:00Z'),
+            dataHoraBr('2026-08-23T15:16:00-03:00')]).size, 1);
+eq('vazio e lixo não quebram', [dataHoraBr(''), dataHoraBr(null), dataHoraBr('abacaxi')], ['', '', '']);
 
 console.log('\n5) CSV para entregar a um auditor');
 const csv = paraCSV([{ empresa: 'Alfa, Beta Ltda', obrigacao: 'DARF', titulo: 'T',

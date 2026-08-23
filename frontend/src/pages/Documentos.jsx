@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { documentosAPI, tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
-import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, paraCSV, EXTENSOES }
+import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, dataHoraBr, paraCSV, EXTENSOES }
   from './filtroDocumentos';
 import { FileArchive, Search, Paperclip, Download, AlertTriangle, FileDown,
          Inbox, Send, CheckCircle2, Clock, Trash2 } from 'lucide-react';
@@ -143,11 +143,6 @@ export default function Documentos() {
       setAcessos(null);
       setErro(mensagemDeErro(err, 'Não foi possível ler as aberturas'));
     }
-  };
-
-  const dataHora = (iso) => {
-    const d = (iso || '').slice(0, 16);
-    return d.length === 16 ? `${dataBr(d)} ${d.slice(11)}` : dataBr(d);
   };
 
   const ativo = temFiltroAtivo(filtros);
@@ -316,7 +311,7 @@ export default function Documentos() {
                             </>
                           ) : <span className="text-gray-400">link antigo, sem dono</span>}
                         </td>
-                        <td className="tabular-nums whitespace-nowrap">{dataHora(a.quando)}</td>
+                        <td className="tabular-nums whitespace-nowrap">{dataHoraBr(a.quando)}</td>
                         <td className="whitespace-nowrap">
                           {a.contado
                             ? <span className="text-green-700">contou</span>

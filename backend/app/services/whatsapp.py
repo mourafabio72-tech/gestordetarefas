@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..models import Tarefa, Usuario, Empresa, StatusTarefa
 from .email import send_email
 from . import config as cfgmod
+from .razao_social import formatar as formatar_razao
 
 
 def normalizar_telefone(valor) -> str:
@@ -274,8 +275,9 @@ def destinatarios_cliente(db, tarefa) -> list:
         vistos.add(endereco)
         dest.append({"nome": nome, "canal": canal, "endereco": endereco})
 
-    juntar(empresa.razao_social, "whatsapp", normalizar_telefone(empresa.telefone))
-    juntar(empresa.razao_social, "email", empresa.email)
+    nome_empresa = formatar_razao(empresa.razao_social)
+    juntar(nome_empresa, "whatsapp", normalizar_telefone(empresa.telefone))
+    juntar(nome_empresa, "email", empresa.email)
     for u in db.query(U).filter(U.empresa_id == empresa.id, U.tipo == "cliente",
                                 U.bloqueado != True, U.ativo == True).all():
         juntar(u.nome, "whatsapp", normalizar_telefone(u.telefone))
@@ -480,7 +482,7 @@ def format_task_message(tarefa: Tarefa, days_remaining: int, responsavel: Usuari
     corpo, que é outra informação: quem responde pela tarefa, não quem está
     sendo avisado (o gestor recebe o aviso de uma tarefa que não é dele).
     """
-    empresa_nome = tarefa.empresa.razao_social or tarefa.empresa.nome_fantasia
+    empresa_nome = formatar_razao(tarefa.empresa.razao_social) or tarefa.empresa.nome_fantasia
     setor_nome = tarefa.setor.nome if tarefa.setor else "Não definido"
 
     urgency = urgencia(days_remaining)
@@ -658,11 +660,11 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
         tel = normalizar_telefone(empresa.telefone)
         if tel and f"whatsapp:{tel}:" not in vistos:
             vistos.add(f"whatsapp:{tel}:")
-            dest.append({"papel": "empresa", "nome": empresa.razao_social,
+            dest.append({"papel": "empresa", "nome": formatar_razao(empresa.razao_social),
                          "canal": "whatsapp", "endereco": tel})
         if empresa.email and f"email:{empresa.email}:" not in vistos:
             vistos.add(f"email:{empresa.email}:")
-            dest.append({"papel": "empresa", "nome": empresa.razao_social,
+            dest.append({"papel": "empresa", "nome": formatar_razao(empresa.razao_social),
                          "canal": "email", "endereco": empresa.email})
     return dest
 
@@ -734,7 +736,7 @@ async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: 
         except Exception:
             pass
 
-        empresa_nome = tarefa.empresa.razao_social if tarefa.empresa else None
+        empresa_nome = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else None
         item = {"titulo": tarefa.titulo, "empresa": empresa_nome, "dias": dias,
                 "prazo": base.strftime("%d/%m"), "multa": bool(tarefa.gera_multa),
                 "link": link}

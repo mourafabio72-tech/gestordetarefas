@@ -67,6 +67,28 @@ export function dataBr(iso) {
 }
 
 /**
+ * Data e hora de um instante gravado pelo servidor, no fuso de quem lê.
+ *
+ * O backend grava em UTC. O ISO chega de duas formas conforme o banco: com
+ * offset ("...+00:00") no Postgres, e sem nada no SQLite. Sem offset, o
+ * JavaScript interpreta a string como hora LOCAL — e a hora do acesso aparecia
+ * 3 horas adiantada, porque 18:16 UTC virava 18:16 de Brasília em vez de 15:16.
+ *
+ * Por isso o "Z" é acrescentado quando falta: diz ao navegador que aquilo é
+ * UTC, e a conversão para o fuso de quem lê passa a ser dele.
+ */
+export function dataHoraBr(iso) {
+  if (!iso) return '';
+  const texto = String(iso);
+  const temFuso = /(Z|[+-]\d{2}:?\d{2})$/.test(texto);
+  const d = new Date(temFuso ? texto : texto + 'Z');
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} `
+       + `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
  * CSV do que está na tela, para quem precisa entregar a lista a um auditor.
  *
  * Aspas duplicadas e campo entre aspas: razão social com vírgula é comum, e sem
