@@ -428,15 +428,25 @@ export default function Tarefas() {
       const { data: anexo } = await tarefasAPI.anexarSaida(entrega.tarefa.id, arquivo);
       const { data } = await tarefasAPI.enviarCliente(entrega.tarefa.id, true);
       setEntrega((e) => ({ ...e, ensaio: data, enviando: false, erro: null,
-                           conferencia: anexo?.conferencia || null }));
+                           conferencia: anexo?.conferencia || null,
+                           exigeConfirmar: false }));
     } catch (error) {
       setEntrega((e) => ({ ...e, enviando: false,
         erro: mensagemDeErro(error, 'Não foi possível anexar o documento') }));
     }
   };
 
-  const confirmarEnvio = async () => {
-    setEntrega((e) => ({ ...e, enviando: true, erro: null }));
+  // Documento que CONTRADIZ a tarefa não sai com um clique. Não é bloqueio:
+  // CNPJ diferente pode ser matriz e filial, e travar de vez atrapalharia caso
+  // legítimo. É um segundo passo — o suficiente para o envio errado não
+  // acontecer por reflexo, que é como ele acontece.
+  const confirmarEnvio = async (forcado = false) => {
+    const contradiz = entrega?.conferencia && !entrega.conferencia.ok;
+    if (contradiz && !forcado) {
+      setEntrega((e) => ({ ...e, exigeConfirmar: true }));
+      return;
+    }
+    setEntrega((e) => ({ ...e, enviando: true, erro: null, exigeConfirmar: false }));
     try {
       const { data } = await tarefasAPI.enviarCliente(entrega.tarefa.id, false);
       setEntrega((e) => ({ ...e, enviando: false, resultado: data }));
@@ -913,6 +923,12 @@ export default function Tarefas() {
                   <ul className="list-disc ml-4 mt-1">
                     {entrega.conferencia.alertas.map((a, i) => <li key={i}>{a}</li>)}
                   </ul>
+                  {entrega.exigeConfirmar && (
+                    <p className="mt-2 font-medium">
+                      O botão mudou. Confirme só se souber que este documento é o certo —
+                      matriz e filial têm CNPJ diferente, por exemplo.
+                    </p>
+                  )}
                 </div>
               )}
               {entrega.conferencia?.ok && entrega.conferencia.leu_algo && (
@@ -995,11 +1011,21 @@ export default function Tarefas() {
                     <button type="button" onClick={() => setEntrega(null)} className="btn-secondary flex-1">
                       Cancelar
                     </button>
-                    <button type="button" onClick={confirmarEnvio}
-                      disabled={entrega.enviando || !entrega.ensaio?.destinatarios?.length}
-                      className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40">
-                      <Send size={16} /> {entrega.enviando ? 'Enviando…' : 'Enviar agora'}
-                    </button>
+                    {entrega.exigeConfirmar ? (
+                      <button type="button" onClick={() => confirmarEnvio(true)}
+                        disabled={entrega.enviando}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-lg px-3.5 py-1.5
+                                   font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-40">
+                        <AlertTriangle size={16} />
+                        {entrega.enviando ? 'Enviando…' : 'Enviar mesmo assim'}
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => confirmarEnvio(false)}
+                        disabled={entrega.enviando || !entrega.ensaio?.destinatarios?.length}
+                        className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40">
+                        <Send size={16} /> {entrega.enviando ? 'Enviando…' : 'Enviar agora'}
+                      </button>
+                    )}
                   </div>
                 </>
               )}
