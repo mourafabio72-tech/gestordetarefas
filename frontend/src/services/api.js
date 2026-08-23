@@ -132,7 +132,11 @@ export const tarefasAPI = {
   anexarSaida: (id, arquivo) => {
     const fd = new FormData();
     fd.append('arquivo', arquivo);
-    return api.post(`/tarefas/${id}/saida`, fd);
+    // O `Content-Type: application/json` é padrão desta instância do axios, e
+    // sem sobrescrever aqui o FormData sai como JSON — o FastAPI não encontra o
+    // campo e responde "arquivo: é obrigatório". Todos os outros uploads do
+    // projeto fazem o mesmo; este tinha ficado de fora.
+    return api.post(`/tarefas/${id}/saida`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   saida: (id, baixar) => api.get(`/tarefas/${id}/saida`, {
     params: baixar ? { baixar: true } : {}, responseType: 'blob',
