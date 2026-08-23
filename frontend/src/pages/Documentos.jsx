@@ -139,8 +139,12 @@ export default function Documentos() {
       <div className="flex justify-between items-start gap-4 mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Documentos</h1>
+          {/* O subtítulo segue a aba: na de entregues, falar em "comprovantes
+              que baixaram tarefas" descreve o acervo errado. */}
           <p className="text-xs text-gray-500 mt-0.5">
-            Os comprovantes que baixaram tarefas. Aqui se procura pelo documento, sem saber de qual tarefa veio.
+            {filtros.tipo === 'entregues'
+              ? 'As guias e documentos que o escritório entregou. Mostra se o cliente abriu o link.'
+              : 'Os comprovantes que baixaram tarefas. Aqui se procura pelo documento, sem saber de qual tarefa veio.'}
           </p>
         </div>
         <button onClick={exportar} disabled={!docs.length}
