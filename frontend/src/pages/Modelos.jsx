@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
+import { separarAceitos, emRemessas, juntarResultados, EXTENSOES_ACEITAS }
+  from './lotesModelos';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
 
@@ -38,6 +40,7 @@ export default function Modelos() {
   const [fila, setFila] = useState([]);        // análises aguardando revisão (fila[0] = atual)
   const [form, setForm] = useState(null);       // campos editáveis do item atual
   const [resumo, setResumo] = useState(null);   // resultado do último lote
+  const [progresso, setProgresso] = useState(null);   // { feitos, total }
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -52,22 +55,49 @@ export default function Modelos() {
   useEffect(() => { setForm(atual ? formDe(atual) : null); }, [atual]);
 
   const processar = async (fileList) => {
-    const files = Array.from(fileList || []).filter((f) => /\.(pdf|xlsx|xls)$/i.test(f.name));
-    if (!files.length) return;
-    setBusy(true); setResumo(null);
+    const { aceitos, recusados } = separarAceitos(fileList);
+    // Descarte por extensão era silencioso: quem arrastava uma pasta com .docx
+    // no meio via "nada aconteceu" e não sabia por quê.
+    if (recusados.length) {
+      alert(`${recusados.length} arquivo(s) ignorado(s) — só leio ${EXTENSOES_ACEITAS.join(', ')}:\n\n`
+            + recusados.slice(0, 10).map((f) => f.name).join('\n')
+            + (recusados.length > 10 ? `\n… e mais ${recusados.length - 10}` : ''));
+    }
+    if (!aceitos.length) return;
+    setBusy(true); setResumo(null); setProgresso(null);
     try {
-      if (files.length === 1) {
-        const { data } = await modelosAPI.analisar(files[0]);
+      if (aceitos.length === 1) {
+        const { data } = await modelosAPI.analisar(aceitos[0]);
         setFila([data]);
       } else {
-        const { data } = await modelosAPI.lote(files);
+        // Em remessas: 36 arquivos numa requisição só não chegam ao servidor —
+        // o proxy corta por tamanho ou por tempo, e o erro não diz qual foi.
+        const remessas = emRemessas(aceitos);
+        const partes = [];
+        let feitos = 0;
+        setProgresso({ feitos: 0, total: aceitos.length });
+        for (const remessa of remessas) {
+          try {
+            const { data } = await modelosAPI.lote(remessa);
+            partes.push({ total: remessa.length, resultado: data });
+          } catch (err) {
+            // A remessa que falhou não some: cada arquivo dela vira uma linha
+            // de revisão com o motivo, e a conta continua fechando.
+            partes.push({ total: remessa.length,
+                          erro: mensagemDeErro(err, 'Falhou ao enviar esta remessa'),
+                          nomes: remessa.map((f) => f.name) });
+          }
+          feitos += remessa.length;
+          setProgresso({ feitos, total: aceitos.length });
+        }
+        const data = juntarResultados(partes);
         setResumo(data);
         setFila(data.revisar || []);
         if (data.resumo.salvos) await carregar();  // já mostra os salvos automaticamente
       }
     } catch (err) {
       alert(mensagemDeErro(err, 'Não consegui ler os arquivos.'));
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setProgresso(null); }
   };
 
   const onDrop = (ev) => { ev.preventDefault(); setDragOver(false); processar(ev.dataTransfer.files); };
@@ -121,6 +151,20 @@ export default function Modelos() {
             onChange={(e) => processar(e.target.files)} />
         </label>
       </div>
+
+      {/* Progresso das remessas. Sem isto, 36 arquivos em grupos de 5 parecem
+          uma tela travada por quase um minuto. */}
+      {progresso && (
+        <div className="card mb-6">
+          <p className="text-sm text-gray-700 mb-2">
+            Lendo os documentos… <strong>{progresso.feitos}</strong> de {progresso.total}
+          </p>
+          <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+            <div className="h-full bg-primary-500 transition-all duration-300"
+                 style={{ width: `${Math.round((progresso.feitos / progresso.total) * 100)}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Resumo do lote */}
       {resumo && (
