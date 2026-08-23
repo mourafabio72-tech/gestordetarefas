@@ -1,7 +1,7 @@
 // Prova de frontend/src/pages/lotesModelos.js — Node puro, sem build.
 //   node frontend/provas/prova_lotes_modelos.js
 
-import { separarAceitos, emRemessas, juntarResultados, POR_REMESSA }
+import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, POR_REMESSA }
   from '../src/pages/lotesModelos.js';
 
 let ok = 0, falhou = 0;
@@ -58,6 +58,49 @@ eq('e o nome do arquivo, para saber qual refazer',
 eq('a conta fecha: salvos + revisar = total',
    comFalha.resumo.salvos + comFalha.resumo.revisar, comFalha.resumo.total);
 eq('lista vazia devolve resumo zerado', juntarResultados([]).resumo, { total: 0, salvos: 0, revisar: 0 });
+
+console.log('\n5) Remessa que falha se divide e tenta de novo');
+// O limite que derruba a requisição depende dos arquivos: cinco planilhas
+// pesadas estouram onde cinco PDFs pequenos passam. Dividir na falha encontra
+// o tamanho que passa sem punir o caso comum.
+const cinco = ['a', 'b', 'c', 'd', 'e'].map(arq);
+let chamadas = [];
+
+// Servidor que só aceita remessas de até 2.
+const ate2 = async (lista) => {
+  chamadas.push(lista.length);
+  if (lista.length > 2) throw new Error('413');
+  return { resumo: { total: lista.length }, salvos: lista.map((f) => ({ id: f.name })), revisar: [] };
+};
+let andou = 0;
+let partes = await enviarComDivisao(cinco, ate2, (n) => { andou += n; });
+let juntas = juntarResultados(partes);
+eq('todos acabam entrando', juntas.salvos.length, 5);
+eq('nenhum vira erro', juntas.revisar.length, 0);
+eq('a barra andou o total', andou, 5);
+eq('tentou o grupo grande antes de dividir', chamadas[0], 5);
+eq('e nenhuma chamada que passou tinha mais de 2',
+   chamadas.filter((n) => n <= 2).length > 0, true);
+
+// Servidor que recusa SEMPRE: a divisão para no arquivo sozinho.
+chamadas = [];
+const sempreFalha = async (lista) => { chamadas.push(lista.length); throw new Error('500'); };
+partes = await enviarComDivisao(cinco, sempreFalha, () => {});
+juntas = juntarResultados(partes);
+eq('cada arquivo vira uma linha de erro', juntas.revisar.length, 5);
+eq('com o nome de cada um',
+   juntas.revisar.map((r) => r.nome_arquivo).sort(), ['a', 'b', 'c', 'd', 'e']);
+eq('não insiste depois de chegar a um arquivo',
+   chamadas.filter((n) => n === 1).length, 5);
+
+// Tudo funcionando: uma chamada só, sem divisão.
+chamadas = [];
+const sempreOk = async (lista) => {
+  chamadas.push(lista.length);
+  return { resumo: { total: lista.length }, salvos: [], revisar: [] };
+};
+await enviarComDivisao(cinco, sempreOk, () => {});
+eq('caso comum não paga pela retentativa', chamadas, [5]);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

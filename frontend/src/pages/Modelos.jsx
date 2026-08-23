@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { separarAceitos, emRemessas, juntarResultados, EXTENSOES_ACEITAS }
+import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, EXTENSOES_ACEITAS }
   from './lotesModelos';
 import { conferirIdentificador } from './identificador';
 import { estadoDoCandidato, explicar } from './colisaoIdentificador';
@@ -86,21 +86,31 @@ export default function Modelos() {
         let feitos = 0;
         setProgresso({ feitos: 0, total: aceitos.length });
         for (const remessa of remessas) {
-          try {
-            const { data } = await modelosAPI.lote(remessa);
-            partes.push({ total: remessa.length, resultado: data });
-          } catch (err) {
-            // A remessa que falhou não some: cada arquivo dela vira uma linha
-            // de revisão com o motivo, e a conta continua fechando.
-            partes.push({ total: remessa.length,
-                          erro: mensagemDeErro(err, 'Falhou ao enviar esta remessa'),
-                          nomes: remessa.map((f) => f.name) });
-            // Guarda os File para o botão de tentar de novo: sem eles, a única
-            // saída seria arrastar a pasta inteira outra vez.
-            remessa.forEach((f) => naoEnviados.current.set(f.name, f));
+          // Falhou? Divide ao meio e tenta cada metade. O limite que derruba a
+          // requisição depende dos arquivos, e assim não é preciso adivinhá-lo.
+          const resultados = await enviarComDivisao(
+            remessa,
+            async (lista) => {
+              try {
+                const { data } = await modelosAPI.lote(lista);
+                return data;
+              } catch (err) {
+                const e = new Error('falhou');
+                e.mensagem = mensagemDeErro(err, 'Falhou ao enviar');
+                throw e;
+              }
+            },
+            (n) => { feitos += n; setProgresso({ feitos, total: aceitos.length }); },
+          );
+          partes.push(...resultados);
+          // Guarda os File dos que não entraram, para o botão de tentar de novo.
+          for (const r of resultados) {
+            if (!r.erro) continue;
+            for (const nome of r.nomes || []) {
+              const f = remessa.find((x) => x.name === nome);
+              if (f) naoEnviados.current.set(nome, f);
+            }
           }
-          feitos += remessa.length;
-          setProgresso({ feitos, total: aceitos.length });
         }
         const data = juntarResultados(partes);
         setResumo(data);

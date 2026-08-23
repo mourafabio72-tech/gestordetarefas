@@ -7,8 +7,40 @@
 // foi — a tela só mostrava "não consegui ler os arquivos", como se o problema
 // fosse o conteúdo.
 
-/** Arquivos por remessa. Baixo o bastante para não estourar limite de proxy. */
+/** Arquivos por remessa na primeira tentativa. */
 export const POR_REMESSA = 5;
+
+/**
+ * Envia uma remessa; se ela falhar, DIVIDE AO MEIO e tenta cada metade.
+ *
+ * O limite que derruba a requisição — tamanho ou tempo — depende dos arquivos,
+ * e não dá para adivinhar um número que sirva para toda pasta. Cinco planilhas
+ * pesadas estouram onde cinco PDFs pequenos passam. Dividir na falha encontra o
+ * tamanho que passa, sem punir o caso comum com remessas minúsculas.
+ *
+ * Um arquivo sozinho que falha é o fim da linha: aí o problema é ele, não o
+ * tamanho da remessa, e insistir só demoraria mais para dizer a mesma coisa.
+ *
+ * `enviar(lista)` faz a chamada. `aoProgredir(n)` recebe quantos arquivos já
+ * foram resolvidos, para a barra andar mesmo durante as retentativas.
+ */
+export async function enviarComDivisao(remessa, enviar, aoProgredir = () => {}) {
+  try {
+    const resultado = await enviar(remessa);
+    aoProgredir(remessa.length);
+    return [{ total: remessa.length, resultado }];
+  } catch (err) {
+    if (remessa.length === 1) {
+      aoProgredir(1);
+      return [{ total: 1, erro: err?.mensagem || err?.message || 'Falhou ao enviar',
+                nomes: [remessa[0]?.name] }];
+    }
+    const meio = Math.ceil(remessa.length / 2);
+    const a = await enviarComDivisao(remessa.slice(0, meio), enviar, aoProgredir);
+    const b = await enviarComDivisao(remessa.slice(meio), enviar, aoProgredir);
+    return [...a, ...b];
+  }
+}
 
 /** Extensões que o leitor do servidor entende. */
 export const EXTENSOES_ACEITAS = ['pdf', 'xlsx', 'xls'];
