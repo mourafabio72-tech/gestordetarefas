@@ -63,6 +63,48 @@ def ler_arquivo(nome: str, conteudo: bytes) -> str:
     return ler_pdf(conteudo)  # default: PDF
 
 
+def conferir_saida(texto: str, cnpj_empresa: str, competencia_tarefa: str) -> dict:
+    """O documento que vai sair é mesmo desta empresa e desta competência?
+
+    Mandar a guia de um cliente para outro é o erro caro deste fluxo: o cliente
+    recebe dado de terceiro e o escritório descobre pelo telefone. A conferência
+    lê o próprio PDF e compara com o cadastro.
+
+    AVISA, não bloqueia. Guia sem CNPJ legível existe (imagem escaneada,
+    layout de prefeitura), e recusar o envio nesses casos travaria trabalho
+    legítimo por falta de prova, não por prova em contrário. O que não se pode
+    é deixar passar em silêncio o documento que diz OUTRO CNPJ.
+
+    Devolve `{ok, alertas[], cnpj_lido, competencia_lida}`. `ok` só é falso
+    quando algo lido CONTRADIZ o cadastro — não quando falta.
+    """
+    lido = extrair_dados(texto or "")
+    cnpj_doc = _so_digitos(lido.get("cnpj") or "")
+    comp_doc = lido.get("competencia")
+    alertas = []
+
+    cnpj_cad = _so_digitos(cnpj_empresa or "")
+    if cnpj_doc and cnpj_cad and cnpj_doc != cnpj_cad:
+        alertas.append(f"O documento é do CNPJ {_formata_cnpj(cnpj_doc)}, "
+                       f"e a empresa da tarefa é {_formata_cnpj(cnpj_cad)}.")
+    if comp_doc and competencia_tarefa and comp_doc != competencia_tarefa:
+        alertas.append(f"O documento é da competência {comp_doc}, "
+                       f"e a tarefa é de {competencia_tarefa}.")
+
+    return {"ok": not alertas, "alertas": alertas,
+            "cnpj_lido": cnpj_doc or None, "competencia_lida": comp_doc,
+            # Sem texto legível não há o que conferir, e a tela precisa dizer
+            # isso em vez de dar a impressão de que conferiu e passou.
+            "leu_algo": bool(cnpj_doc or comp_doc)}
+
+
+def _formata_cnpj(d: str) -> str:
+    d = _so_digitos(d or "")
+    if len(d) != 14:
+        return d
+    return f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
+
+
 def extrair_dados(texto: str) -> dict:
     d = {"cnpj": None, "competencia": None, "protocolo": None, "data_entrega": None}
 

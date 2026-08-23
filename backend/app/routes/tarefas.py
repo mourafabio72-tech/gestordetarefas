@@ -490,8 +490,29 @@ async def anexar_saida(
         tarefa.saida_token = None
         tarefa.saida_downloads = 0
         tarefa.saida_baixada_em = None
+        # Os links já enviados morrem junto. Sem isso, quem tem o link antigo
+        # continuaria baixando — e agora baixaria a guia NOVA sem saber que
+        # mudou, que é pior do que receber um link quebrado.
+        from ..models import TarefaEnvio
+        for e in db.query(TarefaEnvio).filter(TarefaEnvio.tarefa_id == tarefa.id).all():
+            e.token = None
     db.commit()
-    return {"arquivo": up.nome_de_exibicao(tarefa.saida_nome), "bytes": len(conteudo)}
+
+    # Confere o documento contra a tarefa. Best-effort: guia escaneada não tem
+    # texto, e falhar a leitura não pode impedir o anexo.
+    conferencia = {"ok": True, "alertas": [], "leu_algo": False}
+    try:
+        from ..services import validador
+        texto = validador.ler_arquivo(nome, conteudo)
+        conferencia = validador.conferir_saida(
+            texto,
+            tarefa.empresa.cnpj if tarefa.empresa else None,
+            tarefa.competencia)
+    except Exception:
+        pass
+
+    return {"arquivo": up.nome_de_exibicao(tarefa.saida_nome), "bytes": len(conteudo),
+            "conferencia": conferencia}
 
 
 @router.get("/{tarefa_id}/saida")
@@ -550,11 +571,22 @@ def historico_acessos(
     from ..services import upload as up
 
     _tarefa_no_escopo(db, current_user, tarefa_id)
+    from ..models import TarefaEnvio
     linhas = (db.query(SaidaAcesso).filter(SaidaAcesso.tarefa_id == tarefa_id)
               .order_by(SaidaAcesso.id.desc()).limit(50).all())
-    return [{"quando": a.quando, "ip": a.ip, "contado": bool(a.contado),
-             "robo": up.eh_robo(a.user_agent), "user_agent": a.user_agent}
-            for a in linhas]
+    envios = {e.id: e for e in db.query(TarefaEnvio)
+              .filter(TarefaEnvio.tarefa_id == tarefa_id).all()}
+    saida = []
+    for a in linhas:
+        e = envios.get(a.envio_id)
+        saida.append({"quando": a.quando, "ip": a.ip, "contado": bool(a.contado),
+                      "robo": up.eh_robo(a.user_agent), "user_agent": a.user_agent,
+                      # Quem abriu — vem do link exclusivo daquele destinatário.
+                      # Link antigo, de antes do token por pessoa, não tem dono.
+                      "quem": e.destinatario if e else None,
+                      "endereco": e.endereco if e else None,
+                      "canal": e.canal if e else None})
+    return saida
 
 
 @router.post("/{tarefa_id}/enviar-cliente")
@@ -605,19 +637,29 @@ async def enviar_ao_cliente(
     empresa = tarefa.empresa.razao_social if tarefa.empresa else ""
     comp = f" — {tarefa.competencia}" if tarefa.competencia else ""
     assunto = f"[BPS4] {tarefa.titulo}{comp}"
-    # O link é o que dá rastreio. Vai nos dois canais: no WhatsApp sozinho (nada
-    # de arquivo, some o limite de tamanho e a dependência do provedor aceitar),
-    # no e-mail junto do anexo, porque o cliente arquiva a guia na caixa dele e
-    # tirar isso pioraria a vida dele.
-    link = up.link_saida(cfg, tarefa, db)
-    texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
-             f"📎 {nome_arquivo}\n{link}\n\nQualquer dúvida, estamos à disposição.")
+    # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz
+    # que alguém abriu; a pergunta é quem — o sócio que paga ou o e-mail geral
+    # que ninguém lê. O token do envio responde isso.
+    base = (cfg.get("public_url") or "").rstrip("/")
     # O documento do cliente não vai para atendente do escritório: quem recebe é
     # o cliente, e o atendimento nasce na fila padrão da conexão.
     zap = await carregar_zap(cfg)
 
+    import secrets
     resultados = []
     for d in destinos:
+        # O envio nasce ANTES da mensagem sair: é dele que vem o token do link,
+        # e o texto precisa carregar esse token.
+        envio = TarefaEnvio(tarefa_id=tarefa.id, arquivo=nome_arquivo, canal=d["canal"],
+                            endereco=d["endereco"], destinatario=d["nome"],
+                            token=secrets.token_urlsafe(24), sucesso=False,
+                            enviado_por=current_user.id)
+        db.add(envio)
+        db.flush()          # garante o id sem fechar a transação
+        link = f"{base}/api/publico/baixar/{envio.token}"
+        texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
+                 f"📎 {nome_arquivo}\n{link}\n\nQualquer dúvida, estamos à disposição.")
+
         if d["canal"] == "whatsapp":
             # Link, não arquivo: é o que se pode rastrear, e ainda dispensa o
             # provedor aceitar o anexo.
@@ -627,10 +669,8 @@ async def enviar_ao_cliente(
             r = send_email(d["endereco"], assunto, texto, cfg,
                            anexos=[(nome_arquivo, conteudo)])
         ok = bool(r.get("success"))
-        db.add(TarefaEnvio(tarefa_id=tarefa.id, arquivo=nome_arquivo, canal=d["canal"],
-                           endereco=d["endereco"], destinatario=d["nome"], sucesso=ok,
-                           detalhe=None if ok else str(r.get("error") or r.get("response") or "")[:500],
-                           enviado_por=current_user.id))
+        envio.sucesso = ok
+        envio.detalhe = None if ok else str(r.get("error") or r.get("response") or "")[:500]
         resultados.append({**d, "enviado": ok, "detalhe": r})
 
     entregou = any(r["enviado"] for r in resultados)

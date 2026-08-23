@@ -425,9 +425,10 @@ export default function Tarefas() {
     if (!arquivo || !entrega) return;
     setEntrega((e) => ({ ...e, enviando: true, erro: null }));
     try {
-      await tarefasAPI.anexarSaida(entrega.tarefa.id, arquivo);
+      const { data: anexo } = await tarefasAPI.anexarSaida(entrega.tarefa.id, arquivo);
       const { data } = await tarefasAPI.enviarCliente(entrega.tarefa.id, true);
-      setEntrega((e) => ({ ...e, ensaio: data, enviando: false, erro: null }));
+      setEntrega((e) => ({ ...e, ensaio: data, enviando: false, erro: null,
+                           conferencia: anexo?.conferencia || null }));
     } catch (error) {
       setEntrega((e) => ({ ...e, enviando: false,
         erro: mensagemDeErro(error, 'Não foi possível anexar o documento') }));
@@ -901,6 +902,29 @@ export default function Tarefas() {
             <div className="p-4 space-y-3">
               {entrega.erro && (
                 <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{entrega.erro}</div>
+              )}
+              {/* Conferência do documento contra a tarefa. Avisa, não bloqueia:
+                  guia escaneada não tem texto, e recusar por falta de prova
+                  travaria trabalho legítimo. O que não pode é passar em
+                  silêncio um documento que diz OUTRO CNPJ. */}
+              {entrega.conferencia && !entrega.conferencia.ok && (
+                <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800">
+                  <strong>Confira antes de enviar:</strong>
+                  <ul className="list-disc ml-4 mt-1">
+                    {entrega.conferencia.alertas.map((a, i) => <li key={i}>{a}</li>)}
+                  </ul>
+                </div>
+              )}
+              {entrega.conferencia?.ok && entrega.conferencia.leu_algo && (
+                <div className="px-3 py-2 rounded-lg text-xs bg-green-50 text-green-800">
+                  ✓ O documento confere: CNPJ e competência batem com a tarefa.
+                </div>
+              )}
+              {entrega.conferencia && !entrega.conferencia.leu_algo && (
+                <div className="px-3 py-2 rounded-lg text-xs bg-gray-100 text-gray-600">
+                  Não consegui ler CNPJ nem competência neste arquivo (escaneado ou sem texto).
+                  Confira você antes de enviar.
+                </div>
               )}
 
               {entrega.resultado ? (

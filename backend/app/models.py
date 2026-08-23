@@ -133,6 +133,9 @@ class SaidaAcesso(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     tarefa_id = Column(Integer, ForeignKey("tarefas.id"), nullable=False, index=True)
+    # Por qual link entrou. É o que diz QUEM abriu: cada destinatário recebe um
+    # token próprio, então o acesso identifica a pessoa em vez de só o IP.
+    envio_id = Column(Integer, ForeignKey("tarefa_envios.id"), nullable=True, index=True)
     ip = Column(String(60))
     user_agent = Column(String(300))
     # Nem toda requisição é o cliente abrindo. O WhatsApp busca o link para
@@ -155,6 +158,10 @@ class TarefaEnvio(Base):
     id = Column(Integer, primary_key=True, index=True)
     tarefa_id = Column(Integer, ForeignKey("tarefas.id"), nullable=False, index=True)
     arquivo = Column(String(200))
+    # Link exclusivo deste destinatário. Um token por pessoa, não por tarefa:
+    # com um link só para todos, o acesso diz que ALGUÉM abriu, e a pergunta é
+    # quem — o sócio que paga ou o e-mail geral que ninguém lê.
+    token = Column(String(64), unique=True, index=True)
     canal = Column(String(20))                 # whatsapp | email
     endereco = Column(String(200))
     destinatario = Column(String(200))         # nome de quem recebeu, para o histórico ler bem

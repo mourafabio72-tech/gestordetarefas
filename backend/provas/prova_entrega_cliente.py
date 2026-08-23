@@ -159,23 +159,59 @@ h = client.get(f"/api/tarefas/{id_ok}/envios", headers=cabeca()).json()
 checa("o histórico traz canal, endereço e quem recebeu",
       all(e["canal"] and e["endereco"] and e["destinatario"] for e in h))
 
-print("\n=== 3b. trocar o documento revoga o link e zera o rastro ===")
+print("\n=== 3b. um link POR DESTINATÁRIO, e o acesso diz quem abriu ===")
+from app.models import SaidaAcesso as SA, TarefaEnvio as TE      # noqa: E402
 db = SessionLocal()
-t_antes = db.query(Tarefa).get(id_ok)
-token_antigo = t_antes.saida_token
-t_antes.saida_downloads, t_antes.saida_baixada_em = 3, None
-t_antes.saida_token = t_antes.saida_token or "tok-fixo-prova"
-db.commit(); db.close()
-checa("o envio gerou token", bool(token_antigo))
-r = client.get(f"/api/publico/baixar/{token_antigo}")
-checa("o link público serve o documento sem login", r.status_code == 200, f"({r.status_code})")
-db = SessionLocal()
-checa("e o acesso é contado", db.query(Tarefa).get(id_ok).saida_downloads == 4)
-checa("com data", db.query(Tarefa).get(id_ok).saida_baixada_em is not None)
-from app.models import SaidaAcesso                        # noqa: E402
-checa("e vira linha de auditoria",
-      db.query(SaidaAcesso).filter(SaidaAcesso.tarefa_id == id_ok).count() == 1)
+envios = db.query(TE).filter(TE.tarefa_id == id_ok).all()
+tokens = {e.token for e in envios}
+por_token = {e.token: (e.destinatario, e.endereco, e.canal) for e in envios}
 db.close()
+checa("cada envio saiu com seu próprio token", len(tokens) == 4 and None not in tokens,
+      f"({len(tokens)})")
+checa("e são todos diferentes entre si", len(tokens) == len(envios))
+# A mensagem de cada um leva o token dele: é isso que identifica quem abriu.
+for canal, _end, msg, _t in enviados:
+    if canal == "whatsapp":
+        checa("a mensagem carrega um token que existe",
+              any(t in msg for t in tokens if t), msg[-60:])
+        break
+
+alvo = sorted(tokens)[0]
+quem, endereco, canal = por_token[alvo]
+db = SessionLocal()
+db.query(SA).filter(SA.tarefa_id == id_ok).delete()
+t0 = db.query(Tarefa).get(id_ok); t0.saida_downloads = 0; db.commit(); db.close()
+
+r = client.get(f"/api/publico/baixar/{alvo}", headers={"user-agent": "Mozilla/5.0 Chrome/120"})
+checa("o link do destinatário serve o documento sem login", r.status_code == 200, f"({r.status_code})")
+db = SessionLocal()
+acesso = db.query(SA).filter(SA.tarefa_id == id_ok).order_by(SA.id.desc()).first()
+checa("o acesso fica ligado ao envio — é assim que se sabe QUEM abriu",
+      acesso.envio_id is not None)
+checa("e o envio diz o nome e o endereço",
+      por_token[alvo][0] == quem and por_token[alvo][1] == endereco)
+checa("o acesso é contado", db.query(Tarefa).get(id_ok).saida_downloads == 1)
+checa("com data e hora", db.query(Tarefa).get(id_ok).saida_baixada_em is not None)
+db.close()
+
+h = client.get(f"/api/tarefas/{id_ok}/acessos", headers=cabeca()).json()
+checa("o histórico traz quem abriu", h[0]["quem"] == quem, str(h[0])[:120])
+checa("com o endereço e o canal", h[0]["endereco"] == endereco and h[0]["canal"] == canal)
+checa("e a hora do acesso", bool(h[0]["quando"]))
+
+# Trocar o documento mata TODOS os links já enviados.
+client.post(f"/api/tarefas/{id_ok}/saida", headers=cabeca(),
+            files={"arquivo": ("DAS retificada.pdf", b"%PDF nova", "application/pdf")})
+checa("o link do destinatário morre depois da troca",
+      client.get(f"/api/publico/baixar/{alvo}").status_code == 404)
+db = SessionLocal()
+checa("nenhum envio antigo guarda token",
+      all(e.token is None for e in db.query(TE).filter(TE.tarefa_id == id_ok).all()))
+checa("contador zerado — baixaram o documento ANTERIOR",
+      db.query(Tarefa).get(id_ok).saida_downloads == 0)
+db.close()
+checa("link inventado não abre nada",
+      client.get("/api/publico/baixar/nao-existe-esse-token").status_code == 404)
 
 print("\n=== 3c. o contador conta ABERTURA, não requisição ===")
 from app.models import SaidaAcesso as SA                       # noqa: E402
@@ -204,9 +240,15 @@ checa("eh_robo não se confunde com 'Robot' no meio de nome de gente",
 # Na rota: duas batidas seguidas contam uma.
 db = SessionLocal()
 t_cont = db.query(Tarefa).get(id_ok)
+# Reenvia para ter um token vivo: a troca de documento matou os anteriores.
+db.commit(); db.close()
+client.post(f"/api/tarefas/{id_ok}/enviar-cliente", headers=cabeca())
+db = SessionLocal()
+tok_cont = db.query(TE).filter(TE.tarefa_id == id_ok, TE.token.isnot(None)).first().token
+t_cont = db.query(Tarefa).get(id_ok)
 t_cont.saida_downloads = 0
-db.query(SA).filter(SA.tarefa_id == id_ok).delete()   # conta o que ESTE bloco fizer
-db.commit(); tok_cont = t_cont.saida_token; db.close()
+db.query(SA).filter(SA.tarefa_id == id_ok).delete()
+db.commit(); db.close()
 client.get(f"/api/publico/baixar/{tok_cont}", headers={"user-agent": "WhatsApp/2.23"})
 db = SessionLocal(); n1 = db.query(Tarefa).get(id_ok).saida_downloads; db.close()
 checa("a prévia do WhatsApp não move o contador", n1 == 0, f"({n1})")
@@ -222,18 +264,6 @@ _cont = db.query(SA).filter(SA.tarefa_id == id_ok, SA.contado == True).count()
 db.close()
 checa("as três requisições ficam na auditoria", _reg >= 3, f"({_reg})")
 checa("mas só uma marcada como contada", _cont == 1, f"({_cont})")
-
-client.post(f"/api/tarefas/{id_ok}/saida", headers=cabeca(),
-            files={"arquivo": ("DAS retificada.pdf", b"%PDF nova", "application/pdf")})
-db = SessionLocal()
-t_dep = db.query(Tarefa).get(id_ok)
-checa("token novo depois da troca", t_dep.saida_token != token_antigo)
-checa("contador zerado — baixaram o documento ANTERIOR", t_dep.saida_downloads == 0)
-checa("e a data também", t_dep.saida_baixada_em is None)
-db.close()
-checa("o link antigo morre", client.get(f"/api/publico/baixar/{token_antigo}").status_code == 404)
-checa("link inventado não abre nada",
-      client.get("/api/publico/baixar/nao-existe-esse-token").status_code == 404)
 
 print("\n=== 4. nenhum envio funcionou: a tarefa NÃO pode concluir ===")
 db = SessionLocal()

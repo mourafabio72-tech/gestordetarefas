@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Tarefa, Empresa, Obrigacao, StatusTarefa, SaidaAcesso
+from ..models import Tarefa, Empresa, Obrigacao, StatusTarefa, SaidaAcesso, TarefaEnvio
 from ..services import upload as up
 
 router = APIRouter(prefix="/publico", tags=["publico"])
@@ -75,7 +75,12 @@ def baixar_documento(
     quais clientes ainda não pegaram a guia. Um anexo de e-mail sai do nosso
     alcance no instante do envio; um link é uma requisição aqui.
     """
-    tarefa = db.query(Tarefa).filter(Tarefa.saida_token == token).first()
+    # O token pode ser de um DESTINATÁRIO (o normal, desde que cada um passou a
+    # receber o seu) ou da tarefa (links emitidos antes disso). Procurar nos
+    # dois mantém de pé a guia que já está na mão do cliente.
+    envio = db.query(TarefaEnvio).filter(TarefaEnvio.token == token).first()
+    tarefa = (db.query(Tarefa).filter(Tarefa.id == envio.tarefa_id).first() if envio
+              else db.query(Tarefa).filter(Tarefa.saida_token == token).first())
     if not tarefa or not tarefa.saida_nome:
         raise HTTPException(status_code=404, detail="Documento não encontrado ou link expirado.")
     caminho = up.caminho_do_anexo(tarefa.saida_nome)
@@ -106,7 +111,8 @@ def baixar_documento(
         segundos = (agora - ultimo.quando).total_seconds()
 
     conta = up.conta_como_abertura(ua, segundos)
-    db.add(SaidaAcesso(tarefa_id=tarefa.id, ip=ip[:60], user_agent=ua, contado=conta))
+    db.add(SaidaAcesso(tarefa_id=tarefa.id, envio_id=envio.id if envio else None,
+                       ip=ip[:60], user_agent=ua, contado=conta))
     if conta:
         tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
         tarefa.saida_baixada_em = datetime.utcnow()

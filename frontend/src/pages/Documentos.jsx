@@ -35,6 +35,7 @@ export default function Documentos() {
   const podeApagar = Boolean(user?.permissoes_efetivas?.apagar_anexo);
   const [confirmando, setConfirmando] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [acessos, setAcessos] = useState(null);   // { doc, linhas }
   const [filtros, setFiltros] = useState(filtrosVazios());
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(false);
@@ -129,6 +130,24 @@ export default function Documentos() {
     } catch (err) {
       setErro(mensagemDeErro(err, 'Não foi possível excluir o documento'));
     }
+  };
+
+  // Quem abriu, quando e por qual link. O contador diz quantas vezes; isto diz
+  // de quem foi cada uma — o sócio que paga ou o e-mail geral que ninguém lê.
+  const verAcessos = async (doc) => {
+    setAcessos({ doc, linhas: null });
+    try {
+      const { data } = await tarefasAPI.acessos(doc.tarefa_id);
+      setAcessos({ doc, linhas: data });
+    } catch (err) {
+      setAcessos(null);
+      setErro(mensagemDeErro(err, 'Não foi possível ler as aberturas'));
+    }
+  };
+
+  const dataHora = (iso) => {
+    const d = (iso || '').slice(0, 16);
+    return d.length === 16 ? `${dataBr(d)} ${d.slice(11)}` : dataBr(d);
   };
 
   const ativo = temFiltroAtivo(filtros);
@@ -265,6 +284,62 @@ export default function Documentos() {
       {erro && <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700">{erro}</div>}
       {aviso && <div className="mb-4 px-4 py-3 rounded-lg text-sm bg-amber-50 text-amber-800">{aviso}</div>}
 
+      {/* Detalhe das aberturas. Fica num painel e não numa coluna porque são
+          várias linhas por documento, com nome, horário e o que NÃO contou. */}
+      {acessos && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+             onClick={() => setAcessos(null)}>
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Aberturas do documento</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {acessos.doc.titulo} · {acessos.doc.empresa}
+              </p>
+            </div>
+            <div className="p-4">
+              {!acessos.linhas ? <p className="text-sm text-gray-500">Carregando…</p> : (
+                <table className="table-app">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                      <th>Quem</th><th>Quando</th><th>Contou?</th><th>Origem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acessos.linhas.map((a, i) => (
+                      <tr key={i} className="border-b border-gray-100">
+                        <td>
+                          {a.quem ? (
+                            <>
+                              {a.quem}
+                              <span className="block text-[11px] text-gray-500">{a.endereco}</span>
+                            </>
+                          ) : <span className="text-gray-400">link antigo, sem dono</span>}
+                        </td>
+                        <td className="tabular-nums whitespace-nowrap">{dataHora(a.quando)}</td>
+                        <td className="whitespace-nowrap">
+                          {a.contado
+                            ? <span className="text-green-700">contou</span>
+                            : <span className="text-gray-500">
+                                {a.robo ? 'prévia do app' : 'mesma abertura'}
+                              </span>}
+                        </td>
+                        <td className="text-[11px] text-gray-400 max-w-[220px] truncate"
+                            title={a.user_agent}>{a.ip}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {acessos.linhas?.length === 0 && (
+                <p className="text-sm text-gray-500">Ninguém abriu ainda.</p>
+              )}
+              <button onClick={() => setAcessos(null)} className="btn-secondary w-full mt-3">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {dados && (
         <>
           <p className="text-xs text-gray-500 mb-2">
@@ -323,7 +398,14 @@ export default function Documentos() {
                               </span>
                             )}
                           </td>
-                          <td className="tabular-nums text-gray-600">{d.downloads ? `${d.downloads}×` : '—'}</td>
+                          <td className="tabular-nums text-gray-600">
+                            {d.downloads ? (
+                              <button type="button" onClick={() => verAcessos(d)}
+                                className="underline hover:text-primary-700" title="Ver quem abriu e quando">
+                                {d.downloads}×
+                              </button>
+                            ) : '—'}
+                          </td>
                         </>
                       ) : (
                         <>
