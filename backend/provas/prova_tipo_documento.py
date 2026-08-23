@@ -67,6 +67,20 @@ checa("na ordem inversa também",
 checa("'dae' dentro de outra palavra idem",
       tipo("memoria de calculo cidadae") != "guia")
 
+print("\n3b. Declaração x recibo — o par que também se confunde")
+# A declaração é o documento transmitido; o recibo é a prova de que ela foi
+# entregue. O recibo é o que costuma chegar ao escritório, e por isso vence.
+checa("ECF é declaração", tipo("ECF Escrituracao Contabil Fiscal 2025") == "declaracao",
+      tipo("ECF Escrituracao Contabil Fiscal 2025"))
+checa("DEFIS idem", tipo("DEFIS Declaracao de Informacoes Socioeconomicas") == "declaracao")
+checa("DCTF idem", tipo("DCTFWeb Declaracao de Debitos") == "declaracao")
+checa("mas o RECIBO da ECF é recibo, não declaração",
+      tipo("Recibo de Entrega da ECF 2025") == "recibo_entrega",
+      tipo("Recibo de Entrega da ECF 2025"))
+checa("e o recibo da DEFIS também",
+      tipo("RECIBO DE ENTREGA DE DEFIS 2025") == "recibo_entrega")
+checa("'ecd' dentro de outra palavra não conta", tipo("procedimento") != "declaracao")
+
 print("\n4. Os outros tipos continuam de pé")
 checa("recibo de entrega", tipo("Recibo de Entrega da EFD-Contribuicoes") == "recibo_entrega")
 checa("recibo de transmissão idem", tipo("Recibo de Transmissao do arquivo") == "recibo_entrega")

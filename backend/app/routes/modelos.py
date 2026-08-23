@@ -11,6 +11,7 @@ router = APIRouter(prefix="/modelos", tags=["modelos"])
 
 TIPOS = {"guia": "Guia a pagar (DARF, DAS, GPS…)",
          "comprovante_pagamento": "Comprovante de pagamento",
+         "declaracao": "Declaração (ECF, ECD, DCTF, DEFIS…)",
          "recibo_entrega": "Recibo de entrega",
          "relatorio": "Relatório",
          "outro": "Outro"}

@@ -185,8 +185,15 @@ def classificar_tipo(texto: str) -> str:
                  r"|codigo de barras|linha digitavel|\bboleto\b"
                  r"|\bdas\b[^\n]{0,40}simples|simples[^\n]{0,40}\bdas\b", t):
         return "guia"
+    # 3. Recibo ANTES de declaração: "Recibo de Entrega da ECF" é o recibo, não
+    # a ECF. O recibo é a prova de que a declaração foi entregue, e é ele que
+    # costuma chegar ao escritório.
     if re.search(r"recibo de entrega|comprovante de entrega|recibo de transmiss|protocolo de entrega|recibo|transmiss", t):
         return "recibo_entrega"
+    # 4. A declaração em si — o documento transmitido ou o espelho dele.
+    if re.search(r"declaracao|\becf\b|\becd\b|\bdctf\b|\bdirf\b|\brais\b|\bdefis\b"
+                 r"|\bdasn\b|\bdmed\b|\bdimob\b|\bsped\b|\befd\b|escrituracao", t):
+        return "declaracao"
     if re.search(r"relatorio|demonstrativo|balancete|extrato|memoria de calculo|apuracao", t):
         return "relatorio"
     return "outro"

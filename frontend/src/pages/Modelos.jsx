@@ -10,9 +10,13 @@ import { formatarRazaoSocial } from './razaoSocial';
 
 // A guia é o documento A PAGAR que o escritório entrega; o comprovante é a
 // prova de que foi pago, que o cliente devolve. Papéis opostos no fluxo.
+// A guia é o documento A PAGAR que o escritório entrega; o comprovante é a
+// prova de que foi pago. A declaração é o documento transmitido; o recibo é a
+// prova de que ela foi entregue. Dois pares que se confundem fácil.
 const TIPOS = {
   guia: 'Guia a pagar (DARF, DAS, GPS…)',
   comprovante_pagamento: 'Comprovante de pagamento',
+  declaracao: 'Declaração (ECF, ECD, DCTF, DEFIS…)',
   recibo_entrega: 'Recibo de entrega',
   relatorio: 'Relatório',
   outro: 'Outro',
@@ -20,6 +24,7 @@ const TIPOS = {
 const TIPO_CLS = {
   guia: 'bg-orange-100 text-orange-700',
   comprovante_pagamento: 'bg-amber-100 text-amber-700',
+  declaracao: 'bg-violet-100 text-violet-700',
   recibo_entrega: 'bg-primary-100 text-primary-700',
   relatorio: 'bg-sky-100 text-sky-700',
   outro: 'bg-gray-100 text-gray-600',
