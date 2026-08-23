@@ -324,19 +324,40 @@ def _treinar_obrigacao(db: Session, obrigacao_id: int, identificador: str) -> bo
     return True
 
 
+def _cabe(valor, limite: int):
+    """Corta o texto no limite da coluna. None continua None.
+
+    Tudo aqui vem de dentro de um PDF, e PDF não respeita tamanho de coluna: o
+    protocolo é um hash sem tamanho máximo no padrão que o extrai, e a
+    competência mal lida pode trazer a frase inteira. Estourar a coluna derruba
+    o INSERT com erro 500 no meio do cadastro, e a tela não tem como explicar
+    isso a quem está só salvando um modelo.
+    """
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    return texto[:limite] or None
+
+
 def salvar_modelo(db: Session, dados: dict) -> "object":
     """Grava um Modelo no repositório e treina a obrigação vinculada (se houver)."""
     from ..models import Modelo
+    # A competência só entra se estiver no formato da coluna (MM/AAAA); qualquer
+    # outra coisa é leitura ruim, e guardá-la cortada em 7 caracteres inventaria
+    # um dado errado em vez de admitir que não leu.
+    comp = (dados.get("competencia_exemplo") or "").strip()
+    if not re.fullmatch(r"\d{2}/\d{4}", comp):
+        comp = None
     m = Modelo(
-        nome_arquivo=dados.get("nome_arquivo"),
-        cnpj=_so_digitos(dados.get("cnpj") or "") or None,
-        razao_social_extraida=dados.get("razao_social_extraida"),
+        nome_arquivo=_cabe(dados.get("nome_arquivo"), 200),
+        cnpj=_cabe(_so_digitos(dados.get("cnpj") or ""), 14),
+        razao_social_extraida=_cabe(dados.get("razao_social_extraida"), 200),
         empresa_id=dados.get("empresa_id"),
         obrigacao_id=dados.get("obrigacao_id"),
-        tipo_documento=dados.get("tipo_documento") or "outro",
-        identificador=(dados.get("identificador") or "").strip() or None,
-        competencia_exemplo=dados.get("competencia_exemplo"),
-        protocolo_exemplo=dados.get("protocolo_exemplo"),
+        tipo_documento=_cabe(dados.get("tipo_documento") or "outro", 30),
+        identificador=_cabe(dados.get("identificador"), 120),
+        competencia_exemplo=comp,
+        protocolo_exemplo=_cabe(dados.get("protocolo_exemplo"), 120),
         texto_extraido=dados.get("texto_extraido"),
     )
     db.add(m)

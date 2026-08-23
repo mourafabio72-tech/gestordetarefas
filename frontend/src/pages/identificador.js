@@ -48,5 +48,25 @@ export function conferirIdentificador(identificador, textoDocumento) {
     return { estado: 'curto',
              aviso: 'Muito curto: vai casar com documentos que não são deste tipo.' };
   }
+  // Valor e data mudam a cada documento. Um identificador que os contenha casa
+  // com ESTE arquivo e com nenhum outro — o e-validador reconheceria a guia de
+  // abril e nunca a de maio, o que é pior do que não reconhecer nenhuma:
+  // parece funcionar no teste e falha no uso.
+  const movel = trechoMovel(identificador);
+  if (movel) {
+    return { estado: 'volatil',
+             aviso: `Este trecho contém ${movel}, que muda a cada documento. `
+                  + 'Ele casaria só com este arquivo. Escolha um título ou cabeçalho '
+                  + 'que se repita em todos os meses.' };
+  }
   return { estado: 'achou', aviso: null };
+}
+
+/** O que no trecho muda de um documento para o outro. Null se nada muda. */
+export function trechoMovel(texto) {
+  const t = String(texto || '');
+  if (/\d{1,3}(\.\d{3})*,\d{2}/.test(t)) return 'um valor em reais';
+  if (/\b\d{2}\/\d{2}\/\d{4}\b/.test(t)) return 'uma data';
+  if (/\b\d{2}\/\d{4}\b/.test(t)) return 'uma competência';
+  return null;
 }

@@ -3,7 +3,7 @@ import { modelosAPI, empresasAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, EXTENSOES_ACEITAS }
   from './lotesModelos';
-import { conferirIdentificador } from './identificador';
+import { conferirIdentificador, trechoMovel } from './identificador';
 import { estadoDoCandidato, explicar } from './colisaoIdentificador';
 import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
@@ -313,6 +313,7 @@ export default function Modelos() {
               </p>
               <input className={`input-field ${
                 conferencia.estado === 'nao_achou' ? 'border-red-400' :
+                conferencia.estado === 'volatil' ? 'border-amber-400' :
                 conferencia.estado === 'achou' ? 'border-green-500' : ''}`}
                 value={form.identificador}
                 onChange={(e) => setForm({ ...form, identificador: e.target.value })}
@@ -335,7 +336,11 @@ export default function Modelos() {
                     // layout do mesmo documento (Lucro Real e Presumido caindo
                     // na mesma apuração). Só outra obrigação é problema.
                     const { estado, outras } = estadoDoCandidato(c, nomeObrigacaoEscolhida);
-                    const cor = estado === 'conflito'
+                    // Candidato com valor ou data dentro casa só com ESTE
+                    // arquivo. O sistema sugere assim quando o documento não
+                    // tem título limpo, e clicar sem reparar é fácil.
+                    const movel = trechoMovel(c.texto);
+                    const cor = estado === 'conflito' || movel
                       ? 'border-amber-300 bg-amber-50 text-amber-700'
                       : estado === 'variacao'
                         ? 'border-blue-200 bg-blue-50 text-blue-700'
@@ -344,8 +349,10 @@ export default function Modelos() {
                       <button key={i} type="button"
                         onClick={() => setForm({ ...form, identificador: c.texto })}
                         className={`text-xs rounded-full px-2 py-1 border ${cor}`}
-                        title={explicar(estado, outras)}>
-                        {c.texto}{estado === 'conflito' ? ' ⚠' : ''}
+                        title={movel
+                          ? `Contém ${movel}: casaria só com este arquivo.`
+                          : explicar(estado, outras)}>
+                        {c.texto}{estado === 'conflito' || movel ? ' ⚠' : ''}
                       </button>
                     );
                   })}

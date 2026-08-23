@@ -1,7 +1,7 @@
 // Prova de frontend/src/pages/identificador.js — Node puro, sem build.
 //   node frontend/provas/prova_identificador.js
 
-import { conferirIdentificador, normalizar } from '../src/pages/identificador.js';
+import { conferirIdentificador, normalizar, trechoMovel } from '../src/pages/identificador.js';
 
 let ok = 0, falhou = 0;
 const eq = (nome, obtido, esperado) => {
@@ -33,6 +33,20 @@ eq('cabeçalho de coluna também está lá', est('CONTA'), 'achou');
 console.log('\n3) Curto demais distingue pouco');
 eq('três letras avisa', est('IRP'), 'curto');
 eq('quatro já passa', est('IRPJ'), 'achou');
+
+console.log('\n3b) Trecho que muda a cada documento');
+// O candidato sugerido para um DARF veio "2089 IRPJ - LUCRO PRESUMIDO 45.410,58
+// 45.410,58": o valor do imposto está dentro. Casaria com a guia de abril e com
+// nenhuma outra — pior que não casar, porque passa no teste e falha no uso.
+const COM_VALOR = 'Documento 2089 IRPJ - LUCRO PRESUMIDO 45.410,58 45.410,58 vencimento 30/04/2026';
+eq('valor em reais é acusado', est('2089 IRPJ - LUCRO PRESUMIDO 45.410,58', COM_VALOR), 'volatil');
+eq('e o aviso diz o que é', conferirIdentificador('45.410,58', COM_VALOR).aviso.includes('valor em reais'), true);
+eq('data completa idem', est('vencimento 30/04/2026', COM_VALOR), 'volatil');
+eq('competência idem', trechoMovel('apuração 07/2026'), 'uma competência');
+eq('sem número móvel passa', est('LUCRO PRESUMIDO', COM_VALOR), 'achou');
+eq('código de receita sozinho não é valor', trechoMovel('DARF codigo 2089'), null);
+eq('nada móvel devolve null', trechoMovel('Memória de Cálculo do IRPJ'), null);
+eq('vazio não quebra', [trechoMovel(''), trechoMovel(null)], [null, null]);
 
 console.log('\n4) Casos de borda');
 eq('vazio não acusa nada', est(''), 'vazio');
