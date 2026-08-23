@@ -172,6 +172,44 @@ checa("sem corte, cortou é falso", docs("admin@x.com")["cortou"] is False)
 sem_sessao = client.get("/api/documentos")
 checa("sem sessão não lista", sem_sessao.status_code in (401, 403))
 
+print("\n=== 8. excluir documento: só com a flag apagar_anexo ===")
+def apagar(email, tid, tipo="recebido"):
+    return client.delete(f"/api/tarefas/{tid}/documento", params={"tipo": tipo},
+                         headers=cabeca(email))
+
+# O analista enxerga a tarefa dele, mas não tem a flag: ver não é apagar.
+r = apagar("dono@x.com", ids["Com comprovante"])
+checa("sem a flag, 403 — e é 403 mesmo, não 404", r.status_code == 403, f"({r.status_code})")
+checa("a mensagem diz qual permissão falta", "apagar_anexo" in r.text, r.text[:80])
+checa("e o arquivo continua lá",
+      client.get(f"/api/tarefas/{ids['Com comprovante']}/anexo",
+                 headers=cabeca("dono@x.com")).status_code == 200)
+
+r = apagar("admin@x.com", ids["Com comprovante"])
+checa("com a flag, apaga", r.status_code == 200, f"({r.status_code} {r.text[:60]})")
+checa("diz que o arquivo existia mesmo", r.json().get("arquivo_existia") is True)
+checa("o arquivo sai do volume", up.caminho_do_anexo(guardado) is None)
+checa("e a rota de download passa a devolver 404",
+      client.get(f"/api/tarefas/{ids['Com comprovante']}/anexo",
+                 headers=cabeca("admin@x.com")).status_code == 404)
+checa("some do acervo", docs("admin@x.com")["mostrando"] == 2)
+
+db = SessionLocal()
+t = db.query(Tarefa).get(ids["Com comprovante"])
+checa("o vínculo no banco é limpo", t.anexo_nome is None)
+# Apagar a prova não desfaz a entrega: a tarefa continua como estava.
+checa("a tarefa NÃO volta para pendente", t.status == StatusTarefa.CONCLUIDA)
+db.close()
+
+checa("apagar duas vezes devolve 404",
+      apagar("admin@x.com", ids["Com comprovante"]).status_code == 404)
+checa("tarefa sem documento devolve 404",
+      apagar("admin@x.com", ids["Sem comprovante"]).status_code == 404)
+checa("banco apontando para arquivo já sumido ainda limpa o vínculo",
+      apagar("admin@x.com", ids["Arquivo sumiu"]).status_code == 200)
+checa("sem sessão não apaga",
+      client.delete(f"/api/tarefas/{ids['Nome malicioso']}/documento").status_code in (401, 403))
+
 import shutil                                        # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)
 print("\n" + ("TUDO VERDE" if ok else "VERMELHO") + "\n")

@@ -4,7 +4,9 @@ import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
 import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, paraCSV, EXTENSOES }
   from './filtroDocumentos';
-import { FileArchive, Search, Paperclip, Download, AlertTriangle, FileDown } from 'lucide-react';
+import { FileArchive, Search, Paperclip, Download, AlertTriangle, FileDown,
+         Inbox, Send, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mesmo desenho da barra de filtros de Tarefas: rótulo fixo por cima, borda
 // verde quando o campo está filtrando. Duas telas de consulta que se parecem
@@ -26,6 +28,12 @@ function Campo({ rotulo, dica, largura = '', children }) {
 }
 
 export default function Documentos() {
+  const { user } = useAuth();
+  // Quem apaga é decidido no cadastro de Grupos, pela flag `apagar_anexo`. O
+  // botão nem aparece para quem não tem — mas quem chamar a API direto leva 403
+  // do mesmo jeito: esconder na tela é conveniência, não é a trava.
+  const podeApagar = Boolean(user?.permissoes_efetivas?.apagar_anexo);
+  const [confirmando, setConfirmando] = useState(null);
   const [filtros, setFiltros] = useState(filtrosVazios());
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(false);
@@ -69,7 +77,9 @@ export default function Documentos() {
 
   const abrir = async (doc, baixar = false) => {
     try {
-      const { data } = await tarefasAPI.anexo(doc.tarefa_id, baixar);
+      const { data } = filtros.tipo === 'entregues'
+        ? await tarefasAPI.saida(doc.tarefa_id, baixar)
+        : await tarefasAPI.anexo(doc.tarefa_id, baixar);
       const url = URL.createObjectURL(data);
       if (baixar) {
         const a = document.createElement('a');
@@ -95,6 +105,25 @@ export default function Documentos() {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
+  // Duas etapas, não um confirm(): o primeiro clique arma a lixeira, o segundo
+  // apaga. Documento apagado não volta, e diálogo do navegador se aceita no
+  // reflexo. Passa o efeito em 4 segundos, para a lixeira não ficar armada.
+  const excluir = async (doc) => {
+    if (confirmando !== doc.tarefa_id) {
+      setConfirmando(doc.tarefa_id);
+      setTimeout(() => setConfirmando((c) => (c === doc.tarefa_id ? null : c)), 4000);
+      return;
+    }
+    setConfirmando(null);
+    try {
+      await tarefasAPI.excluirDocumento(doc.tarefa_id,
+        filtros.tipo === 'entregues' ? 'entregue' : 'recebido');
+      buscar();
+    } catch (err) {
+      setErro(mensagemDeErro(err, 'Não foi possível excluir o documento'));
+    }
+  };
+
   const ativo = temFiltroAtivo(filtros);
   const docs = dados?.documentos || [];
 
@@ -111,6 +140,25 @@ export default function Documentos() {
           className="btn-secondary flex items-center gap-2 shrink-0 disabled:opacity-40">
           <FileDown size={18} /> Exportar CSV
         </button>
+      </div>
+
+      {/* Dois acervos, não um. O que o cliente MANDOU e o que o escritório
+          ENTREGOU respondem perguntas diferentes, e a coluna "arquivo"
+          significaria coisas distintas em linhas vizinhas se fossem uma lista só. */}
+      <div className="flex gap-1 mb-3">
+        {[
+          { valor: 'recebidos', rotulo: 'Recebidos do cliente', icone: Inbox },
+          { valor: 'entregues', rotulo: 'Entregues ao cliente', icone: Send },
+        ].map((t) => (
+          <button key={t.valor} type="button"
+            onClick={() => { const novo = { ...filtros, tipo: t.valor, baixado: '' }; setFiltros(novo); buscar(novo); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
+              ${filtros.tipo === t.valor
+                ? 'bg-primary-100 border-primary-400 text-primary-800'
+                : 'bg-white border-gray-300 text-gray-600 hover:border-primary-300'}`}>
+            <t.icone size={14} /> {t.rotulo}
+          </button>
+        ))}
       </div>
 
       <div className="mb-5 rounded-xl border border-gray-200 p-3" style={{ background: '#faf7f0' }}>
@@ -171,6 +219,16 @@ export default function Documentos() {
               ))}
             </div>
           </Campo>
+          {filtros.tipo === 'entregues' && (
+            <Campo rotulo="O cliente pegou?" dica="A pergunta do fim do mês" largura="w-[150px]">
+              <select value={filtros.baixado} onChange={(e) => set('baixado', e.target.value)}
+                className={ctrl(filtros.baixado)}>
+                <option value="">Tanto faz</option>
+                <option value="nao">Ainda não baixou</option>
+                <option value="sim">Já baixou</option>
+              </select>
+            </Campo>
+          )}
           <Campo rotulo="Tipo" largura="w-[124px]">
             <select value={filtros.extensao} onChange={(e) => set('extensao', e.target.value)}
               className={ctrl(filtros.extensao)}>
@@ -225,8 +283,12 @@ export default function Documentos() {
                   <tr className="border-b border-gray-200 text-left text-gray-500">
                     <th>Empresa</th><th>Obrigação</th><th>Tarefa</th>
                     <th className="whitespace-nowrap">Comp.</th>
-                    <th className="whitespace-nowrap">Entrega</th>
-                    <th>Protocolo</th><th>Arquivo</th><th className="px-2"></th>
+                    {filtros.tipo === 'entregues' ? (
+                      <><th className="whitespace-nowrap">O cliente pegou?</th><th>Aberturas</th></>
+                    ) : (
+                      <><th className="whitespace-nowrap">Entrega</th><th>Protocolo</th></>
+                    )}
+                    <th>Arquivo</th><th className="px-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,8 +298,27 @@ export default function Documentos() {
                       <td className="text-gray-600">{d.obrigacao || '—'}</td>
                       <td className="max-w-[200px] truncate" title={d.titulo}>{d.titulo}</td>
                       <td className="tabular-nums whitespace-nowrap">{d.competencia || '—'}</td>
-                      <td className="tabular-nums whitespace-nowrap">{dataBr(d.data_entrega) || '—'}</td>
-                      <td className="max-w-[160px] truncate text-gray-600" title={d.protocolo}>{d.protocolo || '—'}</td>
+                      {filtros.tipo === 'entregues' ? (
+                        <>
+                          <td className="whitespace-nowrap">
+                            {d.downloads ? (
+                              <span className="inline-flex items-center gap-1 text-green-700">
+                                <CheckCircle2 size={13} /> {dataBr(d.baixado_em) || 'sim'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-amber-700">
+                                <Clock size={13} /> ainda não
+                              </span>
+                            )}
+                          </td>
+                          <td className="tabular-nums text-gray-600">{d.downloads ? `${d.downloads}×` : '—'}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="tabular-nums whitespace-nowrap">{dataBr(d.data_entrega) || '—'}</td>
+                          <td className="max-w-[160px] truncate text-gray-600" title={d.protocolo}>{d.protocolo || '—'}</td>
+                        </>
+                      )}
                       <td className="max-w-[200px] truncate" title={d.arquivo}>
                         {d.no_volume ? d.arquivo : (
                           <span className="inline-flex items-center gap-1 text-amber-700"
@@ -255,6 +336,18 @@ export default function Documentos() {
                           className="p-1 rounded hover:bg-[#e2ebde] disabled:opacity-30" style={{ color: '#566450' }}>
                           <Download size={14} />
                         </button>
+                        {podeApagar && (
+                          <button onClick={() => excluir(d)}
+                            title={confirmando === d.tarefa_id
+                              ? 'Clique de novo para excluir de vez'
+                              : 'Excluir este documento'}
+                            className={`p-1 rounded transition-colors ${
+                              confirmando === d.tarefa_id
+                                ? 'bg-red-600 text-white'
+                                : 'hover:bg-[#f7e7e3] text-[#a24a3a]'}`}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -140,6 +140,8 @@ export const tarefasAPI = {
   enviarCliente: (id, ensaio) => api.post(`/tarefas/${id}/enviar-cliente`, null,
     { params: ensaio ? { ensaio: true } : {} }),
   envios: (id) => api.get(`/tarefas/${id}/envios`),
+  // Exige a flag `apagar_anexo`, decidida no cadastro de Grupos.
+  excluirDocumento: (id, tipo) => api.delete(`/tarefas/${id}/documento`, { params: { tipo } }),
   update: (id, data) => api.put(`/tarefas/${id}`, data),
   delete: (id) => api.delete(`/tarefas/${id}`),
   dashboard: (empresaId) => api.get('/tarefas/dashboard/stats', { params: empresaId ? { empresa_id: empresaId } : {} }),

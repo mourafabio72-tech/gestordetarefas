@@ -363,6 +363,63 @@ def baixar_anexo(
                         content_disposition_type=disposicao)
 
 
+def _tarefa_no_escopo(db, user, tarefa_id):
+    t = (_aplicar_escopo(db.query(Tarefa), db, user)
+         .filter(Tarefa.id == tarefa_id).first())
+    if not t:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    return t
+
+
+@router.delete("/{tarefa_id}/documento")
+def excluir_documento(
+    tarefa_id: int,
+    tipo: str = "recebido",     # recebido (comprovante) | entregue (guia)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_flag("apagar_anexo")),
+):
+    """Apaga um documento do acervo — o arquivo e o vínculo com a tarefa.
+
+    Exige a flag `apagar_anexo`, que já existia e só o admin tem por padrão.
+    Quem pode apagar é decidido no cadastro de Grupos, não aqui.
+
+    NÃO reabre a tarefa. Comprovante e conclusão são registros diferentes: a
+    entrega aconteceu, e apagar o arquivo não a desfaz. Reabrir automaticamente
+    devolveria à fila uma tarefa que ninguém precisa refazer — o que se perdeu
+    foi a prova, e é isso que o log diz.
+
+    No documento de ENTREGA, o token morre junto: o link que o cliente tem para
+    de funcionar em vez de servir um arquivo que já não existe.
+    """
+    from ..services import upload as up
+    from ..seguranca import log_event
+
+    tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
+    entregue = (tipo or "recebido").lower() == "entregue"
+    nome = tarefa.saida_nome if entregue else tarefa.anexo_nome
+    if not nome:
+        raise HTTPException(status_code=404, detail="Nenhum documento para excluir")
+
+    removido = up.remover_arquivo(nome)
+    if entregue:
+        tarefa.saida_nome = None
+        tarefa.saida_token = None
+        tarefa.saida_downloads = 0
+        tarefa.saida_baixada_em = None
+    else:
+        tarefa.anexo_nome = None
+    db.commit()
+
+    # Quem apagou, o quê e quando. Documento apagado sem rastro é o tipo de
+    # coisa que só se descobre quando alguém pede a prova da entrega.
+    log_event("DOCUMENTO_EXCLUIDO", level="WARN", email=current_user.email,
+              usuario_id=current_user.id, tarefa_id=tarefa.id,
+              arquivo=nome, tipo="entregue" if entregue else "recebido",
+              arquivo_existia=removido)
+    return {"excluido": True, "arquivo": up.nome_de_exibicao(nome),
+            "arquivo_existia": removido}
+
+
 # ── Documento que o escritório ENTREGA ao cliente ────────────────────────────
 #
 # O caminho contrário do e-validador: em vez de esperar o comprovante do
@@ -371,14 +428,6 @@ def baixar_anexo(
 
 EXT_SAIDA_OK = {".pdf", ".xlsx", ".xls", ".png", ".jpg", ".jpeg", ".xml", ".zip", ".csv", ".txt"}
 MAX_SAIDA = 15 * 1024 * 1024
-
-
-def _tarefa_no_escopo(db, user, tarefa_id):
-    t = (_aplicar_escopo(db.query(Tarefa), db, user)
-         .filter(Tarefa.id == tarefa_id).first())
-    if not t:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    return t
 
 
 @router.post("/{tarefa_id}/saida")
