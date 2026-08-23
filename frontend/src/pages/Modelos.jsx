@@ -5,7 +5,7 @@ import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, EXTENSO
   from './lotesModelos';
 import { conferirIdentificador, trechoMovel } from './identificador';
 import { estadoDoCandidato, explicar } from './colisaoIdentificador';
-import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward } from 'lucide-react';
+import { FileStack, Upload, Trash2, CheckCircle2, AlertTriangle, Building2, FileCheck2, SkipForward, Pencil } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
 
 // A guia é o documento A PAGAR que o escritório entrega; o comprovante é a
@@ -52,6 +52,7 @@ export default function Modelos() {
   const [form, setForm] = useState(null);       // campos editáveis do item atual
   const [resumo, setResumo] = useState(null);   // resultado do último lote
   const [progresso, setProgresso] = useState(null);   // { feitos, total }
+  const [editandoId, setEditandoId] = useState(null); // modelo em edição, se houver
   // Arquivos cuja remessa não chegou ao servidor, por nome, para reenviar.
   const naoEnviados = useRef(new Map());
   const [busy, setBusy] = useState(false);
@@ -136,10 +137,45 @@ export default function Modelos() {
   const nomeObrigacaoEscolhida =
     obrigacoes.find((o) => String(o.id) === String(form?.obrigacao_id))?.nome || '';
 
+  // Abre um modelo salvo no mesmo formulário da revisão. O texto extraído não é
+  // devolvido na listagem, então a conferência do identificador fica sem base —
+  // e dizer isso é melhor do que checar contra vazio e acusar que "não está no
+  // documento".
+  const editar = (m) => {
+    setEditandoId(m.id);
+    setResumo(null);
+    setFila([{
+      nome_arquivo: m.nome_arquivo, cnpj: m.cnpj,
+      razao_social_extraida: m.razao_social_extraida,
+      empresa_id: m.empresa_id, obrigacao_sugerida_id: m.obrigacao_id,
+      tipo_documento: m.tipo_documento, competencia_exemplo: m.competencia_exemplo,
+      protocolo_exemplo: m.protocolo_exemplo, texto_extraido: null,
+      candidatos: [], identificador_atual: m.identificador,
+    }]);
+    setForm({
+      nome_arquivo: m.nome_arquivo, cnpj: m.cnpj || '',
+      razao_social_extraida: m.razao_social_extraida || '',
+      empresa_id: m.empresa_id || '', obrigacao_id: m.obrigacao_id || '',
+      tipo_documento: m.tipo_documento || 'outro',
+      identificador: m.identificador || '',
+      competencia_exemplo: m.competencia_exemplo || '',
+      protocolo_exemplo: m.protocolo_exemplo || '',
+      texto_extraido: null,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const salvar = async () => {
     setBusy(true);
     try {
-      await modelosAPI.create({ ...form, empresa_id: form.empresa_id || null, obrigacao_id: form.obrigacao_id || null });
+      const corpo = { ...form, empresa_id: form.empresa_id || null,
+                      obrigacao_id: form.obrigacao_id || null };
+      if (editandoId) {
+        await modelosAPI.update(editandoId, corpo);
+        setEditandoId(null);
+      } else {
+        await modelosAPI.create(corpo);
+      }
       setFila((f) => f.slice(1));
       await carregar();
     } catch (err) {
@@ -147,7 +183,7 @@ export default function Modelos() {
     } finally { setBusy(false); }
   };
 
-  const pular = () => setFila((f) => f.slice(1));
+  const pular = () => { setEditandoId(null); setFila((f) => f.slice(1)); };
 
   const excluir = async (id) => {
     if (!confirm('Remover este modelo do repositório?')) return;
@@ -376,7 +412,7 @@ export default function Modelos() {
 
           <div className={`flex items-center gap-3 mt-5 ${atual.erro ? 'hidden' : ''}`}>
             <button onClick={salvar} disabled={busy} className="btn-primary">
-              {busy ? 'Salvando…' : 'Salvar modelo'}
+              {busy ? 'Salvando…' : editandoId ? 'Salvar alteração' : 'Salvar modelo'}
             </button>
             <button onClick={pular} className="btn-secondary flex items-center gap-1">
               <SkipForward size={15} /> Pular
@@ -423,8 +459,13 @@ export default function Modelos() {
                         : <span className="text-gray-400">-</span>}
                     </td>
                     <td className="pr-4 text-gray-500 max-w-[12rem] truncate" title={m.identificador}>{m.identificador || '-'}</td>
-                    <td className="text-right">
-                      <button onClick={() => excluir(m.id)} className="text-gray-400 hover:text-red-600" title="Remover">
+                    <td className="text-right whitespace-nowrap">
+                      <button onClick={() => editar(m)} className="text-gray-400 hover:text-primary-700 mr-2"
+                        title="Editar este modelo">
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => excluir(m.id)} className="text-gray-400 hover:text-red-600"
+                        title="Remover — o identificador sai da obrigação junto">
                         <Trash2 size={16} />
                       </button>
                     </td>

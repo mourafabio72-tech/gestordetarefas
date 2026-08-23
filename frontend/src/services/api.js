@@ -208,6 +208,7 @@ export const modelosAPI = {
   },
   create: (data) => api.post('/modelos', data),
   delete: (id) => api.delete(`/modelos/${id}`),
+  update: (id, data) => api.put(`/modelos/${id}`, data),
 };
 
 export const cronogramaAPI = {

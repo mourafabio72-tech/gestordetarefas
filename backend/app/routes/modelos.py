@@ -183,6 +183,29 @@ def criar(
     return _serializar(m)
 
 
+@router.put("/{modelo_id}")
+def editar(
+    modelo_id: int,
+    body: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("evalidador", "editar")),
+):
+    """Altera qualquer campo do modelo e acerta o treino da obrigação."""
+    from ..services.validador import atualizar_modelo
+    try:
+        m = atualizar_modelo(db, modelo_id, body)
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=422,
+                            detail=f"Não consegui salvar a alteração: {type(e).__name__}: {e}"[:400])
+    if not m:
+        raise HTTPException(status_code=404, detail="Modelo não encontrado")
+    return _serializar(m)
+
+
 @router.delete("/{modelo_id}")
 def excluir(
     modelo_id: int,
@@ -192,6 +215,13 @@ def excluir(
     m = db.query(Modelo).filter(Modelo.id == modelo_id).first()
     if not m:
         raise HTTPException(status_code=404, detail="Modelo não encontrado")
+    # O treino sai junto. Apagar o modelo e deixar o identificador na obrigação
+    # é o pior dos dois mundos: some o registro de onde aquilo veio, e o
+    # e-validador continua casando por ele — foi assim que os vínculos errados
+    # sobreviveram à limpeza dos modelos.
+    from ..services.validador import _esquecer_identificador
+    esqueceu = _esquecer_identificador(db, m.obrigacao_id, m.identificador,
+                                       ignorar_modelo_id=m.id)
     db.delete(m)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "identificador_removido": esqueceu}

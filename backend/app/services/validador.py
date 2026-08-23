@@ -391,6 +391,73 @@ def salvar_modelo(db: Session, dados: dict) -> "object":
     return m
 
 
+def _esquecer_identificador(db: Session, obrigacao_id, ident: str, ignorar_modelo_id=None):
+    """Tira o identificador da obrigação, se nenhum OUTRO modelo ainda o usar.
+
+    Editar um modelo tem de desfazer o treino que ele causou — é justamente
+    para isso que se edita, quando o vínculo saiu errado. Mas dois modelos
+    podem ter chegado ao mesmo identificador (o mesmo layout em duas empresas),
+    e aí apagá-lo cegamente desligaria o reconhecimento dos dois.
+    """
+    from ..models import Modelo
+    if not obrigacao_id or not (ident or "").strip():
+        return False
+    o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
+    if not o:
+        return False
+    outros = db.query(Modelo).filter(
+        Modelo.obrigacao_id == obrigacao_id,
+        Modelo.identificador.isnot(None))
+    if ignorar_modelo_id:
+        outros = outros.filter(Modelo.id != ignorar_modelo_id)
+    if any(_norm(m.identificador) == _norm(ident) for m in outros.all()):
+        return False
+    atuais = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
+    restantes = [k for k in atuais if _norm(k) != _norm(ident)]
+    if len(restantes) == len(atuais):
+        return False
+    o.identificadores = ",".join(restantes)
+    return True
+
+
+def atualizar_modelo(db: Session, modelo_id: int, dados: dict):
+    """Edita um modelo e ACERTA o treino: o identificador antigo sai da
+    obrigação antiga, o novo entra na nova.
+
+    Sem isso, corrigir um vínculo errado na tela deixaria o erro vivo onde ele
+    importa — na lista de identificadores da obrigação, que é o que o
+    e-validador consulta.
+    """
+    from ..models import Modelo
+    m = db.query(Modelo).filter(Modelo.id == modelo_id).first()
+    if not m:
+        return None
+
+    ident_novo = (dados.get("identificador") or "").strip() or None
+    obrig_nova = dados.get("obrigacao_id")
+    mudou_vinculo = (_norm(ident_novo or "") != _norm(m.identificador or "")
+                     or obrig_nova != m.obrigacao_id)
+    if mudou_vinculo:
+        _esquecer_identificador(db, m.obrigacao_id, m.identificador, ignorar_modelo_id=m.id)
+
+    comp = (dados.get("competencia_exemplo") or "").strip()
+    m.nome_arquivo = _cabe(dados.get("nome_arquivo"), 200) or m.nome_arquivo
+    m.cnpj = _cabe(_so_digitos(dados.get("cnpj") or ""), 14)
+    m.razao_social_extraida = _cabe(dados.get("razao_social_extraida"), 200)
+    m.empresa_id = dados.get("empresa_id")
+    m.obrigacao_id = obrig_nova
+    m.tipo_documento = _cabe(dados.get("tipo_documento") or "outro", 30)
+    m.identificador = _cabe(ident_novo, 120)
+    m.competencia_exemplo = comp if re.fullmatch(r"\d{2}/\d{4}", comp) else None
+    m.protocolo_exemplo = _cabe(dados.get("protocolo_exemplo"), 120)
+
+    if mudou_vinculo:
+        _treinar_obrigacao(db, m.obrigacao_id, m.identificador)
+    db.commit()
+    db.refresh(m)
+    return m
+
+
 def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     """Extrai, casa e (se único) baixa a tarefa. Retorna um relatório.
     Se o método regex/palavra-chave não resolver e a IA estiver ativa, usa a IA
