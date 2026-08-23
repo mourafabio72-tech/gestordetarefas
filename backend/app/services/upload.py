@@ -94,6 +94,40 @@ def salvar_arquivo(token: str, filename: str, conteudo: bytes) -> str:
     return nome
 
 
+# Quem busca o link sem ser o cliente. O WhatsApp puxa a URL para montar a
+# prévia da mensagem assim que ela é enviada -- antes de qualquer pessoa tocar
+# nela --, e o mesmo vale para Telegram, Slack e afins.
+ROBOS = ("whatsapp", "facebookexternalhit", "facebot", "telegrambot", "slackbot",
+         "discordbot", "twitterbot", "linkedinbot", "skypeuripreview", "bingbot",
+         "googlebot", "bot/", "crawler", "spider", "preview", "curl", "wget",
+         "python-requests", "httpx", "axios")
+
+# Duas requisições do mesmo lugar em segundos são a mesma abertura: visualizador
+# de PDF pede o arquivo em partes, e recarregar a página é reflexo, não segunda
+# consulta.
+JANELA_MESMA_ABERTURA = 120   # segundos
+
+
+def eh_robo(user_agent: str) -> bool:
+    ua = (user_agent or "").lower()
+    return any(marca in ua for marca in ROBOS)
+
+
+def conta_como_abertura(user_agent: str, segundos_desde_o_ultimo) -> bool:
+    """Esta requisição é uma abertura nova do cliente?
+
+    Não conta robô, e não conta repetição do mesmo IP dentro da janela. O
+    registro de auditoria guarda as duas assim mesmo -- o que se descarta é a
+    CONTAGEM, porque "o cliente abriu 2 vezes" quando ele abriu uma faz duvidar
+    do número inteiro.
+    """
+    if eh_robo(user_agent):
+        return False
+    if segundos_desde_o_ultimo is not None and segundos_desde_o_ultimo < JANELA_MESMA_ABERTURA:
+        return False
+    return True
+
+
 def token_saida(db, tarefa) -> str:
     """Token do link público do documento de saída, criando se não houver."""
     if not tarefa.saida_token:

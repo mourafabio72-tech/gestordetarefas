@@ -23,6 +23,7 @@ def migrate():
         ("saida_token", "ALTER TABLE tarefas ADD COLUMN saida_token VARCHAR(64)"),
         ("saida_baixada_em", "ALTER TABLE tarefas ADD COLUMN saida_baixada_em TIMESTAMP"),
         ("saida_downloads", "ALTER TABLE tarefas ADD COLUMN saida_downloads INTEGER DEFAULT 0"),
+        ("acesso_contado", "ALTER TABLE saida_acessos ADD COLUMN contado BOOLEAN DEFAULT TRUE"),
         ("protocolo_entrega", "ALTER TABLE tarefas ADD COLUMN protocolo_entrega VARCHAR(120)"),
         ("data_entrega", "ALTER TABLE tarefas ADD COLUMN data_entrega TIMESTAMP"),
         ("anexo_nome", "ALTER TABLE tarefas ADD COLUMN anexo_nome VARCHAR(200)"),

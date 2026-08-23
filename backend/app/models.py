@@ -135,6 +135,10 @@ class SaidaAcesso(Base):
     tarefa_id = Column(Integer, ForeignKey("tarefas.id"), nullable=False, index=True)
     ip = Column(String(60))
     user_agent = Column(String(300))
+    # Nem toda requisição é o cliente abrindo. O WhatsApp busca o link para
+    # montar a prévia, e visualizador de PDF pede o arquivo em partes. Tudo
+    # fica registrado para auditoria; só o que é abertura de gente conta.
+    contado = Column(Boolean, default=True)
     quando = Column(DateTime(timezone=True), server_default=func.now())
 
 

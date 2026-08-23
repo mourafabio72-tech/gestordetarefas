@@ -86,10 +86,30 @@ def baixar_documento(
     # aconteceu do mesmo jeito, e é o acesso que se quer saber.
     ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
         or (request.client.host if request.client else "")
-    db.add(SaidaAcesso(tarefa_id=tarefa.id, ip=ip[:60],
-                       user_agent=(request.headers.get("user-agent") or "")[:300]))
-    tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
-    tarefa.saida_baixada_em = datetime.utcnow()
+    ua = (request.headers.get("user-agent") or "")[:300]
+
+    # Quanto faz desde a última vez que ESTE ip pegou ESTE documento. O
+    # WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
+    # visualizador de PDF pede o arquivo em partes — as duas coisas inflavam o
+    # contador e faziam "abriu 2×" onde houve uma abertura só.
+    # Só acessos que CONTARAM entram na janela. Sem este filtro, a prévia do
+    # WhatsApp — que chega segundos antes — engoliria a primeira abertura de
+    # verdade sempre que as duas saíssem do mesmo IP, como acontece numa rede
+    # corporativa.
+    ultimo = (db.query(SaidaAcesso)
+              .filter(SaidaAcesso.tarefa_id == tarefa.id, SaidaAcesso.ip == ip[:60],
+                      SaidaAcesso.contado == True)
+              .order_by(SaidaAcesso.id.desc()).first())
+    segundos = None
+    if ultimo is not None and ultimo.quando is not None:
+        agora = datetime.now(ultimo.quando.tzinfo) if ultimo.quando.tzinfo else datetime.utcnow()
+        segundos = (agora - ultimo.quando).total_seconds()
+
+    conta = up.conta_como_abertura(ua, segundos)
+    db.add(SaidaAcesso(tarefa_id=tarefa.id, ip=ip[:60], user_agent=ua, contado=conta))
+    if conta:
+        tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
+        tarefa.saida_baixada_em = datetime.utcnow()
     db.commit()
 
     nome = up.nome_de_exibicao(tarefa.saida_nome)

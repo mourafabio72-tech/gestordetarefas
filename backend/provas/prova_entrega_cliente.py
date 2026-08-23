@@ -164,6 +164,7 @@ db = SessionLocal()
 t_antes = db.query(Tarefa).get(id_ok)
 token_antigo = t_antes.saida_token
 t_antes.saida_downloads, t_antes.saida_baixada_em = 3, None
+t_antes.saida_token = t_antes.saida_token or "tok-fixo-prova"
 db.commit(); db.close()
 checa("o envio gerou token", bool(token_antigo))
 r = client.get(f"/api/publico/baixar/{token_antigo}")
@@ -175,6 +176,52 @@ from app.models import SaidaAcesso                        # noqa: E402
 checa("e vira linha de auditoria",
       db.query(SaidaAcesso).filter(SaidaAcesso.tarefa_id == id_ok).count() == 1)
 db.close()
+
+print("\n=== 3c. o contador conta ABERTURA, não requisição ===")
+from app.models import SaidaAcesso as SA                       # noqa: E402
+# O WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
+# visualizador de PDF pede o arquivo em partes. Contar tudo faria "abriu 2×"
+# onde houve uma abertura só — e um número que a pessoa sabe estar errado
+# contamina os outros.
+from app.services.upload import conta_como_abertura, eh_robo   # noqa: E402
+checa("robô do WhatsApp não conta", not conta_como_abertura("WhatsApp/2.23.20.0 A", None))
+checa("prévia do Facebook não conta", not conta_como_abertura("facebookexternalhit/1.1", None))
+checa("Telegram, Slack e Discord também não",
+      not any(conta_como_abertura(u, None) for u in
+              ("TelegramBot (like TwitterBot)", "Slackbot-LinkExpanding", "Discordbot/2.0")))
+checa("curl e requests não contam",
+      not conta_como_abertura("curl/8.4.0", None) and not conta_como_abertura("python-requests/2.31", None))
+checa("navegador de verdade conta", conta_como_abertura("Mozilla/5.0 ... Chrome/120 Safari/537", None))
+checa("segunda requisição em 3s é a MESMA abertura",
+      not conta_como_abertura("Mozilla/5.0 Chrome/120", 3))
+checa("recarregar 5 minutos depois é abertura nova",
+      conta_como_abertura("Mozilla/5.0 Chrome/120", 300))
+checa("sem user-agent conta — cliente com navegador estranho não pode sumir",
+      conta_como_abertura("", None) and conta_como_abertura(None, None))
+checa("eh_robo não se confunde com 'Robot' no meio de nome de gente",
+      eh_robo("WhatsApp/2.0") and not eh_robo("Mozilla/5.0 (Macintosh)"))
+
+# Na rota: duas batidas seguidas contam uma.
+db = SessionLocal()
+t_cont = db.query(Tarefa).get(id_ok)
+t_cont.saida_downloads = 0
+db.query(SA).filter(SA.tarefa_id == id_ok).delete()   # conta o que ESTE bloco fizer
+db.commit(); tok_cont = t_cont.saida_token; db.close()
+client.get(f"/api/publico/baixar/{tok_cont}", headers={"user-agent": "WhatsApp/2.23"})
+db = SessionLocal(); n1 = db.query(Tarefa).get(id_ok).saida_downloads; db.close()
+checa("a prévia do WhatsApp não move o contador", n1 == 0, f"({n1})")
+client.get(f"/api/publico/baixar/{tok_cont}", headers={"user-agent": "Mozilla/5.0 Chrome/120"})
+db = SessionLocal(); n2 = db.query(Tarefa).get(id_ok).saida_downloads; db.close()
+checa("a abertura de verdade conta 1", n2 == 1, f"({n2})")
+client.get(f"/api/publico/baixar/{tok_cont}", headers={"user-agent": "Mozilla/5.0 Chrome/120"})
+db = SessionLocal(); n3 = db.query(Tarefa).get(id_ok).saida_downloads; db.close()
+checa("a segunda parte do PDF não conta de novo", n3 == 1, f"({n3})")
+db = SessionLocal()
+_reg = db.query(SA).filter(SA.tarefa_id == id_ok).count()
+_cont = db.query(SA).filter(SA.tarefa_id == id_ok, SA.contado == True).count()
+db.close()
+checa("as três requisições ficam na auditoria", _reg >= 3, f"({_reg})")
+checa("mas só uma marcada como contada", _cont == 1, f"({_cont})")
 
 client.post(f"/api/tarefas/{id_ok}/saida", headers=cabeca(),
             files={"arquivo": ("DAS retificada.pdf", b"%PDF nova", "application/pdf")})
