@@ -167,7 +167,18 @@ def criar(
     identificador escolhido à lista da obrigação)."""
     if not body.get("cnpj") and not body.get("razao_social_extraida"):
         raise HTTPException(status_code=422, detail="Documento sem CNPJ nem razão social identificados.")
-    m = salvar_modelo(db, body)
+    # Um 500 mudo aqui é o pior desfecho: quem está cadastrando não tem acesso
+    # ao log do servidor, e a tela só sabe dizer "erro no servidor". Traduzir a
+    # exceção em mensagem é o que transforma o problema em algo acionável.
+    try:
+        m = salvar_modelo(db, body)
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=422,
+                            detail=f"Não consegui salvar este modelo: {type(e).__name__}: {e}"[:400])
     return _serializar(m)
 
 

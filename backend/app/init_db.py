@@ -19,6 +19,7 @@ def migrate():
         ("competencia", "ALTER TABLE tarefas ADD COLUMN competencia VARCHAR(7)"),
         ("identificadores", "ALTER TABLE obrigacoes ADD COLUMN identificadores VARCHAR(200)"),
         ("sentido", "ALTER TABLE obrigacoes ADD COLUMN sentido VARCHAR(10) DEFAULT 'receber'"),
+        ("identificadores_maior", "ALTER TABLE obrigacoes ALTER COLUMN identificadores TYPE VARCHAR(2000)"),
         ("saida_nome", "ALTER TABLE tarefas ADD COLUMN saida_nome VARCHAR(200)"),
         ("saida_token", "ALTER TABLE tarefas ADD COLUMN saida_token VARCHAR(64)"),
         ("saida_baixada_em", "ALTER TABLE tarefas ADD COLUMN saida_baixada_em TIMESTAMP"),

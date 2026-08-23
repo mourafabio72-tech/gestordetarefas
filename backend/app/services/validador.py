@@ -314,6 +314,9 @@ def analisar_para_repositorio(db: Session, nome: str, conteudo: bytes) -> dict:
     }
 
 
+LIMITE_IDENTIFICADORES = 2000   # tamanho da coluna obrigacoes.identificadores
+
+
 def _treinar_obrigacao(db: Session, obrigacao_id: int, identificador: str) -> bool:
     """Acrescenta o identificador do modelo à lista da obrigação (dedup por forma
     normalizada). É assim que o modelo 'treina' o e-validador."""
@@ -326,8 +329,15 @@ def _treinar_obrigacao(db: Session, obrigacao_id: int, identificador: str) -> bo
     atuais = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
     if any(_norm(k) == _norm(ident) for k in atuais):
         return False
-    atuais.append(ident)
-    o.identificadores = ",".join(atuais)
+    nova = ",".join(atuais + [ident])
+    # Recusa explícita em vez de deixar o banco estourar: um erro com nome é
+    # acionável, um 500 no meio do cadastro não é.
+    if len(nova) > LIMITE_IDENTIFICADORES:
+        raise ValueError(
+            f"A lista de identificadores de '{o.nome}' chegaria a {len(nova)} caracteres, "
+            f"acima do limite de {LIMITE_IDENTIFICADORES}. Apague os que não usa mais "
+            f"em Cadastro → Obrigações antes de acrescentar outro.")
+    o.identificadores = nova
     return True
 
 

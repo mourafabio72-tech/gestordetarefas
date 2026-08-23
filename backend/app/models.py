@@ -307,7 +307,11 @@ class Obrigacao(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(200), nullable=False)
     mininome = Column(String(50))                 # nome curto (ex.: "DARF 0220")
-    identificadores = Column(String(200))          # códigos/palavras que o e-validador procura no PDF (CSV: "0220,IRPJ")
+    # LISTA de identificadores, separada por vírgula. O limite é da lista
+    # inteira, não de um item: cada modelo salvo acrescenta um, e 200 caracteres
+    # acabam em meia dúzia de treinos — o INSERT morria com 500 no meio do
+    # cadastro, sem dizer o que tinha estourado.
+    identificadores = Column(String(2000))
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)
     responsavel_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)  # responsável padrão da tarefa gerada
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)   # supervisor padrão da tarefa gerada
