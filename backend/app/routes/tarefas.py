@@ -534,6 +534,29 @@ def historico_envios(
              "enviado_em": e.enviado_em} for e in envios]
 
 
+@router.get("/{tarefa_id}/acessos")
+def historico_acessos(
+    tarefa_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Cada batida no link do documento: quando, de onde, e se contou.
+
+    O contador diz quantas vezes o cliente abriu; isto diz POR QUE ele diz
+    isso. Sem esta lista, um número que parece errado vira adivinhação — foi o
+    que aconteceu com o "2×" que era a prévia do WhatsApp somada ao clique.
+    """
+    from ..models import SaidaAcesso
+    from ..services import upload as up
+
+    _tarefa_no_escopo(db, current_user, tarefa_id)
+    linhas = (db.query(SaidaAcesso).filter(SaidaAcesso.tarefa_id == tarefa_id)
+              .order_by(SaidaAcesso.id.desc()).limit(50).all())
+    return [{"quando": a.quando, "ip": a.ip, "contado": bool(a.contado),
+             "robo": up.eh_robo(a.user_agent), "user_agent": a.user_agent}
+            for a in linhas]
+
+
 @router.post("/{tarefa_id}/enviar-cliente")
 async def enviar_ao_cliente(
     tarefa_id: int,
