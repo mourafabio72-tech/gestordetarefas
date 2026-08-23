@@ -70,6 +70,20 @@ body {
     @apply py-2 px-3;
   }
 
+  /* Rolagem que não ocupa largura.
+
+     A barra de rolagem nativa come ~15px de dentro do elemento, e num menu
+     lateral isso desalinha: o `nav` rolando fica mais estreito que o rodapé,
+     que não rola, e os dois blocos terminam em pontos diferentes. Some a barra,
+     não o scroll -- roda do mouse e trackpad continuam funcionando. */
+  .rolagem-invisivel {
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* Edge antigo */
+  }
+  .rolagem-invisivel::-webkit-scrollbar {
+    display: none;                  /* Chrome, Safari */
+  }
+
   .card {
     @apply bg-white rounded-xl p-4 border border-gray-200;
     box-shadow: 0 1px 3px rgba(86, 100, 80, 0.08);

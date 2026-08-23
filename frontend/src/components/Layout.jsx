@@ -147,7 +147,10 @@ export default function Layout() {
             mouse chegar nela. A seta do cabeçalho continua, para FIXAR aberta
             quem não quiser depender do hover. */}
 
-        <nav className="px-2 py-3 flex-1 overflow-y-auto">
+        {/* `rolagem-invisivel`: a barra nativa ocuparia ~15px de dentro do nav,
+            deixando-o mais estreito que o rodapé — que não rola — e os dois
+            blocos terminariam em pontos diferentes. */}
+        <nav className="px-2 py-3 flex-1 overflow-y-auto rolagem-invisivel">
           {menuGroups.map((group) => {
             const visibleItems = group.items.filter((item) => item.roles.includes(grupo));
             if (visibleItems.length === 0) return null;
