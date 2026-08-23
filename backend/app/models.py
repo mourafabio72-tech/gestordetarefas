@@ -290,6 +290,11 @@ class Tarefa(Base):
         o = self.obrigacao
         if o is None:
             return False
+        # Obrigação interna não troca documento com ninguém: exigir um
+        # travaria a baixa por algo que nunca vai existir. Vale mesmo com a
+        # flag ligada — o sentido é a informação mais forte.
+        if (o.sentido or "receber") == "interna":
+            return False
         if o.exige_documento is None:
             return bool((o.identificadores or "").strip())
         return bool(o.exige_documento)
@@ -329,11 +334,13 @@ class Obrigacao(Base):
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
-    # Para que lado o documento anda. "receber" é o padrão histórico: o cliente
-    # manda o comprovante e a tarefa baixa pelo e-validador. "entregar" é o
-    # contrário — o escritório anexa a guia e envia ao cliente, e é o envio que
-    # conclui a tarefa. Guia do Simples, DARF e boleto são deste segundo tipo.
-    sentido = Column(String(10), default="receber")   # receber | entregar
+    # Para que lado o documento anda — e há três respostas, não duas:
+    #   receber  — o cliente manda o comprovante e a tarefa baixa pelo e-validador
+    #   entregar — o escritório anexa a guia e envia; o envio conclui a tarefa
+    #   interna  — não troca documento com ninguém (conciliar banco, lançar
+    #              notas, fechar balancete). É trabalho do escritório, e pedir
+    #              documento nessas seria travar a baixa por algo que não existe.
+    sentido = Column(String(10), default="receber")   # receber | entregar | interna
     passivel_multa = Column(Boolean, default=False)
     alerta_guia_nao_lida = Column(Boolean, default=False)
     ativa = Column(Boolean, default=True)

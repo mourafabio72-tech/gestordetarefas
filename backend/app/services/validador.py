@@ -245,10 +245,17 @@ def analisar_modelo(db: Session, nome: str, conteudo: bytes) -> dict:
 
 
 def identificar_obrigacao(db: Session, texto: str):
-    """Acha a obrigação cujas palavras-chave (identificadores) aparecem no texto."""
+    """Acha a obrigação cujas palavras-chave (identificadores) aparecem no texto.
+
+    Obrigação INTERNA fica fora: ela não troca documento com ninguém, então
+    nenhum arquivo que chega pode ser dela. Deixá-la concorrer só criaria
+    ambiguidade com quem de fato recebe documento.
+    """
     alvo = _norm(texto)
     candidatas = []
-    for o in db.query(Obrigacao).filter(Obrigacao.ativa == True).all():
+    for o in db.query(Obrigacao).filter(
+            Obrigacao.ativa == True,
+            (Obrigacao.sentido.is_(None)) | (Obrigacao.sentido != "interna")).all():
         chaves = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
         if any(_casa_chave(k, alvo) for k in chaves):
             candidatas.append(o)

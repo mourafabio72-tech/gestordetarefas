@@ -446,7 +446,10 @@ export default function Obrigacoes() {
                   <input value={form.mininome} onChange={(e) => set('mininome', e.target.value)} className="input-field" placeholder="DARF 0220" />
                 </div>
               </div>
-              <div>
+              {/* O e-validador só existe para documento que CHEGA. Numa
+                  obrigação interna ou de entrega, este bloco inteiro é ruído —
+                  e pior, convida a cadastrar identificador que nunca vai casar. */}
+              <div className={form.sentido === 'interna' || form.sentido === 'entregar' ? 'hidden' : ''}>
                 <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                   Identificadores (e-validador)
                   <span title={AJUDA_IDENTIFICADORES} className="text-gray-400 cursor-help">
@@ -865,12 +868,26 @@ export default function Obrigacoes() {
                         </span>
                       </span>
                     </label>
+                    {/* Nem toda obrigação troca documento. Sem esta opção, a
+                        tarefa interna herdava "receber" e podia acabar exigindo
+                        um comprovante que nunca vai existir. */}
+                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input type="radio" name="sentido" className="mt-0.5"
+                        checked={form.sentido === 'interna'}
+                        onChange={() => set('sentido', 'interna')} />
+                      <span>
+                        <strong>Nenhum</strong> — tarefa interna
+                        <span className="block text-xs text-gray-500">
+                          Conciliar banco, lançar notas, fechar balancete. Baixa na mão.
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
                 </label>
-                {form.sentido !== 'entregar' && (
+                {form.sentido !== 'entregar' && form.sentido !== 'interna' && (
                   <label className="flex items-center gap-2 text-sm text-gray-700"
                     title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
                     <input type="checkbox"
