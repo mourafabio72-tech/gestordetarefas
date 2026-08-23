@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const menuGroups = [
   {
@@ -89,28 +89,45 @@ export default function Layout() {
   const [fixado, setFixado] = useState(() => localStorage.getItem('menuColapsado') === '1');
   const [sobreMouse, setSobreMouse] = useState(false);
   const colapsado = fixado && !sobreMouse;
+  const relogio = useRef(null);
+
+  // A barra empurra o conteúdo em vez de cobri-lo, então abrir de raspão
+  // reorganizaria a página inteira sem a pessoa querer. O atraso na ABERTURA
+  // resolve: passar o mouse a caminho de outro lugar não dispara nada. Fechar
+  // é imediato — quem tirou o mouse quer o espaço de volta agora.
+  const ATRASO_ABERTURA = 180;
+  const entrouNaBarra = () => {
+    if (!fixado) return;
+    clearTimeout(relogio.current);
+    relogio.current = setTimeout(() => setSobreMouse(true), ATRASO_ABERTURA);
+  };
+  const saiuDaBarra = () => {
+    clearTimeout(relogio.current);
+    setSobreMouse(false);
+  };
+  useEffect(() => () => clearTimeout(relogio.current), []);
+
   const toggleColapsado = () => setFixado((c) => {
     localStorage.setItem('menuColapsado', c ? '0' : '1');
+    clearTimeout(relogio.current);
     setSobreMouse(false);   // ao fixar, recolhe já; sem isto ficaria aberta até tirar o mouse
     return !c;
   });
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Espaçador do tamanho da barra recolhida. Enquanto ela estiver fixada,
-          a barra sai do fluxo para poder crescer POR CIMA do conteúdo: sem
-          isto, abrir no hover empurraria a página inteira para a direita a
-          cada vez que o mouse passasse perto. */}
-      {fixado && <div className="hidden lg:block w-16 shrink-0" />}
+      {/* A barra fica NO FLUXO e empurra o conteúdo ao abrir, em vez de crescer
+          por cima dele. Coberto, o card e o filtro debaixo da barra ficavam
+          inalcançáveis enquanto o mouse estivesse nela — e é justamente para
+          alcançar algo que a pessoa move o mouse. O preço é o conteúdo
+          reorganizar, e é o que o atraso de abertura ameniza. */}
       <aside
-        onMouseEnter={() => fixado && setSobreMouse(true)}
-        onMouseLeave={() => setSobreMouse(false)}
+        onMouseEnter={entrouNaBarra}
+        onMouseLeave={saiuDaBarra}
         className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[#2f3b2f] text-white transform transition-all duration-200 ease-in-out
-        lg:translate-x-0 flex flex-col
-        ${fixado ? 'lg:absolute lg:z-40' : 'lg:relative'}
+        lg:relative lg:translate-x-0 flex flex-col shrink-0
         ${colapsado ? 'lg:w-16' : ''}
-        ${fixado && sobreMouse ? 'lg:w-64 lg:shadow-2xl' : ''}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between border-b border-white/10 p-4">
