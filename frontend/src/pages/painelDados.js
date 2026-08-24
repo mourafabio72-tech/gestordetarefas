@@ -123,3 +123,51 @@ export function haQuantosDias(iso, agora = new Date()) {
   if (dias <= 0) return 'hoje';
   return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
 }
+
+/**
+ * Segmentos da rosca, em SVG puro (o projeto não tem biblioteca de gráfico e
+ * não precisa de uma para desenhar cinco arcos).
+ *
+ * Cada fatia vira um traço no mesmo círculo: `dash` é o comprimento do arco,
+ * `gap` o resto da volta, `offset` onde ele começa. Usa os percentuais já
+ * fechados em 100 por `percentuais`, então a volta fecha exata — desenhar a
+ * partir dos valores crus deixaria uma fresta ou uma sobreposição.
+ */
+export function arcosRosca(fatias, raio = 42) {
+  const volta = 2 * Math.PI * raio;
+  let andado = 0;
+  return (fatias || []).filter((f) => f.pct > 0).map((f) => {
+    const dash = (f.pct / 100) * volta;
+    const arco = { ...f, dash, gap: volta - dash, offset: -andado, volta };
+    andado += dash;
+    return arco;
+  });
+}
+
+/**
+ * Barras empilhadas: uma por setor, colaborador ou empresa.
+ *
+ * A LARGURA da barra é o volume relativo ao maior — é o que responde "quem tem
+ * mais trabalho". A divisão DENTRO dela é a composição — "e como esse trabalho
+ * está". O heatmap responde só a segunda; junto com a largura, o gráfico diz
+ * as duas coisas de uma vez.
+ */
+export function barras(itens, situacoes = SITUACOES) {
+  const lista = itens || [];
+  const maior = Math.max(1, ...lista.map((i) => i.total || 0));
+  return lista.map((i) => {
+    const total = i.total || 0;
+    return {
+      nome: i.nome,
+      total,
+      multa: i.multa || 0,
+      // Piso de 2%: linha com uma tarefa só some ao lado de outra com 300, e
+      // sumir é pior que exagerar — quem tem 1 precisa aparecer para ser clicado.
+      largura: total ? Math.max((total / maior) * 100, 2) : 0,
+      segmentos: situacoes
+        .map((s) => ({ ...s, valor: i[s.chave] || 0 }))
+        .filter((s) => s.valor > 0)
+        .map((s) => ({ ...s, pct: (s.valor / total) * 100 })),
+    };
+  });
+}

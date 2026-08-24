@@ -2,7 +2,7 @@
 //   node frontend/provas/prova_painel_dados.js
 
 import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
-         pontualidade, haQuantosDias, SITUACOES, DIMENSOES }
+         pontualidade, haQuantosDias, arcosRosca, barras, SITUACOES, DIMENSOES }
   from '../src/pages/painelDados.js';
 
 let ok = 0, falhou = 0;
@@ -79,6 +79,36 @@ eq('data inválida também não', haQuantosDias('nao-e-data', agoraFixo), '');
 console.log('\n8) Dimensões do mapa');
 eq('são três, e batem com as chaves da API',
   DIMENSOES.map((d) => d.chave), ['por_setor', 'por_colaborador', 'por_empresa']);
+
+console.log('\n9) Rosca — os arcos têm de fechar a volta');
+const fat = percentuais({ atrasada: 2, pendente: 5, em_andamento: 1, concluida: 4, cancelada: 0 });
+const arcos = arcosRosca(fat, 42);
+const volta = 2 * Math.PI * 42;
+eq('fatia zerada não vira arco', arcos.length, 4);
+eq('a soma dos arcos fecha a circunferência',
+  Math.round(arcos.reduce((s, a) => s + a.dash, 0) * 1000), Math.round(volta * 1000));
+eq('o primeiro arco começa do zero', arcos[0].offset, 0);
+eq('cada arco começa onde o anterior parou',
+  Math.round(-arcos[1].offset * 1000), Math.round(arcos[0].dash * 1000));
+eq('painel vazio não desenha nada', arcosRosca(percentuais({})).length, 0);
+
+console.log('\n10) Barras — largura é volume, divisão é composição');
+const bs = barras([
+  { nome: 'Fiscal', total: 100, atrasada: 50, pendente: 50, em_andamento: 0, concluida: 0, cancelada: 0, multa: 3 },
+  { nome: 'DP', total: 50, atrasada: 0, pendente: 50, em_andamento: 0, concluida: 0, cancelada: 0 },
+  { nome: 'Societário', total: 1, atrasada: 1, pendente: 0, em_andamento: 0, concluida: 0, cancelada: 0 },
+]);
+eq('o maior ocupa a largura toda', bs[0].largura, 100);
+eq('metade do volume, metade da barra', bs[1].largura, 50);
+// 1 de 100 daria 1% — invisível. Some, e some justamente o caso que alguém
+// precisa clicar.
+eq('a linha minúscula não some', bs[2].largura, 2);
+eq('só as situações presentes viram segmento', bs[1].segmentos.length, 1);
+eq('a composição é da própria linha', bs[0].segmentos.map((s) => s.pct), [50, 50]);
+eq('a soma dos segmentos dá 100% da barra',
+  Math.round(bs[0].segmentos.reduce((s, x) => s + x.pct, 0)), 100);
+eq('multa vem junto', bs[0].multa, 3);
+eq('lista vazia não quebra', barras([]), []);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

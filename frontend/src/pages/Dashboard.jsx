@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { painelAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
-import { SITUACOES, DIMENSOES, percentuais, linhasMapa, diaMes, pontualidade,
-  haQuantosDias, filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
-import { AlertTriangle, ChevronDown, ChevronRight, Inbox, Send, Flame } from 'lucide-react';
+import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
+  pontualidade, haQuantosDias, filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
+import { AlertTriangle, ChevronDown, ChevronRight, Inbox, Send, Flame,
+  BarChart3, LayoutGrid } from 'lucide-react';
 
 const ctrl = (ativo) =>
   `w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none transition-colors
@@ -37,30 +38,53 @@ function Numero({ valor, texto, cor, icone: Icone, titulo, para }) {
     : <span className={classe} style={{ color: cor }} title={titulo}>{corpo}</span>;
 }
 
-// Uma barra só, com as situações lado a lado. Substitui a rosca: em rosca,
-// comparar duas fatias exige girar a cabeça, e o número que interessa — quantas
-// atrasadas — ficava numa legenda ao lado.
-function Barra({ dados }) {
-  const total = dados.reduce((s, d) => s + d.valor, 0);
-  if (!total) return <div className="h-2 rounded-full bg-gray-200" />;
+// Rosca em SVG, sem biblioteca. Pequena de propósito: dá a proporção de
+// relance e deixa o espaço para os números, que são o que se anota.
+function Rosca({ fatias, centro, legenda }) {
+  const arcos = arcosRosca(fatias, 42);
   return (
-    <div className="flex h-2 rounded-full overflow-hidden">
-      {dados.filter((d) => d.valor > 0).map((d) => (
-        <div key={d.chave} style={{ width: `${d.pct}%`, background: d.cor }}
-          title={`${d.rotulo}: ${d.valor} (${d.pct}%)`} />
-      ))}
+    <div className="flex items-center gap-3 shrink-0">
+      <svg viewBox="0 0 120 120" className="w-[112px] h-[112px] shrink-0">
+        <g transform="rotate(-90 60 60)">
+          <circle cx="60" cy="60" r="42" fill="none" stroke="#eee8db" strokeWidth="16" />
+          {arcos.map((a) => (
+            <circle key={a.chave} cx="60" cy="60" r="42" fill="none" stroke={a.cor}
+              strokeWidth="16" strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={a.offset}>
+              <title>{`${a.rotulo}: ${a.valor} (${a.pct}%)`}</title>
+            </circle>
+          ))}
+        </g>
+        <text x="60" y="57" textAnchor="middle" className="fill-gray-800"
+          style={{ fontSize: 26, fontWeight: 700 }}>{centro}</text>
+        <text x="60" y="73" textAnchor="middle" className="fill-gray-500" style={{ fontSize: 11 }}>
+          {legenda}
+        </text>
+      </svg>
+      <div className="space-y-0.5">
+        {fatias.filter((f) => f.valor > 0).map((f) => (
+          <div key={f.chave} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: f.cor }} />
+            <span className="w-24">{f.rotulo}</span>
+            <strong className="tabular-nums">{f.valor}</strong>
+            <span className="text-gray-400 tabular-nums">{f.pct}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 // Três dimensões em abas, não três blocos empilhados: a mesma pergunta ("onde
 // dói") lida por setor, por pessoa e por cliente, sem triplicar a altura.
-function MapaComAbas({ dados }) {
+function GraficoComAbas({ dados }) {
   const [dim, setDim] = useState('por_setor');
+  const [modo, setModo] = useState('barras');
   const [tudo, setTudo] = useState(false);
-  const linhas = linhasMapa(dados[dim] || []);
-  const mostradas = tudo ? linhas : linhas.slice(0, 10);
+  const itens = dados[dim] || [];
+  const corte = (l) => (tudo ? l : l.slice(0, 10));
   const nomeDe = (n) => (dim === 'por_empresa' ? formatarRazaoSocial(n) : n);
+  const linhasBarra = corte(barras(itens));
+  const linhasMapaV = corte(linhasMapa(itens));
 
   return (
     <div className="card">
@@ -73,20 +97,58 @@ function MapaComAbas({ dados }) {
             {d.rotulo}
           </button>
         ))}
-        <span className="ml-auto text-[10px] text-gray-400">
-          {dim === 'por_colaborador' ? 'tarefa dividida conta para cada um' : `${linhas.length} linhas`}
-        </span>
+        {/* Barra e mapa respondem a perguntas diferentes: a barra compara
+            volume entre linhas, o mapa compara a composição de cada uma.
+            Em vez de escolher por você, os dois ficam a um clique. */}
+        <div className="ml-auto flex items-center gap-0.5">
+          {[{ v: 'barras', Icone: BarChart3, t: 'Barras' },
+            { v: 'mapa', Icone: LayoutGrid, t: 'Mapa de calor' }].map(({ v, Icone, t }) => (
+            <button key={v} type="button" onClick={() => setModo(v)} title={t}
+              className={`p-1.5 rounded-md transition-colors ${
+                modo === v ? 'bg-primary-100 text-primary-800' : 'text-gray-400 hover:bg-gray-100'}`}>
+              <Icone size={14} />
+            </button>
+          ))}
+        </div>
       </div>
 
-      {linhas.length === 0 ? <p className="text-sm text-gray-500">Nada a mostrar com esses filtros.</p> : (
+      {itens.length === 0 && <p className="text-sm text-gray-500">Nada a mostrar com esses filtros.</p>}
+
+      {modo === 'barras' && itens.length > 0 && (
         <div className="space-y-1.5">
-          {mostradas.map((l) => (
+          {linhasBarra.map((l) => (
             <div key={l.nome} className="flex items-center gap-2">
               <span className="w-32 shrink-0 text-xs truncate text-gray-700" title={nomeDe(l.nome)}>
                 {nomeDe(l.nome)}
               </span>
-              {/* Cada célula é uma situação; a cor satura conforme o peso DELA
-                  na linha, para cliente pequeno e grande serem comparáveis. */}
+              <div className="flex-1 h-5 rounded bg-[#f3efe6] overflow-hidden">
+                {/* Largura = volume ante o maior; divisão interna = composição. */}
+                <div className="flex h-full rounded overflow-hidden" style={{ width: `${l.largura}%` }}>
+                  {l.segmentos.map((sg) => (
+                    <div key={sg.chave} style={{ width: `${sg.pct}%`, background: sg.cor }}
+                      title={`${sg.rotulo}: ${sg.valor}`} />
+                  ))}
+                </div>
+              </div>
+              <span className="w-9 shrink-0 text-right text-xs tabular-nums text-gray-600">{l.total}</span>
+              <span className="w-8 shrink-0 text-right text-[11px] tabular-nums" style={{ color: '#a24a3a' }}
+                title={l.multa ? `${l.multa} em aberto geram multa` : ''}>
+                {l.multa > 0 ? `⚠${l.multa}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modo === 'mapa' && itens.length > 0 && (
+        <div className="space-y-1.5">
+          {linhasMapaV.map((l) => (
+            <div key={l.nome} className="flex items-center gap-2">
+              <span className="w-32 shrink-0 text-xs truncate text-gray-700" title={nomeDe(l.nome)}>
+                {nomeDe(l.nome)}
+              </span>
+              {/* Aqui a cor satura conforme o peso da situação NA LINHA, para
+                  cliente pequeno e grande serem comparáveis. */}
               <div className="flex gap-0.5 flex-1">
                 {l.celulas.map((c) => (
                   <div key={c.chave} title={`${c.rotulo}: ${c.valor}`}
@@ -101,8 +163,8 @@ function MapaComAbas({ dados }) {
                 ))}
               </div>
               <span className="w-9 shrink-0 text-right text-xs tabular-nums text-gray-500">{l.total}</span>
-              <span className="w-8 shrink-0 text-right text-[11px] tabular-nums"
-                style={{ color: '#a24a3a' }} title={l.multa ? `${l.multa} em aberto geram multa` : ''}>
+              <span className="w-8 shrink-0 text-right text-[11px] tabular-nums" style={{ color: '#a24a3a' }}
+                title={l.multa ? `${l.multa} em aberto geram multa` : ''}>
                 {l.multa > 0 ? `⚠${l.multa}` : ''}
               </span>
             </div>
@@ -110,19 +172,21 @@ function MapaComAbas({ dados }) {
         </div>
       )}
 
-      {linhas.length > 10 && (
-        <button onClick={() => setTudo(!tudo)}
-          className="mt-2 text-[11px] text-gray-500 underline hover:text-gray-700">
-          {tudo ? 'mostrar só as 10 primeiras' : `mostrar todas as ${linhas.length}`}
-        </button>
-      )}
-
-      <div className="flex flex-wrap gap-3 mt-3 pt-2 border-t border-gray-100">
-        {SITUACOES.map((s) => (
-          <span key={s.chave} className="flex items-center gap-1 text-[10px] text-gray-500">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.cor }} /> {s.rotulo}
+      <div className="flex items-center gap-3 mt-3 pt-2 border-t border-gray-100 flex-wrap">
+        {SITUACOES.map((sg) => (
+          <span key={sg.chave} className="flex items-center gap-1 text-[10px] text-gray-500">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: sg.cor }} /> {sg.rotulo}
           </span>
         ))}
+        {dim === 'por_colaborador' && (
+          <span className="text-[10px] text-gray-400">tarefa dividida conta para cada um</span>
+        )}
+        {itens.length > 10 && (
+          <button onClick={() => setTudo(!tudo)}
+            className="ml-auto text-[11px] text-gray-500 underline hover:text-gray-700">
+            {tudo ? 'só as 10 primeiras' : `mostrar todas as ${itens.length}`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -278,8 +342,9 @@ export default function Dashboard() {
       {/* Uma faixa, não seis cartões. O que importa é a relação entre os
           números — quanto do que está aberto já atrasou —, e seis caixas
           grandes com um número cada obrigam a fazer essa conta de cabeça. */}
-      <div className="card">
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 mb-3">
+      <div className="card flex flex-wrap items-center gap-x-8 gap-y-4">
+        <Rosca fatias={fatias} centro={emAberto} legenda={`de ${r.total}`} />
+        <div className="flex-1 min-w-[300px] flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <span className="text-sm text-gray-600">
             <strong className="text-2xl text-gray-800 tabular-nums">{emAberto}</strong> em aberto
             <span className="text-gray-400"> de {r.total}</span>
@@ -306,20 +371,10 @@ export default function Dashboard() {
             </span>
           )}
         </div>
-        <Barra dados={fatias} />
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-          {fatias.filter((f) => f.valor > 0).map((f) => (
-            <span key={f.chave} className="flex items-center gap-1 text-[11px] text-gray-600">
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: f.cor }} />
-              {f.rotulo} <strong className="tabular-nums">{f.valor}</strong>
-              <span className="text-gray-400">{f.pct}%</span>
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <MapaComAbas dados={dados} />
+        <GraficoComAbas dados={dados} />
         <Empurrao aguardando={dados.aguardando || []} naoAbertas={dados.nao_abertas || []} />
       </div>
 
