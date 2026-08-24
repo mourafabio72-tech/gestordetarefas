@@ -171,3 +171,39 @@ export function barras(itens, situacoes = SITUACOES) {
     };
   });
 }
+
+/**
+ * Link do Painel para a lista de Tarefas, já com o recorte do número clicado.
+ *
+ * Carrega junto os filtros que já estavam no Painel — clicar em "2 atrasadas"
+ * com a empresa filtrada tem de abrir as 2 atrasadas DAQUELA empresa, não as
+ * atrasadas do escritório inteiro.
+ */
+export function urlTarefas(filtros, recorte = {}) {
+  const p = new URLSearchParams();
+  const f = filtros || {};
+  if (f.empresa_id) p.set('empresa', f.empresa_id);
+  if (f.setor_id) p.set('setor', f.setor_id);
+  if (f.usuario_id) p.set('usuario', f.usuario_id);
+  if (f.competencia) p.set('competencia', f.competencia);
+  if (f.so_multa) p.set('multa', '1');
+  for (const [k, v] of Object.entries(recorte)) if (v) p.set(k, String(v));
+  const q = p.toString();
+  return q ? `/tarefas?${q}` : '/tarefas';
+}
+
+/**
+ * Uma rosca por linha (setor, colaborador ou empresa).
+ *
+ * A rosca mostra composição e nada mais — não dá para comparar volume entre
+ * duas roscas do mesmo tamanho. Por isso o total vai no miolo: sem ele, um
+ * setor com 3 tarefas e outro com 300 desenham o mesmo círculo.
+ */
+export function roscasPorLinha(itens, situacoes = SITUACOES) {
+  return (itens || []).map((i) => ({
+    nome: i.nome,
+    total: i.total || 0,
+    multa: i.multa || 0,
+    fatias: percentuais(i, situacoes),
+  }));
+}

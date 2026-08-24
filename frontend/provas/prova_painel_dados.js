@@ -2,7 +2,8 @@
 //   node frontend/provas/prova_painel_dados.js
 
 import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
-         pontualidade, haQuantosDias, arcosRosca, barras, SITUACOES, DIMENSOES }
+         pontualidade, haQuantosDias, arcosRosca, barras, roscasPorLinha, urlTarefas,
+         SITUACOES, DIMENSOES }
   from '../src/pages/painelDados.js';
 
 let ok = 0, falhou = 0;
@@ -109,6 +110,31 @@ eq('a soma dos segmentos dá 100% da barra',
   Math.round(bs[0].segmentos.reduce((s, x) => s + x.pct, 0)), 100);
 eq('multa vem junto', bs[0].multa, 3);
 eq('lista vazia não quebra', barras([]), []);
+
+console.log('\n11) Link do painel para as tarefas');
+eq('sem filtro nenhum, vai para a lista limpa', urlTarefas({}), '/tarefas');
+eq('leva o recorte clicado', urlTarefas({}, { alerta: 'atrasada' }), '/tarefas?alerta=atrasada');
+// Clicar em "2 atrasadas" com a empresa filtrada tem de abrir as 2 DAQUELA
+// empresa. Perder o filtro aqui daria um número diferente do que a pessoa viu.
+eq('carrega junto os filtros do painel',
+  urlTarefas({ empresa_id: '7', competencia: '08/2026' }, { alerta: 'hoje' }),
+  '/tarefas?empresa=7&competencia=08%2F2026&alerta=hoje');
+eq('so_multa vira multa=1', urlTarefas({ so_multa: true }), '/tarefas?multa=1');
+eq('recorte vazio não vira parâmetro', urlTarefas({}, { alerta: '' }), '/tarefas');
+
+console.log('\n12) Uma rosca por linha');
+const rs = roscasPorLinha([
+  { nome: 'Fiscal', total: 3, atrasada: 1, pendente: 2, em_andamento: 0, concluida: 0, cancelada: 0, multa: 1 },
+  { nome: 'DP', total: 300, atrasada: 0, pendente: 300, em_andamento: 0, concluida: 0, cancelada: 0 },
+]);
+eq('cada linha vira uma rosca', rs.length, 2);
+eq('as fatias fecham 100', rs.map((r) => r.fatias.reduce((s, f) => s + f.pct, 0)), [100, 100]);
+// Duas roscas do mesmo tamanho não dizem qual tem mais trabalho — o total no
+// miolo é o que separa um setor de 3 de um setor de 300.
+eq('o total vai junto, senão 3 e 300 desenham o mesmo círculo',
+  rs.map((r) => r.total), [3, 300]);
+eq('multa acompanha', rs[0].multa, 1);
+eq('lista vazia não quebra', roscasPorLinha(null), []);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

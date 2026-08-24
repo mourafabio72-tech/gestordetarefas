@@ -4,9 +4,10 @@ import { painelAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
 import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
-  pontualidade, haQuantosDias, filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
+  pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, filtrosVazios, paraConsulta,
+  temFiltroAtivo } from './painelDados';
 import { AlertTriangle, ChevronDown, ChevronRight, Inbox, Send, Flame,
-  BarChart3, AlignLeft } from 'lucide-react';
+  BarChart3, AlignLeft, PieChart } from 'lucide-react';
 
 const ctrl = (ativo) =>
   `w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none transition-colors
@@ -24,42 +25,62 @@ function Campo({ rotulo, largura = '', children }) {
   );
 }
 
-function Numero({ valor, texto, cor, icone: Icone, titulo, para }) {
+// Cada número é uma porta para a lista, não um enfeite: quem lê "2 atrasadas"
+// quer ver QUAIS são as duas. O recorte viaja na URL e a tela de Tarefas abre
+// já filtrada pelo mesmo critério que o painel usou para contar.
+function CardNum({ valor, texto, cor, icone: Icone, titulo, para }) {
   if (!valor) return null;
   const corpo = (
     <>
-      {Icone && <Icone size={12} />}
-      <strong className="text-base tabular-nums">{valor}</strong> {texto}
+      <span className="flex items-baseline gap-1">
+        <strong className="text-lg tabular-nums leading-none" style={{ color: cor }}>{valor}</strong>
+        {Icone && <Icone size={11} style={{ color: cor }} />}
+      </span>
+      <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{texto}</span>
     </>
   );
-  const classe = 'text-xs flex items-center gap-1';
-  return para
-    ? <Link to={para} className={`${classe} hover:underline`} style={{ color: cor }} title={titulo}>{corpo}</Link>
-    : <span className={classe} style={{ color: cor }} title={titulo}>{corpo}</span>;
+  const base = 'min-w-[86px] px-2.5 py-1.5 rounded-lg border bg-[#fffdf9]';
+  return para ? (
+    <Link to={para} title={titulo || `Ver ${texto}`}
+      className={`${base} border-gray-200 hover:border-primary-300 hover:shadow-sm transition-colors`}>
+      {corpo}
+    </Link>
+  ) : (
+    // Sem link quando não há lista equivalente para abrir — melhor um cartão
+    // parado que um link que leva ao lugar errado.
+    <span className={`${base} border-transparent`} title={titulo}>{corpo}</span>
+  );
 }
 
-// Rosca em SVG, sem biblioteca. Pequena de propósito: dá a proporção de
-// relance e deixa o espaço para os números, que são o que se anota.
-function Rosca({ fatias, centro, legenda }) {
-  const arcos = arcosRosca(fatias, 42);
+// Só o desenho, para servir à rosca grande da faixa e às pequenas por setor.
+function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16 }) {
+  const arcos = arcosRosca(fatias, raio);
   return (
-    <div className="flex items-center gap-2.5 shrink-0">
-      <svg viewBox="0 0 120 120" className="w-[84px] h-[84px] shrink-0">
-        <g transform="rotate(-90 60 60)">
-          <circle cx="60" cy="60" r="42" fill="none" stroke="#eee8db" strokeWidth="16" />
-          {arcos.map((a) => (
-            <circle key={a.chave} cx="60" cy="60" r="42" fill="none" stroke={a.cor}
-              strokeWidth="16" strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={a.offset}>
-              <title>{`${a.rotulo}: ${a.valor} (${a.pct}%)`}</title>
-            </circle>
-          ))}
-        </g>
-        <text x="60" y="58" textAnchor="middle" className="fill-gray-800"
-          style={{ fontSize: 28, fontWeight: 700 }}>{centro}</text>
+    <svg viewBox="0 0 120 120" style={{ width: tamanho, height: tamanho }} className="shrink-0">
+      <g transform="rotate(-90 60 60)">
+        <circle cx="60" cy="60" r={raio} fill="none" stroke="#eee8db" strokeWidth={largura} />
+        {arcos.map((a) => (
+          <circle key={a.chave} cx="60" cy="60" r={raio} fill="none" stroke={a.cor}
+            strokeWidth={largura} strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={a.offset}>
+            <title>{`${a.rotulo}: ${a.valor} (${a.pct}%)`}</title>
+          </circle>
+        ))}
+      </g>
+      <text x="60" y={legenda ? 58 : 66} textAnchor="middle" className="fill-gray-800"
+        style={{ fontSize: 28, fontWeight: 700 }}>{centro}</text>
+      {legenda && (
         <text x="60" y="75" textAnchor="middle" className="fill-gray-500" style={{ fontSize: 12 }}>
           {legenda}
         </text>
-      </svg>
+      )}
+    </svg>
+  );
+}
+
+function Rosca({ fatias, centro, legenda }) {
+  return (
+    <div className="flex items-center gap-2.5 shrink-0">
+      <Donut fatias={fatias} centro={centro} legenda={legenda} />
       <div className="space-y-px">
         {fatias.filter((f) => f.valor > 0).map((f) => (
           <div key={f.chave} className="flex items-center gap-1.5 text-[10px] text-gray-600">
@@ -78,13 +99,14 @@ function Rosca({ fatias, centro, legenda }) {
 // dói") lida por setor, por pessoa e por cliente, sem triplicar a altura.
 function GraficoComAbas({ dados }) {
   const [dim, setDim] = useState('por_setor');
-  const [modo, setModo] = useState('barras');
+  const [modo, setModo] = useState('pizza');
   const [tudo, setTudo] = useState(false);
   const itens = dados[dim] || [];
   const corte = (l) => (tudo ? l : l.slice(0, 10));
   const nomeDe = (n) => (dim === 'por_empresa' ? formatarRazaoSocial(n) : n);
   const linhasBarra = corte(barras(itens));
   const linhasMapaV = corte(linhasMapa(itens));
+  const roscas = corte(roscasPorLinha(itens));
 
   return (
     <div className="card">
@@ -101,7 +123,8 @@ function GraficoComAbas({ dados }) {
             compara VOLUME entre linhas, a barra por situação compara a
             COMPOSIÇÃO de cada linha. Em vez de escolher por você, um clique. */}
         <div className="ml-auto flex items-center gap-0.5">
-          {[{ v: 'barras', Icone: BarChart3, t: 'Barra empilhada — volume entre linhas' },
+          {[{ v: 'pizza', Icone: PieChart, t: 'Pizza — uma por linha' },
+            { v: 'barras', Icone: BarChart3, t: 'Barra empilhada — volume entre linhas' },
             { v: 'mapa', Icone: AlignLeft, t: 'Barra por situação — composição da linha' }].map(({ v, Icone, t }) => (
             <button key={v} type="button" onClick={() => setModo(v)} title={t}
               className={`p-1.5 rounded-md transition-colors ${
@@ -113,6 +136,27 @@ function GraficoComAbas({ dados }) {
       </div>
 
       {itens.length === 0 && <p className="text-sm text-gray-500">Nada a mostrar com esses filtros.</p>}
+
+      {modo === 'pizza' && itens.length > 0 && (
+        /* Uma pizza por linha. A rosca mostra composição e só isso — duas do
+           mesmo diâmetro não dizem qual tem mais trabalho —, por isso o total
+           fica no miolo de cada uma. */
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-2 gap-y-3">
+          {roscas.map((r) => (
+            <div key={r.nome} className="flex flex-col items-center gap-0.5">
+              <Donut fatias={r.fatias} centro={r.total} tamanho={68} raio={44} largura={20} />
+              <span className="text-[10px] text-gray-700 text-center leading-tight line-clamp-2"
+                title={nomeDe(r.nome)}>
+                {nomeDe(r.nome)}
+              </span>
+              {r.multa > 0 && (
+                <span className="text-[9px] tabular-nums" style={{ color: '#a24a3a' }}
+                  title={`${r.multa} em aberto geram multa`}>⚠{r.multa}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {modo === 'barras' && itens.length > 0 && (
         <div className="space-y-1.5">
@@ -323,6 +367,7 @@ export default function Dashboard() {
   const fatias = percentuais(r);
   const emAberto = r.atrasada + r.pendente + r.em_andamento;
   const pont = pontualidade(r);
+  const link = (recorte) => urlTarefas(filtros, recorte);
 
   return (
     // Teto de largura: em monitor largo o conteúdo esticava de ponta a ponta e
@@ -375,32 +420,35 @@ export default function Dashboard() {
       {/* Uma faixa, não seis cartões. O que importa é a relação entre os
           números — quanto do que está aberto já atrasou —, e seis caixas
           grandes com um número cada obrigam a fazer essa conta de cabeça. */}
-      <div className="card flex flex-wrap items-center gap-x-6 gap-y-3 py-3">
+      <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 py-3">
         <Rosca fatias={fatias} centro={emAberto} legenda={`de ${r.total}`} />
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
-          <span className="text-xs text-gray-600">
-            <strong className="text-base text-gray-800 tabular-nums">{emAberto}</strong> em aberto
-            <span className="text-gray-400"> de {r.total}</span>
-          </span>
-          <Numero valor={r.atrasada} texto={r.atrasada > 1 ? 'atrasadas' : 'atrasada'}
-            cor="#a24a3a" para="/tarefas" />
-          <Numero valor={r.vence_hoje} texto={r.vence_hoje > 1 ? 'vencem hoje' : 'vence hoje'} cor="#b4622c" />
-          <Numero valor={r.vence_semana} texto="na semana" cor="#55614e" />
-          <Numero valor={r.urgentes} texto="urgentes" cor="#8a3f2e" icone={Flame}
+        <div className="flex flex-wrap gap-1.5">
+          <CardNum valor={emAberto} texto="em aberto" cor="#2f3b2f"
+            para={link({ alerta: 'aberta' })} titulo="Tudo que ainda não foi concluído nem cancelado" />
+          <CardNum valor={r.atrasada} texto={r.atrasada > 1 ? 'atrasadas' : 'atrasada'} cor="#a24a3a"
+            para={link({ alerta: 'atrasada' })} titulo="Passou do prazo interno" />
+          <CardNum valor={r.vence_hoje} texto="vence hoje" cor="#b4622c"
+            para={link({ alerta: 'hoje' })} />
+          <CardNum valor={r.vence_semana} texto="em 7 dias" cor="#55614e"
+            para={link({ alerta: 'semana' })} titulo="Vence de hoje até daqui a 7 dias" />
+          <CardNum valor={r.urgentes} texto="urgentes" cor="#8a3f2e" icone={Flame}
+            para={link({ alerta: 'aberta', prioridade: 'alta_urgente' })}
             titulo="Em aberto com prioridade alta ou urgente" />
-          <Numero valor={r.multa} texto="geram multa" cor="#a24a3a" icone={AlertTriangle}
-            titulo="Tarefas em aberto cuja obrigação gera multa se perder o prazo" />
-          <Numero valor={r.aguardando_cliente} texto="esperam o cliente" cor="#7a6a3a" icone={Inbox}
-            titulo="Em aberto sem o documento que o cliente precisa enviar" />
-          <Numero valor={r.nao_abertas} texto="não abertas" cor="#7a6a3a" icone={Send}
-            titulo="Documento enviado ao cliente e ainda não baixado" />
+          <CardNum valor={r.multa} texto="geram multa" cor="#a24a3a" icone={AlertTriangle}
+            para={link({ alerta: 'aberta', multa: '1' })}
+            titulo="Em aberto cuja obrigação gera multa se perder o prazo" />
+          <CardNum valor={r.aguardando_cliente} texto="esperam doc." cor="#7a6a3a" icone={Inbox}
+            titulo="Sem o documento que o cliente precisa enviar — a lista está no quadro abaixo" />
+          <CardNum valor={r.nao_abertas} texto="não abertas" cor="#7a6a3a" icone={Send}
+            titulo="Enviado ao cliente e ainda não baixado — a lista está no quadro abaixo" />
           {pont && (
-            <span className="text-xs text-gray-600"
+            <span className="min-w-[86px] px-2.5 py-1.5 rounded-lg border border-transparent"
               title={`${pont.dentro} de ${pont.base} concluídas dentro do prazo interno`}>
-              <strong className="text-base tabular-nums"
+              <strong className="text-lg tabular-nums leading-none"
                 style={{ color: pont.pct >= 90 ? '#4d8a3f' : pont.pct >= 70 ? '#8a6a2e' : '#a24a3a' }}>
                 {pont.pct}%
-              </strong> no prazo
+              </strong>
+              <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">no prazo</span>
             </span>
           )}
         </div>

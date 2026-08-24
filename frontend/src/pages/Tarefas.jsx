@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download,
          Send, Upload, X, MessageCircle, Mail } from 'lucide-react';
-import { filtrarTarefas, competenciasDe, presetsVencimento,
-         filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA } from './filtroTarefas';
+import { filtrarTarefas, competenciasDe, presetsVencimento, filtrosVazios,
+         temFiltroAtivo, filtrosDaUrl, rotuloDoRecorte, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
 import { alertaDaTarefa, fundoDoAlerta } from './alertaPrazo';
 import { formatarRazaoSocial } from './razaoSocial';
@@ -137,7 +137,11 @@ export default function Tarefas() {
   const [showModal, setShowModal] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState(null);
   const [searchParams] = useSearchParams();
-  const [filtros, setFiltros] = useState(filtrosVazios(searchParams.get('setor') || ''));
+  // A tela abre já filtrada quando vem de um link do Painel. Lê a URL inteira,
+  // não só o setor: clicar em "2 atrasadas" tem de trazer as 2, e não a lista
+  // toda para a pessoa procurar quais eram.
+  const [filtros, setFiltros] = useState(() => filtrosDaUrl(searchParams));
+  const recorte = rotuloDoRecorte(filtros);
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
@@ -830,6 +834,14 @@ export default function Tarefas() {
                 ? <><strong className="text-gray-700">{filteredTarefas.length}</strong> de {tarefas.length}</>
                 : <>{tarefas.length} {tarefas.length === 1 ? 'tarefa' : 'tarefas'}</>}
             </span>
+            {recorte && (
+              /* Dizer QUAL recorte veio do Painel. Sem isto, a tela abre com
+                 menos tarefas do que a pessoa esperava e parece que sumiram. */
+              <span className="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap"
+                style={{ background: '#ede2d1', color: '#55614e' }}>
+                mostrando: {recorte}
+              </span>
+            )}
             {temFiltro && (
               <button
                 type="button"

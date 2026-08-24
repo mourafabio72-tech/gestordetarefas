@@ -6,7 +6,8 @@
 import assert from 'node:assert';
 import {
   filtrarTarefas, competenciasDe, presetsVencimento,
-  filtrosVazios, temFiltroAtivo, SEM_COMPETENCIA,
+  filtrosVazios, temFiltroAtivo, filtrosDaUrl, rotuloDoRecorte,
+  SEM_COMPETENCIA,
 } from '../src/pages/filtroTarefas.js';
 
 let n = 0;
@@ -163,6 +164,61 @@ const ids = (lista) => lista.map(t => t.id);
   assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), texto: 'x' }), true);
   assert.strictEqual(temFiltroAtivo({ ...filtrosVazios(), usuario_id: '3' }), true);
   ok('texto e pessoa combinam com o resto e acendem o "limpar"');
+}
+
+// 17. O recorte que vem do Painel por link.
+//
+// O número do Painel e a lista daqui TÊM de bater. O Painel classifica pelo
+// prazo interno (`data_prazo`), então o recorte aqui também: usar a faixa de
+// vencimento, que lê o prazo legal, mostraria uma quantidade diferente da que
+// a pessoa acabou de clicar.
+{
+  const HOJE = new Date(2026, 7, 24);        // 24/08/2026, local
+  const T = [
+    { id: 1, status: 'pendente',     data_prazo: '2026-08-20T00:00:00', prioridade: 'media',   gera_multa: true },
+    { id: 2, status: 'pendente',     data_prazo: '2026-08-24T00:00:00', prioridade: 'urgente', gera_multa: false },
+    { id: 3, status: 'em_andamento', data_prazo: '2026-08-28T00:00:00', prioridade: 'alta',    gera_multa: false },
+    { id: 4, status: 'pendente',     data_prazo: '2026-10-30T00:00:00', prioridade: 'baixa',   gera_multa: false },
+    { id: 5, status: 'concluida',    data_prazo: '2026-08-01T00:00:00', prioridade: 'alta',    gera_multa: true },
+    { id: 6, status: 'cancelada',    data_prazo: '2026-08-01T00:00:00', prioridade: 'media',   gera_multa: false },
+    { id: 7, status: 'pendente',     data_prazo: null,                  prioridade: 'media',   gera_multa: false },
+  ];
+  const rec = (alerta, extra = {}) =>
+    ids(filtrarTarefas(T, { ...filtrosVazios(), alerta, ...extra }, HOJE));
+
+  assert.deepStrictEqual(rec('atrasada'), [1], 'atrasada é só a de prazo vencido');
+  assert.deepStrictEqual(rec('hoje'), [2], 'vence hoje');
+  assert.deepStrictEqual(rec('semana'), [2, 3], 'hoje e os próximos 7 dias');
+  // 'aberta' não pode sair do semáforo: a 7 não tem prazo, e no semáforo isso
+  // é 'neutro' — o mesmo balaio da cancelada. Ela está aberta do mesmo jeito.
+  assert.deepStrictEqual(rec('aberta'), [1, 2, 3, 4, 7], 'aberta inclui a sem prazo');
+  assert.deepStrictEqual(rec('aberta', { prioridade: 'alta_urgente' }), [2, 3],
+    'urgentes do painel = em aberto com prioridade alta ou urgente');
+  // A concluída de prioridade alta não entra: já não é fila.
+  assert.ok(!rec('aberta', { prioridade: 'alta_urgente' }).includes(5));
+  assert.deepStrictEqual(ids(filtrarTarefas(T, { ...filtrosVazios(), multa: true }, HOJE)), [1, 5],
+    'multa filtra pelas que geram');
+  ok('os recortes do Painel batem com o que o Painel conta');
+}
+
+// 18. A URL vira filtro, e link velho não quebra a tela.
+{
+  const f = filtrosDaUrl(new URLSearchParams('empresa=3&setor=2&alerta=atrasada&multa=1'));
+  assert.strictEqual(f.empresa_id, '3');
+  assert.strictEqual(f.setor_id, '2');
+  assert.strictEqual(f.alerta, 'atrasada');
+  assert.strictEqual(f.multa, true);
+  assert.strictEqual(temFiltroAtivo(f), true, 'o "limpar" tem de acender');
+
+  const lixo = filtrosDaUrl(new URLSearchParams('alerta=coisanenhuma&naoexiste=1'));
+  assert.strictEqual(lixo.alerta, '', 'recorte desconhecido é ignorado');
+  assert.strictEqual(temFiltroAtivo(lixo), false, 'link velho abre a tela sem filtro, não quebrada');
+
+  assert.strictEqual(filtrosDaUrl({ alerta: 'hoje' }).alerta, 'hoje', 'aceita objeto simples');
+  assert.strictEqual(rotuloDoRecorte({ alerta: 'atrasada', prioridade: 'alta_urgente' }),
+    'atrasadas, prioridade alta ou urgente');
+  assert.strictEqual(rotuloDoRecorte(filtrosVazios()), '', 'sem recorte, sem rótulo');
+  ok('a URL do Painel vira filtro, e link inválido não derruba a tela');
 }
 
 console.log(`\nPROVA OK: ${n} casos`);
