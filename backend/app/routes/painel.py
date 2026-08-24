@@ -220,10 +220,11 @@ def painel(
             key=lambda x: (-(x["atrasada"] + x["pendente"] + x["em_andamento"]), x["nome"]))
 
     setores = lista(por_setor)
-    if do_cliente["total"]:
-        # No fim da fila e marcada: quem somar as linhas tem de saber que esta
-        # repete tarefas já contadas nos setores.
-        setores.append({"nome": "Cliente", **do_cliente, "derivado": True})
+    # Sempre presente, mesmo zerada: "nada parado no cliente" é resposta, e uma
+    # coluna que some quando está boa faz a pessoa perguntar se o dado existe.
+    # Vai no fim e marcada — quem somar as linhas tem de saber que esta repete
+    # tarefas já contadas nos setores.
+    setores.append({"nome": "Cliente", **do_cliente, "derivado": True})
 
     aguardando.sort(key=lambda x: (x["data_prazo"] is None, x["data_prazo"]))
     nao_abertas.sort(key=lambda x: (x["data_vencimento"] is None, x["data_vencimento"]))

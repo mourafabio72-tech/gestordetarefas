@@ -3,7 +3,7 @@
 
 import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
          pontualidade, haQuantosDias, arcosRosca, barras, roscasPorLinha, urlTarefas,
-         fundoDoTom, TONS, SITUACOES, DIMENSOES }
+         fundoDoTom, corDoSetor, TONS, SITUACOES, DIMENSOES }
   from '../src/pages/painelDados.js';
 
 let ok = 0, falhou = 0;
@@ -140,13 +140,28 @@ console.log('\n13) Tom dos cards');
 // "Em aberto" contém todos os outros. Pintado, viraria mais um alerta
 // competindo com os que de fato pedem ação.
 eq('o guarda-chuva fica no creme, sem alarde', fundoDoTom('base'), '#fffdf9');
-eq('atrasada puxa vermelho', TONS.atrasada.forte, '#a24a3a');
-eq('vence hoje é amarelo', TONS.hoje.forte, '#8a6a2e');
-eq('a vencer é verde', TONS.a_vencer.forte, '#4d7a3f');
-eq('urgente é laranja', TONS.urgente.forte, '#b4622c');
+eq('atrasada puxa vermelho', TONS.atrasada.forte, '#8f3b2c');
+eq('vence hoje é amarelo', TONS.hoje.forte, '#7a5a1e');
+eq('a vencer é verde', TONS.a_vencer.forte, '#3d6b32');
+eq('urgente é laranja', TONS.urgente.forte, '#9c4f1e');
 eq('tom desconhecido cai no base, não quebra o card', fundoDoTom('inventado'), '#fffdf9');
-eq('tom com cor vira degradê, como no card de tarefa',
-  fundoDoTom('atrasada').startsWith('linear-gradient'), true);
+eq('o fundo é cor cheia, não o sopro que sumia de longe', fundoDoTom('atrasada'), '#e9ab98');
+eq('cada tom tem borda própria', TONS.urgente.borda, '#dfa165');
+
+console.log('\n15) Cor de etiqueta por setor');
+// Estável pelo nome: se dependesse da posição na lista, o mesmo setor sairia
+// verde num dia e azul no outro, e a etiqueta deixaria de ensinar.
+eq('a mesma entrada dá sempre a mesma cor', corDoSetor('Fiscal'), corDoSetor('Fiscal'));
+eq('não depende de caixa nem de espaço', corDoSetor('Fiscal'), corDoSetor('  fiscal '));
+// Os setores reais do escritório não podem colidir. Com hash puro, dois deles
+// caíam na mesma cor — e duas etiquetas iguais não etiquetam nada.
+eq('os setores do escritório têm cada um a sua',
+  new Set(['Fiscal', 'Contabilidade', 'DP', 'Financeiro', 'Societário', 'Controladoria']
+    .map(corDoSetor)).size, 6);
+eq('acento não muda a cor', corDoSetor('Societário'), corDoSetor('societario'));
+eq('Cliente não entra no sorteio: não é setor nosso', corDoSetor('Cliente'), '#a99e88');
+eq('sem setor tem tom apagado', corDoSetor('Sem setor'), '#c3bda9');
+eq('nome vazio não quebra', typeof corDoSetor(''), 'string');
 
 console.log('\n14) A marca de linha derivada chega à tela');
 const comCliente = [{ nome: 'Cliente', total: 2, atrasada: 1, pendente: 1, em_andamento: 0,

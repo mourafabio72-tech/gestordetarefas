@@ -4,7 +4,7 @@ import { painelAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
 import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
-  pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, fundoDoTom, TONS,
+  pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, fundoDoTom, corDoSetor, TONS,
   filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
 import { AlertTriangle, Inbox, Send, Flame,
   BarChart3, AlignLeft, PieChart } from 'lucide-react';
@@ -55,10 +55,12 @@ function CardNum({ valor, texto, tom = 'base', icone: Icone, titulo, para }) {
 }
 
 // Só o desenho, para servir à rosca grande da faixa e às pequenas por setor.
-function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16 }) {
+function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16, anel = null }) {
   const arcos = arcosRosca(fatias, raio);
   return (
     <svg viewBox="0 0 120 120" style={{ width: tamanho, height: tamanho }} className="shrink-0">
+      {anel && <circle cx="60" cy="60" r={raio + largura / 2 + 3} fill="none"
+        stroke={anel} strokeWidth="3" />}
       <g transform="rotate(-90 60 60)">
         <circle cx="60" cy="60" r={raio} fill="none" stroke="#eee8db" strokeWidth={largura} />
         {arcos.map((a) => (
@@ -106,6 +108,11 @@ function GraficoComAbas({ dados }) {
   const itens = dados[dim] || [];
   const corte = (l) => (tudo ? l : l.slice(0, 10));
   const nomeDe = (n) => (dim === 'por_empresa' ? formatarRazaoSocial(n) : n);
+  // A etiqueta de cor só vale para setor: em colaborador e empresa a lista é
+  // longa e aberta, e cor demais deixa de distinguir.
+  const etiqueta = (n) => (dim === 'por_setor'
+    ? <span className="w-2 h-2 rounded-full shrink-0" style={{ background: corDoSetor(n) }} />
+    : null);
   const linhasBarra = corte(barras(itens));
   const linhasMapaV = corte(linhasMapa(itens));
   const roscas = corte(roscasPorLinha(itens));
@@ -146,10 +153,13 @@ function GraficoComAbas({ dados }) {
         <div className="flex items-start gap-4 overflow-x-auto pb-1">
           {roscas.map((r) => (
             <div key={r.nome} className="flex flex-col items-center gap-1 shrink-0 w-[108px]">
-              <Donut fatias={r.fatias} centro={r.total} tamanho={100} raio={44} largura={19} />
-              <span className={`text-[11px] text-center leading-tight ${
+              {/* Anel externo na cor do setor: a rosca por dentro continua
+                  contando situação, e a borda diz de quem ela é. */}
+              <Donut fatias={r.fatias} centro={r.total} tamanho={100} raio={44} largura={19}
+                anel={dim === 'por_setor' ? corDoSetor(r.nome) : null} />
+              <span className={`text-[11px] text-center leading-tight flex items-center gap-1 ${
                 r.derivado ? 'italic text-gray-500' : 'text-gray-700'}`} title={nomeDe(r.nome)}>
-                {nomeDe(r.nome)}
+                {etiqueta(r.nome)}{nomeDe(r.nome)}
               </span>
               {r.multa > 0 && (
                 <span className="text-[10px] tabular-nums" style={{ color: '#a24a3a' }}
@@ -164,8 +174,9 @@ function GraficoComAbas({ dados }) {
         <div className="space-y-1.5">
           {linhasBarra.map((l) => (
             <div key={l.nome} className="flex items-center gap-2">
-              <span className="w-32 shrink-0 text-xs truncate text-gray-700" title={nomeDe(l.nome)}>
-                {nomeDe(l.nome)}
+              <span className="w-32 shrink-0 text-xs truncate text-gray-700 flex items-center gap-1.5"
+                title={nomeDe(l.nome)}>
+                {etiqueta(l.nome)}<span className="truncate">{nomeDe(l.nome)}</span>
               </span>
               <div className="flex-1 h-5 rounded bg-[#f3efe6] overflow-hidden">
                 {/* Largura = volume ante o maior; divisão interna = composição. */}
@@ -209,8 +220,9 @@ function GraficoComAbas({ dados }) {
           </div>
           {linhasMapaV.map((l) => (
             <div key={l.nome} className="flex items-center gap-2">
-              <span className="w-32 shrink-0 text-xs truncate text-gray-700" title={nomeDe(l.nome)}>
-                {nomeDe(l.nome)}
+              <span className="w-32 shrink-0 text-xs truncate text-gray-700 flex items-center gap-1.5"
+                title={nomeDe(l.nome)}>
+                {etiqueta(l.nome)}<span className="truncate">{nomeDe(l.nome)}</span>
               </span>
               {/* Uma barrinha por situação, comprimento relativo À LINHA: é o
                   que torna setor de 8 tarefas e setor de 300 comparáveis
@@ -262,72 +274,6 @@ function GraficoComAbas({ dados }) {
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-// As duas filas em que o escritório não avança sozinho: falta um movimento do
-// CLIENTE. O nome importa — "Depende de alguém" não dizia de quem nem do quê.
-function EsperandoCliente({ aguardando, naoAbertas }) {
-  const vazio = !aguardando.length && !naoAbertas.length;
-  return (
-    <div className="card py-3">
-      <h2 className="text-sm font-semibold text-gray-800">Parado do lado do cliente</h2>
-      <p className="text-[11px] text-gray-500 mb-2.5">
-        Não anda trabalhando mais: anda cobrando. Documento que o cliente ainda não
-        mandou, e guia que saiu daqui e ninguém abriu.
-      </p>
-
-      {vazio && (
-        <p className="text-xs text-gray-500">
-          Nada parado. Todo documento esperado chegou, e tudo que enviamos foi aberto.
-        </p>
-      )}
-
-      {aguardando.length > 0 && (
-        <div className="mb-2.5">
-          <h3 className="text-[11px] font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
-            <Inbox size={12} className="text-gray-400" />
-            O cliente ainda não mandou o documento
-            <span className="text-gray-400 font-normal">{aguardando.length}</span>
-          </h3>
-          <ul className="space-y-0.5">
-            {aguardando.map((t) => (
-              <li key={t.id} className="grid grid-cols-[38px_1fr_38%] gap-2 items-center text-[11px]">
-                <span className="tabular-nums"
-                  style={{ color: t.atrasada ? '#a24a3a' : '#808a74' }}>{diaMes(t.data_prazo)}</span>
-                <span className="truncate text-gray-700" title={t.titulo}>{t.titulo}</span>
-                <span className="truncate text-gray-400" title={formatarRazaoSocial(t.empresa)}>
-                  {formatarRazaoSocial(t.empresa)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {naoAbertas.length > 0 && (
-        <div>
-          <h3 className="text-[11px] font-semibold text-gray-700 flex items-center gap-1.5 mb-1">
-            <Send size={12} className="text-gray-400" />
-            Enviamos e o cliente não abriu
-            <span className="text-gray-400 font-normal">{naoAbertas.length}</span>
-          </h3>
-          {/* A guia entregue no prazo não protege ninguém se o cliente não
-              baixou: quem leva a multa é ele, e a reclamação chega aqui. */}
-          <ul className="space-y-0.5">
-            {naoAbertas.map((t) => (
-              <li key={t.id} className="grid grid-cols-[58px_1fr_38%] gap-2 items-center text-[11px]">
-                <span className="text-gray-500">{haQuantosDias(t.enviado_em)}</span>
-                <span className="truncate text-gray-700" title={t.titulo}>{t.titulo}</span>
-                <span className="truncate text-gray-400" title={formatarRazaoSocial(t.empresa)}>
-                  {formatarRazaoSocial(t.empresa)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
@@ -442,9 +388,9 @@ export default function Dashboard() {
             para={link({ alerta: 'aberta', multa: '1' })}
             titulo="Em aberto cuja obrigação gera multa se perder o prazo" />
           <CardNum valor={r.aguardando_cliente} texto="esperam doc." tom="base" icone={Inbox}
-            titulo="Sem o documento que o cliente precisa enviar — a lista está no quadro abaixo" />
+            titulo="Sem o documento que o cliente precisa enviar — some na coluna Cliente do gráfico" />
           <CardNum valor={r.nao_abertas} texto="não abertas" tom="base" icone={Send}
-            titulo="Enviado ao cliente e ainda não baixado — a lista está no quadro abaixo" />
+            titulo="Enviado ao cliente e ainda não baixado — some na coluna Cliente do gráfico" />
           {pont && (
             <span className="min-w-[86px] px-2.5 py-1.5 rounded-lg border border-transparent"
               title={`${pont.dentro} de ${pont.base} concluídas dentro do prazo interno`}>
@@ -458,10 +404,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2 items-start">
-        <GraficoComAbas dados={dados} />
-        <EsperandoCliente aguardando={dados.aguardando || []} naoAbertas={dados.nao_abertas || []} />
-      </div>
+      <GraficoComAbas dados={dados} />
 
       {/* Tabela, não mais grupos com seta. A seta escondia justamente o que se
           procura aqui — qual tarefa, de quem, para quando —, e obrigava a
@@ -516,7 +459,13 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className="py-1.5 px-2 text-gray-500">
-                      <span className="block truncate" title={t.setor}>{t.setor}</span>
+                      {/* Mesma cor do gráfico: quem viu a pizza do Fiscal acha
+                          as linhas do Fiscal aqui sem ler coluna nenhuma. */}
+                      <span className="flex items-center gap-1.5 min-w-0" title={t.setor}>
+                        <span className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: corDoSetor(t.setor) }} />
+                        <span className="truncate">{t.setor}</span>
+                      </span>
                     </td>
                     <td className="py-1.5 pl-2 text-gray-500">
                       <span className="block truncate" title={t.responsaveis.join(', ')}>

@@ -222,15 +222,66 @@ export function roscasPorLinha(itens, situacoes = SITUACOES) {
  * fato pedem ação.
  */
 export const TONS = {
-  base:     { forte: '#2f3b2f', suave: null },
-  atrasada: { forte: '#a24a3a', suave: '#f2cdc2' },
-  hoje:     { forte: '#8a6a2e', suave: '#f4e3b8' },   // amarelo
-  a_vencer: { forte: '#4d7a3f', suave: '#d9e9cd' },   // verde
-  urgente:  { forte: '#b4622c', suave: '#f8dcbe' },   // laranja
+  base:     { forte: '#2f3b2f', suave: null,      borda: '#e6dfd0' },
+  atrasada: { forte: '#8f3b2c', suave: '#e9ab98', borda: '#d98e77' },
+  hoje:     { forte: '#7a5a1e', suave: '#eed08a', borda: '#dcb662' },   // amarelo
+  a_vencer: { forte: '#3d6b32', suave: '#bcd9a6', borda: '#9cc281' },   // verde
+  urgente:  { forte: '#9c4f1e', suave: '#f0bd8a', borda: '#dfa165' },   // laranja
 };
 
-/** Fundo do card: a cor esmaecendo até o creme, como no card de tarefa. */
+/**
+ * Fundo do card. Cor cheia, não o sopro de antes: a primeira versão dissolvia
+ * no creme cedo demais e, de longe, os cinco cards pareciam o mesmo cartão.
+ */
 export function fundoDoTom(tom) {
   const t = TONS[tom] || TONS.base;
-  return t.suave ? `linear-gradient(135deg, ${t.suave} 0%, #fffdf9 82%)` : '#fffdf9';
+  return t.suave || '#fffdf9';
+}
+
+// Cores de setor. Não é a paleta das situações: aqui a cor só serve de
+// etiqueta, para o olho achar "Fiscal" sem ler. Por isso são matizes distintos
+// entre si e dessaturados o bastante para não competir com o semáforo.
+const PALETA_SETOR = [
+  '#5f7057', '#2f6d78', '#8a5a2e', '#6a5a8a', '#3f7a5a',
+  '#8a4a5a', '#4a6a9a', '#7a7a3a',
+];
+
+// Os setores do escritório têm cor FIXA, não sorteada. O sorteio por hash é
+// bom para nome que ninguém previu, mas com quatro ou cinco nomes ele colide —
+// e dois setores da mesma cor é pior que nenhuma cor. Cliente e "sem setor"
+// ficam em tons apagados de propósito: não são fila de trabalho de ninguém.
+const COR_FIXA = {
+  contabilidade: '#5f7057',
+  contabil: '#5f7057',
+  fiscal: '#2f6d78',
+  dp: '#8a5a2e',
+  'departamento pessoal': '#8a5a2e',
+  'recursos humanos': '#8a5a2e',
+  financeiro: '#6a5a8a',
+  societario: '#3f7a5a',
+  legalizacao: '#4a6a9a',
+  controladoria: '#8a4a5a',
+  paralegal: '#7a7a3a',
+  cliente: '#a99e88',
+  'sem setor': '#c3bda9',
+};
+
+/** Sem acento e sem caixa, para "Societário" e "societario" caírem na mesma. */
+function chaveDoNome(nome) {
+  return (nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+/**
+ * Cor de um setor, estável pelo nome.
+ *
+ * Estável importa: se a cor mudasse conforme a posição na lista, o mesmo setor
+ * apareceria verde num dia e azul no outro, e a etiqueta deixaria de ensinar.
+ */
+export function corDoSetor(nome) {
+  const chave = chaveDoNome(nome);
+  if (!chave) return PALETA_SETOR[0];
+  if (COR_FIXA[chave]) return COR_FIXA[chave];
+  let soma = 0;
+  for (let i = 0; i < chave.length; i++) soma = (soma * 31 + chave.charCodeAt(i)) % 100000;
+  return PALETA_SETOR[soma % PALETA_SETOR.length];
 }

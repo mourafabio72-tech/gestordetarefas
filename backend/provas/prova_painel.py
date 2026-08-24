@@ -259,9 +259,13 @@ checa("é a última da lista", d2["por_setor"][-1]["nome"] == "Cliente")
 checa("a mesma tarefa continua contada no setor dela",
       setores2["Fiscal"]["total"] > 0 and setores2["Cliente"]["total"] > 0)
 
+# A coluna fica mesmo zerada: "nada parado no cliente" é resposta, e coluna que
+# some quando está boa faz a pessoa duvidar de que o dado existe.
 sem_cliente = client.get("/api/painel", params={"competencia": "07/2026"}, headers=cab).json()
-checa("sem nada parado no cliente, a linha nem aparece",
-      all(x["nome"] != "Cliente" for x in sem_cliente["por_setor"]))
+zerada = [x for x in sem_cliente["por_setor"] if x["nome"] == "Cliente"]
+checa("sem nada parado, a linha continua lá, zerada", len(zerada) == 1 and zerada[0]["total"] == 0,
+      str(zerada))
+checa("e continua sendo a última", sem_cliente["por_setor"][-1]["nome"] == "Cliente")
 
 import shutil                                                  # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)
