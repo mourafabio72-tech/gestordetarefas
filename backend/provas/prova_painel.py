@@ -110,20 +110,20 @@ soma_colab = sum(c["total"] for c in d["por_colaborador"])
 checa("a soma por colaborador excede o total, por causa do trabalho dividido",
       soma_colab == 8 and soma_colab > r["total"], str(soma_colab))
 
-print("\n5. Próximas do vencimento, agrupadas por setor")
-grupos = {g["setor"]: g for g in d["proximas"]}
-checa("só o que está em aberto", sum(g["total"] for g in d["proximas"]) == 5,
-      str(sum(g["total"] for g in d["proximas"])))
+print("\n5. Próximas do vencimento, em tabela")
+checa("uma linha por tarefa em aberto, não um grupo", len(d["proximas"]) == 5,
+      str(len(d["proximas"])))
 checa("concluída e cancelada ficam de fora",
-      all(t["titulo"] not in ("concluida com multa", "cancelada")
-          for g in d["proximas"] for t in g["tarefas"]))
-checa("o setor com atraso vem primeiro", d["proximas"][0]["setor"] == "Fiscal")
-checa("cada grupo conta suas atrasadas", grupos["Fiscal"]["atrasadas"] == 2)
-checa("a tarefa traz quem responde",
-      any(t["responsaveis"] == ["Ana"] for t in grupos["Fiscal"]["tarefas"]))
-checa("e se gera multa", any(t["multa"] for t in grupos["Fiscal"]["tarefas"]))
-checa("ordenadas pelo prazo",
-      [t["titulo"] for t in grupos["Fiscal"]["tarefas"]][0] == "atrasada com multa")
+      all(t["titulo"] not in ("concluida com multa", "cancelada") for t in d["proximas"]))
+checa("ordenadas pelo prazo", d["proximas"][0]["titulo"] == "atrasada com multa",
+      d["proximas"][0]["titulo"])
+checa("a linha traz empresa", d["proximas"][0]["empresa"] == "Cliente")
+checa("traz o setor, que virou coluna", d["proximas"][0]["setor"] == "Fiscal")
+checa("traz quem responde", d["proximas"][0]["responsaveis"] == ["Ana"])
+checa("marca a atrasada", d["proximas"][0]["atrasada"] is True)
+checa("e se gera multa", d["proximas"][0]["multa"] is True)
+checa("diz o total de abertas, para a tabela avisar quando cortar",
+      d["abertas_total"] == 5, str(d["abertas_total"]))
 
 print("\n6. Filtros")
 f = lambda **kw: client.get("/api/painel", params=kw, headers=cab).json()["resumo"]
@@ -242,6 +242,26 @@ except TypeError as e:
 checa("prazo vindo do Postgres não quebra", quebrou is None, quebrou or "")
 checa("e é lido como atrasada", sit_pg == "atrasada", str(sit_pg))
 checa("prazo vindo do SQLite dá a MESMA resposta", sit_lite == "atrasada", str(sit_lite))
+
+print("\n13. A linha Cliente no gráfico por setor")
+# Onde a bola está parada quando não está com nenhum setor nosso. É ADITIVA: a
+# tarefa continua contando no setor dela, porque tirá-la de lá mudaria a carga
+# do setor, que é outra pergunta.
+setores2 = {x["nome"]: x for x in d2["por_setor"]}
+checa("existe uma linha Cliente", "Cliente" in setores2, str(list(setores2)))
+checa("junta o que espera documento com o que foi enviado e não abriram",
+      setores2["Cliente"]["total"] == 2, str(setores2["Cliente"]["total"]))
+checa("vem marcada como derivada, para ninguém somar errado",
+      setores2["Cliente"].get("derivado") is True)
+checa("é a última da lista", d2["por_setor"][-1]["nome"] == "Cliente")
+# A tarefa "doc nao chegou" é do Fiscal e está esperando o cliente: tem de
+# aparecer nos dois lugares, e é justamente por isso que a linha é marcada.
+checa("a mesma tarefa continua contada no setor dela",
+      setores2["Fiscal"]["total"] > 0 and setores2["Cliente"]["total"] > 0)
+
+sem_cliente = client.get("/api/painel", params={"competencia": "07/2026"}, headers=cab).json()
+checa("sem nada parado no cliente, a linha nem aparece",
+      all(x["nome"] != "Cliente" for x in sem_cliente["por_setor"]))
 
 import shutil                                                  # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)

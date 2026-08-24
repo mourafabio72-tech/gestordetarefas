@@ -3,7 +3,7 @@
 
 import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
          pontualidade, haQuantosDias, arcosRosca, barras, roscasPorLinha, urlTarefas,
-         SITUACOES, DIMENSOES }
+         fundoDoTom, TONS, SITUACOES, DIMENSOES }
   from '../src/pages/painelDados.js';
 
 let ok = 0, falhou = 0;
@@ -135,6 +135,27 @@ eq('o total vai junto, senão 3 e 300 desenham o mesmo círculo',
   rs.map((r) => r.total), [3, 300]);
 eq('multa acompanha', rs[0].multa, 1);
 eq('lista vazia não quebra', roscasPorLinha(null), []);
+
+console.log('\n13) Tom dos cards');
+// "Em aberto" contém todos os outros. Pintado, viraria mais um alerta
+// competindo com os que de fato pedem ação.
+eq('o guarda-chuva fica no creme, sem alarde', fundoDoTom('base'), '#fffdf9');
+eq('atrasada puxa vermelho', TONS.atrasada.forte, '#a24a3a');
+eq('vence hoje é amarelo', TONS.hoje.forte, '#8a6a2e');
+eq('a vencer é verde', TONS.a_vencer.forte, '#4d7a3f');
+eq('urgente é laranja', TONS.urgente.forte, '#b4622c');
+eq('tom desconhecido cai no base, não quebra o card', fundoDoTom('inventado'), '#fffdf9');
+eq('tom com cor vira degradê, como no card de tarefa',
+  fundoDoTom('atrasada').startsWith('linear-gradient'), true);
+
+console.log('\n14) A marca de linha derivada chega à tela');
+const comCliente = [{ nome: 'Cliente', total: 2, atrasada: 1, pendente: 1, em_andamento: 0,
+                      concluida: 0, cancelada: 0, multa: 0, derivado: true }];
+eq('a pizza sabe que é derivada', roscasPorLinha(comCliente)[0].derivado, true);
+eq('a barra também', barras(comCliente)[0].derivado, true);
+eq('e o mapa', linhasMapa(comCliente)[0].derivado, true);
+eq('setor de verdade não vem marcado',
+  roscasPorLinha([{ nome: 'Fiscal', total: 1, atrasada: 1 }])[0].derivado, false);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

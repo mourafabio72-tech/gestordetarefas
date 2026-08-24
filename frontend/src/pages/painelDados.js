@@ -51,6 +51,7 @@ export function linhasMapa(itens, situacoes = SITUACOES) {
       nome: i.nome,
       total,
       multa: i.multa || 0,
+      derivado: Boolean(i.derivado),
       celulas: situacoes.map((s) => ({
         ...s,
         valor: i[s.chave] || 0,
@@ -161,6 +162,7 @@ export function barras(itens, situacoes = SITUACOES) {
       nome: i.nome,
       total,
       multa: i.multa || 0,
+      derivado: Boolean(i.derivado),
       // Piso de 2%: linha com uma tarefa só some ao lado de outra com 300, e
       // sumir é pior que exagerar — quem tem 1 precisa aparecer para ser clicado.
       largura: total ? Math.max((total / maior) * 100, 2) : 0,
@@ -204,6 +206,31 @@ export function roscasPorLinha(itens, situacoes = SITUACOES) {
     nome: i.nome,
     total: i.total || 0,
     multa: i.multa || 0,
+    // A linha "Cliente" do gráfico por setor é um recorte, não um setor: ela
+    // repete tarefas já contadas. A marca viaja até a tela para ser dita lá.
+    derivado: Boolean(i.derivado),
     fatias: percentuais(i, situacoes),
   }));
+}
+
+/**
+ * Tom de cada card da faixa. O mesmo semáforo dos cards de tarefa, para a cor
+ * querer dizer a mesma coisa nas duas telas.
+ *
+ * "Em aberto" fica no tom base de propósito: é o guarda-chuva que contém todos
+ * os outros, e pintá-lo faria parecer mais um alerta, competindo com os que de
+ * fato pedem ação.
+ */
+export const TONS = {
+  base:     { forte: '#2f3b2f', suave: null },
+  atrasada: { forte: '#a24a3a', suave: '#f2cdc2' },
+  hoje:     { forte: '#8a6a2e', suave: '#f4e3b8' },   // amarelo
+  a_vencer: { forte: '#4d7a3f', suave: '#d9e9cd' },   // verde
+  urgente:  { forte: '#b4622c', suave: '#f8dcbe' },   // laranja
+};
+
+/** Fundo do card: a cor esmaecendo até o creme, como no card de tarefa. */
+export function fundoDoTom(tom) {
+  const t = TONS[tom] || TONS.base;
+  return t.suave ? `linear-gradient(135deg, ${t.suave} 0%, #fffdf9 82%)` : '#fffdf9';
 }

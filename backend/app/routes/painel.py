@@ -159,6 +159,11 @@ def painel(
                         "concluidas_com_prazo": 0, "no_prazo": 0}
     por_setor, por_colaborador, por_empresa = {}, {}, {}
     aguardando, nao_abertas = [], []
+    # Linha "Cliente" do gráfico por setor: onde a bola está parada quando não
+    # está com nenhum setor nosso. É ADITIVA -- a tarefa continua contando no
+    # setor dela. Tirá-la de lá mudaria a carga dos setores, que é outra
+    # pergunta; aqui a linha só responde "quanto depende de fora".
+    do_cliente = _zero()
 
     for t in tarefas:
         prazo = _utc(t.data_prazo)
@@ -189,6 +194,7 @@ def painel(
         # e executar" — por isso sai do balaio geral de atrasadas.
         if aberta and sentido == "receber" and exige and not t.anexo_nome:
             resumo["aguardando_cliente"] += 1
+            _somar(do_cliente, sit, multa)
             aguardando.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
                                "data_prazo": prazo, "atrasada": sit == "atrasada"})
 
@@ -197,6 +203,7 @@ def painel(
         # chega aqui.
         if sentido == "entregar" and enviado_em.get(t.id) and not (t.saida_downloads or 0):
             resumo["nao_abertas"] += 1
+            _somar(do_cliente, sit, multa)
             nao_abertas.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
                                 "enviado_em": enviado_em[t.id],
                                 "data_vencimento": _utc(t.data_vencimento) or prazo})
@@ -212,33 +219,37 @@ def painel(
             [{"nome": k, **v} for k, v in d.items()],
             key=lambda x: (-(x["atrasada"] + x["pendente"] + x["em_andamento"]), x["nome"]))
 
+    setores = lista(por_setor)
+    if do_cliente["total"]:
+        # No fim da fila e marcada: quem somar as linhas tem de saber que esta
+        # repete tarefas já contadas nos setores.
+        setores.append({"nome": "Cliente", **do_cliente, "derivado": True})
+
     aguardando.sort(key=lambda x: (x["data_prazo"] is None, x["data_prazo"]))
     nao_abertas.sort(key=lambda x: (x["data_vencimento"] is None, x["data_vencimento"]))
 
-    # Próximas do vencimento, agrupadas por setor. Só o que ainda vai ser feito.
+    # Próximas do vencimento, em tabela: uma linha por tarefa, ordenada pelo
+    # prazo. Era agrupada por setor com o detalhe atrás de uma seta, e a seta
+    # escondia justamente o que se procura -- qual tarefa, de quem, para quando.
+    # O setor virou coluna, então continua dando para ler por setor.
     abertas = [t for t in tarefas
                if _situacao(t.status, _utc(t.data_prazo), agora) in ABERTAS and t.data_prazo]
     abertas.sort(key=lambda t: _utc(t.data_prazo))
-    grupos = {}
-    for t in abertas[:200]:
+    proximas = []
+    for t in abertas[:60]:
         prazo = _utc(t.data_prazo)
-        nome_setor = nomes_setor.get(t.setor_id) or "Sem setor"
-        g = grupos.setdefault(nome_setor, {"setor": nome_setor, "total": 0,
-                                           "atrasadas": 0, "tarefas": []})
-        atrasada = prazo < agora
-        g["total"] += 1
-        g["atrasadas"] += 1 if atrasada else 0
-        if len(g["tarefas"]) < 25:
-            g["tarefas"].append({
-                "id": t.id, "titulo": t.titulo, "data_prazo": prazo,
-                "atrasada": atrasada, "multa": bool(t.gera_multa),
-                "empresa": nomes_empresa.get(t.empresa_id) or "Sem empresa",
-                "responsaveis": [n for _i, n in (resp.get(t.id) or [])],
-            })
-    proximas = sorted(grupos.values(), key=lambda g: (-g["atrasadas"], -g["total"], g["setor"]))
+        proximas.append({
+            "id": t.id, "titulo": t.titulo,
+            "data_prazo": prazo, "data_vencimento": _utc(t.data_vencimento),
+            "atrasada": prazo < agora, "multa": bool(t.gera_multa),
+            "empresa": nomes_empresa.get(t.empresa_id) or "Sem empresa",
+            "setor": nomes_setor.get(t.setor_id) or "Sem setor",
+            "responsaveis": [n for _i, n in (resp.get(t.id) or [])],
+        })
 
     return {"resumo": resumo,
-            "por_setor": lista(por_setor),
+            "por_setor": setores,
+            "abertas_total": len(abertas),
             "por_colaborador": lista(por_colaborador),
             "por_empresa": lista(por_empresa),
             "aguardando": aguardando[:12],

@@ -4,9 +4,9 @@ import { painelAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
 import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
-  pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, filtrosVazios, paraConsulta,
-  temFiltroAtivo } from './painelDados';
-import { AlertTriangle, ChevronDown, ChevronRight, Inbox, Send, Flame,
+  pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, fundoDoTom, TONS,
+  filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
+import { AlertTriangle, Inbox, Send, Flame,
   BarChart3, AlignLeft, PieChart } from 'lucide-react';
 
 const ctrl = (ativo) =>
@@ -28,27 +28,29 @@ function Campo({ rotulo, largura = '', children }) {
 // Cada número é uma porta para a lista, não um enfeite: quem lê "2 atrasadas"
 // quer ver QUAIS são as duas. O recorte viaja na URL e a tela de Tarefas abre
 // já filtrada pelo mesmo critério que o painel usou para contar.
-function CardNum({ valor, texto, cor, icone: Icone, titulo, para }) {
+function CardNum({ valor, texto, tom = 'base', icone: Icone, titulo, para }) {
   if (!valor) return null;
+  const cor = (TONS[tom] || TONS.base).forte;
   const corpo = (
     <>
       <span className="flex items-baseline gap-1">
-        <strong className="text-lg tabular-nums leading-none" style={{ color: cor }}>{valor}</strong>
-        {Icone && <Icone size={11} style={{ color: cor }} />}
+        <strong className="text-xl tabular-nums leading-none" style={{ color: cor }}>{valor}</strong>
+        {Icone && <Icone size={12} style={{ color: cor }} />}
       </span>
-      <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{texto}</span>
+      <span className="block text-[10px] leading-tight mt-0.5" style={{ color: '#55614e' }}>{texto}</span>
     </>
   );
-  const base = 'min-w-[86px] px-2.5 py-1.5 rounded-lg border bg-[#fffdf9]';
+  const base = 'min-w-[88px] px-2.5 py-2 rounded-lg border';
+  const estilo = { background: fundoDoTom(tom), borderColor: (TONS[tom] || TONS.base).suave || '#e6dfd0' };
   return para ? (
-    <Link to={para} title={titulo || `Ver ${texto}`}
-      className={`${base} border-gray-200 hover:border-primary-300 hover:shadow-sm transition-colors`}>
+    <Link to={para} title={titulo || `Ver ${texto}`} style={estilo}
+      className={`${base} hover:shadow-sm hover:brightness-[0.985] transition`}>
       {corpo}
     </Link>
   ) : (
     // Sem link quando não há lista equivalente para abrir — melhor um cartão
     // parado que um link que leva ao lugar errado.
-    <span className={`${base} border-transparent`} title={titulo}>{corpo}</span>
+    <span className={base} style={estilo} title={titulo}>{corpo}</span>
   );
 }
 
@@ -141,16 +143,16 @@ function GraficoComAbas({ dados }) {
         /* Uma pizza por linha. A rosca mostra composição e só isso — duas do
            mesmo diâmetro não dizem qual tem mais trabalho —, por isso o total
            fica no miolo de cada uma. */
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-2 gap-y-3">
+        <div className="flex items-start gap-4 overflow-x-auto pb-1">
           {roscas.map((r) => (
-            <div key={r.nome} className="flex flex-col items-center gap-0.5">
-              <Donut fatias={r.fatias} centro={r.total} tamanho={68} raio={44} largura={20} />
-              <span className="text-[10px] text-gray-700 text-center leading-tight line-clamp-2"
-                title={nomeDe(r.nome)}>
+            <div key={r.nome} className="flex flex-col items-center gap-1 shrink-0 w-[108px]">
+              <Donut fatias={r.fatias} centro={r.total} tamanho={100} raio={44} largura={19} />
+              <span className={`text-[11px] text-center leading-tight ${
+                r.derivado ? 'italic text-gray-500' : 'text-gray-700'}`} title={nomeDe(r.nome)}>
                 {nomeDe(r.nome)}
               </span>
               {r.multa > 0 && (
-                <span className="text-[9px] tabular-nums" style={{ color: '#a24a3a' }}
+                <span className="text-[10px] tabular-nums" style={{ color: '#a24a3a' }}
                   title={`${r.multa} em aberto geram multa`}>⚠{r.multa}</span>
               )}
             </div>
@@ -248,6 +250,11 @@ function GraficoComAbas({ dados }) {
         {dim === 'por_colaborador' && (
           <span className="text-[10px] text-gray-400">tarefa dividida conta para cada um</span>
         )}
+        {itens.some((i) => i.derivado) && (
+          <span className="text-[10px] text-gray-400 italic">
+            Cliente repete tarefas já contadas nos setores
+          </span>
+        )}
         {itens.length > 10 && (
           <button onClick={() => setTudo(!tudo)}
             className="ml-auto text-[11px] text-gray-500 underline hover:text-gray-700">
@@ -332,7 +339,6 @@ export default function Dashboard() {
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
-  const [abertos, setAbertos] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -357,8 +363,6 @@ export default function Dashboard() {
 
   const set = (k, v) => { const novo = { ...filtros, [k]: v }; setFiltros(novo); carregar(novo); };
   const limpar = () => { const v = filtrosVazios(); setFiltros(v); carregar(v); };
-  const alternar = (setor) =>
-    setAbertos((a) => (a.includes(setor) ? a.filter((x) => x !== setor) : [...a, setor]));
 
   if (erro) return <div className="px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700">{erro}</div>;
   if (!dados) return <div className="flex items-center justify-center h-64">Carregando…</div>;
@@ -423,23 +427,23 @@ export default function Dashboard() {
       <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 py-3">
         <Rosca fatias={fatias} centro={emAberto} legenda={`de ${r.total}`} />
         <div className="flex flex-wrap gap-1.5">
-          <CardNum valor={emAberto} texto="em aberto" cor="#2f3b2f"
+          <CardNum valor={emAberto} texto="em aberto" tom="base"
             para={link({ alerta: 'aberta' })} titulo="Tudo que ainda não foi concluído nem cancelado" />
-          <CardNum valor={r.atrasada} texto={r.atrasada > 1 ? 'atrasadas' : 'atrasada'} cor="#a24a3a"
+          <CardNum valor={r.atrasada} texto={r.atrasada > 1 ? 'atrasadas' : 'atrasada'} tom="atrasada"
             para={link({ alerta: 'atrasada' })} titulo="Passou do prazo interno" />
-          <CardNum valor={r.vence_hoje} texto="vence hoje" cor="#b4622c"
+          <CardNum valor={r.vence_hoje} texto="vence hoje" tom="hoje"
             para={link({ alerta: 'hoje' })} />
-          <CardNum valor={r.vence_semana} texto="em 7 dias" cor="#55614e"
+          <CardNum valor={r.vence_semana} texto="a vencer em 7 dias" tom="a_vencer"
             para={link({ alerta: 'semana' })} titulo="Vence de hoje até daqui a 7 dias" />
-          <CardNum valor={r.urgentes} texto="urgentes" cor="#8a3f2e" icone={Flame}
+          <CardNum valor={r.urgentes} texto="urgentes" tom="urgente" icone={Flame}
             para={link({ alerta: 'aberta', prioridade: 'alta_urgente' })}
             titulo="Em aberto com prioridade alta ou urgente" />
-          <CardNum valor={r.multa} texto="geram multa" cor="#a24a3a" icone={AlertTriangle}
+          <CardNum valor={r.multa} texto="geram multa" tom="atrasada" icone={AlertTriangle}
             para={link({ alerta: 'aberta', multa: '1' })}
             titulo="Em aberto cuja obrigação gera multa se perder o prazo" />
-          <CardNum valor={r.aguardando_cliente} texto="esperam doc." cor="#7a6a3a" icone={Inbox}
+          <CardNum valor={r.aguardando_cliente} texto="esperam doc." tom="base" icone={Inbox}
             titulo="Sem o documento que o cliente precisa enviar — a lista está no quadro abaixo" />
-          <CardNum valor={r.nao_abertas} texto="não abertas" cor="#7a6a3a" icone={Send}
+          <CardNum valor={r.nao_abertas} texto="não abertas" tom="base" icone={Send}
             titulo="Enviado ao cliente e ainda não baixado — a lista está no quadro abaixo" />
           {pont && (
             <span className="min-w-[86px] px-2.5 py-1.5 rounded-lg border border-transparent"
@@ -459,64 +463,78 @@ export default function Dashboard() {
         <EsperandoCliente aguardando={dados.aguardando || []} naoAbertas={dados.nao_abertas || []} />
       </div>
 
-      {/* Por setor, com o detalhe atrás de uma seta: a lista corrida de 30
-          tarefas empurrava tudo para baixo e não respondia "qual setor está
-          pior", que é a pergunta de quem abre o painel. */}
+      {/* Tabela, não mais grupos com seta. A seta escondia justamente o que se
+          procura aqui — qual tarefa, de quem, para quando —, e obrigava a
+          abrir setor por setor para varrer a semana. O setor virou coluna. */}
       <div className="card py-3">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">Próximas do vencimento</h2>
+        <div className="flex items-baseline gap-2 mb-2">
+          <h2 className="text-sm font-semibold text-gray-800">Próximas do vencimento</h2>
+          <span className="text-[11px] text-gray-400">
+            {dados.abertas_total} em aberto com prazo
+          </span>
+        </div>
         {dados.proximas.length === 0 ? (
           <p className="text-xs text-gray-500">Nada em aberto com prazo definido.</p>
-        ) : dados.proximas.map((g) => {
-          const aberto = abertos.includes(g.setor);
-          return (
-            <div key={g.setor} className="border-b border-gray-100 last:border-0">
-              <button type="button" onClick={() => alternar(g.setor)}
-                className="w-full flex items-center gap-2 py-1.5 px-1 text-left rounded
-                           hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50">
-                {aberto ? <ChevronDown size={14} className="text-gray-400" />
-                        : <ChevronRight size={14} className="text-gray-400" />}
-                <span className="text-xs font-medium text-gray-800">{g.setor}</span>
-                <span className="text-[11px] text-gray-500">{g.total}</span>
-                {g.atrasadas > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ background: '#f6ded7', color: '#a24a3a' }}>
-                    {g.atrasadas} atrasada{g.atrasadas > 1 ? 's' : ''}
-                  </span>
-                )}
-              </button>
-              {aberto && (
-                /* Colunas de largura fixa, não `ml-auto`: com o responsável
-                   empurrado para a borda direita da tela, ler "quem" exigia
-                   atravessar o vazio a partir do título. */
-                <ul className="pb-1.5 pl-6 space-y-0.5">
-                  {g.tarefas.map((t) => (
-                    <li key={t.id}
-                      className="grid grid-cols-[38px_minmax(0,1fr)_minmax(0,320px)_150px] gap-2
-                                 items-center text-[11px]">
-                      <span className="tabular-nums"
-                        style={{ color: t.atrasada ? '#a24a3a' : '#808a74' }}>{diaMes(t.data_prazo)}</span>
-                      <span className="truncate text-gray-700 flex items-center gap-1" title={t.titulo}>
-                        {t.titulo}
-                        {t.multa && <AlertTriangle size={10} style={{ color: '#a24a3a' }} />}
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wide text-gray-400
+                               border-b border-gray-200">
+                  <th className="py-1.5 pr-2 font-semibold">Tarefa</th>
+                  <th className="py-1.5 px-2 font-semibold w-[74px]">Prazo</th>
+                  <th className="py-1.5 px-2 font-semibold w-[86px]">Vencimento</th>
+                  <th className="py-1.5 px-2 font-semibold w-[26%]">Empresa</th>
+                  <th className="py-1.5 px-2 font-semibold w-[110px]">Setor</th>
+                  <th className="py-1.5 pl-2 font-semibold w-[150px]">Analista</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dados.proximas.map((t) => (
+                  <tr key={t.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                    <td className="py-1.5 pr-2 text-gray-700">
+                      <span className="flex items-center gap-1">
+                        <span className="truncate" title={t.titulo}>{t.titulo}</span>
+                        {t.multa && (
+                          <AlertTriangle size={10} style={{ color: '#a24a3a' }} title="Gera multa" />
+                        )}
                       </span>
-                      <span className="truncate text-gray-500" title={formatarRazaoSocial(t.empresa)}>
+                    </td>
+                    {/* Prazo interno e vencimento legal são datas diferentes, e
+                        é a diferença entre elas que dá o fôlego: atrasou aqui
+                        dentro mas ainda dá tempo de entregar ao Fisco. */}
+                    <td className="py-1.5 px-2 tabular-nums"
+                      style={{ color: t.atrasada ? '#a24a3a' : '#55614e' }}>
+                      {diaMes(t.data_prazo)}
+                    </td>
+                    <td className="py-1.5 px-2 tabular-nums text-gray-500">
+                      {diaMes(t.data_vencimento) || '—'}
+                    </td>
+                    <td className="py-1.5 px-2 text-gray-600">
+                      <span className="block truncate" title={formatarRazaoSocial(t.empresa)}>
                         {formatarRazaoSocial(t.empresa)}
                       </span>
-                      <span className="truncate text-gray-400" title={t.responsaveis.join(', ')}>
-                        {t.responsaveis.join(', ')}
+                    </td>
+                    <td className="py-1.5 px-2 text-gray-500">
+                      <span className="block truncate" title={t.setor}>{t.setor}</span>
+                    </td>
+                    <td className="py-1.5 pl-2 text-gray-500">
+                      <span className="block truncate" title={t.responsaveis.join(', ')}>
+                        {t.responsaveis.join(', ') || '—'}
                       </span>
-                    </li>
-                  ))}
-                  {g.total > g.tarefas.length && (
-                    <li className="text-[10px] text-gray-400">
-                      …e mais {g.total - g.tarefas.length}. Veja em Tarefas.
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-          );
-        })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {dados.abertas_total > dados.proximas.length && (
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Mostrando as {dados.proximas.length} de prazo mais curto, de {dados.abertas_total}.{' '}
+                <Link to={link({ alerta: 'aberta' })} className="underline">Ver todas em Tarefas</Link>
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
