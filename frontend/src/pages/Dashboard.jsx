@@ -150,16 +150,20 @@ function GraficoComAbas({ dados }) {
         /* Uma pizza por linha. A rosca mostra composição e só isso — duas do
            mesmo diâmetro não dizem qual tem mais trabalho —, por isso o total
            fica no miolo de cada uma. */
-        <div className="flex items-start gap-4 overflow-x-auto pb-1">
+        /* Grade que se estica: com o quadro ocupando a largura toda, uma fila
+           encostada à esquerda deixava meio metro de vazio à direita. As
+           colunas se dividem o espaço, e sobra vira tamanho, não buraco. */
+        <div className="grid gap-y-4 justify-items-center"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
           {roscas.map((r) => (
-            <div key={r.nome} className="flex flex-col items-center gap-1 shrink-0 w-[108px]">
+            <div key={r.nome} className="flex flex-col items-center gap-1.5">
               {/* Anel externo na cor do setor: a rosca por dentro continua
                   contando situação, e a borda diz de quem ela é. */}
-              <Donut fatias={r.fatias} centro={r.total} tamanho={100} raio={44} largura={19}
+              <Donut fatias={r.fatias} centro={r.total} tamanho={132} raio={44} largura={19}
                 anel={dim === 'por_setor' ? corDoSetor(r.nome) : null} />
-              <span className={`text-[11px] text-center leading-tight flex items-center gap-1 ${
+              <span className={`text-xs text-center leading-tight flex items-center gap-1.5 max-w-[140px] ${
                 r.derivado ? 'italic text-gray-500' : 'text-gray-700'}`} title={nomeDe(r.nome)}>
-                {etiqueta(r.nome)}{nomeDe(r.nome)}
+                {etiqueta(r.nome)}<span className="truncate">{nomeDe(r.nome)}</span>
               </span>
               {r.multa > 0 && (
                 <span className="text-[10px] tabular-nums" style={{ color: '#a24a3a' }}
