@@ -1,7 +1,8 @@
 // Prova de frontend/src/pages/painelDados.js — Node puro, sem build.
 //   node frontend/provas/prova_painel_dados.js
 
-import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo, SITUACOES }
+import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
+         pontualidade, haQuantosDias, SITUACOES, DIMENSOES }
   from '../src/pages/painelDados.js';
 
 let ok = 0, falhou = 0;
@@ -55,6 +56,29 @@ eq('desligado não entra', paraConsulta({ ...filtrosVazios(), so_multa: false })
 eq('texto é aparado', paraConsulta({ competencia: ' 07/2026 ' }), { competencia: '07/2026' });
 eq('sem filtro', temFiltroAtivo(filtrosVazios()), false);
 eq('com filtro', temFiltroAtivo({ ...filtrosVazios(), setor_id: '3' }), true);
+
+console.log('\n6) Pontualidade — o único número que olha para trás');
+// Sem base, devolve null em vez de 0%: "0% no prazo" e "nada concluído ainda"
+// são coisas diferentes, e a segunda não é notícia ruim.
+eq('sem concluída com prazo, não há índice',
+  pontualidade({ concluidas_com_prazo: 0, no_prazo: 0 }), null);
+eq('6 de 8 dá 75%', pontualidade({ concluidas_com_prazo: 8, no_prazo: 6 }).pct, 75);
+eq('e diz quantas ficaram fora', pontualidade({ concluidas_com_prazo: 8, no_prazo: 6 }).fora, 2);
+eq('tudo no prazo dá 100', pontualidade({ concluidas_com_prazo: 3, no_prazo: 3 }).pct, 100);
+eq('nada no prazo dá 0', pontualidade({ concluidas_com_prazo: 3, no_prazo: 0 }).pct, 0);
+eq('resumo ausente não quebra', pontualidade(undefined), null);
+
+console.log('\n7) Há quantos dias o documento está parado');
+const agoraFixo = new Date('2026-08-20T12:00:00Z');
+eq('mesmo dia é "hoje"', haQuantosDias('2026-08-20T09:00:00Z', agoraFixo), 'hoje');
+eq('um dia é singular', haQuantosDias('2026-08-19T09:00:00Z', agoraFixo), 'há 1 dia');
+eq('vários dias é plural', haQuantosDias('2026-08-14T09:00:00Z', agoraFixo), 'há 6 dias');
+eq('data vazia não quebra a tela', haQuantosDias(null, agoraFixo), '');
+eq('data inválida também não', haQuantosDias('nao-e-data', agoraFixo), '');
+
+console.log('\n8) Dimensões do mapa');
+eq('são três, e batem com as chaves da API',
+  DIMENSOES.map((d) => d.chave), ['por_setor', 'por_colaborador', 'por_empresa']);
 
 console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

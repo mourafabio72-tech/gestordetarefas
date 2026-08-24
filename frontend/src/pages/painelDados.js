@@ -88,3 +88,38 @@ export function paraConsulta(filtros) {
 export function temFiltroAtivo(filtros) {
   return Object.keys(paraConsulta(filtros)).length > 0;
 }
+
+/** As três dimensões do mapa. Abas, e não três blocos: a página já era longa. */
+export const DIMENSOES = [
+  { chave: 'por_setor', rotulo: 'Setor' },
+  { chave: 'por_colaborador', rotulo: 'Colaborador' },
+  { chave: 'por_empresa', rotulo: 'Empresa' },
+];
+
+/**
+ * Pontualidade do que já foi entregue.
+ *
+ * Todo o resto do painel é foto do agora: quanto falta, o que atrasou. Este é
+ * o único número que olha para trás e diz se o escritório entrega no prazo.
+ * Só conta tarefa concluída que tinha prazo — sem prazo não há o que cumprir,
+ * e incluí-la inflaria o índice de graça.
+ */
+export function pontualidade(resumo) {
+  const base = resumo?.concluidas_com_prazo || 0;
+  if (!base) return null;
+  const dentro = resumo?.no_prazo || 0;
+  return { base, dentro, fora: base - dentro, pct: Math.round((dentro / base) * 100) };
+}
+
+/**
+ * "há 3 dias", a partir de uma data ISO. Usado no documento que saiu e não foi
+ * aberto: o que assusta ali não é a data, é o tempo parado.
+ */
+export function haQuantosDias(iso, agora = new Date()) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const dias = Math.floor((agora - d) / 86400000);
+  if (dias <= 0) return 'hoje';
+  return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+}

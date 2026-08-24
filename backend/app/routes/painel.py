@@ -3,7 +3,7 @@
 Substitui `/tarefas/dashboard/stats` e `/dashboard/stats-por-setor`, que
 respondiam perguntas soltas e não conversavam entre si.
 
-Duas decisões estruturam este arquivo:
+Três decisões estruturam este arquivo:
 
 1. SITUAÇÃO EXCLUSIVA. A versão anterior contava "atrasada" dentro de
    "pendente", e a rosca do dashboard somava 101%. Aqui cada tarefa está em uma
@@ -13,19 +13,27 @@ Duas decisões estruturam este arquivo:
 2. AGREGA EM MEMÓRIA. Uma consulta traz as colunas necessárias e o resto é
    contagem em Python. Com centenas de tarefas isso é mais barato que as vinte
    consultas que as rotas antigas faziam, e permite cortar por setor, por
-   colaborador e por multa sem multiplicar idas ao banco.
+   colaborador, por empresa e por multa sem multiplicar idas ao banco.
+
+3. ATRASO TEM DONO. "12 atrasadas" não diz o que fazer. Atraso porque o cliente
+   não mandou o documento é cobrança; atraso com o documento na mão é trabalho
+   parado aqui dentro. São dois problemas diferentes, com duas ações
+   diferentes, e o painel separa os dois.
 """
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Tarefa, Usuario, Setor, StatusTarefa, tarefa_responsaveis
+from ..models import (Tarefa, Usuario, Setor, Empresa, Obrigacao, TarefaEnvio,
+                      StatusTarefa, PrioridadeTarefa, tarefa_responsaveis)
 from ..auth import get_current_user
 from .tarefas import _aplicar_escopo
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
 SITUACOES = ("pendente", "em_andamento", "atrasada", "concluida", "cancelada")
+ABERTAS = ("pendente", "em_andamento", "atrasada")
 
 
 def _situacao(status, prazo, agora) -> str:
@@ -51,8 +59,23 @@ def _somar(alvo: dict, situacao: str, multa: bool):
     # Multa só conta no que ainda pode dar problema: tarefa concluída que gera
     # multa já não é risco, e somá-la faria o número crescer justamente à
     # medida que o trabalho anda.
-    if multa and situacao in ("pendente", "em_andamento", "atrasada"):
+    if multa and situacao in ABERTAS:
         alvo["multa"] = alvo.get("multa", 0) + 1
+
+
+def _perfil_obrigacao(o) -> tuple:
+    """(sentido, exige_documento) da obrigação — mesma regra do model.
+
+    Repetida aqui porque a consulta do painel não carrega o objeto Tarefa, e
+    instanciar centenas de ORM só para ler duas propriedades desfaz a economia
+    de trazer colunas soltas.
+    """
+    sentido = (o.sentido or "receber")
+    if sentido == "interna":
+        return sentido, False
+    if o.exige_documento is None:
+        return sentido, bool((o.identificadores or "").strip())
+    return sentido, bool(o.exige_documento)
 
 
 @router.get("")
@@ -83,10 +106,17 @@ def painel(
 
     tarefas = q.with_entities(
         Tarefa.id, Tarefa.titulo, Tarefa.status, Tarefa.data_prazo,
-        Tarefa.setor_id, Tarefa.gera_multa, Tarefa.empresa_id).all()
+        Tarefa.data_vencimento, Tarefa.data_conclusao, Tarefa.prioridade,
+        Tarefa.setor_id, Tarefa.empresa_id, Tarefa.obrigacao_id,
+        Tarefa.gera_multa, Tarefa.anexo_nome, Tarefa.saida_downloads).all()
     ids = [t.id for t in tarefas]
 
     nomes_setor = {s.id: s.nome for s in db.query(Setor).all()}
+    nomes_empresa = {e.id: (e.nome_fantasia or e.razao_social)
+                     for e in db.query(Empresa.id, Empresa.razao_social, Empresa.nome_fantasia).all()}
+    perfis = {o.id: _perfil_obrigacao(o) for o in db.query(
+        Obrigacao.id, Obrigacao.sentido, Obrigacao.exige_documento, Obrigacao.identificadores).all()}
+
     # Responsáveis de todas as tarefas numa consulta, não uma por tarefa.
     resp = {}
     if ids:
@@ -95,26 +125,64 @@ def painel(
                                .filter(tarefa_responsaveis.c.tarefa_id.in_(ids)).all()):
             resp.setdefault(tid, []).append((uid, nome))
 
-    resumo = _zero()
-    resumo["vence_hoje"] = 0
-    resumo["vence_semana"] = 0
-    por_setor, por_colaborador = {}, {}
+    # Último envio bem-sucedido por tarefa: é o que permite dizer "saiu daqui
+    # há 4 dias e ninguém abriu".
+    enviado_em = {}
+    if ids:
+        for tid, quando in (db.query(TarefaEnvio.tarefa_id, func.max(TarefaEnvio.enviado_em))
+                            .filter(TarefaEnvio.tarefa_id.in_(ids), TarefaEnvio.sucesso == True)
+                            .group_by(TarefaEnvio.tarefa_id).all()):
+            enviado_em[tid] = quando
+
+    resumo = _zero() | {"vence_hoje": 0, "vence_semana": 0, "urgentes": 0,
+                        "aguardando_cliente": 0, "nao_abertas": 0,
+                        "concluidas_com_prazo": 0, "no_prazo": 0}
+    por_setor, por_colaborador, por_empresa = {}, {}, {}
+    aguardando, nao_abertas = [], []
 
     for t in tarefas:
         sit = _situacao(t.status, t.data_prazo, agora)
         multa = bool(t.gera_multa)
+        aberta = sit in ABERTAS
         _somar(resumo, sit, multa)
-        if sit in ("pendente", "em_andamento") and t.data_prazo:
+
+        if aberta and t.data_prazo:
             if hoje <= t.data_prazo < hoje + timedelta(days=1):
                 resumo["vence_hoje"] += 1
             if hoje <= t.data_prazo <= fim_semana:
                 resumo["vence_semana"] += 1
+        if aberta and t.prioridade in (PrioridadeTarefa.URGENTE, PrioridadeTarefa.ALTA):
+            resumo["urgentes"] += 1
 
-        chave_setor = nomes_setor.get(t.setor_id) or "Sem setor"
-        _somar(por_setor.setdefault(chave_setor, _zero()), sit, multa)
+        # Pontualidade: só as concluídas que tinham prazo para cumprir.
+        if sit == "concluida" and t.data_prazo and t.data_conclusao:
+            resumo["concluidas_com_prazo"] += 1
+            if t.data_conclusao <= t.data_prazo:
+                resumo["no_prazo"] += 1
 
-        pessoas = resp.get(t.id) or [(None, "Sem responsável")]
-        for _uid, nome in pessoas:
+        sentido, exige = perfis.get(t.obrigacao_id, ("receber", False))
+        empresa = nomes_empresa.get(t.empresa_id) or "Sem empresa"
+
+        # Travada no cliente: o escritório não tem o que fazer enquanto o
+        # documento não chega. Cobrar é a ação, e ela não é a mesma de "sentar
+        # e executar" — por isso sai do balaio geral de atrasadas.
+        if aberta and sentido == "receber" and exige and not t.anexo_nome:
+            resumo["aguardando_cliente"] += 1
+            aguardando.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
+                               "data_prazo": t.data_prazo, "atrasada": sit == "atrasada"})
+
+        # Saiu daqui e ninguém abriu. A guia entregue no prazo não protege o
+        # cliente se ele não baixou: quem leva a multa é ele, e a reclamação
+        # chega aqui.
+        if sentido == "entregar" and enviado_em.get(t.id) and not (t.saida_downloads or 0):
+            resumo["nao_abertas"] += 1
+            nao_abertas.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
+                                "enviado_em": enviado_em[t.id],
+                                "data_vencimento": t.data_vencimento or t.data_prazo})
+
+        _somar(por_setor.setdefault(nomes_setor.get(t.setor_id) or "Sem setor", _zero()), sit, multa)
+        _somar(por_empresa.setdefault(empresa, _zero()), sit, multa)
+        for _uid, nome in (resp.get(t.id) or [(None, "Sem responsável")]):
             _somar(por_colaborador.setdefault(nome, _zero()), sit, multa)
 
     def lista(d):
@@ -123,16 +191,18 @@ def painel(
             [{"nome": k, **v} for k, v in d.items()],
             key=lambda x: (-(x["atrasada"] + x["pendente"] + x["em_andamento"]), x["nome"]))
 
+    aguardando.sort(key=lambda x: (x["data_prazo"] is None, x["data_prazo"]))
+    nao_abertas.sort(key=lambda x: (x["data_vencimento"] is None, x["data_vencimento"]))
+
     # Próximas do vencimento, agrupadas por setor. Só o que ainda vai ser feito.
     abertas = [t for t in tarefas
-               if _situacao(t.status, t.data_prazo, agora) in ("pendente", "em_andamento", "atrasada")
-               and t.data_prazo]
+               if _situacao(t.status, t.data_prazo, agora) in ABERTAS and t.data_prazo]
     abertas.sort(key=lambda t: t.data_prazo)
     grupos = {}
     for t in abertas[:200]:
-        g = grupos.setdefault(nomes_setor.get(t.setor_id) or "Sem setor",
-                              {"setor": nomes_setor.get(t.setor_id) or "Sem setor",
-                               "total": 0, "atrasadas": 0, "tarefas": []})
+        nome_setor = nomes_setor.get(t.setor_id) or "Sem setor"
+        g = grupos.setdefault(nome_setor, {"setor": nome_setor, "total": 0,
+                                           "atrasadas": 0, "tarefas": []})
         atrasada = t.data_prazo < agora
         g["total"] += 1
         g["atrasadas"] += 1 if atrasada else 0
@@ -140,9 +210,15 @@ def painel(
             g["tarefas"].append({
                 "id": t.id, "titulo": t.titulo, "data_prazo": t.data_prazo,
                 "atrasada": atrasada, "multa": bool(t.gera_multa),
+                "empresa": nomes_empresa.get(t.empresa_id) or "Sem empresa",
                 "responsaveis": [n for _i, n in (resp.get(t.id) or [])],
             })
     proximas = sorted(grupos.values(), key=lambda g: (-g["atrasadas"], -g["total"], g["setor"]))
 
-    return {"resumo": resumo, "por_setor": lista(por_setor),
-            "por_colaborador": lista(por_colaborador), "proximas": proximas}
+    return {"resumo": resumo,
+            "por_setor": lista(por_setor),
+            "por_colaborador": lista(por_colaborador),
+            "por_empresa": lista(por_empresa),
+            "aguardando": aguardando[:12],
+            "nao_abertas": nao_abertas[:12],
+            "proximas": proximas}

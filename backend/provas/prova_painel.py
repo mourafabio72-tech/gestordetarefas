@@ -23,7 +23,8 @@ os.environ.setdefault("SECRET_KEY", "chave-de-prova")
 
 from fastapi.testclient import TestClient                      # noqa: E402
 from app.database import Base, engine, SessionLocal            # noqa: E402
-from app.models import Usuario, Empresa, Setor, Tarefa, StatusTarefa  # noqa: E402
+from app.models import (Usuario, Empresa, Setor, Tarefa, Obrigacao, TarefaEnvio,  # noqa: E402
+                        StatusTarefa, PrioridadeTarefa)
 from app.auth import get_password_hash, create_access_token    # noqa: E402
 from app.main import app                                       # noqa: E402
 
@@ -133,6 +134,78 @@ checa("competência certa traz tudo", f(competencia="07/2026")["total"] == 7)
 
 print("\n7. Sem sessão não abre")
 checa("401 ou 403", client.get("/api/painel").status_code in (401, 403))
+
+print("\n8. Atraso tem dono — travado no cliente x travado aqui dentro")
+db = SessionLocal()
+receber = Obrigacao(nome="DAS", sentido="receber", exige_documento=True)
+entregar = Obrigacao(nome="Guia", sentido="entregar")
+interna = Obrigacao(nome="Conciliar banco", sentido="interna", exige_documento=True)
+emp2 = Empresa(razao_social="Segunda Cliente Ltda", nome_fantasia="Segunda", cnpj="2")
+db.add_all([receber, entregar, interna, emp2]); db.commit()
+# Ids relidos: os objetos da primeira sessão morreram no db.close() acima.
+emp_id = db.query(Empresa.id).filter_by(cnpj="1").scalar()
+fiscal_id = db.query(Setor.id).filter_by(nome="Fiscal").scalar()
+emp2_id, receber_id, entregar_id, interna_id = emp2.id, receber.id, entregar.id, interna.id
+
+def nova2(titulo, status, dias, ob=None, anexo=None, downloads=0,
+          prioridade=PrioridadeTarefa.MEDIA, conclusao=None, empresa=None):
+    t = Tarefa(titulo=titulo, empresa_id=empresa or emp_id, setor_id=fiscal_id,
+               status=status, obrigacao_id=ob, anexo_nome=anexo,
+               saida_downloads=downloads, prioridade=prioridade,
+               data_conclusao=agora + timedelta(days=conclusao) if conclusao is not None else None,
+               data_prazo=agora + timedelta(days=dias) if dias is not None else None)
+    db.add(t); db.commit()
+    return t.id
+
+t_agu = nova2("doc nao chegou", StatusTarefa.PENDENTE, -2, ob=receber_id)
+nova2("doc ja chegou", StatusTarefa.PENDENTE, 2, ob=receber_id, anexo="comprovante.pdf")
+nova2("conciliar banco", StatusTarefa.PENDENTE, -1, ob=interna_id)
+t_fechada = nova2("guia enviada e nao aberta", StatusTarefa.CONCLUIDA, -1, ob=entregar_id)
+t_lida = nova2("guia enviada e aberta", StatusTarefa.CONCLUIDA, -1, ob=entregar_id, downloads=3)
+nova2("guia pronta mas nao enviada", StatusTarefa.PENDENTE, 4, ob=entregar_id)
+nova2("urgente em aberto", StatusTarefa.PENDENTE, 1, prioridade=PrioridadeTarefa.URGENTE)
+nova2("alta ja concluida", StatusTarefa.CONCLUIDA, -1, prioridade=PrioridadeTarefa.ALTA)
+nova2("entregue no prazo", StatusTarefa.CONCLUIDA, -5, conclusao=-6)
+nova2("entregue atrasada", StatusTarefa.CONCLUIDA, -5, conclusao=-3)
+nova2("tarefa da segunda", StatusTarefa.PENDENTE, 3, empresa=emp2_id)
+for tid in (t_fechada, t_lida):
+    db.add(TarefaEnvio(tarefa_id=tid, canal="whatsapp", sucesso=True))
+db.commit(); db.close()
+
+d2 = client.get("/api/painel", headers=cab).json()
+r2 = d2["resumo"]
+
+checa("aguardando o cliente conta só o documento que falta",
+      r2["aguardando_cliente"] == 1, str(r2["aguardando_cliente"]))
+checa("documento já entregue sai da fila de cobrança",
+      all(x["titulo"] != "doc ja chegou" for x in d2["aguardando"]))
+checa("obrigação interna nunca espera documento de ninguém",
+      all(x["titulo"] != "conciliar banco" for x in d2["aguardando"]))
+checa("a lista diz de quem é a empresa e se já atrasou",
+      d2["aguardando"][0]["empresa"] == "Cliente" and d2["aguardando"][0]["atrasada"])
+
+print("\n9. Guia que saiu daqui e ninguém abriu")
+checa("conta a enviada sem abertura", r2["nao_abertas"] == 1, str(r2["nao_abertas"]))
+checa("a que o cliente baixou não entra",
+      all(x["titulo"] != "guia enviada e aberta" for x in d2["nao_abertas"]))
+# Sem envio não há o que cobrar do cliente: o documento ainda está com a gente.
+checa("a que nem foi enviada não entra",
+      all(x["titulo"] != "guia pronta mas nao enviada" for x in d2["nao_abertas"]))
+checa("a lista traz quando saiu", bool(d2["nao_abertas"][0]["enviado_em"]))
+
+print("\n10. Prioridade e pontualidade")
+checa("urgente/alta conta só em aberto", r2["urgentes"] == 1, str(r2["urgentes"]))
+checa("pontualidade olha só quem tinha prazo e foi concluída",
+      r2["concluidas_com_prazo"] == 2, str(r2["concluidas_com_prazo"]))
+checa("uma no prazo, uma fora", r2["no_prazo"] == 1, str(r2["no_prazo"]))
+
+print("\n11. Por empresa")
+empresas = {e["nome"]: e for e in d2["por_empresa"]}
+checa("as duas empresas aparecem", len(empresas) == 2, str(list(empresas)))
+checa("usa o nome fantasia quando existe", "Segunda" in empresas)
+checa("a soma por empresa fecha com o total",
+      sum(e["total"] for e in d2["por_empresa"]) == r2["total"])
+checa("a mais carregada vem primeiro", d2["por_empresa"][0]["nome"] == "Cliente")
 
 import shutil                                                  # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)
