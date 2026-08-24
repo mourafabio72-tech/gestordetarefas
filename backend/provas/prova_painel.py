@@ -207,6 +207,42 @@ checa("a soma por empresa fecha com o total",
       sum(e["total"] for e in d2["por_empresa"]) == r2["total"])
 checa("a mais carregada vem primeiro", d2["por_empresa"][0]["nome"] == "Cliente")
 
+print("\n12. Fuso — o 500 que a prova em SQLite não pegava")
+# Postgres devolve datetime AWARE para DateTime(timezone=True); SQLite devolve
+# NAIVE. O painel compara data em Python (as rotas antigas comparavam no SQL,
+# e o banco resolvia sozinho), então `aware < naive` estourava TypeError e a
+# tela mostrava "500: erro no servidor". Nenhuma prova via isso, porque toda
+# prova roda em SQLite. Estas checagens chamam a função direto, com os dois
+# tipos, e é o que impede a volta do erro.
+from datetime import timezone as _tz                            # noqa: E402
+from app.routes.painel import _utc, _situacao                   # noqa: E402
+
+agora_aware = datetime.now(_tz.utc)
+naive = datetime.utcnow() - timedelta(days=2)
+aware = agora_aware - timedelta(days=2)
+
+checa("data sem fuso vira UTC", _utc(naive).tzinfo == _tz.utc)
+checa("data com fuso passa intacta", _utc(aware) is aware)
+checa("nulo continua nulo", _utc(None) is None)
+
+try:
+    naive < agora_aware
+    puro = False
+except TypeError:
+    puro = True
+checa("comparar aware com naive de fato estoura — era este o 500", puro)
+
+try:
+    sit_pg = _situacao(StatusTarefa.PENDENTE, _utc(aware), agora_aware)
+    sit_lite = _situacao(StatusTarefa.PENDENTE, _utc(naive), agora_aware)
+    quebrou = None
+except TypeError as e:
+    sit_pg = sit_lite = None
+    quebrou = str(e)
+checa("prazo vindo do Postgres não quebra", quebrou is None, quebrou or "")
+checa("e é lido como atrasada", sit_pg == "atrasada", str(sit_pg))
+checa("prazo vindo do SQLite dá a MESMA resposta", sit_lite == "atrasada", str(sit_lite))
+
 import shutil                                                  # noqa: E402
 shutil.rmtree(_tmp, ignore_errors=True)
 print("\n" + ("TUDO VERDE" if ok else "VERMELHO") + "\n")

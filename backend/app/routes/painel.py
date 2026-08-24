@@ -15,12 +15,18 @@ Três decisões estruturam este arquivo:
    consultas que as rotas antigas faziam, e permite cortar por setor, por
    colaborador, por empresa e por multa sem multiplicar idas ao banco.
 
-3. ATRASO TEM DONO. "12 atrasadas" não diz o que fazer. Atraso porque o cliente
+3. COMPARA DATA EM PYTHON, ENTÃO NORMALIZA O FUSO. As rotas antigas
+   comparavam `data_prazo < now` dentro do SQL, e o banco resolvia o fuso
+   sozinho. Aqui a comparação é em Python: a coluna é DateTime(timezone=True),
+   o Postgres devolve AWARE e o SQLite devolve NAIVE, e misturar os dois
+   levanta TypeError. Toda data lida passa por `_utc()` antes de ser comparada.
+
+4. ATRASO TEM DONO. "12 atrasadas" não diz o que fazer. Atraso porque o cliente
    não mandou o documento é cobrança; atraso com o documento na mão é trabalho
    parado aqui dentro. São dois problemas diferentes, com duas ações
    diferentes, e o painel separa os dois.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -36,8 +42,22 @@ SITUACOES = ("pendente", "em_andamento", "atrasada", "concluida", "cancelada")
 ABERTAS = ("pendente", "em_andamento", "atrasada")
 
 
+def _utc(dt):
+    """Data comparável, venha ela com fuso ou sem.
+
+    Postgres devolve datetime aware; SQLite, naive. `aware < naive` é
+    TypeError, e foi o 500 do painel em produção — invisível na prova, que
+    roda em SQLite. Sem fuso, assume UTC: é o que `datetime.utcnow()` gravou.
+    """
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 def _situacao(status, prazo, agora) -> str:
-    """Em que situação a tarefa está AGORA — uma só, nunca duas."""
+    """Em que situação a tarefa está AGORA — uma só, nunca duas.
+
+    `prazo` já tem de vir de `_utc()`."""
     if status == StatusTarefa.CONCLUIDA:
         return "concluida"
     if status == StatusTarefa.CANCELADA:
@@ -88,7 +108,7 @@ def painel(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    agora = datetime.utcnow()
+    agora = datetime.now(timezone.utc)
     hoje = agora.replace(hour=0, minute=0, second=0, microsecond=0)
     fim_semana = hoje + timedelta(days=7)
 
@@ -141,23 +161,24 @@ def painel(
     aguardando, nao_abertas = [], []
 
     for t in tarefas:
-        sit = _situacao(t.status, t.data_prazo, agora)
+        prazo = _utc(t.data_prazo)
+        sit = _situacao(t.status, prazo, agora)
         multa = bool(t.gera_multa)
         aberta = sit in ABERTAS
         _somar(resumo, sit, multa)
 
-        if aberta and t.data_prazo:
-            if hoje <= t.data_prazo < hoje + timedelta(days=1):
+        if aberta and prazo:
+            if hoje <= prazo < hoje + timedelta(days=1):
                 resumo["vence_hoje"] += 1
-            if hoje <= t.data_prazo <= fim_semana:
+            if hoje <= prazo <= fim_semana:
                 resumo["vence_semana"] += 1
         if aberta and t.prioridade in (PrioridadeTarefa.URGENTE, PrioridadeTarefa.ALTA):
             resumo["urgentes"] += 1
 
         # Pontualidade: só as concluídas que tinham prazo para cumprir.
-        if sit == "concluida" and t.data_prazo and t.data_conclusao:
+        if sit == "concluida" and prazo and t.data_conclusao:
             resumo["concluidas_com_prazo"] += 1
-            if t.data_conclusao <= t.data_prazo:
+            if _utc(t.data_conclusao) <= prazo:
                 resumo["no_prazo"] += 1
 
         sentido, exige = perfis.get(t.obrigacao_id, ("receber", False))
@@ -169,7 +190,7 @@ def painel(
         if aberta and sentido == "receber" and exige and not t.anexo_nome:
             resumo["aguardando_cliente"] += 1
             aguardando.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
-                               "data_prazo": t.data_prazo, "atrasada": sit == "atrasada"})
+                               "data_prazo": prazo, "atrasada": sit == "atrasada"})
 
         # Saiu daqui e ninguém abriu. A guia entregue no prazo não protege o
         # cliente se ele não baixou: quem leva a multa é ele, e a reclamação
@@ -178,7 +199,7 @@ def painel(
             resumo["nao_abertas"] += 1
             nao_abertas.append({"id": t.id, "titulo": t.titulo, "empresa": empresa,
                                 "enviado_em": enviado_em[t.id],
-                                "data_vencimento": t.data_vencimento or t.data_prazo})
+                                "data_vencimento": _utc(t.data_vencimento) or prazo})
 
         _somar(por_setor.setdefault(nomes_setor.get(t.setor_id) or "Sem setor", _zero()), sit, multa)
         _somar(por_empresa.setdefault(empresa, _zero()), sit, multa)
@@ -196,19 +217,20 @@ def painel(
 
     # Próximas do vencimento, agrupadas por setor. Só o que ainda vai ser feito.
     abertas = [t for t in tarefas
-               if _situacao(t.status, t.data_prazo, agora) in ABERTAS and t.data_prazo]
-    abertas.sort(key=lambda t: t.data_prazo)
+               if _situacao(t.status, _utc(t.data_prazo), agora) in ABERTAS and t.data_prazo]
+    abertas.sort(key=lambda t: _utc(t.data_prazo))
     grupos = {}
     for t in abertas[:200]:
+        prazo = _utc(t.data_prazo)
         nome_setor = nomes_setor.get(t.setor_id) or "Sem setor"
         g = grupos.setdefault(nome_setor, {"setor": nome_setor, "total": 0,
                                            "atrasadas": 0, "tarefas": []})
-        atrasada = t.data_prazo < agora
+        atrasada = prazo < agora
         g["total"] += 1
         g["atrasadas"] += 1 if atrasada else 0
         if len(g["tarefas"]) < 25:
             g["tarefas"].append({
-                "id": t.id, "titulo": t.titulo, "data_prazo": t.data_prazo,
+                "id": t.id, "titulo": t.titulo, "data_prazo": prazo,
                 "atrasada": atrasada, "multa": bool(t.gera_multa),
                 "empresa": nomes_empresa.get(t.empresa_id) or "Sem empresa",
                 "responsaveis": [n for _i, n in (resp.get(t.id) or [])],
