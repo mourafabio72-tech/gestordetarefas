@@ -6,7 +6,7 @@ import { formatarRazaoSocial } from './razaoSocial';
 import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
   pontualidade, haQuantosDias, filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
 import { AlertTriangle, ChevronDown, ChevronRight, Inbox, Send, Flame,
-  BarChart3, LayoutGrid } from 'lucide-react';
+  BarChart3, AlignLeft } from 'lucide-react';
 
 const ctrl = (ativo) =>
   `w-full h-8 px-2 text-xs border rounded-md bg-[#fffdf9] outline-none transition-colors
@@ -97,12 +97,12 @@ function GraficoComAbas({ dados }) {
             {d.rotulo}
           </button>
         ))}
-        {/* Barra e mapa respondem a perguntas diferentes: a barra compara
-            volume entre linhas, o mapa compara a composição de cada uma.
-            Em vez de escolher por você, os dois ficam a um clique. */}
+        {/* Os dois modos respondem a perguntas diferentes: a barra empilhada
+            compara VOLUME entre linhas, a barra por situação compara a
+            COMPOSIÇÃO de cada linha. Em vez de escolher por você, um clique. */}
         <div className="ml-auto flex items-center gap-0.5">
-          {[{ v: 'barras', Icone: BarChart3, t: 'Barras' },
-            { v: 'mapa', Icone: LayoutGrid, t: 'Mapa de calor' }].map(({ v, Icone, t }) => (
+          {[{ v: 'barras', Icone: BarChart3, t: 'Barra empilhada — volume entre linhas' },
+            { v: 'mapa', Icone: AlignLeft, t: 'Barra por situação — composição da linha' }].map(({ v, Icone, t }) => (
             <button key={v} type="button" onClick={() => setModo(v)} title={t}
               className={`p-1.5 rounded-md transition-colors ${
                 modo === v ? 'bg-primary-100 text-primary-800' : 'text-gray-400 hover:bg-gray-100'}`}>
@@ -142,23 +142,46 @@ function GraficoComAbas({ dados }) {
 
       {modo === 'mapa' && itens.length > 0 && (
         <div className="space-y-1.5">
+          {/* Cabeçalho das colunas: cinco barrinhas sem rótulo obrigariam a
+              conferir a cor na legenda a cada leitura. */}
+          <div className="flex items-center gap-2">
+            <span className="w-32 shrink-0" />
+            <div className="flex gap-2 flex-1">
+              {SITUACOES.map((sg) => (
+                <div key={sg.chave} className="flex-1 flex items-center gap-1">
+                  <span className="flex-1 text-[9px] uppercase tracking-wide text-gray-400 truncate">
+                    {sg.curto}
+                  </span>
+                  <span className="w-5 shrink-0" />
+                </div>
+              ))}
+            </div>
+            <span className="w-9 shrink-0 text-right text-[9px] uppercase tracking-wide text-gray-400">
+              Total
+            </span>
+            <span className="w-8 shrink-0" />
+          </div>
           {linhasMapaV.map((l) => (
             <div key={l.nome} className="flex items-center gap-2">
               <span className="w-32 shrink-0 text-xs truncate text-gray-700" title={nomeDe(l.nome)}>
                 {nomeDe(l.nome)}
               </span>
-              {/* Aqui a cor satura conforme o peso da situação NA LINHA, para
-                  cliente pequeno e grande serem comparáveis. */}
-              <div className="flex gap-0.5 flex-1">
+              {/* Uma barrinha por situação, comprimento relativo À LINHA: é o
+                  que torna setor de 8 tarefas e setor de 300 comparáveis
+                  quanto ao que os aflige. Antes isto era cor de célula, e cor
+                  se estima; barra se mede. */}
+              <div className="flex gap-2 flex-1">
                 {l.celulas.map((c) => (
-                  <div key={c.chave} title={`${c.rotulo}: ${c.valor}`}
-                    className="flex-1 h-6 rounded flex items-center justify-center text-[10px] font-medium"
-                    style={{
-                      background: c.valor ? c.cor : '#f0ece3',
-                      opacity: c.valor ? 0.25 + c.intensidade * 0.75 : 1,
-                      color: c.valor && c.intensidade > 0.45 ? '#fff' : '#55614e',
-                    }}>
-                    {c.valor || ''}
+                  <div key={c.chave} className="flex-1 flex items-center gap-1"
+                    title={`${c.rotulo}: ${c.valor}`}>
+                    <div className="flex-1 h-3.5 rounded-sm bg-[#f0ece3] overflow-hidden">
+                      <div className="h-full rounded-sm"
+                        style={{ width: `${Math.round(c.intensidade * 100)}%`, background: c.cor }} />
+                    </div>
+                    <span className="w-5 shrink-0 text-[10px] tabular-nums text-right"
+                      style={{ color: c.valor ? '#55614e' : '#c3bda9' }}>
+                      {c.valor || '·'}
+                    </span>
                   </div>
                 ))}
               </div>

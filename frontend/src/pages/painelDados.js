@@ -4,11 +4,11 @@
 
 /** As cinco situações, na ordem em que se lê: o que corre primeiro. */
 export const SITUACOES = [
-  { chave: 'atrasada', rotulo: 'Atrasadas', cor: '#a24a3a' },
-  { chave: 'pendente', rotulo: 'Pendentes', cor: '#8a6a2e' },
-  { chave: 'em_andamento', rotulo: 'Em andamento', cor: '#3a7d76' },
-  { chave: 'concluida', rotulo: 'Concluídas', cor: '#4d8a3f' },
-  { chave: 'cancelada', rotulo: 'Canceladas', cor: '#a99e88' },
+  { chave: 'atrasada', rotulo: 'Atrasadas', curto: 'Atras.', cor: '#a24a3a' },
+  { chave: 'pendente', rotulo: 'Pendentes', curto: 'Pend.', cor: '#8a6a2e' },
+  { chave: 'em_andamento', rotulo: 'Em andamento', curto: 'Andam.', cor: '#3a7d76' },
+  { chave: 'concluida', rotulo: 'Concluídas', curto: 'Concl.', cor: '#4d8a3f' },
+  { chave: 'cancelada', rotulo: 'Canceladas', curto: 'Canc.', cor: '#a99e88' },
 ];
 
 /**
