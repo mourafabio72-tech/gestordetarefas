@@ -250,6 +250,10 @@ export const gruposAPI = {
   delete: (slug) => api.delete(`/grupos/${slug}`),
 };
 
+export const painelAPI = {
+  get: (params) => api.get('/painel', { params }),
+};
+
 export const documentosAPI = {
   list: (params) => api.get('/documentos', { params }),
   competencias: () => api.get('/documentos/competencias'),
