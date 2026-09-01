@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .seguranca import aplicar_headers
+from .versao import BUILD
 from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos, painel
 from .services.scheduler import start_scheduler
 from .init_db import (migrate, criar_indices, seed_admin, ensure_admin_grupo,
@@ -91,3 +92,15 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/api/health")
+def health_api():
+    """Igual ao /health, mas sob /api, que e o unico caminho do backend que
+    atravessa o proxy: na raiz quem responde e o React buildado, e o /health
+    acima nunca chega aqui em producao.
+
+    O `build` bate com a data do commit e responde, de fora, qual versao esta
+    servida. Ver `app/versao.py`.
+    """
+    return {"status": "healthy", "build": BUILD}
