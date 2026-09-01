@@ -41,3 +41,5 @@ BUILD = _carimbo_de_build()
 
 #: O que aparece na tela: "build 20260901-1046".
 VERSAO_COMPLETA = f"build {BUILD}"
+
+# gatilho de implantacao cadastrado em 2026-09-01: este commit testa se o push publica sozinho.
