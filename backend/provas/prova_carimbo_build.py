@@ -1,15 +1,19 @@
 """
-prova_carimbo_build.py — o carimbo tem que dizer que CODIGO esta no ar.
+prova_carimbo_build.py — a varredura que alimenta o carimbo de build.
 
-O que ele fazia: lia o mtime do proprio versao.py. Em 2026-09-03 isso mentiu.
-O /api/health respondia 20260901-1155 havia tres dias enquanto tres deploys
-entravam, porque o EasyPanel faz checkout por cima do diretorio existente e so
-o arquivo ALTERADO ganha mtime novo. Commit que nao mexe no versao.py nao move
-o mtime do versao.py, e o carimbo congela. Quase demos o webhook como morto por
-causa disso, com o deploy ja no ar.
+CUIDADO COM A HISTORIA DESTE ARQUIVO. Ele nasceu em 2026-09-03 de um
+diagnostico ERRADO: li o carimbo `20260901-1155` do Tareffas como se estivesse
+congelado, quando entre 01/09 e 03/09 nao houve commit nenhum naquele repo --
+nao havia deploy para o carimbo perder --, e medi as leituras seguintes antes
+do deploy terminar.
 
-O que ele faz agora: le o mtime mais recente de todo o pacote app/. Qualquer
-arquivo de codigo que mude move o carimbo.
+O que esta medido: no contexto de build todo arquivo carrega o timestamp do
+COMMIT, e o COPY do Docker tem cache por conteudo. Logo, ler um arquivo so ja
+funcionava, e trocar por varredura da arvore NAO consertou bug nenhum.
+
+Entao por que a prova fica? Porque a varredura existe no codigo, e codigo sem
+checagem apodrece. Ela trava o comportamento dela: qual arvore entra, o que
+fica de fora, e o que acontece quando nao ha nada para ler.
 
 Rodar:  python provas/prova_carimbo_build.py
 """

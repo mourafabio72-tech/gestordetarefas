@@ -12,24 +12,26 @@ painel. Com isto, um curl responde:
 
     curl -s https://gestordetarefas.zoaria.com.br/api/health
 
-O carimbo vem do mtime MAIS RECENTE de todo o pacote `app/`, e nao do mtime
-deste arquivo.
+O carimbo vem do mtime MAIS RECENTE de todo o pacote `app/`.
 
-A primeira versao usava so este arquivo, e ficou congelada em 20260901-1155
-por tres dias enquanto tres deploys entravam. O motivo: o EasyPanel faz
-checkout por cima do diretorio que ja existe, e so o arquivo ALTERADO ganha
-mtime novo. Commit que nao toca no versao.py nao move o mtime do versao.py, a
-camada do Docker vem do cache, e o carimbo mente dizendo que producao e velha.
+COMO ISSO FUNCIONA DE VERDADE, medido em 2026-09-03 nos nove apps: no contexto
+de build todo arquivo carrega o timestamp do COMMIT, e nao a data em que aquele
+arquivo mudou pela ultima vez. O COPY do Docker tem cache por conteudo, entao
+commit que nao altera a imagem deixa a camada antiga e o carimbo anterior -- o
+que esta certo, porque a imagem no ar e mesmo a de antes.
 
-Isso e pior do que nao ter carimbo: em 2026-09-03 quase demos o webhook como
-morto por causa dele, quando o deploy tinha chegado. Falso negativo em
-instrumento de verificacao custa mais caro que instrumento nenhum.
+Ou seja: olhar o pacote inteiro em vez deste arquivo NAO conserta bug nenhum.
+Ficou porque e inofensivo e um pouco mais robusto quando um servico do compose
+acerta o cache. Este arquivo ja afirmou o contrario, dizendo que o carimbo
+congelaria; era falso, e nasceu de ler um carimbo de 01/09 como congelamento
+quando simplesmente nao havia commit no periodo.
 
-Olhando o pacote inteiro, QUALQUER arquivo de codigo que mude move o carimbo,
-que e exatamente a pergunta que se quer responder: que codigo esta no ar.
-`__pycache__` fica de fora de proposito -- aquele .pyc nasce quando o
-container importa o modulo, entao ele carimbaria a hora do boot, nao a do
-codigo.
+CUIDADO AO DIAGNOSTICAR: carimbo velho nao e prova de deploy parado. Compare
+com o timestamp do HEAD (`git log -1 --date=format:'%Y%m%d-%H%M'`) antes de
+acusar o webhook.
+
+`__pycache__` fica de fora: aquele .pyc nasce quando o container importa o
+modulo, entao ele carimbaria a hora do boot, nao a do codigo.
 
 Nao depende de variavel de ambiente, que alguem esqueceria de atualizar.
 """
