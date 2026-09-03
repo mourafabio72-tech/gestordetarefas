@@ -170,6 +170,42 @@ check("a gerada de 07/2026 continua viva",
 check("nao sobrou envio orfao", db.query(TarefaEnvio).count() == 0)
 check("nao sobrou acesso orfao", db.query(SaidaAcesso).count() == 0)
 
+print("\n=== 9. o documento ENTREGUE ao cliente tambem sai do volume ===")
+# `anexo_nome` (o que o cliente sobe) e `saida_nome` (a guia que o escritorio
+# entrega) sao campos separados. A exclusao apagava so o primeiro, e toda guia
+# ja enviada ficava no volume sem nada apontando para ela.
+t6 = nova("Com guia de saida")
+t6.anexo_nome = up.salvar_arquivo("tokA", "comprovante.pdf", b"%PDF entrada")
+t6.saida_nome = up.salvar_saida(t6.id, "guia.pdf", b"%PDF saida")
+db.commit()
+cam_ent = os.path.join(up.UPLOAD_DIR, t6.anexo_nome)
+cam_sai = os.path.join(up.UPLOAD_DIR, t6.saida_nome)
+check("os dois arquivos existem antes", os.path.isfile(cam_ent) and os.path.isfile(cam_sai))
+delete_tarefa(t6.id, db=db, current_user=admin)
+r6 = delete_tarefa(t6.id, db=db, current_user=admin)
+check("o comprovante sai", not os.path.isfile(cam_ent))
+check("a guia de saida sai tambem", not os.path.isfile(cam_sai), f"({cam_sai})")
+check("a resposta conta os dois", r6.get("arquivos_removidos") == 2, f"({r6})")
+
+print("\n=== 10. excluir competencia limpa o volume, nao so o banco ===")
+g4 = gerada("DAS com os dois arquivos", "09/2026")
+g4.anexo_nome = up.salvar_arquivo("tokB", "recibo.pdf", b"%PDF r")
+g4.saida_nome = up.salvar_saida(g4.id, "das.pdf", b"%PDF d")
+db.commit()
+g5 = gerada("DAS so com guia", "09/2026")
+g5.saida_nome = up.salvar_saida(g5.id, "das2.pdf", b"%PDF d2")
+db.commit()
+caminhos = [os.path.join(up.UPLOAD_DIR, n)
+            for n in (g4.anexo_nome, g4.saida_nome, g5.saida_nome)]
+check("tres arquivos no volume antes", all(os.path.isfile(c) for c in caminhos))
+r7 = excluir_tarefas_competencia(ExcluirCompetenciaBody(competencia="09/2026"),
+                                 db=db, current_user=admin)
+check("apagou as duas tarefas", r7.get("excluidas") == 2, f"({r7})")
+check("nenhum arquivo orfao sobrou no volume",
+      not any(os.path.isfile(c) for c in caminhos),
+      f"({[c for c in caminhos if os.path.isfile(c)]})")
+check("a resposta conta os tres", r7.get("arquivos_removidos") == 3, f"({r7})")
+
 db.close()
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

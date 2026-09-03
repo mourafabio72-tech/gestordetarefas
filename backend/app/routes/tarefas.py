@@ -777,14 +777,21 @@ def delete_tarefa(
     # a lixeira prometia excluir e cancelava de novo, para sempre.
     if db_tarefa.status == StatusTarefa.CANCELADA:
         from ..services import upload as up
-        arquivo = db_tarefa.anexo_nome
+        # Os nomes se leem ANTES do delete, e os arquivos saem DEPOIS do
+        # commit: apagar primeiro deixaria a tarefa sem arquivo se o banco
+        # recusasse a exclusão.
+        arquivo, saida = db_tarefa.anexo_nome, db_tarefa.saida_nome
         db_tarefa.responsaveis = []          # solta a associação antes
         db.delete(db_tarefa)
         db.commit()
-        # o comprovante sai do volume junto: sem a tarefa, ninguém mais o acha
+        # Os dois arquivos saem do volume junto: sem a tarefa, ninguém mais os
+        # acha. O documento de saída ficava para trás, e toda guia entregue ao
+        # cliente virava órfã.
         removido = up.remover_arquivo(arquivo)
+        removidos = int(removido) + up.remover_arquivos([saida])
         return {"message": "Tarefa excluída definitivamente.",
-                "excluida": True, "anexo_removido": removido}
+                "excluida": True, "anexo_removido": removido,
+                "arquivos_removidos": removidos}
 
     db_tarefa.status = StatusTarefa.CANCELADA
     db.commit()
@@ -805,6 +812,7 @@ def excluir_tarefas_competencia(
     """Apaga DE VEZ as tarefas geradas por obrigação (com obrigacao_id) da
     competência informada (MM/AAAA). É o desfazer do 'Gerar tarefas do mês', e
     depois dá para regerar limpo. Não toca em tarefas avulsas (criadas à mão)."""
+    from ..services import upload as up
     comp = (body.competencia or "").strip()
     p = comp.split("/")
     valido = (len(p) == 2 and p[0].isdigit() and p[1].isdigit()
@@ -814,10 +822,19 @@ def excluir_tarefas_competencia(
     tarefas = (db.query(Tarefa)
                .filter(Tarefa.competencia == comp, Tarefa.obrigacao_id.isnot(None))
                .all())
+    # A lista de arquivos se monta antes do delete, pelo mesmo motivo da
+    # exclusão de uma tarefa só: depois do commit não há mais linha para
+    # perguntar qual era o arquivo, e antes do commit ainda pode dar errado.
+    arquivos = []
     n = 0
     for t in tarefas:
+        arquivos.extend([t.anexo_nome, t.saida_nome])
         t.responsaveis = []
         db.delete(t)
         n += 1
     db.commit()
-    return {"excluidas": n, "competencia": comp}
+    # Isto aqui não existia: apagar um mês inteiro tirava as tarefas do banco e
+    # deixava todo comprovante e toda guia no volume, sem nada apontando para
+    # eles. Num volume que é crítico, e sem forma de achar depois.
+    removidos = up.remover_arquivos(arquivos)
+    return {"excluidas": n, "competencia": comp, "arquivos_removidos": removidos}

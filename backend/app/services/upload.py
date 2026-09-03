@@ -56,6 +56,27 @@ def remover_arquivo(nome: str) -> bool:
     return False
 
 
+def remover_arquivos(nomes) -> int:
+    """Tira do volume vários arquivos de uma vez. Devolve quantos saíram.
+
+    Existe porque uma tarefa pode ter DOIS arquivos, em campos separados de
+    propósito: `anexo_nome`, o comprovante que o cliente subiu, e `saida_nome`,
+    o documento que o escritório entregou. A exclusão apagava só o primeiro, e
+    toda guia já enviada virava arquivo órfão no volume. A exclusão por
+    competência não apagava nenhum dos dois: um mês inteiro deixava centenas.
+
+    Nome repetido ou vazio não conta duas vezes.
+    """
+    vistos, saidos = set(), 0
+    for nome in nomes:
+        if not nome or nome in vistos:
+            continue
+        vistos.add(nome)
+        if remover_arquivo(nome):
+            saidos += 1
+    return saidos
+
+
 def caminho_do_anexo(nome: str):
     """Caminho absoluto do comprovante no volume, ou None se não houver arquivo.
 
