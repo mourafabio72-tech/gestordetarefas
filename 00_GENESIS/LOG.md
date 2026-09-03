@@ -177,3 +177,5 @@ uteis/corridos.
 Provas: `backend/provas/prova_marco_fechamento.py`, com o cenario do usuario
 (tres empresas, tres marcos) e a cadeia de tres etapas deslocando junto. Demais
 passando. Spec atualizada (secao 1b).
+
+[2026-09-03T13:20:00] fase=ajuste acao=fonte_dashboard resultado=ok obs="Dashboard.jsx: fonteDoCentro(centro,raio,largura) calcula a fonte do miolo da rosca a partir do vao real do anel, teto 26; antes era fontSize 28 fixo e 4 digitos encostavam no anel. Legenda da rosca da faixa: valor passou de w-5 para w-9, que era onde 6693 invadia o 35%. Build do frontend ok (vite, 2290 modules)."

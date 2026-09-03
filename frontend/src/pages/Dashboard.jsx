@@ -54,6 +54,15 @@ function CardNum({ valor, texto, tom = 'base', icone: Icone, titulo, para }) {
   );
 }
 
+// O número do miolo cresce com a contagem, e o buraco da rosca não: com 4
+// dígitos em fonte fixa o total encostava no anel e a rosca virava moldura de
+// número. A fonte passa a sair do vão que existe, não de um palpite.
+function fonteDoCentro(centro, raio, largura) {
+  const vao = (raio - largura / 2) * 2 * 0.78;
+  const chars = String(centro ?? '').length || 1;
+  return Math.min(26, Math.round(vao / (chars * 0.62)));
+}
+
 // Só o desenho, para servir à rosca grande da faixa e às pequenas por setor.
 function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16, anel = null }) {
   const arcos = arcosRosca(fatias, raio);
@@ -71,7 +80,7 @@ function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16,
         ))}
       </g>
       <text x="60" y={legenda ? 58 : 66} textAnchor="middle" className="fill-gray-800"
-        style={{ fontSize: 28, fontWeight: 700 }}>{centro}</text>
+        style={{ fontSize: fonteDoCentro(centro, raio, largura), fontWeight: 700 }}>{centro}</text>
       {legenda && (
         <text x="60" y="75" textAnchor="middle" className="fill-gray-500" style={{ fontSize: 12 }}>
           {legenda}
@@ -90,7 +99,7 @@ function Rosca({ fatias, centro, legenda }) {
           <div key={f.chave} className="flex items-center gap-1.5 text-[10px] text-gray-600">
             <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: f.cor }} />
             <span className="w-[72px]">{f.rotulo}</span>
-            <strong className="tabular-nums w-5 text-right">{f.valor}</strong>
+            <strong className="tabular-nums w-9 text-right">{f.valor}</strong>
             <span className="text-gray-400 tabular-nums">{f.pct}%</span>
           </div>
         ))}
