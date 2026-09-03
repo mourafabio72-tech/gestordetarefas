@@ -282,6 +282,15 @@ class Tarefa(Base):
     supervisor = relationship("Usuario", foreign_keys=[supervisor_id])
     responsaveis = relationship("Usuario", secondary=tarefa_responsaveis)
     obrigacao = relationship("Obrigacao", foreign_keys=[obrigacao_id])
+    # Os filhos da tarefa: cada saída de documento para o cliente e cada
+    # abertura do link. Existiam com FK NOT NULL para `tarefas` e sem
+    # relationship nenhuma declarada aqui, então o ORM não sabia que eles
+    # existiam: apagar uma tarefa que já tinha sido enviada estourava FOREIGN
+    # KEY. Passava despercebido na lixeira (tarefa avulsa raramente tem envio)
+    # e derrubava a "Excluir tarefas do mês", que pega a competência inteira e
+    # quase sempre alcança alguma já entregue.
+    envios = relationship("TarefaEnvio", cascade="all, delete-orphan")
+    acessos = relationship("SaidaAcesso", cascade="all, delete-orphan")
 
     @property
     def exige_documento(self) -> bool:
