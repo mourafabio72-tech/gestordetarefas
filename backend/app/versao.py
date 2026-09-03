@@ -12,10 +12,26 @@ painel. Com isto, um curl responde:
 
     curl -s https://gestordetarefas.zoaria.com.br/api/health
 
-O carimbo vem do mtime deste arquivo. No container ele nasce do arquivo do
-commit, entao o carimbo BATE COM A DATA DO COMMIT e identifica o ponto exato
-da historia que esta servido. Nao depende de variavel de ambiente, que alguem
-esqueceria de atualizar.
+O carimbo vem do mtime MAIS RECENTE de todo o pacote `app/`, e nao do mtime
+deste arquivo.
+
+A primeira versao usava so este arquivo, e ficou congelada em 20260901-1155
+por tres dias enquanto tres deploys entravam. O motivo: o EasyPanel faz
+checkout por cima do diretorio que ja existe, e so o arquivo ALTERADO ganha
+mtime novo. Commit que nao toca no versao.py nao move o mtime do versao.py, a
+camada do Docker vem do cache, e o carimbo mente dizendo que producao e velha.
+
+Isso e pior do que nao ter carimbo: em 2026-09-03 quase demos o webhook como
+morto por causa dele, quando o deploy tinha chegado. Falso negativo em
+instrumento de verificacao custa mais caro que instrumento nenhum.
+
+Olhando o pacote inteiro, QUALQUER arquivo de codigo que mude move o carimbo,
+que e exatamente a pergunta que se quer responder: que codigo esta no ar.
+`__pycache__` fica de fora de proposito -- aquele .pyc nasce quando o
+container importa o modulo, entao ele carimbaria a hora do boot, nao a do
+codigo.
+
+Nao depende de variavel de ambiente, que alguem esqueceria de atualizar.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -28,10 +44,30 @@ _ESTE_ARQUIVO = Path(__file__).resolve()
 _FUSO_BR = timezone(timedelta(hours=-3))
 
 
+_PACOTE = _ESTE_ARQUIVO.parent
+
+
+def _mtime_mais_recente() -> float:
+    """O mtime do arquivo de codigo mais novo do pacote `app/`.
+
+    Volta ao mtime deste arquivo se a varredura nao achar nada, para o carimbo
+    nunca ficar pior do que era.
+    """
+    novo = 0.0
+    for caminho in _PACOTE.rglob("*.py"):
+        if "__pycache__" in caminho.parts:
+            continue
+        try:
+            novo = max(novo, caminho.stat().st_mtime)
+        except OSError:
+            continue          # arquivo sumiu no meio da varredura: segue
+    return novo or _ESTE_ARQUIVO.stat().st_mtime
+
+
 def _carimbo_de_build() -> str:
     """AAAAMMDD-HHMM no relogio de Brasilia. Falha vira 'desconhecido'."""
     try:
-        quando = datetime.fromtimestamp(_ESTE_ARQUIVO.stat().st_mtime, _FUSO_BR)
+        quando = datetime.fromtimestamp(_mtime_mais_recente(), _FUSO_BR)
         return quando.strftime("%Y%m%d-%H%M")
     except OSError:
         return "desconhecido"
@@ -42,4 +78,3 @@ BUILD = _carimbo_de_build()
 #: O que aparece na tela: "build 20260901-1046".
 VERSAO_COMPLETA = f"build {BUILD}"
 
-# gatilho de implantacao cadastrado em 2026-09-01: este commit testa se o push publica sozinho.
