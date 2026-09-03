@@ -121,8 +121,12 @@ gerar = editar. (matriz de permissões já implementada.)
   multi-select de empresas, alvo por regime/segmento, meses ativos, botão "Copiar
   de outra empresa"); rota `/obrigacoes` + item na sidebar (Cadastro). ✅ FEITO
 - **B (gerador):** `services/gerador.py` (competência + prazo dia-útil + alvo + dedupe),
-  endpoint `POST /obrigacoes/gerar {mes,ano}` (flag alocar_obrigacao), e job automático
-  no scheduler (dia 1, 6:00). ✅ FEITO
+  endpoint `POST /obrigacoes/gerar {mes,ano,obrigacao_ids?,empresa_ids?}` (flag
+  alocar_obrigacao), e job automático no scheduler (dia 1, 6:00). ✅ FEITO
+  Os dois recortes são opcionais e vazio significa "todas": `obrigacao_ids` gera só
+  as obrigações marcadas na lista, `empresa_ids` só as empresas escolhidas no modal.
+  O recorte por empresa é **interseção** com o alvo da obrigação, nunca soma — escolher
+  a empresa ali não a inscreve na obrigação. Prova: `provas/prova_gerar_recorte_empresas.py`.
 - **D (e-validador):** `services/validador.py` (extrai CNPJ + competência + protocolo;
   casa obrigação por palavra-chave com limite de palavra; baixa a tarefa),
   `routes/evalidador.py` (`POST /evalidador/processar`, upload multi-PDF, perm evalidador),

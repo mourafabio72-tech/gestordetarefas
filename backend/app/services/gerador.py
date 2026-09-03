@@ -318,8 +318,17 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     return True
 
 
-def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids: list = None) -> dict:
+def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids: list = None,
+                 empresa_ids: list = None) -> dict:
     criadas, puladas, por_obrigacao = 0, 0, []
+    # Recorte por empresa: gerar o mês de um cliente só, ou de um punhado.
+    # Acontece quando o cliente entra no meio do mês, quando alguém pede a
+    # regeneração de uma empresa depois de arrumar o cadastro dela, e quando se
+    # quer conferir o resultado num cliente antes de soltar no escritório todo.
+    # É INTERSEÇÃO com o que a obrigação alcança, nunca soma: empresa escolhida
+    # aqui que a obrigação não pega continua sem a tarefa. Escolher a empresa
+    # não a inscreve na obrigação -- isso é cadastro, e se faz na obrigação.
+    filtro_emp = set(empresa_ids) if empresa_ids else None
     q = db.query(Obrigacao).filter(Obrigacao.ativa == True)
     # Recorte opcional: gerar só as obrigações escolhidas na tela. Sem isso, a
     # única opção era gerar TODAS as ativas -- e num escritório com dezenas de
@@ -333,7 +342,10 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
         n_o = 0
-        for emp in empresas_alvo(db, o):
+        alvo = empresas_alvo(db, o)
+        if filtro_emp is not None:
+            alvo = [e for e in alvo if e.id in filtro_emp]
+        for emp in alvo:
             # Vencimento POR EMPRESA: obrigação ancorada no fechamento tem data
             # diferente em cada cliente, então o cálculo entra no laço.
             vencimento = calc_vencimento(o, emp, mes_entrega, ano_entrega)
@@ -352,7 +364,11 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
                                   "criadas": n_o})
     db.commit()
     return {"mes_entrega": f"{mes_entrega:02d}/{ano_entrega:04d}",
-            "criadas": criadas, "puladas": puladas, "detalhe": por_obrigacao}
+            "criadas": criadas, "puladas": puladas, "detalhe": por_obrigacao,
+            # A tela precisa poder dizer "gerei para 3 empresas", e não só
+            # quantas tarefas saíram: zero criadas com recorte de empresa é
+            # ambíguo entre "já existiam" e "a obrigação não pega essas".
+            "empresas_no_recorte": len(filtro_emp) if filtro_emp else None}
 
 
 def gerar_mes_atual(db: Session) -> dict:

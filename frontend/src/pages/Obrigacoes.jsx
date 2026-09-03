@@ -104,15 +104,25 @@ export default function Obrigacoes() {
   const [showGerar, setShowGerar] = useState(false);
   const [gerMes, setGerMes] = useState(_hj.getMonth() + 1);
   const [gerAno, setGerAno] = useState(_hj.getFullYear());
+  // Recorte por empresa. `gerTodasEmp` é o interruptor explícito, e não a
+  // ausência de seleção: "não marquei nada" e "quero todas" são intenções
+  // diferentes, e tratá-las como a mesma coisa é o jeito de gerar o escritório
+  // inteiro sem querer.
+  const [gerTodasEmp, setGerTodasEmp] = useState(true);
+  const [gerEmpresas, setGerEmpresas] = useState([]);
+  const [buscaGerEmp, setBuscaGerEmp] = useState('');
   const MESES_NOME = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const gerarTarefas = async () => {
     setGerando(true);
     try {
       // selecionadas quando há seleção; todas as ativas quando não há
       const { data } = await obrigacoesAPI.gerar(gerMes, gerAno,
-        selecionados.length ? selecionados : null);
+        selecionados.length ? selecionados : null,
+        gerTodasEmp ? null : gerEmpresas);
       setShowGerar(false);
-      alert(`Tarefas de ${data.mes_entrega}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
+      const recorte = data.empresas_no_recorte
+        ? ` (recorte de ${data.empresas_no_recorte} empresa(s))` : '';
+      alert(`Tarefas de ${data.mes_entrega}${recorte}: ${data.criadas} criada(s), ${data.puladas} já existiam.`);
     } catch (e) {
       alert(mensagemDeErro(e, 'Erro ao gerar tarefas.'));
     } finally { setGerando(false); }
@@ -269,7 +279,7 @@ export default function Obrigacoes() {
             <Unlink size={18} /> Desvincular empresa
           </button>
           <button onClick={() => setShowGerar(true)} disabled={gerando} className="btn-secondary flex items-center gap-2"
-            title="Cria as tarefas de um mês para todas as empresas, a partir das obrigações ativas">
+            title="Cria as tarefas de um mês a partir das obrigações ativas, para todas as empresas ou só as escolhidas">
             <Zap size={18} /> {gerando ? 'Gerando…' : 'Gerar tarefas do mês'}
           </button>
           <button onClick={abrirNovo} className="btn-primary flex items-center gap-2">
@@ -952,13 +962,79 @@ export default function Obrigacoes() {
                   className="btn-secondary text-xs px-3 py-1">mês atual</button>
                 <button type="button" onClick={() => pularMes(1)} className="btn-secondary text-xs px-3 py-1">próximo mês →</button>
               </div>
+              {/* Recorte por empresa. Mora aqui dentro, e não na lista de fora,
+                  porque a pergunta "para quem eu gero" só existe no momento de
+                  gerar -- e porque a lista de fora é de obrigações, não de
+                  empresas. */}
+              {(() => {
+                const termo = buscaGerEmp.trim().toLowerCase();
+                const filtradas = termo
+                  ? empresas.filter((e) => `${e.razao_social} ${formatarRazaoSocial(e.razao_social)} ${e.grupo || ''}`.toLowerCase().includes(termo))
+                  : empresas;
+                return (
+                  <div className="border border-gray-200 rounded-lg p-3 space-y-1.5">
+                    <p className="text-sm font-medium text-gray-700">Para quais empresas?</p>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="ger_alvo_emp" className="h-4 w-4"
+                        checked={gerTodasEmp} onChange={() => setGerTodasEmp(true)} />
+                      <span className="font-medium text-gray-700">Todas as empresas</span>
+                      <span className="text-gray-400 text-xs">cada obrigação vai para quem ela alcança</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" name="ger_alvo_emp" className="h-4 w-4"
+                        checked={!gerTodasEmp} onChange={() => setGerTodasEmp(false)} />
+                      <span className="font-medium text-gray-700">Somente as escolhidas</span>
+                    </label>
+                    {!gerTodasEmp && (
+                      <div className="pt-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-xs text-gray-400 flex-1">{gerEmpresas.length} selecionada(s)</p>
+                          <button type="button"
+                            onClick={() => setGerEmpresas([...new Set([...gerEmpresas, ...filtradas.map((e) => e.id)])])}
+                            className="text-xs text-primary-600 hover:underline">
+                            {termo ? 'Selecionar filtradas' : 'Selecionar todas'}
+                          </button>
+                          <span className="text-gray-300">·</span>
+                          <button type="button" onClick={() => setGerEmpresas([])}
+                            className="text-xs text-gray-500 hover:underline">Limpar</button>
+                        </div>
+                        <input type="text" value={buscaGerEmp} onChange={(e) => setBuscaGerEmp(e.target.value)}
+                          placeholder="Buscar empresa ou grupo…" className="input-field mb-2 text-sm" />
+                        <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1">
+                          {filtradas.length === 0 ? (
+                            <p className="text-xs text-gray-400">Nenhuma empresa encontrada.</p>
+                          ) : filtradas.map((e) => (
+                            <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input type="checkbox" className="h-4 w-4"
+                                checked={gerEmpresas.includes(e.id)}
+                                onChange={() => setGerEmpresas(gerEmpresas.includes(e.id)
+                                  ? gerEmpresas.filter((x) => x !== e.id)
+                                  : [...gerEmpresas, e.id])} />
+                              {formatarRazaoSocial(e.razao_social)}
+                              {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
+                            </label>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1.5">
+                          A empresa escolhida só recebe as obrigações que <strong>já a alcançam</strong>.
+                          Escolher aqui não inscreve ninguém numa obrigação — isso é cadastro, e se
+                          faz na obrigação.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div className={`text-xs rounded px-3 py-2 ${selecionados.length
                 ? 'bg-primary-50 text-primary-800' : 'bg-amber-50 text-amber-800'}`}>
                 {selecionados.length
                   ? <>Vai gerar <strong>somente as {selecionados.length} obrigação(ões) selecionada(s)</strong>.</>
                   : <>Nenhuma obrigação selecionada: vai gerar <strong>todas as ativas</strong> do
-                     sistema, para todas as empresas que cada uma alcança. Para gerar só algumas,
-                     feche isto e marque-as na lista.</>}
+                     sistema. Para gerar só algumas, feche isto e marque-as na lista.</>}
+                {' '}
+                {gerTodasEmp
+                  ? <>Para <strong>todas as empresas</strong> que cada uma alcança.</>
+                  : <>Para <strong>{gerEmpresas.length} empresa(s)</strong>.</>}
               </div>
               <p className="text-xs text-gray-500">
                 Mês de <strong>entrega</strong>, não de competência. Cada obrigação calcula a
@@ -968,7 +1044,14 @@ export default function Obrigacoes() {
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <button onClick={() => setShowGerar(false)} className="btn-secondary">Cancelar</button>
-              <button onClick={gerarTarefas} disabled={gerando} className="btn-primary">
+              {/* Sem esta trava, "somente as escolhidas" com a lista vazia
+                  mandaria [] ao backend, que trata vazio como "todas" -- e o
+                  botão geraria o escritório inteiro dizendo o contrário. */}
+              <button onClick={gerarTarefas}
+                disabled={gerando || (!gerTodasEmp && gerEmpresas.length === 0)}
+                title={!gerTodasEmp && gerEmpresas.length === 0
+                  ? 'Escolha ao menos uma empresa, ou volte para "Todas as empresas".' : ''}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                 {gerando ? 'Gerando…' : `Gerar ${String(gerMes).padStart(2, '0')}/${gerAno}`}
               </button>
             </div>

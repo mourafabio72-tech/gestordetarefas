@@ -87,6 +87,7 @@ class GerarRequest(BaseModel):
     mes: int   # mês de entrega (1-12)
     ano: int
     obrigacao_ids: Optional[List[int]] = None   # vazio = todas as ativas
+    empresa_ids: Optional[List[int]] = None     # vazio = todas as que a obrigação alcança
 
 
 def _set_empresas(db: Session, obrigacao: Obrigacao, empresa_ids):
@@ -169,7 +170,7 @@ def gerar_competencia(
     """Gera as tarefas do mês de entrega informado (empresas da regra ∪ vínculo)."""
     if not (1 <= body.mes <= 12):
         raise HTTPException(status_code=400, detail="Mês inválido (1-12)")
-    return gerar_tarefas(db, body.mes, body.ano, body.obrigacao_ids)
+    return gerar_tarefas(db, body.mes, body.ano, body.obrigacao_ids, body.empresa_ids)
 
 
 @router.post("/copiar-empresa")
