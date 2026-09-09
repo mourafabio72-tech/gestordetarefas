@@ -211,7 +211,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 17: entrega e validacao
 
-- status: pending
+- status: **done** (2026-09-09; producao com o carimbo do HEAD e as rotas novas respondendo)
 - depende de: 10, 11, 12, 13, 14, 15, 16
 - duracao estimada: 40min
 - o que entra:

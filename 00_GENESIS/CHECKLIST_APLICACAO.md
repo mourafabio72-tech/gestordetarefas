@@ -433,6 +433,13 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
       pastas com as duas tabelas novas e o `visibilidade.py`, e dois quirks que
       custaram tempo nesta rodada (o PRAGMA do SQLite e o DELETE em massa que nao
       passa pelo ORM)
-- [ ] carimbo de producao conferido contra o HEAD do repositorio
-      PROVA: `curl -s https://gestordetarefas.zoaria.com.br/api/health` comparado com
-      `git log -1 --date=format:'%Y%m%d-%H%M'`
+- [x] carimbo de producao conferido contra o HEAD do repositorio
+      EVIDENCIA: HEAD `ef50124 20260909-1125`, producao
+      `{"status":"healthy","build":"20260909-1125"}`. Batem.
+      E o carimbo diz que a IMAGEM e nova, nao que o codigo desta rodada entrou
+      nela, entao perguntei tambem pelas ROTAS: sem token,
+      `POST /api/tarefas/0/nao-se-aplica` responde 401 e `GET
+      /api/obrigacoes/0/excecoes` responde 401. Rota que nao existe responderia
+      404, entao o 401 e a prova de que o codigo novo esta servindo.
+      O deploy levou cerca de 8 minutos, e nao os ~2 de costume: nao ha nada de
+      errado nisso, e um Compose com dois servicos e build do frontend
