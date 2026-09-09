@@ -20,9 +20,12 @@ alguem pode precisar mostrar a terceiro.
   responsavel cadastrado. A tarefa nao herda mais o responsavel da obrigacao, e
   o scheduler gera o mes no dia 1 as 6h. A resposta da geracao diz quantas
   nasceram sem dono e de quais empresas.
-- **59 travessoes em texto visivel, em 11 telas**, que a Fase 6 tinha zerado em
-  17/08 e voltaram no trabalho de agosto e setembro. Nenhum deste trabalho.
-  Limpeza e uma rodada propria.
+- ~~Travessoes em texto visivel, que a Fase 6 tinha zerado em 17/08 e voltaram
+  no trabalho de agosto e setembro~~ **FEITO em 2026-09-09**, a pedido do
+  usuario, logo depois do fechamento: 51 no frontend (9 telas) e 3 no backend,
+  todos reescritos. Medido tirando comentario antes de contar, e no backend
+  pela AST, so nas strings de dado. Zero nos dois lados. Detalhe na matriz de
+  conformidade.
 - **`log_event` sem `request_id`, `path` e `method`**, que a
   `Padrao_Logging_Estruturado` lista como obrigatorios. Achado de verificador,
   nao corrigido porque e o logger central do app inteiro.

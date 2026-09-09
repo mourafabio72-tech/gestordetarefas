@@ -39,7 +39,7 @@ export function conferirIdentificador(identificador, textoDocumento) {
   if (!texto.includes(alvo)) {
     return { estado: 'nao_achou',
              aviso: 'Este texto NÃO aparece no documento. O identificador é procurado '
-                  + 'dentro do arquivo — se ele não estiver lá, o e-validador nunca vai '
+                  + 'dentro do arquivo, e se ele não estiver lá, o e-validador nunca vai '
                   + 'reconhecer este tipo de documento. Copie um título ou cabeçalho que '
                   + 'esteja escrito no arquivo.' };
   }

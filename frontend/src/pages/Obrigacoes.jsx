@@ -591,7 +591,7 @@ export default function Obrigacoes() {
                     <p className="text-xs text-gray-600 mt-1">
                       Marque só as etapas do processo (lançar notas, conciliar, balancete).
                       O vencimento sai do <strong>fechamento de cada empresa</strong>, então varia
-                      de cliente para cliente. Obrigação com prazo em lei — SPED, DEFIS, DARF —
+                      de cliente para cliente. Obrigação com prazo em lei (SPED, DEFIS, DARF)
                       deixe desmarcada: o prazo é o mesmo para todos.
                     </p>
                     {form.ancora === 'fechamento' && (
@@ -621,7 +621,7 @@ export default function Obrigacoes() {
                       <p className="text-xs text-gray-600 mt-2 border-t border-primary-200 pt-2">
                         A data sai do <strong>Fechamento contábil</strong> de cada empresa, no
                         cadastro dela. Empresa que não tiver esse campo preenchido usa a
-                        <strong> Regra de prazo</strong> ao lado — assim a tarefa nasce com data
+                        <strong> Regra de prazo</strong> ao lado, e assim a tarefa nasce com data
                         de qualquer jeito, em vez de nascer sem prazo.
                       </p>
                     )}
@@ -630,7 +630,7 @@ export default function Obrigacoes() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo
                       {form.ancora === 'fechamento' && (
                         <span className="ml-1 font-normal text-[11px] text-amber-700">
-                          — só para empresa sem fechamento definido
+                          só para empresa sem fechamento definido
                         </span>
                       )}
                     </label>
@@ -1092,7 +1092,7 @@ export default function Obrigacoes() {
                         </div>
                         <p className="text-xs text-gray-500 mt-1.5">
                           A empresa escolhida só recebe as obrigações que <strong>já a alcançam</strong>.
-                          Escolher aqui não inscreve ninguém numa obrigação — isso é cadastro, e se
+                          Escolher aqui não inscreve ninguém numa obrigação: isso é cadastro, e se
                           faz na obrigação.
                         </p>
                       </div>
@@ -1113,7 +1113,7 @@ export default function Obrigacoes() {
               </div>
               <p className="text-xs text-gray-500">
                 Mês de <strong>entrega</strong>, não de competência. Cada obrigação calcula a
-                competência dela a partir daqui — a de 2 meses antes, gerada em setembro, nasce
+                competência dela a partir daqui. A de 2 meses antes, gerada em setembro, nasce
                 com competência de julho.
               </p>
             </div>

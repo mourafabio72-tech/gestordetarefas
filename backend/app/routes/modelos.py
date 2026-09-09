@@ -140,7 +140,9 @@ async def lote(
         else:
             # motivo curto para a UI
             if not auto and a.get("empresa_id") and a.get("obrigacao_sugerida_id"):
-                a["motivo"] = "Reconhecido — confira e salve"
+                # A tela COMPARA esta frase (`Modelos.jsx`), entao ela muda nos dois
+                # lados no mesmo commit, ou o card verde some sem erro nenhum.
+                a["motivo"] = "Reconhecido: confira e salve"
             elif not a.get("empresa_id"):
                 a["motivo"] = "Empresa não reconhecida (CNPJ não cadastrado)"
             elif not a.get("obrigacao_sugerida_id"):

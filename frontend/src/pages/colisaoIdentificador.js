@@ -30,7 +30,7 @@ export function estadoDoCandidato(candidato, nomeObrigacaoEscolhida) {
 /** Frase para o `title` do botão — o porquê, não só a cor. */
 export function explicar(estado, outras) {
   if (estado === 'variacao') {
-    return 'Já existe algo parecido NESTA obrigação. Serve como variação — '
+    return 'Já existe algo parecido NESTA obrigação. Serve como variação: '
          + 'outro layout do mesmo documento.';
   }
   if (estado === 'conflito') {

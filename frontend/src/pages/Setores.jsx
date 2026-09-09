@@ -123,7 +123,7 @@ export default function Setores() {
                     <td className="text-gray-500">{setor.descricao || '-'}</td>
                     <td className="text-gray-500">
                       {usuarios.find((u) => u.id === setor.gestor_id)?.nome
-                        || <span className="text-amber-600" title="Sem gestor: as tarefas deste setor só terão supervisor se o responsável tiver gestor próprio">— definir</span>}
+                        || <span className="text-amber-600" title="Sem gestor: as tarefas deste setor só terão supervisor se o responsável tiver gestor próprio">definir</span>}
                     </td>
                     <td>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${setor.ativo === false ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700'}`}>

@@ -123,7 +123,7 @@ export default function Documentos() {
       // A reabertura é efeito colateral e precisa ser dita: sem isso, a tarefa
       // reaparece na fila de alguém e ninguém liga uma coisa à outra.
       setAviso(data?.tarefa_reaberta
-        ? `“${doc.titulo}” voltou para pendente — era este documento que a concluía.`
+        ? `“${doc.titulo}” voltou para pendente: era este documento que a concluía.`
         : 'Documento excluído.');
       setTimeout(() => setAviso(null), 8000);
       buscar();
@@ -343,7 +343,7 @@ export default function Documentos() {
             {/* Corte declarado: uma lista truncada em silêncio faria a pessoa
                 concluir que o resto não existe. */}
             {dados.cortou && (
-              <span className="text-amber-700"> — a consulta passa de {dados.limite} linhas.
+              <span className="text-amber-700">. A consulta passa de {dados.limite} linhas.
                 Estreite os filtros para ver o resto.</span>
             )}
           </p>
@@ -377,9 +377,9 @@ export default function Documentos() {
                   {docs.map((d) => (
                     <tr key={d.tarefa_id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="max-w-[220px] truncate" title={d.empresa}>{d.empresa}</td>
-                      <td className="text-gray-600">{d.obrigacao || '—'}</td>
+                      <td className="text-gray-600">{d.obrigacao || '-'}</td>
                       <td className="max-w-[200px] truncate" title={d.titulo}>{d.titulo}</td>
-                      <td className="tabular-nums whitespace-nowrap">{d.competencia || '—'}</td>
+                      <td className="tabular-nums whitespace-nowrap">{d.competencia || '-'}</td>
                       {filtros.tipo === 'entregues' ? (
                         <>
                           <td className="whitespace-nowrap">
@@ -399,19 +399,19 @@ export default function Documentos() {
                                 className="underline hover:text-primary-700" title="Ver quem abriu e quando">
                                 {d.downloads}×
                               </button>
-                            ) : '—'}
+                            ) : '-'}
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="tabular-nums whitespace-nowrap">{dataBr(d.data_entrega) || '—'}</td>
-                          <td className="max-w-[160px] truncate text-gray-600" title={d.protocolo}>{d.protocolo || '—'}</td>
+                          <td className="tabular-nums whitespace-nowrap">{dataBr(d.data_entrega) || '-'}</td>
+                          <td className="max-w-[160px] truncate text-gray-600" title={d.protocolo}>{d.protocolo || '-'}</td>
                         </>
                       )}
                       <td className="max-w-[200px] truncate" title={d.arquivo}>
                         {d.no_volume ? d.arquivo : (
                           <span className="inline-flex items-center gap-1 text-amber-700"
-                            title="O arquivo não está mais no armazenamento — some ao restaurar backup sem o volume.">
+                            title="O arquivo não está mais no armazenamento: some ao restaurar backup sem o volume.">
                             <AlertTriangle size={12} /> {d.arquivo}
                           </span>
                         )}
@@ -428,7 +428,7 @@ export default function Documentos() {
                         {podeApagar && (
                           <button onClick={() => excluir(d)}
                             title={confirmando === d.tarefa_id
-                              ? 'Clique de novo para excluir de vez — a tarefa volta a pendente'
+                              ? 'Clique de novo para excluir de vez, e a tarefa volta a pendente'
                               : 'Excluir este documento (reabre a tarefa)'}
                             className={`p-1 rounded transition-colors ${
                               confirmando === d.tarefa_id

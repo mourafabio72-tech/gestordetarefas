@@ -642,7 +642,7 @@ async def enviar_ao_cliente(
     nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)
     from ..services.razao_social import formatar as formatar_razao
     empresa = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else ""
-    comp = f" — {tarefa.competencia}" if tarefa.competencia else ""
+    comp = f" ({tarefa.competencia})" if tarefa.competencia else ""
     assunto = f"[BPS4] {tarefa.titulo}{comp}"
     # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz
     # que alguém abriu; a pergunta é quem — o sócio que paga ou o e-mail geral
@@ -695,7 +695,7 @@ async def enviar_ao_cliente(
         "concluiu": entregou,
         "message": (f"{enviados} de {len(resultados)} envio(s) concluído(s)."
                     + (" Tarefa concluída." if entregou
-                       else " Nenhum envio funcionou — a tarefa segue aberta.")),
+                       else " Nenhum envio funcionou: a tarefa segue aberta.")),
         "resultados": resultados,
     }
 

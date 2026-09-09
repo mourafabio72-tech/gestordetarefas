@@ -171,14 +171,14 @@ export default function Notificacoes() {
           <div className="flex items-center gap-2 mb-1"><Clock size={18} className="text-primary-700" /><h2 className="font-semibold">Agendamento e regras</h2></div>
           <p className="text-xs text-gray-500 mb-4">
             Cada faixa de urgência tem os horários dela, e rende uma mensagem própria. A tarefa anda
-            sozinha entre as faixas conforme o dia passa. <strong>Escalone os horários</strong> — iguais,
+            sozinha entre as faixas conforme o dia passa. <strong>Escalone os horários</strong>: iguais,
             a pessoa recebe três mensagens de uma vez, que é pior do que uma só.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Campo chave="horarios_a_vencer" label="📋 A vencer" ph="09:00" hint="Planejamento: no dia da antecedência e na véspera." />
-            <Campo chave="horarios_vence_hoje" label="⚠️ Vence hoje" ph="09:30,15:00" hint="Precisa de ação hoje — vale insistir." />
+            <Campo chave="horarios_vence_hoje" label="⚠️ Vence hoje" ph="09:30,15:00" hint="Precisa de ação hoje, vale insistir." />
             <Campo chave="horarios_atrasada" label="🚨 Atrasada" ph="17:45" hint="Cobrança. Uma vez por dia basta." />
-            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Dois toques: neste dia e na véspera — com 3, avisa faltando 3 e faltando 1, e cala no 2. Conta do PRAZO INTERNO, não do vencimento legal." />
+            <Campo chave="alert_dias_antes" label="Antecedência (dias antes)" tipo="number" hint="Dois toques: neste dia e na véspera. Com 3, avisa faltando 3 e faltando 1, e cala no 2. Conta do PRAZO INTERNO, não do vencimento legal." />
             <Campo chave="alert_gestor_niveis" label="Níveis de gestor na cópia" tipo="number" hint="0 = ninguém acima do responsável. 2 = gestor direto + gestor do gestor." />
           </div>
           <div className="border-t border-gray-100 mt-4 pt-3">
@@ -190,7 +190,7 @@ export default function Notificacoes() {
             <p className="text-xs text-gray-400 mt-1">
               Isto é a pessoa jurídica, não o usuário do tipo cliente. O usuário-cliente que for
               responsável por uma tarefa recebe sempre, pelos dois canais, independente deste
-              interruptor. Ligado, o alerta sai também para os contatos da empresa — confira no
+              interruptor. Ligado, o alerta sai também para os contatos da empresa. Confira no
               ensaio antes, é mensagem para cliente real.
             </p>
           </div>
@@ -290,10 +290,10 @@ export default function Notificacoes() {
           </div>
           <p className="text-xs text-gray-500 mb-3">
             O aviso do time vai para a linha única do escritório levando o <strong>login</strong> do
-            colaborador — é o que faz o atendimento nascer na conta dele em vez de cair num balaio comum.
+            colaborador, e é o que faz o atendimento nascer na conta dele em vez de cair num balaio comum.
             O login é o <strong>atendente</strong> no Zap, achado pelo e-mail. O <strong>contato</strong>{' '}
             só entra como reserva, para quem não tem login lá. Quem não casar em nenhum dos dois recebe
-            por e-mail sem avisar ninguém — é por isso que esta conferência existe.
+            por e-mail sem avisar ninguém, e é por isso que esta conferência existe.
           </p>
           <button onClick={conferirZap} disabled={conferindoZap} className="btn-secondary flex items-center gap-2">
             <MessageCircle size={16} /> {conferindoZap ? 'Consultando…' : 'Conferir cadastro'}
@@ -304,29 +304,29 @@ export default function Notificacoes() {
               <p className="mb-2">
                 <strong>{zap.atendentes}</strong> atendente(s) no Zap •{' '}
                 <strong>{zap.contatos_com_numero}</strong> contato(s) com número • linha do escritório:{' '}
-                <span className="font-mono">{zap.linha || '— não configurada'}</span>
+                <span className="font-mono">{zap.linha || 'não configurada'}</span>
               </p>
               {zap.atendentes === 0 && (
                 <p className="text-xs text-red-700 mb-1">
-                  A API não devolveu atendente nenhum. Confira a chave e se o canal está ativo —
+                  A API não devolveu atendente nenhum. Confira a chave e se o canal está ativo:
                   sem isso ninguém do time recebe pelo painel.
                 </p>
               )}
               {!zap.linha && (
                 <p className="text-xs text-red-700 mb-1">
                   O “número de origem” está vazio no bloco do WhatsApp. É a linha para onde o aviso do
-                  time vai — sem ela, cada um cai no telefone do próprio cadastro.
+                  time vai. Sem ela, cada um cai no telefone do próprio cadastro.
                 </p>
               )}
               {zap.com_login?.length > 0 && (
                 <p className="text-xs text-green-800 mb-1">
-                  ✓ {zap.com_login.length} com login no Zap — o aviso cai na conta de cada um:{' '}
+                  ✓ {zap.com_login.length} com login no Zap, o aviso cai na conta de cada um:{' '}
                   {zap.com_login.map((c) => c.nome).join(', ')}
                 </p>
               )}
               {zap.so_contato?.length > 0 && (
                 <p className="text-xs text-amber-700 mb-1">
-                  ⚠ Sem login, só contato — recebem no número próprio, sem atendimento direcionado:{' '}
+                  ⚠ Sem login, só contato, recebem no número próprio e sem atendimento direcionado:{' '}
                   {zap.so_contato.map((c) => c.nome).join(', ')}
                 </p>
               )}
@@ -339,8 +339,8 @@ export default function Notificacoes() {
               <details className="mt-2">
                 <summary className="text-xs text-gray-400 cursor-pointer">campos que a API devolveu</summary>
                 <p className="text-[11px] text-gray-500 font-mono mt-1">
-                  contato: {zap.campos_contato?.join(', ') || '—'}<br />
-                  usuário: {zap.campos_usuario?.join(', ') || '—'}
+                  contato: {zap.campos_contato?.join(', ') || '-'}<br />
+                  usuário: {zap.campos_usuario?.join(', ') || '-'}
                 </p>
               </details>
             </div>
@@ -357,17 +357,17 @@ export default function Notificacoes() {
             <h2 className="text-xl font-semibold">Ensaio do alerta</h2>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Roda agora a mesma verificação do horário agendado e mostra quem receberia o quê —
+            Roda agora a mesma verificação do horário agendado e mostra quem receberia o quê,
             <strong> sem enviar nada</strong>. É assim que se confere a régua sem disparar mensagem para cliente real.
           </p>
           <p className="text-xs text-gray-500 mb-3">
             <MessageCircle size={12} className="inline text-green-600" /> Gente do escritório
             (<strong>responsável</strong> e <strong>supervisor</strong>) recebe na <strong>linha única</strong>{' '}
-            do escritório: o aviso vai com o <em>login</em> dela no ZapContábil — achado pelo e-mail — e o
+            do escritório: o aviso vai com o <em>login</em> dela no ZapContábil (achado pelo e-mail) e o
             atendimento nasce na conta dela. Quem não tem login lá cai no telefone do cadastro e, faltando
             ele, no e-mail.{' '}
             <Mail size={12} className="inline text-blue-600" /> Usuário do tipo <strong>cliente</strong>{' '}
-            recebe pelos <strong>dois</strong> canais — ele não abre o painel e não tem supervisor de
+            recebe pelos <strong>dois</strong> canais: ele não abre o painel e não tem supervisor de
             rede. A cadeia de gestores e a empresa ficam de fora, salvo se você ligar em
             “Agendamento e regras”.
           </p>
@@ -414,7 +414,7 @@ export default function Notificacoes() {
               {ensaio.tarefas === 0 && (
                 <p className="text-xs text-gray-500">
                   Nenhuma tarefa se encaixa neste horário. A régua avisa com a antecedência configurada acima,
-                  no dia anterior, no dia do prazo e enquanto estiver atrasada — o horário extra só pega
+                  no dia anterior, no dia do prazo e enquanto estiver atrasada. O horário extra só pega
                   o que vence hoje ou já venceu.
                 </p>
               )}

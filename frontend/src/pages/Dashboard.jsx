@@ -141,9 +141,9 @@ function GraficoComAbas({ dados }) {
             compara VOLUME entre linhas, a barra por situação compara a
             COMPOSIÇÃO de cada linha. Em vez de escolher por você, um clique. */}
         <div className="ml-auto flex items-center gap-0.5">
-          {[{ v: 'pizza', Icone: PieChart, t: 'Pizza — uma por linha' },
-            { v: 'barras', Icone: BarChart3, t: 'Barra empilhada — volume entre linhas' },
-            { v: 'mapa', Icone: AlignLeft, t: 'Barra por situação — composição da linha' }].map(({ v, Icone, t }) => (
+          {[{ v: 'pizza', Icone: PieChart, t: 'Pizza, uma por linha' },
+            { v: 'barras', Icone: BarChart3, t: 'Barra empilhada, volume entre linhas' },
+            { v: 'mapa', Icone: AlignLeft, t: 'Barra por situação, composição da linha' }].map(({ v, Icone, t }) => (
             <button key={v} type="button" onClick={() => setModo(v)} title={t}
               className={`p-1.5 rounded-md transition-colors ${
                 modo === v ? 'bg-primary-100 text-primary-800' : 'text-gray-400 hover:bg-gray-100'}`}>
@@ -401,9 +401,9 @@ export default function Dashboard() {
             para={link({ alerta: 'aberta', multa: '1' })}
             titulo="Em aberto cuja obrigação gera multa se perder o prazo" />
           <CardNum valor={r.aguardando_cliente} texto="esperam doc." tom="base" icone={Inbox}
-            titulo="Sem o documento que o cliente precisa enviar — some na coluna Cliente do gráfico" />
+            titulo="Sem o documento que o cliente precisa enviar. Some na coluna Cliente do gráfico" />
           <CardNum valor={r.nao_abertas} texto="não abertas" tom="base" icone={Send}
-            titulo="Enviado ao cliente e ainda não baixado — some na coluna Cliente do gráfico" />
+            titulo="Enviado ao cliente e ainda não baixado. Some na coluna Cliente do gráfico" />
           {pont && (
             <span className="min-w-[86px] px-2.5 py-1.5 rounded-lg border border-transparent"
               title={`${pont.dentro} de ${pont.base} concluídas dentro do prazo interno`}>
@@ -464,7 +464,7 @@ export default function Dashboard() {
                       {diaMes(t.data_prazo)}
                     </td>
                     <td className="py-1.5 px-2 tabular-nums text-gray-500">
-                      {diaMes(t.data_vencimento) || '—'}
+                      {diaMes(t.data_vencimento) || '-'}
                     </td>
                     <td className="py-1.5 px-2 text-gray-600">
                       <span className="block truncate" title={formatarRazaoSocial(t.empresa)}>
@@ -482,7 +482,7 @@ export default function Dashboard() {
                     </td>
                     <td className="py-1.5 pl-2 text-gray-500">
                       <span className="block truncate" title={t.responsaveis.join(', ')}>
-                        {t.responsaveis.join(', ') || '—'}
+                        {t.responsaveis.join(', ') || '-'}
                       </span>
                     </td>
                   </tr>

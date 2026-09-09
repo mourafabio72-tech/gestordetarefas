@@ -76,7 +76,7 @@ export default function Modelos() {
     // Descarte por extensão era silencioso: quem arrastava uma pasta com .docx
     // no meio via "nada aconteceu" e não sabia por quê.
     if (recusados.length) {
-      alert(`${recusados.length} arquivo(s) ignorado(s) — só leio ${EXTENSOES_ACEITAS.join(', ')}:\n\n`
+      alert(`${recusados.length} arquivo(s) ignorado(s): só leio ${EXTENSOES_ACEITAS.join(', ')}:\n\n`
             + recusados.slice(0, 10).map((f) => f.name).join('\n')
             + (recusados.length > 10 ? `\n… e mais ${recusados.length - 10}` : ''));
     }
@@ -204,7 +204,7 @@ export default function Modelos() {
         Suba um ou <strong>vários</strong> recibos/comprovantes/relatórios de exemplo. O sistema lê,
         identifica a <strong>empresa</strong> (pelo CNPJ) e o <strong>tipo</strong>, e liga a uma
         <strong> obrigação</strong>. Em lote, os 100% reconhecidos são <strong>salvos sozinhos</strong> e
-        todos entram na fila com a sugestão já preenchida. Ao salvar, o identificador treina o e-validador —
+        todos entram na fila com a sugestão já preenchida. Ao salvar, o identificador treina o e-validador,
         por isso cada um passa pela sua conferência antes.
       </p>
 
@@ -283,10 +283,10 @@ export default function Modelos() {
             )}
           </div>
 
-          {atual.motivo === 'Reconhecido — confira e salve' ? (
+          {atual.motivo === 'Reconhecido: confira e salve' ? (
             <div className="mb-4 text-xs bg-green-50 text-green-800 rounded-lg px-3 py-2">
-              ✓ Empresa e obrigação reconhecidas. Confira o identificador — é ele que treina o
-              e-validador — e salve.
+              ✓ Empresa e obrigação reconhecidas. Confira o identificador, porque é ele que treina o
+              e-validador, e salve.
             </div>
           ) : atual.motivo && (
             <div className="mb-4 text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 flex items-center gap-1">
@@ -358,7 +358,7 @@ export default function Modelos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Identificador — um trecho que EXISTE no documento
+                Identificador: um trecho que EXISTE no documento
               </label>
               <p className="text-xs text-gray-500 mb-1">
                 É o texto que o e-validador vai procurar dentro do arquivo para saber que ele é
@@ -522,7 +522,7 @@ export default function Modelos() {
                         <Pencil size={16} />
                       </button>
                       <button onClick={() => excluir(m.id)} className="text-gray-400 hover:text-red-600"
-                        title="Remover — o identificador sai da obrigação junto">
+                        title="Remover: o identificador sai da obrigação junto">
                         <Trash2 size={16} />
                       </button>
                     </td>
