@@ -137,7 +137,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 14: e-validador em obrigacao interna
 
-- status: pending
+- status: **done** (2026-09-09; 23 provas rc=0)
 - depende de: Fase 8
 - duracao estimada: 45min
 - pedido do usuario em 2026-09-09: "dentro da obrigacao, daqueles que sao internas

@@ -283,21 +283,46 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 14: e-validador em obrigacao interna
 
-- [ ] `models.py:305` passa a deixar a flag EXPLICITA vencer o sentido interna
+- [x] `models.py:329-350` passa a deixar a flag EXPLICITA vencer o sentido interna
+      EVIDENCIA: bloco 1 da `prova_evalidador_interna.py`: `OK interna +
+      exige_documento=True exige documento`
       MOTIVO: pedido do usuario, 2026-09-09. REVERSAO declarada de uma decisao escrita
       no codigo com o motivo "exigir um travaria a baixa por algo que nunca vai
       existir". A premissa era que interna nao tem documento; tem, so que quem anexa e
       o analista, nao o cliente
-- [ ] `exige_documento = NULL` continua derivando de `identificadores`, e interna sem
+- [x] `exige_documento = NULL` continua derivando de `identificadores`, e interna sem
       flag continua sem documento
-      MOTIVO: nenhuma obrigacao interna de hoje pode mudar de comportamento sozinha
-      PROVA: caso na prova com interna sem flag
-- [ ] a tela da obrigacao libera o campo de documento quando o sentido e interna
-- [ ] o comentario de `models.py:302-306` reescrito com a regra nova e o porque
-      MOTIVO: comentario que contradiz o codigo e pior que comentario nenhum
-- [ ] `prova_evalidador_interna.py` com tres casos (interna sem flag, interna com flag,
-      nao interna)
-- [ ] `prova_sentido_obrigacao.py` e `prova_tipo_documento.py` seguem passando
+      EVIDENCIA: bloco 2 da prova, com o caso que protege quem ja usa o sistema:
+      `OK interna + NULL, COM identificadores, TAMBEM nao exige`. Sem esse caso, a
+      obrigacao interna que tem identificador cadastrado passaria a exigir documento
+      sozinha no deploy, e a baixa dela travaria sem ninguem ter pedido nada
+- [x] a tela da obrigacao libera o campo de documento quando o sentido e interna
+      EVIDENCIA: `Obrigacoes.jsx:898-908`, a condicao passou de
+      `sentido !== entregar && sentido !== interna` para `sentido !== entregar`. O
+      valor sugerido quando a flag e NULL continua respeitando o sentido: interna
+      nasce desmarcada mesmo com identificadores. O texto da opcao "tarefa interna"
+      passou a dizer que ela tambem pode baixar pelo e-validador
+- [x] o comentario de `models.py:302-306` reescrito com a regra nova e o porque
+      EVIDENCIA: `models.py:336-346`. O comentario antigo dizia que "interna nao
+      troca documento com ninguem, exigir um travaria a baixa por algo que nunca vai
+      existir"; o novo diz o que mudou, que a premissa estava incompleta, e que quem
+      anexa e o analista e nao o cliente
+- [x] `prova_evalidador_interna.py` com os tres casos, e mais alguns
+      EVIDENCIA: 10 casos em 4 blocos. Alem dos tres pedidos, cobre `exige=False`
+      explicito nos dois sentidos, `entregar` com flag, e tarefa avulsa sem
+      obrigacao
+- [x] `prova_sentido_obrigacao.py` e `prova_tipo_documento.py` seguem passando
+      RESSALVA HONESTA: `prova_sentido_obrigacao.py` NAO passou de primeira, e nao
+      podia passar: ela afirmava literalmente "interna nem com a flag ligada, o
+      sentido e mais forte", que e a regra que o usuario mandou reverter. O caso foi
+      reescrito para o oposto, com o motivo e o link para a prova nova. Isso e a
+      regra mudando, e nao a prova sendo afrouxada para o codigo passar.
+      ACHADO NO CAMINHO, corrigido: `validador.py:265` tirava TODA obrigacao interna
+      da busca por identificador. Com a flag ligada e sem essa correcao, a tarefa
+      passaria a exigir documento e o e-validador nunca acharia a obrigacao para dar
+      a baixa: o trabalho ficaria TRAVADO, pior do que era antes. Interna com a flag
+      explicita passou a entrar na busca; interna em NULL continua fora.
+      23 de 23 provas do backend rc=0
 
 ## Fase 15: desconsiderar a tarefa e virar excecao
 

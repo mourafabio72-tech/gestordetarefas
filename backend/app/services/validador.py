@@ -254,15 +254,23 @@ def analisar_modelo(db: Session, nome: str, conteudo: bytes) -> dict:
 def identificar_obrigacao(db: Session, texto: str):
     """Acha a obrigação cujas palavras-chave (identificadores) aparecem no texto.
 
-    Obrigação INTERNA fica fora: ela não troca documento com ninguém, então
-    nenhum arquivo que chega pode ser dela. Deixá-la concorrer só criaria
-    ambiguidade com quem de fato recebe documento.
+    Obrigação INTERNA fica fora POR PADRÃO: ela não troca documento com o
+    cliente, e deixá-la concorrer criaria ambiguidade com quem de fato recebe.
+
+    A exceção, aberta em 2026-09-09 junto com a reversão de `models.py`: interna
+    que LIGOU `exige_documento` entra. Ela tem documento, só que quem anexa é o
+    analista. Sem esta exceção a flag seria uma armadilha: a tarefa passaria a
+    exigir documento e o e-validador nunca acharia a obrigação para dar a baixa,
+    deixando o trabalho travado, que é pior do que era antes.
+
+    Interna com a flag em `NULL` continua de fora, como sempre esteve.
     """
     alvo = _norm(texto)
     candidatas = []
     for o in db.query(Obrigacao).filter(
             Obrigacao.ativa == True,
-            (Obrigacao.sentido.is_(None)) | (Obrigacao.sentido != "interna")).all():
+            (Obrigacao.sentido.is_(None)) | (Obrigacao.sentido != "interna")
+            | (Obrigacao.exige_documento.is_(True))).all():
         chaves = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
         if any(_casa_chave(k, alvo) for k in chaves):
             candidatas.append(o)

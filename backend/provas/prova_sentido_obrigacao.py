@@ -51,8 +51,14 @@ checa("entregar com identificadores também",
       tarefa_com("entregar", identificadores="EFD").exige_documento is True)
 checa("INTERNA nunca exige, mesmo com identificadores",
       tarefa_com("interna", identificadores="EFD").exige_documento is False)
-checa("interna nem com a flag ligada — o sentido é mais forte",
-      tarefa_com("interna", identificadores="EFD", exige_documento=True).exige_documento is False)
+# REVERTIDO em 2026-09-09, a pedido do usuario: a flag EXPLICITA passou a
+# vencer o sentido. A premissa de que interna nao tem documento estava
+# incompleta -- tem, so que quem anexa e o analista, e nao o cliente. Interna
+# em NULL continua sem exigir, que e o caso logo acima e o que garante que
+# nenhuma obrigacao interna de hoje muda sozinha. Detalhe em
+# `prova_evalidador_interna.py`.
+checa("interna COM a flag ligada passa a exigir documento",
+      tarefa_com("interna", identificadores="EFD", exige_documento=True).exige_documento is True)
 checa("sem obrigação nenhuma, não exige", Tarefa().exige_documento is False)
 checa("sentido nulo se comporta como receber (compatível com o que já existe)",
       tarefa_com(None, identificadores="EFD").exige_documento is True)
@@ -69,10 +75,20 @@ db.commit()
 
 achadas = [o.nome for o in identificar_obrigacao(db, "documento com IPI dentro")]
 checa("a que recebe é sugerida", "apuracao_ipi" in achadas, str(achadas))
-checa("a INTERNA fica de fora, mesmo com o mesmo identificador",
+checa("a INTERNA sem a flag fica de fora, mesmo com o mesmo identificador",
       "conciliar_banco" not in achadas)
 checa("a desativada continua fora", "desativada" not in achadas)
 checa("uma só sobra — sem ambiguidade", len(achadas) == 1, str(achadas))
+
+# A exceção de 2026-09-09: interna que LIGOU exige_documento entra na busca.
+# Sem isto, ligar a flag travaria a tarefa: ela passaria a exigir documento e o
+# e-validador nunca acharia a obrigação para dar a baixa.
+db.add(Obrigacao(nome="balancete_interno", sentido="interna", identificadores="BALANCETE",
+                 exige_documento=True, ativa=True))
+db.commit()
+com_flag = [o.nome for o in identificar_obrigacao(db, "documento BALANCETE fechado")]
+checa("interna COM a flag ligada passa a ser sugerida",
+      "balancete_interno" in com_flag, str(com_flag))
 
 legada = [o.nome for o in identificar_obrigacao(db, "documento LEGADA")]
 checa("obrigação antiga, com sentido NULO, continua sendo sugerida",

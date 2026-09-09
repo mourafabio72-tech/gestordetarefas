@@ -333,12 +333,20 @@ class Tarefa(Base):
         o = self.obrigacao
         if o is None:
             return False
-        # Obrigação interna não troca documento com ninguém: exigir um
-        # travaria a baixa por algo que nunca vai existir. Vale mesmo com a
-        # flag ligada — o sentido é a informação mais forte.
-        if (o.sentido or "receber") == "interna":
-            return False
+        # A flag EXPLÍCITA vence o sentido, inclusive em obrigação interna.
+        #
+        # Isto era o contrário até 2026-09-09, e o motivo escrito aqui era que
+        # "interna não troca documento com ninguém, exigir um travaria a baixa
+        # por algo que nunca vai existir". A premissa estava incompleta: interna
+        # tem documento sim, só que quem anexa é o próprio analista, e não o
+        # cliente. Reversão a pedido do usuário.
+        #
+        # `NULL` continua derivando de `identificadores`, e interna sem flag
+        # continua sem documento -- é o que garante que nenhuma obrigação
+        # interna de hoje muda de comportamento sozinha.
         if o.exige_documento is None:
+            if (o.sentido or "receber") == "interna":
+                return False
             return bool((o.identificadores or "").strip())
         return bool(o.exige_documento)
 

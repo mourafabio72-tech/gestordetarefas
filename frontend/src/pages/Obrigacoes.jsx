@@ -876,17 +876,19 @@ export default function Obrigacoes() {
                         </span>
                       </span>
                     </label>
-                    {/* Nem toda obrigação troca documento. Sem esta opção, a
-                        tarefa interna herdava "receber" e podia acabar exigindo
-                        um comprovante que nunca vai existir. */}
+                    {/* Nem toda obrigação troca documento com alguém de fora.
+                        Interna não recebe do cliente nem entrega a ele, mas
+                        PODE ter documento: quem anexa é o próprio analista.
+                        Por isso ela também mostra o "exige documento" abaixo. */}
                     <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
                       <input type="radio" name="sentido" className="mt-0.5"
                         checked={form.sentido === 'interna'}
                         onChange={() => set('sentido', 'interna')} />
                       <span>
-                        <strong>Nenhum</strong> — tarefa interna
+                        <strong>Nenhum</strong>, tarefa interna
                         <span className="block text-xs text-gray-500">
-                          Conciliar banco, lançar notas, fechar balancete. Baixa na mão.
+                          Conciliar banco, lançar notas, fechar balancete. Baixa na mão,
+                          ou pelo e-validador se você marcar "exige documento".
                         </span>
                       </span>
                     </label>
@@ -895,12 +897,16 @@ export default function Obrigacoes() {
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
                 </label>
-                {form.sentido !== 'entregar' && form.sentido !== 'interna' && (
+                {/* Interna PASSA a mostrar este campo (2026-09-09): ela tem
+                    documento sim, só que quem anexa é o analista, não o cliente.
+                    Quem não marcar continua baixando na mão, como sempre. */}
+                {form.sentido !== 'entregar' && (
                   <label className="flex items-center gap-2 text-sm text-gray-700"
                     title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
-                    <input type="checkbox"
-                      checked={form.exige_documento ?? !!(form.identificadores || '').trim()}
-                      onChange={(e) => set('exige_documento', e.target.checked)} className="h-4 w-4" /> Exige documento (baixa só pelo e-validador)
+                    <input type="checkbox" className="check-app"
+                      checked={form.exige_documento ?? (form.sentido !== 'interna'
+                        && !!(form.identificadores || '').trim())}
+                      onChange={(e) => set('exige_documento', e.target.checked)} /> Exige documento (baixa só pelo e-validador)
                   </label>
                 )}
                 <label className="flex items-center gap-2 text-sm text-gray-700">
