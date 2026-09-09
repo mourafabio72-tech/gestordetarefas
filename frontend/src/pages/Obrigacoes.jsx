@@ -4,6 +4,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
+import { estadoDoAlvo, reduzirAlvo, aplicaTodas as calcAplicaTodas, aviso as avisoAlvo } from './alvoObrigacao';
 
 const AJUDA_IDENTIFICADORES =
   'Palavra ou expressão ÚNICA que só aparece neste tipo de comprovante (ex.: "EFD-Contribuições", "Sped Fiscal", "DAS-SIMPLES", ou o código de receita). ' +
@@ -78,6 +79,17 @@ export default function Obrigacoes() {
   // caminho de volta: sem ele, um clique errado prenderia a empresa fora da
   // obrigação para sempre.
   const [excecoes, setExcecoes] = useState([]);
+  // O alcance da obrigação (check, perfil e empresas vinculadas) é uma
+  // máquina em `alvoObrigacao.js`. O `restringe` e o `anterior` são estado
+  // de TELA e não vão para a API: um diz se a pessoa desmarcou o check sem
+  // ter escolhido perfil ainda, o outro é para onde voltar quando a última
+  // empresa vinculada for desmarcada.
+  const [alvo, setAlvo] = useState(() => estadoDoAlvo({}));
+  const noAlvo = (evento) => {
+    const proximo = reduzirAlvo({ ...alvo, form }, evento);
+    setForm(proximo.form);
+    setAlvo({ restringe: proximo.restringe, anterior: proximo.anterior, form: proximo.form });
+  };
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
@@ -181,7 +193,7 @@ export default function Obrigacoes() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setDetalhes([]); setExcecoes([]); setShowModal(true); };
+  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setAlvo(estadoDoAlvo(emptyForm)); setModelo(null); setDetalhes([]); setExcecoes([]); setShowModal(true); };
   const abrirEdicao = (o) => {
     setEditing(o);
     setForm({
@@ -192,6 +204,7 @@ export default function Obrigacoes() {
       aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
       empresa_ids: o.empresa_ids || [],
     });
+    setAlvo(estadoDoAlvo(o));
     setModelo(null);
     setDetalhes([]);
     obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
@@ -210,6 +223,7 @@ export default function Obrigacoes() {
       aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
       empresa_ids: o.empresa_ids || [],
     });
+    setAlvo(estadoDoAlvo(o));
     setModelo(null);
     setDetalhes([]);
     obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
@@ -710,21 +724,25 @@ export default function Obrigacoes() {
                   {secoes.publico ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Dados empresariais
                 </button>
                 {secoes.publico && (() => {
-                  const aplicaTodas = !form.aplica_regimes && !form.aplica_segmentos;
+                  const aplicaTodas = calcAplicaTodas({ ...alvo, form });
                   const soVinculadas = form.alvo_modo === 'vinculadas';
                   return (
                 <div className="space-y-3">
+                  {/* O aviso conta o que ESTÁ valendo, e não o que a pessoa
+                      escolheu num campo. Antes, vincular empresas deixava o
+                      check "aplicar a todas" marcado, dizendo o contrário do
+                      que a tela fazia. */}
                   {soVinculadas && (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
-                      Esta obrigação está em <strong>somente as empresas vinculadas</strong>:
-                      regime e segmento são ignorados. Para mudar, veja
-                      <strong> Empresas vinculadas</strong>, abaixo.
+                      {avisoAlvo({ ...alvo, form })} O check de aplicar a todas saiu
+                      sozinho quando você marcou a primeira empresa, abaixo em
+                      <strong> Empresas vinculadas</strong>. Desmarcando todas, ele volta.
                     </p>
                   )}
                   {!soVinculadas && (
                   <label className="flex items-center gap-2 text-sm cursor-pointer bg-gray-50 rounded px-3 py-2">
-                    <input type="checkbox" checked={aplicaTodas} className="h-4 w-4"
-                      onChange={(e) => { if (e.target.checked) { set('aplica_regimes', ''); set('aplica_segmentos', ''); } else { set('aplica_regimes', REGIMES[0][0]); } }} />
+                    <input type="checkbox" checked={aplicaTodas} className="check-app"
+                      onChange={(e) => noAlvo({ tipo: 'aplicar-todas', valor: e.target.checked })} />
                     <span className="font-medium text-gray-700">Aplicar a todas as empresas</span>
                     <span className="text-gray-400 text-xs">(desmarque para restringir por regime/segmento)</span>
                   </label>
@@ -837,7 +855,7 @@ export default function Obrigacoes() {
                     ? empresas.filter((e) => `${e.razao_social} ${formatarRazaoSocial(e.razao_social)} ${e.grupo || ''}`.toLowerCase().includes(termo))
                     : empresas;
                   const idsFiltrados = filtradas.map((e) => e.id);
-                  const marcarTodas = () => set('empresa_ids', [...new Set([...form.empresa_ids, ...idsFiltrados])]);
+                  const marcarTodas = () => noAlvo({ tipo: 'vincular-varias', ids: idsFiltrados });
                   return (
                     <>
                   {/* O interruptor mora AQUI, junto da lista que ele governa.
@@ -847,13 +865,13 @@ export default function Obrigacoes() {
                   <div className="bg-gray-50 rounded px-3 py-2 space-y-1.5 mb-3">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="radio" name="alvo_modo_emp" className="h-4 w-4"
-                        checked={!soVinc} onChange={() => set('alvo_modo', 'regra')} />
+                        checked={!soVinc} onChange={() => noAlvo({ tipo: 'modo', valor: 'regra' })} />
                       <span className="font-medium text-gray-700">Somar ao perfil</span>
                       <span className="text-gray-400 text-xs">as marcadas entram ALÉM das que casam regime/segmento</span>
                     </label>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="radio" name="alvo_modo_emp" className="h-4 w-4"
-                        checked={soVinc} onChange={() => set('alvo_modo', 'vinculadas')} />
+                        checked={soVinc} onChange={() => noAlvo({ tipo: 'modo', valor: 'vinculadas' })} />
                       <span className="font-medium text-gray-700">Somente estas</span>
                       <span className="text-gray-400 text-xs">só as marcadas recebem; o perfil é ignorado</span>
                     </label>
@@ -870,7 +888,7 @@ export default function Obrigacoes() {
                           {termo ? 'Selecionar filtradas' : 'Selecionar todas'}
                         </button>
                         <span className="text-gray-300">·</span>
-                        <button type="button" onClick={() => set('empresa_ids', [])}
+                        <button type="button" onClick={() => noAlvo({ tipo: 'limpar-empresas' })}
                           className="text-xs text-gray-500 hover:underline">Limpar</button>
                       </div>
                       <input type="text" value={buscaEmp} onChange={(e) => setBuscaEmp(e.target.value)}
@@ -882,10 +900,10 @@ export default function Obrigacoes() {
                           <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
                             <input type="checkbox"
                               checked={form.empresa_ids.includes(e.id)}
-                              onChange={() => set('empresa_ids', form.empresa_ids.includes(e.id)
-                                ? form.empresa_ids.filter((x) => x !== e.id)
-                                : [...form.empresa_ids, e.id])}
-                              className="h-4 w-4" />
+                              onChange={() => noAlvo(form.empresa_ids.includes(e.id)
+                                ? { tipo: 'desvincular', id: e.id }
+                                : { tipo: 'vincular', id: e.id })}
+                              className="check-app" />
                             {formatarRazaoSocial(e.razao_social)}
                             {e.grupo && <span className="text-xs text-gray-400">· {e.grupo}</span>}
                           </label>

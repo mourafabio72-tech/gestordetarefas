@@ -381,18 +381,36 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 16: o check "Aplicar a todas as empresas"
 
-- [ ] vincular empresa desmarca o check e poe `alvo_modo='vinculadas'`
+- [x] vincular empresa desmarca o check e poe `alvo_modo='vinculadas'`
+      EVIDENCIA: caso 2 da `prova_alvo_check.js`. CONFERIDO NA TELA em 2026-09-09,
+      com o app rodando local: marcando a primeira empresa, o radio pulou sozinho
+      para "Somente estas" e o check sumiu, dando lugar ao aviso ambar
       MOTIVO: hoje o check e derivado de `!aplica_regimes && !aplica_segmentos`
       (`Obrigacoes.jsx:694`) e fica MARCADO mesmo com empresas vinculadas, dizendo o
       contrario do que a tela faz
-- [ ] desvincular a ultima empresa devolve o estado anterior
-      MOTIVO: obrigacao presa em `vinculadas` com lista vazia nao gera para ninguem
-      PROVA: caso na prova
-- [ ] desmarcar o check para de FORCAR um regime (`Obrigacoes.jsx:707`)
-- [ ] o aviso ambar que ja existe passa a explicar o que aconteceu
-- [ ] a logica sai do JSX para `pages/alvoObrigacao.js`, com
+- [x] desvincular a ultima empresa devolve o estado anterior
+      EVIDENCIA: casos 4, 5, 6 e 12 da prova, incluindo o que garante que o PERFIL
+      volta como estava, e nao so o modo. CONFERIDO NA TELA: desmarcando a unica
+      empresa, o check "Aplicar a todas as empresas" voltou marcado e o radio
+      voltou para "Somar ao perfil"
+- [x] desmarcar o check para de FORCAR um regime (`Obrigacoes.jsx:707`)
+      EVIDENCIA: caso 8 da prova, que exige `aplica_regimes` VAZIO depois de
+      desmarcar, e o check desmarcado mesmo assim. Antes ele gravava o primeiro
+      regime da lista, e a obrigacao passava a valer para um perfil que ninguem
+      pediu. O caso 9 cobre o que a tela passou a dizer nesse estado
+- [x] o aviso ambar que ja existe passa a explicar o que aconteceu
+      EVIDENCIA: o texto sai de `aviso()`, e diz quantas empresas recebem, que o
+      check saiu sozinho ao marcar a primeira, e que desmarcando todas ele volta.
+      Cobre tambem o caso silencioso: "somente estas" com lista vazia avisa que a
+      obrigacao nao gera para ninguem (caso 14)
+- [x] a logica sai do JSX para `pages/alvoObrigacao.js`, com
       `frontend/provas/prova_alvo_check.js` em Node puro
-- [ ] `prova_alvo_vinculadas.py` segue passando
+      EVIDENCIA: 15 casos, todos passando. O caso 11 e o que trava o buraco
+      original: compara o que a TELA mostra com o que iria para a API, e exige que
+      concordem
+- [x] `prova_alvo_vinculadas.py` segue passando
+      EVIDENCIA: rc=0. 24 provas do backend e 17 do frontend, todas passando, e
+      `npm run build` sem erro
 
 ## Fase 17: entrega
 

@@ -189,7 +189,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 16: o check "Aplicar a todas as empresas"
 
-- status: pending
+- status: **done** (2026-09-09; 15 casos na prova, conferido na tela)
 - depende de: Fase 15
 - duracao estimada: 1h
 - pedido do usuario em 2026-09-09: "na obrigacao que pode ser aplicada para algumas
