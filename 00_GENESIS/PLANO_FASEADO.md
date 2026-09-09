@@ -1,6 +1,6 @@
 # Plano faseado: campos obrigatórios no logger central
 
-modo=<a definir na primeira execução>
+modo=autonomo (escolhido em 2026-09-09)
 plano aprovado em 2026-09-09, sem ajustes
 
 As fases 1 a 17 estão fechadas e arquivadas nos dois checkpoints desta pasta.
@@ -13,7 +13,7 @@ A numeração continua de lá.
 
 ## Fase 18: os cinco campos entram sozinhos no `log_event`
 
-- **Status:** pending
+- **Status:** done (2026-09-09)
 - **Duração estimada:** 1 sessão curta
 - **Notas que regem:** `Padrao_Logging_Estruturado`, `Mapa_de_Conceitos_de_Seguranca`
   (Família 6), `Escada_Preguica_de_Codigo`, `TDD_RED_GREEN_REFACTOR`, `Sem_Travessao`

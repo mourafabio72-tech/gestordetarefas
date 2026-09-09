@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .seguranca import aplicar_headers
+from .seguranca import abrir_contexto, aplicar_headers
 from .versao import BUILD
 from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos, painel
 from .services.scheduler import start_scheduler
@@ -59,6 +59,20 @@ async def _headers_de_seguranca(request: Request, call_next):
     """Cabeçalhos de segurança em toda resposta, inclusive nas de erro."""
     response = await call_next(request)
     return aplicar_headers(response, request.url.path)
+
+
+@app.middleware("http")
+async def _contexto_de_log(request: Request, call_next):
+    """Abre o contexto do request para o `log_event`, e devolve o id ao cliente.
+
+    O `X-Request-ID` na resposta não vem da nota da vault: é ampliação decidida
+    em 2026-09-09. Sem ele, reclamação de usuário não se liga a linha de log, e
+    a busca vira horário mais chute.
+    """
+    request_id = abrir_contexto(request)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")

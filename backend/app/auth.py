@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Usuario
+from .seguranca import registrar_usuario
 from . import permissoes
 import os
 
@@ -48,6 +49,9 @@ async def get_current_user(
     user = db.query(Usuario).filter(Usuario.email == email).first()
     if user is None:
         raise credentials_exception
+    # Único ponto do app onde o usuário do request existe, e por isso o único
+    # lugar de onde o `user_id` pode entrar no log sem cada rota passar o campo.
+    registrar_usuario(user.id)
     return user
 
 

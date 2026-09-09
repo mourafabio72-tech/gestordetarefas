@@ -10,8 +10,10 @@ tentou, de onde, e o que aconteceu.
 
 from __future__ import annotations  # produção é 3.12, a máquina local é 3.9
 
+import contextvars
 import json
 import sys
+import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -54,13 +56,63 @@ def ip_cliente(request) -> str:
     return (request.client.host if request.client else "")[:45]
 
 
+# Contexto do request, carregado por `contextvars` da biblioteca padrão. É o que
+# leva `request_id`, rota e usuário até o `log_event` sem passar o `request` como
+# parâmetro por todos os chamadores dele: uma guarda na função compartilhada é um
+# diff menor do que uma guarda em cada chamador. Fora de request (o scheduler,
+# uma migração) os três valem `None`, e a linha sai com os campos em `null` em
+# vez de sair sem eles.
+_request_id: contextvars.ContextVar = contextvars.ContextVar(
+    "request_id", default=None)
+_rota: contextvars.ContextVar = contextvars.ContextVar("rota", default=None)
+_usuario: contextvars.ContextVar = contextvars.ContextVar(
+    "usuario", default=None)
+
+
+def abrir_contexto(request) -> str:
+    """Abre o contexto de um request e devolve o `request_id` gerado.
+
+    Os 16 hexadecimais são os da nota de logging da vault. Não é identificador
+    de segurança, é chave de correlação: serve para juntar as linhas de um mesmo
+    pedido quando alguém reclama de um horário.
+    """
+    request_id = uuid.uuid4().hex[:16]
+    _request_id.set(request_id)
+    _rota.set((request.url.path, request.method, ip_cliente(request)))
+    _usuario.set(None)
+    return request_id
+
+
+def registrar_usuario(usuario_id) -> None:
+    """Grava no contexto quem é o usuário do request em curso.
+
+    Chamado de um lugar só, a dependência de autenticação, que é o único ponto
+    do app onde o usuário existe.
+    """
+    _usuario.set(usuario_id)
+
+
 def log_event(event: str, level: str = "INFO", **campos) -> None:
-    """Uma linha JSON por evento, no stdout que o EasyPanel captura."""
+    """Uma linha JSON por evento, no stdout que o EasyPanel captura.
+
+    Os oito campos obrigatórios da `Padrao_Logging_Estruturado` saem em toda
+    linha, na ordem da tabela dela. Os cinco que dependem do request entram por
+    `setdefault`: chamador que manda o campo continua mandando o dele.
+    """
+    path, method, ip = _rota.get() or (None, None, None)
+    campos.setdefault("user_id", _usuario.get())
+    campos.setdefault("ip", ip)
+    campos.setdefault("request_id", _request_id.get())
+    campos.setdefault("path", path)
+    campos.setdefault("method", method)
+
     linha = {
         "timestamp": datetime.now().astimezone().isoformat(),
         "level": level,
         "event": event,
     }
+    for campo in ("user_id", "ip", "request_id", "path", "method"):
+        linha[campo] = campos.pop(campo)
     linha.update(campos)
     print(json.dumps(linha, ensure_ascii=False), file=sys.stdout, flush=True)
 

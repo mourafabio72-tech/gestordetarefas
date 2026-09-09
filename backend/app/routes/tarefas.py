@@ -431,7 +431,7 @@ def excluir_documento(
     # Quem apagou, o quê e quando. Documento apagado sem rastro é o tipo de
     # coisa que só se descobre quando alguém pede a prova da entrega.
     log_event("DOCUMENTO_EXCLUIDO", level="WARN", email=current_user.email,
-              usuario_id=current_user.id, tarefa_id=tarefa.id,
+              tarefa_id=tarefa.id,
               arquivo=nome, tipo="entregue" if entregue else "recebido",
               arquivo_existia=removido, tarefa_reaberta=reaberta)
     return {"excluido": True, "arquivo": up.nome_de_exibicao(nome),
