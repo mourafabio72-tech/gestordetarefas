@@ -194,3 +194,61 @@ Formato de teste:       backend/provas/prova_erro_500.py, executavel por python.
       e o hash do bundle do Vite mudando, que é o que prova frontend novo no ar.
 
 - [ ] **21.7** Matriz com a linha da `Sem_Travessao` desta fase preenchida.
+
+## Fase 22: o boot para de escrever 45 erros falsos no log do banco
+
+Decisões desta fase, tiradas do log de produção de 2026-09-09:
+
+```
+NAO usar ADD COLUMN IF NOT EXISTS: SQLite das provas nao aceita, quebraria a suite
+Perguntar antes:                   inspect(engine).get_columns(), que ja esta instalado
+As tres ALTER COLUMN:              tratadas pelo mesmo inspector (nullable e tipo)
+Os indices:                        ficam como estao, ja usam IF NOT EXISTS
+Formato de teste:                  backend/provas/prova_migrate_silencioso.py
+```
+
+- [ ] **22.1 (RED, vem antes do código)** `backend/provas/prova_migrate_silencioso.py`
+      criada e FALHANDO com o código de hoje. Roda `migrate()` duas vezes contra um
+      SQLite temporário, capturando o stdout.
+      Itens obrigatórios: (a) na 1a rodada as colunas nascem; (b) na 2a rodada o
+      stdout não tem `já existe`; (c) em rodada nenhuma o stdout tem
+      `Erro na coluna`, o que hoje falha por causa das três `ALTER COLUMN`;
+      (d) o schema final tem as mesmas colunas que o código de hoje produz, que é
+      a prova de que a fase não perdeu migração pelo caminho.
+      PROVA: `python backend/provas/prova_migrate_silencioso.py` sai com código 1 hoje
+
+- [ ] **22.2** `migrate()` lê as colunas existentes com `inspect(engine)` e executa
+      só o que falta.
+      PROIBIDO: `ADD COLUMN IF NOT EXISTS`; SQL de `information_schema` escrito a
+      mão; uma consulta por migração quando uma por tabela resolve
+      PROVA: `grep -n "inspect" backend/app/init_db.py`, e o item (b)
+      (Escada_Preguica_de_Codigo degrau 5, dependência já instalada)
+
+- [ ] **22.3** As três `ALTER COLUMN` (`data_prazo_nullable`,
+      `setor_empresa_nullable`, `identificadores_maior`) só rodam quando o
+      inspector disser que ainda são necessárias.
+      PROVA: item (c), e o stdout limpo nas duas rodadas em SQLite
+
+- [ ] **22.4** O `except` que sobrar continua REPORTANDO erro de verdade, e não
+      vira silêncio.
+      PROIBIDO: `except Exception: pass` (anti-padrão nomeado na nota de logging)
+      PROVA: uma migração propositalmente inválida, dentro da prova, ainda imprime
+      a linha de erro
+
+- [ ] **22.5 (GREEN)** `python backend/provas/prova_migrate_silencioso.py` sai com
+      código 0, saída colada no LOG.
+
+- [ ] **22.6 (regressão)** As provas de `backend/provas/` continuam em exit 0. Vale
+      olhar o cabeçalho da saída: hoje toda prova começa cuspindo 45 linhas de
+      `Coluna ... já existe`, e depois desta fase não deve mais.
+
+- [ ] **22.7** Sem travessão nos arquivos do diff, e `grep -rn "escada:" backend/`
+      anotado no LOG.
+
+- [ ] **22.8** Publicado: carimbo de `/api/health` batendo com o HEAD.
+
+- [ ] **22.9** CONFERENCIA_VISUAL, porque log de banco não sai por curl: na aba
+      Logs do EasyPanel, depois do deploy, o serviço `db` não mostra nenhum
+      `already exists`. Registrar `conferido em <data>`.
+
+- [ ] **22.10** Matriz `CONFORMIDADE_VAULT.md` com as linhas desta fase preenchidas.

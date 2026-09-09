@@ -251,3 +251,18 @@ carregar o historico desta. Fase 20 e a proxima acao, e o primeiro item dela e o
 codigo. O modo segue `autonomo`, ja gravado no topo do PLANO_FASEADO: quem retomar
 nao repergunta. Pendente do usuario, e so dele: o item 19.4, conferencia visual da
 linha de log na aba Logs do EasyPanel."
+
+[2026-09-09T19:30:00] fase=0 acao=fase_22_aberta resultado=ok obs="Achado do
+USUARIO, e nao meu: ao conferir o item 19.4 ele trouxe o log do EasyPanel, e nele
+aparecem cerca de 45 `ERROR: column ... already exists` por boot, vindos do
+`migrate()`. Eu tinha conferido carimbo, cabecalho e rota, e nunca o log do banco.
+Medido antes de escrever a fase: `init_db.py:65` roda as 64 migracoes sempre, uma
+transacao por item, e usa o erro do banco como deteccao (`init_db.py:70-73`). A
+armadilha esta declarada no plano: `ADD COLUMN IF NOT EXISTS` quebraria a suite,
+porque as provas rodam em SQLite, que nao aceita essa forma. O caminho e o
+`inspect(engine)`, que ja vem instalado. Tres migracoes nao sao ADD COLUMN
+(`data_prazo_nullable`, `setor_empresa_nullable`, `identificadores_maior`) e
+precisam de tratamento proprio, senao a fase promete um zero que nao entrega: elas
+falham com erro de sintaxe em SQLite a cada rodada de prova hoje. Os indices ficam
+como estao, ja usam IF NOT EXISTS. PLANO ganhou a Fase 22, CHECKLIST 10 itens, e a
+matriz 3 linhas pendentes."

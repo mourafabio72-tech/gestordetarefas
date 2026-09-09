@@ -118,3 +118,11 @@ pendentes:
 | Escada_Preguica_de_Codigo | "2. Ja existe no codebase? -> reusa, nao reescreve" | escrever lista de cabeçalhos nova no handler quando `aplicar_headers` já existe | fase 20 | `grep -n "aplicar_headers" backend/app/main.py` mostra reuso | | pendente |
 | TDD_RED_GREEN_REFACTOR | "escreve-se o teste ANTES do codigo. RED -> GREEN -> REFACTOR" | prova escrita depois, que passa de primeira | fase 20 | `prova_erro_500.py` com exit 1 antes e 0 depois, as duas saídas coladas no LOG | | pendente |
 | Sem_Travessao | "Nunca usar o caractere travessão (em-dash, `—`) em lugar nenhum: Código, Comentários, Templates, Documentação" | medir só as strings de dado, que foi o erro da varredura de 2026-09-09 de manhã | fase 21 | `grep -rn "—" backend/app backend/provas frontend/src` volta vazio | | pendente |
+
+Em 2026-09-09, com a fase 22 aberta, entram tres linhas novas, todas pendentes:
+
+| Nota | Regra literal | Proibido | Onde aplica | Prova | Evidência | Status |
+|---|---|---|---|---|---|---|
+| Padrao_Logging_Estruturado | a tabela de anti-padrões traz "`except Exception: pass`: Erro acontece e ninguém sabe", e a nota abre dizendo que "Log é a única coisa que sobra quando dá problema" | 45 erros falsos por boot, que enterram o erro verdadeiro; ou o contrário, silenciar tudo para o log ficar limpo | `migrate()` de `init_db.py`, fase 22 | itens (b) e (c) da `prova_migrate_silencioso.py` (stdout limpo na 2a rodada) e item 22.4 (migração inválida ainda reporta) | | pendente |
+| Escada_Preguica_de_Codigo | "5. Dependencia ja instalada? -> usa" | escrever consulta a `information_schema` a mão quando o `inspect(engine)` do SQLAlchemy já vem no projeto | fase 22 | `grep -n "inspect" backend/app/init_db.py` | | pendente |
+| TDD_RED_GREEN_REFACTOR | "escreve-se o teste ANTES do codigo. RED -> GREEN -> REFACTOR" | prova escrita depois do conserto | fase 22 | `prova_migrate_silencioso.py` com exit 1 antes e 0 depois, as duas saídas coladas no LOG | | pendente |

@@ -125,6 +125,51 @@ volta vazio; a suíte inteira de `backend/provas` continua em exit 0; o
 `npm run build` do frontend continua compilando; e nenhum arquivo teve mudança
 além da pontuação, provado pelo `git diff` lido antes do commit.
 
+## Fase 22: o boot para de escrever 45 erros falsos no log do banco
+
+- **Status:** pending
+- **Aberta em:** 2026-09-09, a pedido do usuário, a partir do log de produção que
+  ele mesmo trouxe ao conferir o item 19.4.
+- **Duração estimada:** 1 sessão curta
+- **Notas que regem:** `Padrao_Logging_Estruturado` (log existe para investigar,
+  e a nota trata `except` que engole erro como anti-padrão),
+  `Escada_Preguica_de_Codigo` (degrau 2 e 5, usar o que já está instalado),
+  `TDD_RED_GREEN_REFACTOR`, `Fechar_Tarefa_Rodar_Verifica`, `Sem_Travessao`
+- **Dependências:** nenhuma
+- **Output esperado:** boot contra banco já migrado não gera linha de erro nenhuma,
+  nem no Postgres nem no stdout do app.
+
+O que foi medido, e não suposto: `init_db.py:65` roda as 64 migrações SEMPRE, uma
+transação por item, e usa o erro do banco como forma de descobrir que a coluna já
+existe (`init_db.py:70-73`). O Postgres registra cada tentativa como `ERROR:
+column ... already exists`, e o log de produção nasce com cerca de 45 erros falsos
+a cada deploy. Não quebra nada hoje. O preço é que erro de migração de verdade
+passa a morar no meio de 45 iguais, e ninguém olha.
+
+O desenho, com a armadilha declarada: **não é trocar por `ADD COLUMN IF NOT
+EXISTS`**. As provas locais rodam em SQLite, que não aceita essa forma, e a suíte
+inteira quebraria. O caminho que serve aos dois bancos é perguntar antes, com o
+`inspect(engine)` do SQLAlchemy, que já está instalado: lê as colunas existentes
+de cada tabela uma vez e executa só o que falta.
+
+**Três migrações não são `ADD COLUMN` e precisam de tratamento próprio, senão a
+fase promete um zero que não entrega:** `data_prazo_nullable` e
+`setor_empresa_nullable` (`ALTER COLUMN ... DROP NOT NULL`) e
+`identificadores_maior` (`ALTER COLUMN ... TYPE`). Elas hoje falham com erro de
+sintaxe em SQLite a cada rodada de prova, e no Postgres já foram aplicadas. O
+inspector também sabe responder por elas: `nullable` e o tipo da coluna vêm no
+mesmo `get_columns`. Os índices ficam como estão, porque já usam `IF NOT EXISTS`
+e por isso nunca aparecem no log.
+
+**Critério de aceite, verificável por quem não escreveu:**
+`python backend/provas/prova_migrate_silencioso.py` sai com código 0, e com código
+1 no código de hoje. Ela roda o `migrate()` DUAS vezes contra um SQLite temporário
+e captura o stdout: na segunda rodada não sai nenhuma linha com `já existe` nem
+com `Erro na coluna`, e na primeira as colunas são criadas de fato. A suíte inteira
+de `backend/provas` continua em exit 0. Publicado, com o carimbo de `/api/health`
+batendo com o HEAD. E, como o log do banco não sai por curl, uma conferência
+visual na aba Logs depois do deploy seguinte: zero `already exists`.
+
 ## Fora de escopo (cortado pela escada)
 
 - **Os eventos que faltam na tabela da nota** (`ACESSO_NEGADO_403`,
@@ -146,6 +191,9 @@ além da pontuação, provado pelo `git diff` lido antes do commit.
 ## Histórico deste plano
 
 - **2026-09-09, manhã:** plano aberto com as fases 18 e 19, aprovado sem ajustes.
+- **2026-09-09, noite:** fase 22 acrescentada a pedido do usuário, a partir do
+  log de produção que ele trouxe ao conferir o item 19.4. Achado dele, não meu:
+  eu tinha olhado o carimbo e os cabeçalhos, e nunca o log do banco.
 - **2026-09-09, tarde:** fases 20 e 21 acrescentadas a pedido do usuário, depois
   que a verificação adversarial da Fase 18 achou a resposta 500 saindo sem
   cabeçalho nenhum, e a varredura de travessões achou que a medição de manhã
