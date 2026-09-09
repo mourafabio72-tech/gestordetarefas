@@ -65,7 +65,7 @@ def login(dados: LoginRequest, request: Request, db: Session = Depends(get_db)):
     registrar_tentativa(db, email, ip, sucesso=True, origem="senha")
     # Entrar é o momento em que o usuário passa a existir neste request: quem
     # ainda não tem token não passou pela dependência de autenticação.
-    registrar_usuario(user.id)
+    registrar_usuario(user.id, request)
     log_event("LOGIN_OK", email=email, ip=ip)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -192,14 +192,14 @@ def entrar_por_sso(body: SSORequest, request: Request, db: Session = Depends(get
     if user.ativado is False:
         user.ativado = True
         db.commit()
-        registrar_usuario(user.id)
+        registrar_usuario(user.id, request)
         log_event("SSO_ATIVOU_CONTA", email=email, ip=ip)
 
     # 6. O MESMO token do login por senha, com a MESMA validade. Entrar pelo
     #    Hub não compra sessão mais longa.
     access_token = create_access_token(data={"sub": user.email})
     registrar_tentativa(db, email, ip, sucesso=True)
-    registrar_usuario(user.id)
+    registrar_usuario(user.id, request)
     log_event("SSO_OK", email=email, ip=ip)
     _limpar_bilhetes_antigos(db)
     return {"access_token": access_token, "token_type": "bearer"}

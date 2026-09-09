@@ -44,9 +44,12 @@ os.environ["ZOARIA_SSO_SECRET"] = ""
 _BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_BACKEND))
 
+from fastapi import Depends                                    # noqa: E402
 from fastapi.testclient import TestClient                      # noqa: E402
 
-from app.database import Base, engine                          # noqa: E402
+from app.auth import get_current_user, get_password_hash       # noqa: E402
+from app.database import Base, engine, SessionLocal            # noqa: E402
+from app.models import Usuario                                 # noqa: E402
 from app.seguranca import HEADERS_SEGURANCA, log_event         # noqa: E402
 from app.main import app                                       # noqa: E402
 
@@ -63,6 +66,9 @@ PROIBIDAS = ["senha", "password", "token", "authorization", "cookie", "csrf",
 # pedaco dela chegar ao corpo da resposta, a fase falhou.
 SEGREDO = "SELECT senha_hash FROM usuarios WHERE email='chefe@bps4.com.br'"
 
+SENHA = "senha-boa-123"
+EMAIL = "estourador@bps4.com.br"
+
 
 @app.get("/api/_prova_estoura")
 def _prova_estoura():
@@ -71,11 +77,29 @@ def _prova_estoura():
     raise ValueError(SEGREDO)
 
 
+@app.get("/api/_prova_estoura_logado")
+def _prova_estoura_logado(current_user: Usuario = Depends(get_current_user)):
+    """Quem derruba a rota aqui esta autenticado, e a linha tem de dizer quem e."""
+    raise ValueError(SEGREDO)
+
+
 # `raise_server_exceptions=False` porque o padrao do TestClient re-levanta a
 # excecao dentro do teste em vez de devolver a resposta que o cliente veria.
 cliente = TestClient(app, raise_server_exceptions=False)
 cliente_estrito = TestClient(app)
 
+def semear():
+    db = SessionLocal()
+    try:
+        if not db.query(Usuario).filter(Usuario.email == EMAIL).first():
+            db.add(Usuario(nome="Pessoa que Derruba", email=EMAIL, grupo="admin",
+                           senha_hash=get_password_hash(SENHA), ativo=True))
+            db.commit()
+    finally:
+        db.close()
+
+
+semear()
 falhou = []
 
 
@@ -248,6 +272,34 @@ checa(13, "o servidor de verdade subiu para a prova de campo", subiu)
 checa(14, "o traceback CONTINUA saindo no log do servidor depois do handler",
       "Traceback" in saida_servidor and "ValueError" in saida_servidor)
 
+# --------------- 15 e 16: o user_id da linha de erro, que o verificador de
+#     conformidade provou estar saindo `null` mesmo com gente autenticada
+#     derrubando a rota. A `Padrao_Logging_Estruturado` define o campo como "ID
+#     do usuario autenticado, ou null se anonimo", entao null com usuario logado
+#     e valor ERRADO, e nao campo ausente. Os itens 8 e 9 nao pegavam isso
+#     porque a rota que estoura acima nao passa por autenticacao nenhuma.
+
+token = cliente.post("/api/auth/login",
+                     json={"email": EMAIL, "senha": SENHA}).json()["access_token"]
+
+db = SessionLocal()
+try:
+    id_esperado = db.query(Usuario).filter(Usuario.email == EMAIL).first().id
+finally:
+    db.close()
+
+_, linhas_logado = capturar(lambda: cliente.get(
+    "/api/_prova_estoura_logado", headers={"Authorization": f"Bearer {token}"}))
+
+erro_logado = next((l for l in linhas_logado
+                    if l.get("event") == "ERRO_NAO_TRATADO"), {})
+
+checa(15, "com usuario autenticado, a linha do erro diz QUEM derrubou a rota",
+      erro_logado.get("user_id") == id_esperado)
+
+checa(16, "em request anonimo o user_id do erro e null, e nao o do ultimo que passou",
+      "user_id" in erro and erro.get("user_id") is None)
+
 for arquivo in Path(_tmp).glob("*"):
     arquivo.unlink()
 os.rmdir(_tmp)
@@ -255,4 +307,4 @@ os.rmdir(_tmp)
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 14 checagens verdes")
+print("\nPROVA OK: 16 checagens verdes")

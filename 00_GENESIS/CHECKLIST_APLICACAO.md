@@ -115,7 +115,7 @@ Traceback no servidor:  tem de CONTINUAR saindo no stdout. Se sumir, a fase muda
 Formato de teste:       backend/provas/prova_erro_500.py, executavel por python. Sem pytest
 ```
 
-- [ ] **20.1 (RED, vem antes do código)** `backend/provas/prova_erro_500.py` criada
+- [x] **20.1 (RED, vem antes do código)** `backend/provas/prova_erro_500.py` criada
       e FALHANDO com o código de hoje. Usa `TestClient(app, raise_server_exceptions=False)`,
       porque o padrão re-levanta a exceção no teste em vez de devolver a resposta.
       Itens obrigatórios: (a) status 500; (b) `X-Request-ID` presente na resposta de
@@ -126,51 +126,51 @@ Formato de teste:       backend/provas/prova_erro_500.py, executavel por python.
       PROVA: `python backend/provas/prova_erro_500.py` sai com código 1 hoje
       (TDD_RED_GREEN_REFACTOR)
 
-- [ ] **20.2** `abrir_contexto` grava o id também em `request.state.request_id`,
+- [x] **20.2** `abrir_contexto` grava o id também em `request.state.request_id`,
       sem parar de gravar na contextvar.
       PROIBIDO: trocar a contextvar pelo `state`; o `log_event` continua lendo do
       contexto, senão volta a depender de quem chama
       PROVA: `grep -n "state" backend/app/seguranca.py`, e a `prova_logging.py`
       continua em 17 verdes
 
-- [ ] **20.3** `@app.exception_handler(Exception)` em `main.py`, que emite
+- [x] **20.3** `@app.exception_handler(Exception)` em `main.py`, que emite
       `ERRO_NAO_TRATADO` em nível ERROR e devolve JSON genérico com 500.
       PROIBIDO: devolver `str(exc)` ao cliente (Revisao_Vulnerabilidades item 9,
       e a Família 6: "o cliente recebe pouca informação, o log do servidor recebe
       muita"); `except Exception: pass`
       PROVA: itens (a), (e) e (f) da prova
 
-- [ ] **20.4** Os cabeçalhos de segurança na resposta de erro saem do
+- [x] **20.4** Os cabeçalhos de segurança na resposta de erro saem do
       `aplicar_headers` que já existe.
       PROIBIDO: escrever lista de cabeçalhos nova
       PROVA: `grep -n "aplicar_headers" backend/app/main.py` mostra reuso, e o
       item (d) da prova
       (Escada_Preguica_de_Codigo degrau 2)
 
-- [ ] **20.5** O traceback CONTINUA saindo no stdout do servidor depois do
+- [x] **20.5** O traceback CONTINUA saindo no stdout do servidor depois do
       handler entrar. Se não continuar, parar e mudar o desenho.
       PROVA: item da prova que captura o stderr/stdout do servidor durante a
       exceção e acha a palavra `Traceback`
 
-- [ ] **20.6 (GREEN)** `python backend/provas/prova_erro_500.py` sai com código 0,
+- [x] **20.6 (GREEN)** `python backend/provas/prova_erro_500.py` sai com código 0,
       saída colada no LOG.
 
-- [ ] **20.7 (regressão)** As 25 provas de `backend/provas/` continuam em exit 0,
+- [x] **20.7 (regressão)** As 26 provas de `backend/provas/` continuam em exit 0,
       com a `prova_logging.py` e a `prova_seguranca_f7.py` citadas por nome no LOG.
 
-- [ ] **20.8** Sem travessão nos arquivos do diff, e inventário
+- [x] **20.8** Sem travessão nos arquivos do diff, e inventário
       `grep -rn "escada:" backend/` anotado no LOG.
 
-- [ ] **20.9** Publicado: commit, push, e o carimbo de
+- [x] **20.9** Publicado: commit, push, e o carimbo de
       `curl -s https://gestordetarefas.zoaria.com.br/api/health` batendo com
       `git log -1 --date=format:'%Y%m%d-%H%M'`.
 
-- [ ] **20.10** Matriz `CONFORMIDADE_VAULT.md` com as linhas desta fase
+- [x] **20.10** Matriz `CONFORMIDADE_VAULT.md` com as linhas desta fase
       preenchidas e sem pendência.
 
 ## Fase 21: travessão fora de comentário e docstring
 
-- [ ] **21.1** Inventário antes de tocar em nada: contagem por arquivo em
+- [x] **21.1** Inventário antes de tocar em nada: contagem por arquivo em
       `backend/app`, `backend/provas` e `frontend/src`, colada no LOG.
       PROVA: `grep -rc "—" <caminhos> | grep -v ":0"`
 

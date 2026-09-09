@@ -88,13 +88,22 @@ def abrir_contexto(request) -> str:
     return request_id
 
 
-def registrar_usuario(usuario_id) -> None:
-    """Grava no contexto quem é o usuário do request em curso.
+def registrar_usuario(usuario_id, request=None) -> None:
+    """Grava quem é o usuário do request em curso, no contexto e no `state`.
 
-    Chamado de um lugar só, a dependência de autenticação, que é o único ponto
-    do app onde o usuário existe.
+    Chamado da dependência de autenticação, que é o único ponto do app onde o
+    usuário existe, e das três rotas de entrada, onde ele passa a existir antes
+    de haver token.
+
+    O `state` entra pelo mesmo motivo do `request_id`: o tratador de erro global
+    roda em contexto ancestral ao da task do request, e lá a contextvar abaixo
+    já não existe. Sem isso a linha `ERRO_NAO_TRATADO` sai com `user_id` nulo
+    justamente quando alguém autenticado derruba a rota, que é a hora em que
+    saber quem era importa mais.
     """
     _usuario.set(usuario_id)
+    if request is not None:
+        request.state.user_id = usuario_id
 
 
 def log_event(event: str, level: str = "INFO", **campos) -> None:

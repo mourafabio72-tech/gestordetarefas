@@ -96,6 +96,7 @@ async def _erro_nao_tratado(request: Request, exc: Exception):
     log_event(
         "ERRO_NAO_TRATADO",
         level="ERROR",
+        user_id=getattr(request.state, "user_id", None),
         request_id=request_id,
         path=request.url.path,
         method=request.method,

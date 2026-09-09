@@ -266,3 +266,111 @@ precisam de tratamento proprio, senao a fase promete um zero que nao entrega: el
 falham com erro de sintaxe em SQLite a cada rodada de prova hoje. Os indices ficam
 como estao, ja usam IF NOT EXISTS. PLANO ganhou a Fase 22, CHECKLIST 10 itens, e a
 matriz 3 linhas pendentes."
+
+## Fase 20, executada em 2026-09-09 a noite
+
+[2026-09-09T20:40:00] fase=20 acao=prova_erro_500_RED resultado=ok obs="20.1 feito.
+`backend/provas/prova_erro_500.py`, 14 checagens, escrita ANTES do codigo e
+reprovando o codigo de hoje: `PROVA FALHOU nos itens: [2, 3, 4, 6, 7, 8, 9]`,
+exit 1. Os que ja passavam passam por motivo legitimo, e tres deles sao itens de
+NAO-REGRESSAO, medidos ANTES justamente para acusar se a fase quebrar o que
+funciona: o 1 (Starlette ja devolve 500), o 5 (o corpo de hoje e o texto
+generico `Internal Server Error`, entao ja nao vaza), o 11 (caminho feliz), e o
+12, 13 e 14, que sao o traceback do servidor de verdade. O 14 sobe um uvicorn em
+subprocess numa porta livre, dispara a rota que estoura e le o stderr do
+processo: e a unica forma de medir o log DO SERVIDOR, porque com TestClient nao
+existe servidor nenhum para logar. O `raise_server_exceptions=False` no
+TestClient e o que faz a prova ver a resposta em vez de receber a excecao."
+
+[2026-09-09T20:40:30] fase=20 acao=state_e_handler resultado=ok obs="20.2 a 20.4.
+`seguranca.py:85` grava o mesmo id em `request.state.request_id`, SEM tirar a
+contextvar: o `log_event` continua lendo do contexto, e por isso nenhum dos 14
+chamadores mudou. `main.py:80-113` ganhou o `@app.exception_handler(Exception)`,
+que emite `ERRO_NAO_TRATADO` em nivel ERROR e devolve
+`{'detail': 'Erro interno. Tente novamente.'}` com 500. Os cabecalhos saem do
+`aplicar_headers` que ja existia (`main.py:111`), e nao de lista nova: degrau 2
+da escada. O motivo de ler do `state` e nao da contextvar esta medido, e nao
+suposto: o `ServerErrorMiddleware` roda em contexto ANCESTRAL ao da task do
+request, entao a contextvar setada la dentro nao chega aqui. O `state` vive no
+`scope`, que e o mesmo dicionario nas duas pontas.
+LIMITE DECLARADO, e nao escondido: o `user_id` da linha `ERRO_NAO_TRATADO` sai
+`null`, pelo mesmo motivo de contexto. Fazer diferente exigiria `get_current_user`
+receber o `request` para gravar no `state`, e isso e escopo novo, nao item desta
+fase. Os oito campos saem na linha, que e o que o criterio pede; o que falta e o
+VALOR de um deles, e fica registrado aqui."
+
+[2026-09-09T20:40:45] fase=20 acao=prova_erro_500_GREEN resultado=ok obs="20.6.
+`PROVA OK: 14 checagens verdes`, exit 0. As duas linhas reais capturadas no
+stdout, do MESMO request, com o mesmo id que voltou no cabecalho:
+{'level': 'INFO', 'event': 'PROVA_ANTES_DE_ESTOURAR', ..., 'request_id':
+'edd6329ded6f47bd', 'path': '/api/_prova_estoura', 'method': 'GET'} e
+{'level': 'ERROR', 'event': 'ERRO_NAO_TRATADO', 'user_id': null, 'ip':
+'testclient', 'request_id': 'edd6329ded6f47bd', 'path': '/api/_prova_estoura',
+'method': 'GET', 'excecao': 'ValueError'}. O nome da excecao vai para o LOG e
+NAO para o cliente, que e a Familia 6 na pratica: pouco ao cliente, muito ao
+servidor."
+
+[2026-09-09T20:41:00] fase=20 acao=ponto_que_a_fase_tinha_de_medir resultado=ok obs="20.5.
+O PLANO mandava medir, e nao presumir, se registrar handler de `Exception` faz o
+traceback sumir do stdout. NAO faz, e o motivo esta lido no fonte instalado, nao
+suposto: `venv/lib/python3.9/site-packages/starlette/middleware/errors.py:184`
+executa `raise exc` DEPOIS de chamar o handler, sempre. Duas provas disso: o item
+12, em que o TestClient estrito recebe o `ValueError` original, e o item 14, com
+uvicorn de verdade, onde `Traceback` e `ValueError` aparecem no stderr do
+processo. O desenho da fase fica de pe."
+
+[2026-09-09T20:42:00] fase=20 acao=regressao_suite_completa resultado=ok obs="20.7.
+As 26 provas de `backend/provas/` rodaram e as 26 sairam com exit 0. As quatro
+que imprimem contagem: prova_erro_500 14 verdes, prova_logging 17 verdes,
+prova_seguranca_f7 19 verdes, prova_sso_f3 25 verdes. O handler global de
+excecao nao mudou o comportamento de nenhuma rota: `HTTPException` continua
+sendo tratada pelo `ExceptionMiddleware`, que fica por dentro, e so o que passa
+por ele sem tratamento chega aqui."
+
+[2026-09-09T20:42:30] fase=20 acao=travessao_e_escada resultado=ok obs="20.8.
+`grep -n` de travessao nos tres arquivos do diff (`main.py`, `seguranca.py`,
+`prova_erro_500.py`) volta vazio. Inventario de simplificacoes:
+`grep -rn 'escada:' backend/` fora do venv devolve ZERO marcadores, e esta fase
+nao criou nenhum."
+
+[2026-09-09T20:44:00] fase=20 acao=publicado resultado=ok obs="20.9. Commit
+`78dc6a3`, push em `origin main`, e o webhook publicou sozinho. Producao devolve
+`{\"status\":\"healthy\",\"build\":\"20260909-2042\"}` e o HEAD e `78dc6a3
+20260909-2042`: os dois iguais, entao a imagem no ar e a desta fase. O
+`Dockerfile` do backend usa `COPY . .` (linha 17), conferido ANTES do push,
+entao o arquivo novo `provas/prova_erro_500.py` entra na imagem. O que NAO da
+para provar de fora, e fica dito: nao existe rota que estoure em producao, e nao
+vou criar uma para tirar prova. O que o curl mostra e o caminho feliz, com
+`x-request-id` e `x-content-type-options: nosniff`."
+
+[2026-09-09T20:45:00] fase=20 acao=matriz resultado=ok obs="20.10. As cinco
+linhas que a fase 20 abriu na `CONFORMIDADE_VAULT.md` estao preenchidas com a
+saida real. Restam 4 linhas pendentes na matriz inteira, e todas sao de fase
+futura: 1 da fase 21 (Sem_Travessao) e 3 da fase 22. RESSALVA gravada dentro da
+propria linha do `Padrao_Logging_Estruturado`, para nao ficar so no LOG: os oito
+campos saem na linha de erro, mas o `user_id` sai `null`."
+
+## Fase 21, inventario feito antes de tocar em nada
+
+[2026-09-09T20:46:00] fase=21 acao=inventario resultado=ok obs="21.1.
+`grep -ro` em `backend/app`, `backend/provas` e `frontend/src` devolve 224
+travessoes em 63 arquivos. E MAIS QUE O DOBRO do que o PLANO estimou (`cerca de
+90`), e a diferenca tem explicacao: a estimativa contava so comentario e
+docstring do BACKEND, e dizia com todas as letras que o frontend nao tinha sido
+medido desse jeito. Agora esta medido. Os dez maiores: models.py 18,
+services/whatsapp.py 12, services/validador.py 11, pages/painelDados.js 10,
+routes/tarefas.py 10, pages/identificador.js 9, prova_entrega_cliente.py 8,
+prova_tipo_documento.py 7, prova_painel.py 7, prova_sentido_obrigacao.py 6. O
+numero nao muda o escopo da fase, muda o tamanho dela."
+
+[2026-09-09T20:50:00] fase=20 acao=verificador_evidencia resultado=LIMPO obs="O
+verificador de evidencia rodou as provas por conta propria, inclusive o RED
+contra `HEAD~1` em worktree separada, e sustentou os oito itens. Confirmou por
+leitura do fonte instalado o `raise exc` incondicional em
+`starlette/middleware/errors.py:184`, e reproduziu o traceback no uvicorn de
+verdade. Um achado de redacao, corrigido: o item 20.7 dizia `As 25 provas`, e
+sao 26 desde que esta fase acrescentou a `prova_erro_500.py`. A segunda
+observacao dele nasceu de leitura no meio do caminho: 20.9 e 20.10 ja estavam
+gravados no LOG e ainda nao no CHECKLIST quando ele leu, porque o `startswith`
+que usei para marcar exigia um espaco que aquelas duas linhas nao tinham. Os dois
+itens ja estao marcados."

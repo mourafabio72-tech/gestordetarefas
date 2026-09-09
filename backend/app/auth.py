@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .database import get_db
@@ -30,6 +30,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> Usuario:
@@ -51,7 +52,7 @@ async def get_current_user(
         raise credentials_exception
     # Único ponto do app onde o usuário do request existe, e por isso o único
     # lugar de onde o `user_id` pode entrar no log sem cada rota passar o campo.
-    registrar_usuario(user.id)
+    registrar_usuario(user.id, request)
     return user
 
 
