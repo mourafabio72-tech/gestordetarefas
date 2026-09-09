@@ -209,14 +209,29 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 12: importador
 
-- [ ] celula aceita varios nomes separados por ponto e virgula
-      PROVA: caso na prova com "Ana; Bruno"
-- [ ] nome desconhecido no meio vira aviso e nao derruba a linha
-      PROVA: caso na prova com um nome valido e um invalido na mesma celula
-- [ ] celula vazia continua desmarcando o setor, como e hoje
-      PROVA: caso na prova
-- [ ] o modelo XLSX baixavel traz a instrucao do ponto e virgula
-      PROVA: CONFERENCIA_VISUAL do arquivo baixado
+- [x] celula aceita varios nomes separados por ponto e virgula
+      EVIDENCIA: `importador_resp_setor.py:97-99`, e o bloco 1 da
+      `prova_importar_resp_multiplos.py`: `OK os dois entraram, na ordem da celula
+      ([Ana Paula, Bruno Sa])` e `OK a primeira da celula e a principal`. A ordem da
+      celula e a ordem da lista, entao a planilha decide o principal igual a tela
+- [x] nome desconhecido no meio vira aviso e nao derruba a linha
+      EVIDENCIA: bloco 2 da prova. Com "Ana Paula; Fulano Que Nao Existe; Carla" a
+      lista fica `[Ana Paula, Carla]` e sai UM aviso nomeando quem ficou de fora:
+      `Fiscal: nao encontrei 'Fulano Que Nao Existe', os demais foram gravados.`
+      `erros: 0`, porque aviso nao e erro. O bloco 3 cobre o caso de nenhum nome
+      casar, que marca o setor sem responsavel
+- [x] celula vazia continua desmarcando o setor, como e hoje
+      EVIDENCIA: bloco 4 da prova, e com ele um caso que o item nao pedia e que
+      valia conferir: desmarcar NAO deixa linha orfa na tabela do meio. O bloco 5
+      prova que reimportar SUBSTITUI a lista em vez de empilhar, e o 6 que o mesmo
+      nome duas vezes na celula colapsa
+- [x] o modelo XLSX baixavel traz a instrucao do ponto e virgula
+      EVIDENCIA: bloco 7 da prova, que ABRE o arquivo gerado e le o conteudo, o que
+      e mais forte do que a conferencia visual prevista: a linha de exemplo passou a
+      ser `Ana Paula; Bruno Sa`, e o rodape explica a regra por extenso, inclusive
+      que a primeira e a principal. Sem isso, quem abre o modelo nao tem como
+      adivinhar que cabe mais de um nome na celula, e o recurso existiria sem
+      ninguem usar
 
 ## Fase 13: o responsavel sai da obrigacao
 

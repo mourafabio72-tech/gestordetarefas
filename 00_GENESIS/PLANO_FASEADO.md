@@ -97,7 +97,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 12: importador de planilha
 
-- status: pending
+- status: **done** (2026-09-09; 21 provas rc=0, e a prova reprova sem o separador)
 - depende de: Fase 9
 - duracao estimada: 1h
 - o que entra:

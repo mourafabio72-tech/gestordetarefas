@@ -1,9 +1,11 @@
 """Importa a matriz Responsável × Setor das empresas via Excel.
 
 Layout: coluna CNPJ + uma coluna por SETOR (o cabeçalho é o nome do setor).
-A célula traz o NOME do responsável daquele setor naquela empresa.
-  - célula preenchida -> a empresa ATENDE o setor, com aquele responsável
-    (se o nome não casar, atende sem responsável + aviso);
+A célula traz o NOME do responsável daquele setor naquela empresa, e aceita
+VÁRIOS separados por ponto e vírgula ("Ana; Bruno"). A ordem da célula é a
+ordem da lista, e o primeiro é o principal.
+  - célula preenchida -> a empresa ATENDE o setor, com aqueles responsáveis
+    (nome que não casa vira aviso na linha e os outros entram assim mesmo);
   - célula vazia       -> DESMARCA o setor (não atende, não gera tarefa).
 Só mexe nos setores que vierem como coluna na planilha.
 """
@@ -41,10 +43,18 @@ def gerar_modelo(db) -> bytes:
     ws = wb.active
     ws.title = "Responsáveis"
     ws.append(["CNPJ"] + [s.nome for s in setores])
-    ws.append(["12.345.678/0001-90"] + (["Nome do responsável"] if setores else []))
+    # A linha de exemplo ensina o separador. Sem ela, quem abre o modelo não tem
+    # como adivinhar que cabe mais de um nome na mesma célula, e o recurso
+    # existe sem ninguém usar.
+    ws.append(["12.345.678/0001-90"] + (["Ana Paula; Bruno Sá"] if setores else []))
+    ws.append([])
+    ws.append(["Uma pessoa por célula, ou várias separadas por ponto e vírgula."])
+    ws.append(["A primeira da lista é a responsável principal, e é do gestor dela"
+               " que sai o supervisor da tarefa."])
+    ws.append(["Célula vazia quer dizer que a empresa não atende aquele setor."])
     ws.column_dimensions["A"].width = 22
     for i, _ in enumerate(setores):
-        ws.column_dimensions[chr(ord("B") + i)].width = 22
+        ws.column_dimensions[chr(ord("B") + i)].width = 26
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -94,17 +104,31 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                          .filter(EmpresaSetorResponsavel.empresa_id == emp.id,
                                  EmpresaSetorResponsavel.setor_id == setor.id).first())
             if valor:
-                resp = usuario_por_nome.get(_norm(valor))
-                if not resp:
+                # Ponto e vírgula separa as pessoas, e a ordem da célula é a
+                # ordem da lista: a primeira é a principal.
+                nomes = [n.strip() for n in valor.split(";") if n.strip()]
+                achados, faltando = [], []
+                for nome in nomes:
+                    u = usuario_por_nome.get(_norm(nome))
+                    if u is None:
+                        faltando.append(nome)
+                    elif u.id not in achados:
+                        achados.append(u.id)
+                if faltando:
+                    # Um nome errado no meio não derruba a linha: os que casaram
+                    # entram, e o aviso diz exatamente quais ficaram de fora.
+                    resto = (f"os demais foram gravados"
+                             if achados else "setor marcado sem responsável")
                     detalhes.append({"linha": emp.razao_social, "status": "aviso",
-                                     "detalhe": f"{setor.nome}: responsável '{valor}' não encontrado, setor marcado sem responsável."})
+                                     "detalhe": f"{setor.nome}: não encontrei "
+                                                f"{', '.join(repr(n) for n in faltando)}, {resto}."})
                 if not existente:
                     existente = EmpresaSetorResponsavel(empresa_id=emp.id, setor_id=setor.id)
                     db.add(existente)
                 # Passa pelo mesmo ponto que a tela usa: o principal e a lista
                 # se escrevem juntos, senão a planilha gravaria um responsável
                 # que a tela não mostraria.
-                resp_setor.gravar(db, existente, [resp.id] if resp else [])
+                resp_setor.gravar(db, existente, achados)
                 marcados += 1
             else:
                 if existente:
