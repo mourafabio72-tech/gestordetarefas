@@ -13,7 +13,7 @@ import { montarPayloadObrigacao } from '../src/pages/payloadObrigacao.js';
 
 let n = 0;
 const ok = (t) => { n += 1; console.log(`ok ${n}. ${t}`); };
-const base = { nome: 'X', setor_id: '', responsavel_id: '', supervisor_id: '',
+const base = { nome: 'X', setor_id: '', supervisor_id: '',
                tempo_previsto_min: '', lembrar_dias_antes: '5' };
 
 // 1. PROVA POSITIVA
@@ -54,7 +54,10 @@ const base = { nome: 'X', setor_id: '', responsavel_id: '', supervisor_id: '',
   assert.strictEqual(p.setor_id, 3);
   assert.strictEqual(p.tempo_previsto_min, 45);
   assert.strictEqual(p.lembrar_dias_antes, 7);
-  assert.strictEqual(p.responsavel_id, null, 'select vazio vira null, não NaN');
+  // A obrigação deixou de ter responsável em 2026-09-09. O campo não pode ir
+  // no corpo NEM como null: o servidor grava o que vier, e um null apagaria
+  // o valor legado de toda obrigação que alguém editasse.
+  assert.ok(!('responsavel_id' in p), 'o responsável da obrigação não vai mais no corpo');
   ok('os demais campos numéricos continuam certos');
 }
 

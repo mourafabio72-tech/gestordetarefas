@@ -277,9 +277,14 @@ def _empresa_atende(db: Session, empresa_id: int, setor_id) -> bool:
 
 def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
                           competencia: str, prazo: date, vencimento: date = None,
-                          fechamento: date = None) -> bool:
+                          fechamento: date = None, sem_dono: list = None) -> bool:
     """Cria a tarefa (obrigação × empresa × competência) se ainda não existir.
-    Retorna True se criou, False se já existia (dedupe)."""
+    Retorna True se criou, False se já existia (dedupe).
+
+    `sem_dono` é a lista onde ficam as tarefas que nasceram sem responsável.
+    Ela existe porque tirar o fallback da obrigação ESCONDERIA o buraco de
+    cadastro se ninguém contasse: antes, empresa sem responsável no setor
+    herdava o da obrigação e a falta não aparecia em lugar nenhum."""
     # Empresa não atende (não contratou) o setor desta obrigação → não gera.
     if not _empresa_atende(db, emp.id, o.setor_id):
         return False
@@ -290,12 +295,12 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
               .first())
     if existe:
         return False
-    # Responsáveis = analistas da empresa no setor da obrigação (matriz);
-    # fallback no responsável padrão da obrigação. UMA tarefa com todos eles,
-    # nunca uma tarefa por pessoa. Supervisor = gestor do PRIMEIRO da lista.
+    # Responsáveis = analistas da empresa no setor da obrigação, e SÓ isso. A
+    # obrigação serve várias empresas, então dono de tarefa não mora nela: o
+    # `o.responsavel` deixou de valer de fallback em 2026-09-09, a pedido do
+    # usuário. UMA tarefa com todos eles, nunca uma tarefa por pessoa.
+    # Supervisor = gestor do PRIMEIRO da lista.
     resps = _resp_do_setor(db, emp.id, o.setor_id)
-    if not resps and o.responsavel:
-        resps = [o.responsavel]
     resp = resps[0] if resps else None
     # Supervisor, do mais específico ao mais geral -- a mesma escada que o app
     # já usa para o responsável (matriz da empresa vence o padrão da obrigação):
@@ -329,6 +334,9 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     )
     if resps:
         nova.responsaveis = list(resps)
+    elif sem_dono is not None:
+        sem_dono.append({"empresa": emp.razao_social, "obrigacao": o.nome,
+                         "setor_id": o.setor_id})
     db.add(nova)
     return True
 
@@ -336,6 +344,7 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
 def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids: list = None,
                  empresa_ids: list = None) -> dict:
     criadas, puladas, por_obrigacao = 0, 0, []
+    sem_dono = []
     # Recorte por empresa: gerar o mês de um cliente só, ou de um punhado.
     # Acontece quando o cliente entra no meio do mês, quando alguém pede a
     # regeneração de uma empresa depois de arrumar o cadastro dela, e quando se
@@ -368,7 +377,7 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
                                                o.tipo_dias, bool(o.sabado_util))
             fechamento = calc_marco_fechamento(emp, mes_entrega, ano_entrega, bool(o.sabado_util))
             if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento,
-                                     fechamento):
+                                     fechamento, sem_dono):
                 criadas += 1
                 n_o += 1
             else:
@@ -383,7 +392,12 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
             # A tela precisa poder dizer "gerei para 3 empresas", e não só
             # quantas tarefas saíram: zero criadas com recorte de empresa é
             # ambíguo entre "já existiam" e "a obrigação não pega essas".
-            "empresas_no_recorte": len(filtro_emp) if filtro_emp else None}
+            "empresas_no_recorte": len(filtro_emp) if filtro_emp else None,
+            # Quantas nasceram SEM responsável, e de quais empresas. Sem este
+            # número, tirar o fallback da obrigação esconderia a falta de
+            # cadastro em vez de revelar: a tarefa sairia órfã e ninguém veria.
+            "sem_responsavel": len(sem_dono),
+            "empresas_sem_responsavel": sorted({d["empresa"] for d in sem_dono})}
 
 
 def gerar_mes_atual(db: Session) -> dict:

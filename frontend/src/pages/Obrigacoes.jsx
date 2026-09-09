@@ -32,7 +32,7 @@ const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'O
 
 const emptyForm = {
   nome: '', mininome: '', identificadores: '',
-  setor_id: '', responsavel_id: '', supervisor_id: '', tempo_previsto_min: '',
+  setor_id: '', supervisor_id: '', tempo_previsto_min: '',
   regra_prazo_tipo: 'ultimo_dia_util', regra_prazo_dia: '',
   meses_ativos: '1,2,3,4,5,6,7,8,9,10,11,12',
   lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
@@ -171,7 +171,7 @@ export default function Obrigacoes() {
     setEditing(o);
     setForm({
       ...emptyForm, ...o,
-      setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
+      setor_id: o.setor_id || '',
       tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
       alvo_modo: o.alvo_modo || 'regra',
       aplica_regimes: o.aplica_regimes || '', aplica_segmentos: o.aplica_segmentos || '',
@@ -187,7 +187,7 @@ export default function Obrigacoes() {
     setForm({
       ...emptyForm, ...o,
       nome: `${o.nome} (cópia)`,
-      setor_id: o.setor_id || '', responsavel_id: o.responsavel_id || '',
+      setor_id: o.setor_id || '',
       supervisor_id: o.supervisor_id || '',
       tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
       alvo_modo: o.alvo_modo || 'regra',
@@ -520,13 +520,11 @@ export default function Obrigacoes() {
                     {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Responsável padrão</label>
-                  <select value={form.responsavel_id} onChange={(e) => set('responsavel_id', e.target.value)} className="input-field">
-                    <option value="">-</option>
-                    {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                  </select>
-                </div>
+                {/* O responsável padrão saiu daqui em 2026-09-09: a obrigação
+                    serve várias empresas, então quem atende não mora nela. Quem
+                    responde vem da matriz de setores de CADA empresa, no
+                    cadastro dela. O supervisor padrão continua, porque ele é da
+                    obrigação mesmo. */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Supervisor padrão</label>
                   <select value={form.supervisor_id} onChange={(e) => set('supervisor_id', e.target.value)} className="input-field">

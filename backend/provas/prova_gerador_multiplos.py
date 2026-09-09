@@ -174,13 +174,16 @@ check("e continua aparecendo, porque falta de cadastro escondida não se arruma"
       visiveis(db) == 1, f"({visiveis(db)})")
 db.close()
 
-print("\n=== 5. o fallback da obrigação continua valendo (sai na fase 13) ===")
+print("\n=== 5. o responsável da obrigação NÃO vale mais de fallback ===")
+# Escrito na fase 10 como "continua valendo, sai na fase 13". A fase 13 chegou,
+# a pedido do usuário: a obrigação serve várias empresas, então dono de tarefa
+# não mora nela. Detalhe em `prova_responsavel_so_da_matriz.py`.
 db, t, c = montar(0, obrig_tem_resp=True)
-check("sem matriz, a tarefa herda o responsável padrão da obrigação",
-      t.responsavel_id == c["padrao"].id, f"({t.responsavel_id})")
-check("e ele entra também na lista, não só na coluna",
-      [u.id for u in t.responsaveis] == [c["padrao"].id],
-      f"({[u.nome for u in t.responsaveis]})")
+check("sem matriz, a tarefa nasce SEM dono, mesmo com responsável na obrigação",
+      t.responsavel_id is None and not t.responsaveis,
+      f"({t.responsavel_id}, {[u.nome for u in t.responsaveis]})")
+check("e ela nasce assim mesmo, em vez de não ser gerada",
+      db.query(Tarefa).count() == 1)
 db.close()
 
 print("\n=== 6. o alerta alcanca a lista, e nao so o principal ===")

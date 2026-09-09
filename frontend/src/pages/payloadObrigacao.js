@@ -23,7 +23,10 @@ export function montarPayloadObrigacao(form) {
   return {
     ...f,
     setor_id: numero(f.setor_id),
-    responsavel_id: numero(f.responsavel_id),
+    // `responsavel_id` NAO vai mais no corpo, de proposito. A obrigacao
+    // deixou de ter dono em 2026-09-09, e a coluna continua no banco como
+    // legado: mandar `null` aqui APAGARIA o valor antigo de toda obrigacao
+    // que alguem editasse, porque o servidor grava o que vier (`exclude_unset`).
     supervisor_id: numero(f.supervisor_id),
     tempo_previsto_min: numero(f.tempo_previsto_min),
     // As DUAS regras usam o número: dia_fixo é o dia do mês, dia_util é qual

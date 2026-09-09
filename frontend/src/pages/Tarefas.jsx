@@ -328,17 +328,31 @@ export default function Tarefas() {
     });
   };
 
-  // Ao escolher uma obrigação, puxa setor/responsável/supervisor dela.
-  const aoEscolherObrigacao = (id) => {
+  // Ao escolher uma obrigação, puxa setor e supervisor dela. O responsável NÃO
+  // vem da obrigação desde 2026-09-09: ela serve várias empresas, então quem
+  // atende sai da matriz de setores da empresa escolhida. Com a empresa já
+  // escolhida, a mesma consulta que a tela de Empresas usa preenche a lista;
+  // sem empresa, o campo fica como estava, para a pessoa escolher na mão.
+  const aoEscolherObrigacao = async (id) => {
     const o = obrigacoes.find((x) => String(x.id) === String(id));
+    const setorId = o?.setor_id || formData.setor_id;
     setFormData((f) => ({
       ...f,
       obrigacao_id: id,
       titulo: f.titulo || (o?.nome ?? ''),
       setor_id: o?.setor_id || f.setor_id,
-      responsavel_ids: o?.responsavel_id ? [o.responsavel_id] : f.responsavel_ids,
       supervisor_id: o?.supervisor_id || f.supervisor_id,
     }));
+    if (!formData.empresa_id || !setorId) return;
+    try {
+      const r = await empresasAPI.getResponsaveisSetor(formData.empresa_id);
+      const linha = (r.data || []).find((x) => String(x.setor_id) === String(setorId));
+      const ids = linha?.responsavel_ids || [];
+      if (ids.length) setFormData((f) => ({ ...f, responsavel_ids: ids }));
+    } catch {
+      // Falhar aqui não pode travar o cadastro: quem escolhe a pessoa na mão
+      // continua conseguindo, e o campo fica como estava.
+    }
   };
 
   const handleCopiar = async () => {
@@ -1282,7 +1296,7 @@ export default function Tarefas() {
                     <option key={o.id} value={o.id}>{o.nome}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-1">Vincula à obrigação e puxa setor/responsáveis/supervisor dela.</p>
+                <p className="text-xs text-gray-400 mt-1">Vincula à obrigação e puxa o setor e o supervisor dela. Os responsáveis vêm da matriz de setores da empresa escolhida.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>

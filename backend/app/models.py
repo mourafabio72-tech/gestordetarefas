@@ -356,7 +356,11 @@ class Obrigacao(Base):
     # cadastro, sem dizer o que tinha estourado.
     identificadores = Column(String(2000))
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)
-    responsavel_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)  # responsável padrão da tarefa gerada
+    # LEGADO desde 2026-09-09. A obrigação serve várias empresas, então dono de
+    # tarefa não mora nela: quem atende sai da matriz (empresa, setor). A coluna
+    # fica porque apagar coluna é destrutivo e não traz ganho nenhum, mas NADA
+    # mais lê este campo -- nem o gerador, nem a substituição, nem a tela.
+    responsavel_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)   # supervisor padrão da tarefa gerada
     tempo_previsto_min = Column(Integer)
 

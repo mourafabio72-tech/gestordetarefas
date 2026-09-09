@@ -111,7 +111,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 13: o responsavel sai da obrigacao
 
-- status: pending
+- status: **done** (2026-09-09; 22 provas rc=0, e a prova reprova com o fallback de volta)
 - depende de: Fase 10
 - duracao estimada: 1h30
 - pedido do usuario em 2026-09-09: "nao podemos vincular a obrigacao a um usuario,

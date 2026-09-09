@@ -55,9 +55,12 @@ def aplicar_definitiva(db: Session, usuario_id: int, substituto_id: int) -> dict
         {Empresa.responsavel_id: substituto_id}))
     emp += (db.query(Empresa).filter(Empresa.supervisor_id == usuario_id).update(
         {Empresa.supervisor_id: substituto_id}))
-    obg = (db.query(Obrigacao).filter(Obrigacao.responsavel_id == usuario_id).update(
-        {Obrigacao.responsavel_id: substituto_id}))
-    obg += (db.query(Obrigacao).filter(Obrigacao.supervisor_id == usuario_id).update(
+    # A obrigação não tem mais responsável: quem atende sai da matriz da empresa
+    # (decisão de 2026-09-09). A coluna continua no banco como legado, e trocar
+    # o valor dela aqui seria manter viva uma verdade que ninguém mais lê.
+    # O supervisor padrão da obrigação continua existindo e continua sendo
+    # substituído.
+    obg = (db.query(Obrigacao).filter(Obrigacao.supervisor_id == usuario_id).update(
         {Obrigacao.supervisor_id: substituto_id}))
 
     db.commit()

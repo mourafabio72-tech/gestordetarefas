@@ -235,26 +235,51 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 13: o responsavel sai da obrigacao
 
-- [ ] `services/gerador.py:305` deixa de cair em `o.responsavel`; quem atende sai SO da
+- [x] `services/gerador.py:296` deixa de cair em `o.responsavel`; quem atende sai SO da
       matriz da empresa
+      EVIDENCIA: `grep -n "or o.responsavel" backend/app/services/gerador.py` volta
+      vazio (exit 1). Bloco 1 da `prova_responsavel_so_da_matriz.py`: `OK a empresa
+      SEM responsavel no setor NAO herda o da obrigacao (([], None))`. REPROVA com o
+      fallback de volta, verificado: falham 3 casos
       MOTIVO: pedido do usuario, 2026-09-09. Obrigacao serve varias empresas, entao
       dono de tarefa nao mora nela
       PROVA: `grep -n "or o.responsavel" backend/app/services/gerador.py` volta vazio
-- [ ] o select de responsavel sai do cadastro da obrigacao
-      PROVA: `grep -n "form.responsavel_id" frontend/src/pages/Obrigacoes.jsx` volta vazio
-- [ ] a coluna `obrigacoes.responsavel_id` FICA no banco, com comentario de legado
-      MOTIVO: apagar coluna e destrutivo e nao traz ganho
-- [ ] `pages/Tarefas.jsx:338` para de puxar responsavel da obrigacao, e passa a puxar
+- [x] o select de responsavel sai do cadastro da obrigacao
+      EVIDENCIA: `grep -n "form.responsavel_id" frontend/src/pages/Obrigacoes.jsx`
+      volta vazio (exit 1). O campo saiu do formulario, do estado e do payload. Um
+      comentario no lugar dele diz por que, para ninguem recolocar
+- [x] a coluna `obrigacoes.responsavel_id` FICA no banco, com comentario de legado
+      EVIDENCIA: `models.py:359-363`, com o comentario dizendo que NADA mais le o
+      campo. E o cuidado que quase passou: o payload da tela parou de MANDAR o
+      campo, em vez de mandar `null`. O servidor grava o que vier
+      (`model_dump(exclude_unset=True)`), entao um `null` apagaria o valor legado de
+      toda obrigacao que alguem editasse. Caso na `prova_payload_obrigacao.js`
+- [x] `pages/Tarefas.jsx:338` para de puxar responsavel da obrigacao, e passa a puxar
       da matriz da empresa quando ela ja estiver escolhida
-- [ ] `services/substituicao.py:58` para de trocar responsavel em obrigacao
-      MOTIVO: "procure TODOS os chamadores" (Escada, correcao e na causa raiz)
-- [ ] a resposta da geracao diz quantas tarefas nasceram sem responsavel, e de quais
+      EVIDENCIA: `Tarefas.jsx:331-355`. Com a empresa escolhida, chama o mesmo
+      `getResponsaveisSetor` que a tela de Empresas usa e preenche a lista; sem
+      empresa, deixa o campo como estava para a pessoa escolher na mao. Falha na
+      consulta nao trava o cadastro. A legenda do campo foi reescrita: dizia que
+      puxava responsaveis da obrigacao
+- [x] `services/substituicao.py:58` para de trocar responsavel em obrigacao
+      EVIDENCIA: bloco 5 da prova: `OK o responsavel legado da obrigacao fica onde
+      estava` e `OK a substituicao nao conta obrigacao trocada por responsavel`. O
+      supervisor padrao da obrigacao CONTINUA sendo substituido, porque ele e da
+      obrigacao mesmo
+- [x] a resposta da geracao diz quantas tarefas nasceram sem responsavel, e de quais
       empresas
+      EVIDENCIA: bloco 2 da prova: `sem_responsavel: 2` e
+      `empresas_sem_responsavel: [Beta, Gama]`. O bloco 3 prova o contrario, com a
+      matriz completa: contador zero e lista VAZIA, e nao ausente
       MOTIVO: sem isso, tirar o fallback ESCONDE o buraco de cadastro em vez de
       revelar. Era o fallback que mascarava empresa sem responsavel no setor
       PROVA: caso na prova conferindo o contador na resposta
-- [ ] `prova_responsavel_so_da_matriz.py` criada, e verificado que REPROVA com o
+- [x] `prova_responsavel_so_da_matriz.py` criada, e verificado que REPROVA com o
       fallback de volta
+      EVIDENCIA: com o fallback recolocado, a saida traz `FALHA a empresa SEM
+      responsavel no setor NAO herda o da obrigacao ((Padrao da Obrigacao, 1))`,
+      `FALHA o contador bate com as duas empresas sem cadastro (0)` e `FALHA e
+      nomeia as empresas`. 22 de 22 provas do backend rc=0 depois de restaurar
 
 ## Fase 14: e-validador em obrigacao interna
 

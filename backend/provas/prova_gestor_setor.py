@@ -25,7 +25,9 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///" + tempfile.mktemp(suffix=".db
 
 from app.database import SessionLocal, Base, engine                 # noqa: E402
 from app.models import (Empresa, Setor, Usuario, Obrigacao, Tarefa,  # noqa: E402
-                        tarefa_responsaveis)
+                        tarefa_responsaveis, EmpresaSetorResponsavel,
+                        empresa_setor_resp_usuarios)
+from app.services import resp_setor                                 # noqa: E402
 from app.services.gerador import gerar_tarefas                      # noqa: E402
 
 ok = True
@@ -42,7 +44,8 @@ def cenario(resp_tem_gestor, setor_tem_gestor, obrig_tem_sup):
     db = SessionLocal()
     # a associação primeiro: apagar só a tarefa deixa órfão e o id é reusado
     db.execute(tarefa_responsaveis.delete())
-    for m in (Tarefa, Obrigacao, Empresa, Setor, Usuario):
+    db.execute(empresa_setor_resp_usuarios.delete())
+    for m in (Tarefa, EmpresaSetorResponsavel, Obrigacao, Empresa, Setor, Usuario):
         db.query(m).delete()
     db.commit()
 
@@ -61,7 +64,15 @@ def cenario(resp_tem_gestor, setor_tem_gestor, obrig_tem_sup):
     emp = Empresa(razao_social="ACME", cnpj="1", regime_tributario="lucro_real", ativo=True)
     db.add(emp); db.commit()
 
-    o = Obrigacao(nome="Balancete", setor_id=setor.id, responsavel_id=analista.id,
+    # Quem atende vem da matriz (empresa, setor), e não da obrigação. Mudou em
+    # 2026-09-09: a obrigação serve várias empresas, então dono de tarefa não
+    # mora nela. A ESCADA DO SUPERVISOR, que é o que esta prova mede, não mudou.
+    vinculo = EmpresaSetorResponsavel(empresa_id=emp.id, setor_id=setor.id)
+    db.add(vinculo)
+    resp_setor.gravar(db, vinculo, [analista.id])
+    db.commit()
+
+    o = Obrigacao(nome="Balancete", setor_id=setor.id,
                   supervisor_id=da_obrig.id if obrig_tem_sup else None,
                   regra_prazo_tipo="ultimo_dia_util", meses_ativos="1,2,3,4,5,6,7,8,9,10,11,12",
                   competencia_ref="mes_anterior", ativa=True)
