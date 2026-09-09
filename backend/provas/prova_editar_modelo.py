@@ -1,9 +1,9 @@
 """
-prova_editar_modelo.py — editar e excluir modelo acertam o TREINO.
+prova_editar_modelo.py: editar e excluir modelo acertam o TREINO.
 
 O modelo existe para treinar a obrigação: ao salvar, o identificador dele entra
 na lista que o e-validador consulta. Então corrigir um vínculo errado na tela só
-serve se o identificador sair da obrigação antiga — senão o erro continua vivo
+serve se o identificador sair da obrigação antiga, senão o erro continua vivo
 onde importa, e a tela mente dizendo que foi corrigido.
 
 Foi assim que os vínculos errados sobreviveram: apagar o modelo não tirava o
@@ -67,7 +67,7 @@ atualizar_modelo(db, mid, {"nome_arquivo": "a.pdf", "cnpj": "12345678000190",
 checa("o antigo sai", "PIS 8109" not in idents(db, id_pis))
 checa("o novo entra", idents(db, id_pis) == ["PIS - DEMAIS"], str(idents(db, id_pis)))
 
-print("\n4. Dois modelos com o mesmo identificador — um sai, o outro segura")
+print("\n4. Dois modelos com o mesmo identificador: um sai, o outro segura")
 m2 = salvar_modelo(db, {"nome_arquivo": "b.pdf", "cnpj": "99999999000199",
                         "obrigacao_id": id_pis, "identificador": "PIS - DEMAIS"})
 checa("o segundo não duplica na lista", idents(db, id_pis) == ["PIS - DEMAIS"], str(idents(db, id_pis)))

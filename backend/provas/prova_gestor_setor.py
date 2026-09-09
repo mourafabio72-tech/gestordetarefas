@@ -1,5 +1,5 @@
 """
-prova_gestor_setor.py — supervisor da tarefa preenchido pelo gestor do setor.
+prova_gestor_setor.py: supervisor da tarefa preenchido pelo gestor do setor.
 
 Antes, o supervisor saía só do `gestor_id` da pessoa responsável. Quem não
 tivesse gestor preenchido gerava tarefa SEM supervisor -- e ninguém era avisado
@@ -87,7 +87,7 @@ def cenario(resp_tem_gestor, setor_tem_gestor, obrig_tem_sup):
     return nome
 
 
-print("\n=== 1. gestor da pessoa vence — o mais específico ===")
+print("\n=== 1. gestor da pessoa vence, o mais específico ===")
 n = cenario(resp_tem_gestor=True, setor_tem_gestor=True, obrig_tem_sup=True)
 check("com as três fontes, ganha o gestor direto", n == "Chefe Direto", f"({n})")
 

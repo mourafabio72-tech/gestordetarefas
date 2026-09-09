@@ -1,5 +1,5 @@
 """
-prova_excluir_tarefa.py — cancelar e, depois, excluir de vez.
+prova_excluir_tarefa.py: cancelar e, depois, excluir de vez.
 
 A lixeira nunca excluiu: ela marcava a tarefa como CANCELADA. Tarefa avulsa
 (criada à mão, sem obrigação) ficava então sem saída nenhuma -- "Excluir

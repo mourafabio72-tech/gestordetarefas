@@ -4,7 +4,7 @@
 // Sem JSX e sem React, como os vizinhos, para rodar em prova Node pura. Aqui
 // isso vale por um motivo concreto: campo vazio NÃO pode virar parâmetro. Um
 // `empresa_id=` em branco chega ao backend como string vazia e derruba a
-// consulta com 422 — foi assim que o formulário de empresa quebrou antes.
+// consulta com 422: foi assim que o formulário de empresa quebrou antes.
 
 export const EXTENSOES = [
   { valor: '', rotulo: 'Qualquer tipo' },
@@ -44,7 +44,7 @@ export function temFiltroAtivo(filtros) {
   return Object.keys(paraConsulta(resto)).length > 0;
 }
 
-/** Atalhos de período de ENTREGA — as três perguntas que se faz num acervo. */
+/** Atalhos de período de ENTREGA: as três perguntas que se faz num acervo. */
 export function periodos(hoje = new Date()) {
   const iso = (d) => {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -71,7 +71,7 @@ export function dataBr(iso) {
  *
  * O backend grava em UTC. O ISO chega de duas formas conforme o banco: com
  * offset ("...+00:00") no Postgres, e sem nada no SQLite. Sem offset, o
- * JavaScript interpreta a string como hora LOCAL — e a hora do acesso aparecia
+ * JavaScript interpreta a string como hora LOCAL, e a hora do acesso aparecia
  * 3 horas adiantada, porque 18:16 UTC virava 18:16 de Brasília em vez de 15:16.
  *
  * Por isso o "Z" é acrescentado quando falta: diz ao navegador que aquilo é

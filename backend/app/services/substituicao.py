@@ -1,4 +1,4 @@
-"""Substituição de responsável — temporária (janela de datas) ou definitiva (reatribui tudo)."""
+"""Substituição de responsável, temporária (janela de datas) ou definitiva (reatribui tudo)."""
 from datetime import date
 from sqlalchemy.orm import Session
 from ..models import Substituicao, Tarefa, Empresa, Obrigacao, Usuario, StatusTarefa

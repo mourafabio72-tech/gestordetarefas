@@ -1,5 +1,5 @@
 """
-prova_consultas_rapidas.py — trava o custo das consultas de tarefas.
+prova_consultas_rapidas.py: trava o custo das consultas de tarefas.
 
 Não mede tempo (que varia com a máquina): mede QUANTAS IDAS AO BANCO cada
 endpoint faz. É o número que explica a lentidão contra o Postgres do servidor,

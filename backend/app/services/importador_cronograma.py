@@ -232,7 +232,7 @@ def _get_or_create_setor(db, nome: str):
 def importar(db, grupo: str, itens: list, mapa: dict = None, para_todas: bool = True) -> dict:
     """Cria setores e obrigações (dedupe por nome).
 
-    `para_todas=True` (padrão): a obrigação vale para TODAS as empresas — não
+    `para_todas=True` (padrão): a obrigação vale para TODAS as empresas: não
     grava vínculo por CNPJ (regra de regime/segmento vazia = todas). Se a obrigação
     já existir com vínculos antigos, eles são LIMPOS para ficar coerente com a tela.
 

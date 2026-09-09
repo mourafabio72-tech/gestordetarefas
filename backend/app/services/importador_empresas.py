@@ -2,7 +2,7 @@
 
 Colunas aceitas (cabeçalho flexível, sem acento/maiúsculas): razão social, CNPJ,
 regime tributário, grupo (de empresas). Bônus se vierem: nome fantasia, email,
-telefone, segmento. Upsert por CNPJ — se já existe, atualiza; senão, cria.
+telefone, segmento. Upsert por CNPJ: se já existe, atualiza; senão, cria.
 """
 import io
 import re

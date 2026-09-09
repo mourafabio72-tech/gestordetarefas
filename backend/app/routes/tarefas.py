@@ -303,7 +303,7 @@ def update_tarefa(
     if tarefa.status == StatusTarefa.CONCLUIDA and not db_tarefa.data_conclusao:
         update_data["data_conclusao"] = datetime.utcnow()
 
-    # responsaveis (M2M) tratado à parte — trocar o dono é só gestor/admin.
+    # responsaveis (M2M) tratado à parte: trocar o dono é só gestor/admin.
     if "responsavel_ids" in update_data:
         novos = set(update_data.get("responsavel_ids") or [])
         atuais = {u.id for u in db_tarefa.responsaveis}
@@ -335,7 +335,7 @@ def baixar_anexo(
 
     Até aqui o arquivo entrava e não saía: ficava no volume, com o nome no
     banco, e nenhuma rota o servia. Era a prova da entrega guardada num lugar de
-    onde ninguém tirava — e prova de entrega é justamente o que se pede numa
+    onde ninguém tirava, e prova de entrega é justamente o que se pede numa
     fiscalização.
 
     O escopo é o MESMO da listagem de tarefas: quem enxerga a tarefa enxerga o
@@ -384,14 +384,14 @@ def excluir_documento(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_flag("apagar_anexo")),
 ):
-    """Apaga um documento do acervo — o arquivo e o vínculo com a tarefa.
+    """Apaga um documento do acervo: o arquivo e o vínculo com a tarefa.
 
     Exige a flag `apagar_anexo`, que já existia e só o admin tem por padrão.
     Quem pode apagar é decidido no cadastro de Grupos, não aqui.
 
     REABRE a tarefa que o documento tinha concluído. Foi o documento que a
     baixou; sem ele ela não está comprovada, e deixá-la concluída manteria no
-    sistema uma entrega que não se prova mais — some da fila e ninguém refaz.
+    sistema uma entrega que não se prova mais: some da fila e ninguém refaz.
     Volta para PENDENTE e limpa o que veio do documento: data de conclusão,
     protocolo e data de entrega.
 
@@ -497,7 +497,7 @@ async def anexar_saida(
         tarefa.saida_downloads = 0
         tarefa.saida_baixada_em = None
         # Os links já enviados morrem junto. Sem isso, quem tem o link antigo
-        # continuaria baixando — e agora baixaria a guia NOVA sem saber que
+        # continuaria baixando, e agora baixaria a guia NOVA sem saber que
         # mudou, que é pior do que receber um link quebrado.
         from ..models import TarefaEnvio
         for e in db.query(TarefaEnvio).filter(TarefaEnvio.tarefa_id == tarefa.id).all():
@@ -528,7 +528,7 @@ def baixar_saida(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Devolve o documento anexado para entrega — para conferir antes de enviar."""
+    """Devolve o documento anexado para entrega, para conferir antes de enviar."""
     import os
     from ..services import upload as up
 
@@ -570,7 +570,7 @@ def historico_acessos(
     """Cada batida no link do documento: quando, de onde, e se contou.
 
     O contador diz quantas vezes o cliente abriu; isto diz POR QUE ele diz
-    isso. Sem esta lista, um número que parece errado vira adivinhação — foi o
+    isso. Sem esta lista, um número que parece errado vira adivinhação: foi o
     que aconteceu com o "2×" que era a prévia do WhatsApp somada ao clique.
     """
     from ..models import SaidaAcesso
@@ -587,7 +587,7 @@ def historico_acessos(
         e = envios.get(a.envio_id)
         saida.append({"quando": a.quando, "ip": a.ip, "contado": bool(a.contado),
                       "robo": up.eh_robo(a.user_agent), "user_agent": a.user_agent,
-                      # Quem abriu — vem do link exclusivo daquele destinatário.
+                      # Quem abriu: vem do link exclusivo daquele destinatário.
                       # Link antigo, de antes do token por pessoa, não tem dono.
                       "quem": e.destinatario if e else None,
                       "endereco": e.endereco if e else None,
@@ -608,7 +608,7 @@ async def enviar_ao_cliente(
     a ela, sem repetir endereço.
 
     A tarefa só é concluída se ALGUÉM recebeu. Concluir com todos os envios
-    falhando registraria como entregue um documento que não chegou a ninguém —
+    falhando registraria como entregue um documento que não chegou a ninguém,
     e o erro só apareceria quando o cliente reclamasse da multa.
 
     `ensaio=true` mostra a lista de destinatários sem enviar nada.
@@ -645,7 +645,7 @@ async def enviar_ao_cliente(
     comp = f" ({tarefa.competencia})" if tarefa.competencia else ""
     assunto = f"[BPS4] {tarefa.titulo}{comp}"
     # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz
-    # que alguém abriu; a pergunta é quem — o sócio que paga ou o e-mail geral
+    # que alguém abriu; a pergunta é quem: o sócio que paga ou o e-mail geral
     # que ninguém lê. O token do envio responde isso.
     base = (cfg.get("public_url") or "").rstrip("/")
     # O documento do cliente não vai para atendente do escritório: quem recebe é

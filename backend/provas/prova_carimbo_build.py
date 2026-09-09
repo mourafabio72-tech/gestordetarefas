@@ -1,5 +1,5 @@
 """
-prova_carimbo_build.py — a varredura que alimenta o carimbo de build.
+prova_carimbo_build.py: a varredura que alimenta o carimbo de build.
 
 CUIDADO COM A HISTORIA DESTE ARQUIVO. Ele nasceu em 2026-09-03 de um
 diagnostico ERRADO: li o carimbo `20260901-1155` do Tareffas como se estivesse

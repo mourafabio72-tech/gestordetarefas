@@ -1,5 +1,5 @@
 """
-prova_competencia_prazo.py — competência de referência e regra de prazo.
+prova_competencia_prazo.py: competência de referência e regra de prazo.
 
 O caso que motivou: SPED e EFD-Contribuições são entregues no SEGUNDO mês
 subsequente ao fato gerador. Fato gerador de julho, entrega em setembro. O
@@ -33,7 +33,7 @@ def check(nome, cond, extra=""):
 print("\n=== 1. o caso do SPED: fato gerador julho, entrega setembro ===")
 check("entrega set/2026 com '2 meses antes' → competência 07/2026",
       calc_competencia(9, 2026, "-2") == "07/2026", f"({calc_competencia(9, 2026, '-2')})")
-check("o apelido antigo daria 08/2026 — era este o erro",
+check("o apelido antigo daria 08/2026: era este o erro",
       calc_competencia(9, 2026, "mes_anterior") == "08/2026")
 
 print("\n=== 2. os apelidos antigos continuam valendo ===")
@@ -71,7 +71,7 @@ check("e é dia útil, não fim de semana", d.weekday() < 5)
 # "Dia 10" e "10º dia útil" são coisas diferentes, e é essa a razão de existir a
 # regra: quatro dias de diferença só porque o mês tem dois fins de semana antes.
 fixo = calc_prazo(9, 2026, "dia_fixo", 10, "antecipar", False)
-check("dia fixo 10 cai em 10/09 — quatro dias antes", fixo.isoformat() == "2026-09-10",
+check("dia fixo 10 cai em 10/09, quatro dias antes", fixo.isoformat() == "2026-09-10",
       f"({fixo})")
 check("as duas regras dão datas diferentes no mesmo mês", d != fixo)
 # Mês que começa no fim de semana muda a conta, e é justamente o ponto
@@ -113,7 +113,7 @@ d = calc_prazo(9, 2026, "dia_util", None, "antecipar", False)
 check("sem dia informado, vira o 1º dia útil", d.isoformat() == "2026-09-01", f"({d})")
 d10 = calc_prazo(9, 2026, "dia_util", 10, "antecipar", False)
 check("com 10, vira o 10º", d10.isoformat() == "2026-09-14", f"({d10})")
-check("são datas bem diferentes — 13 dias", (d10 - d).days == 13)
+check("são datas bem diferentes, 13 dias", (d10 - d).days == 13)
 
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

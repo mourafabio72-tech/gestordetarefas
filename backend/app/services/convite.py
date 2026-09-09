@@ -27,7 +27,7 @@ def _msg(usuario, link: str) -> str:
 
 async def enviar(db, usuario, cfg: dict) -> dict:
     """Gera/renova o token, salva no usuário e dispara pelo canal do tipo.
-    Retorna {canal, ok, erro}. Não faz commit — quem chama commita."""
+    Retorna {canal, ok, erro}. Não faz commit: quem chama commita."""
     token = gerar_token()
     usuario.convite_token = token
     if usuario.ativado is None:

@@ -1,14 +1,14 @@
 """
-prova_sentido_obrigacao.py — para que lado o documento anda.
+prova_sentido_obrigacao.py: para que lado o documento anda.
 
 São três respostas, não duas:
-  receber  — o cliente manda o comprovante e a tarefa baixa pelo e-validador
-  entregar — o escritório anexa a guia e envia; o envio conclui a tarefa
-  interna  — não troca documento com ninguém
+  receber: o cliente manda o comprovante e a tarefa baixa pelo e-validador
+  entregar: o escritório anexa a guia e envia; o envio conclui a tarefa
+  interna: não troca documento com ninguém
 
 A terceira faltava, e a falta tinha consequência: obrigação interna herdava
 "receber" e, com identificadores cadastrados, passava a EXIGIR um comprovante
-que nunca vai existir — travando a baixa de conciliar banco e lançar notas.
+que nunca vai existir: travando a baixa de conciliar banco e lançar notas.
 
     python provas/prova_sentido_obrigacao.py
 """
@@ -78,7 +78,7 @@ checa("a que recebe é sugerida", "apuracao_ipi" in achadas, str(achadas))
 checa("a INTERNA sem a flag fica de fora, mesmo com o mesmo identificador",
       "conciliar_banco" not in achadas)
 checa("a desativada continua fora", "desativada" not in achadas)
-checa("uma só sobra — sem ambiguidade", len(achadas) == 1, str(achadas))
+checa("uma só sobra, sem ambiguidade", len(achadas) == 1, str(achadas))
 
 # A exceção de 2026-09-09: interna que LIGOU exige_documento entra na busca.
 # Sem isto, ligar a flag travaria a tarefa: ela passaria a exigir documento e o

@@ -7,7 +7,7 @@
 /** Regras de prazo que usam o campo numérico ao lado. */
 const USAM_DIA = ['dia_fixo', 'dia_util'];
 
-/** Inteiro, ou null quando o campo está vazio — nunca NaN. */
+/** Inteiro, ou null quando o campo está vazio: nunca NaN. */
 function numero(v) {
   if (v === null || v === undefined || `${v}`.trim() === '') return null;
   const n = parseInt(v, 10);

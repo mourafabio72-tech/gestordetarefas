@@ -10,7 +10,7 @@
 
 /**
  * Cada nível traz a cor forte (borda e texto) e a suave (o degradê do fundo).
- * Tons da paleta Sage & Creme — o vermelho é a terracota da casa, não o
+ * Tons da paleta Sage & Creme: o vermelho é a terracota da casa, não o
  * vermelho de sistema, que berraria no meio do creme.
  */
 export const NIVEIS = {
@@ -36,7 +36,7 @@ function diaUTC(iso) {
  * ainda vai vencer, negativo para o que passou, e null quando não há data.
  *
  * As faixas: atrasada (passou), hoje, até 7 dias (amarelo) e mais que isso
- * (verde). Sete dias porque a rotina do escritório é semanal — o que cabe na
+ * (verde). Sete dias porque a rotina do escritório é semanal: o que cabe na
  * semana é o que a pessoa precisa enxergar antes de escolher o que fazer hoje.
  *
  * Tarefa concluída sai do semáforo: ela não tem mais prazo a cumprir, e pintar

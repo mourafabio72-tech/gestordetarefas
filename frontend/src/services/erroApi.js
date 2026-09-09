@@ -42,7 +42,7 @@ function traduzir(msg) {
 
 function nomeDoCampo(loc) {
   if (!Array.isArray(loc)) return '';
-  // loc vem como ["body", "campo"] — o nome do campo é o último pedaço textual
+  // loc vem como ["body", "campo"]: o nome do campo é o último pedaço textual
   const campo = [...loc].reverse().find(p => typeof p === 'string' && p !== 'body');
   if (!campo) return '';
   return NOME_DO_CAMPO[campo] || campo.replace(/_/g, ' ');
@@ -78,7 +78,7 @@ export function mensagemDeErro(erro, padrao = 'Não foi possível concluir. Tent
   if (erro?.response?.status === 404) return 'Não encontrado.';
   if (erro?.message === 'Network Error') return 'Sem conexão com o servidor.';
 
-  // Sem `detail` legível, o status é a única pista — e sem ele a pessoa fica
+  // Sem `detail` legível, o status é a única pista, e sem ele a pessoa fica
   // com uma frase genérica que não permite nem pedir ajuda direito. Cada um
   // desses tem causa e conserto diferentes.
   const status = erro?.response?.status;

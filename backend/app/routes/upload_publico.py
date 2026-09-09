@@ -67,7 +67,7 @@ def baixar_documento(
     """Entrega ao CLIENTE o documento da tarefa, pelo link que ele recebeu.
 
     Sem login: quem tem o link entra, como no envio de comprovante. O token é
-    de 24 bytes e vale por tarefa — e trocar o documento gera token novo, o que
+    de 24 bytes e vale por tarefa, e trocar o documento gera token novo, o que
     invalida o link anterior. É assim que uma guia retificada tira a errada de
     circulação em vez de deixar as duas valendo.
 
@@ -95,10 +95,10 @@ def baixar_documento(
 
     # Quanto faz desde a última vez que ESTE ip pegou ESTE documento. O
     # WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
-    # visualizador de PDF pede o arquivo em partes — as duas coisas inflavam o
+    # visualizador de PDF pede o arquivo em partes: as duas coisas inflavam o
     # contador e faziam "abriu 2×" onde houve uma abertura só.
     # Só acessos que CONTARAM entram na janela. Sem este filtro, a prévia do
-    # WhatsApp — que chega segundos antes — engoliria a primeira abertura de
+    # WhatsApp (que chega segundos antes) engoliria a primeira abertura de
     # verdade sempre que as duas saíssem do mesmo IP, como acontece numa rede
     # corporativa.
     ultimo = (db.query(SaidaAcesso)

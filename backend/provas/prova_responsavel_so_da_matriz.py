@@ -1,5 +1,5 @@
 """
-prova_responsavel_so_da_matriz.py — quem atende sai da matriz da empresa, e só
+prova_responsavel_so_da_matriz.py: quem atende sai da matriz da empresa, e só
 dela.
 
 A obrigação serve várias empresas. Ter um responsável nela era dizer que o

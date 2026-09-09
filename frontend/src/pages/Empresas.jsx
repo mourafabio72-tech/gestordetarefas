@@ -14,7 +14,7 @@ const EMPRESA_VAZIA = {
 };
 
 // Marco de fechamento contábil da empresa. As obrigações que fazem parte do
-// processo se posicionam em relação a ele — muda aqui, a cadeia inteira desta
+// processo se posicionam em relação a ele: muda aqui, a cadeia inteira desta
 // empresa desloca junto.
 const FECHAMENTO = [
   { value: '', label: 'Sem marco definido' },

@@ -492,7 +492,7 @@ export default function Obrigacoes() {
                 </div>
               </div>
               {/* O e-validador só existe para documento que CHEGA. Numa
-                  obrigação interna ou de entrega, este bloco inteiro é ruído —
+                  obrigação interna ou de entrega, este bloco inteiro é ruído:
                   e pior, convida a cadastrar identificador que nunca vai casar. */}
               <div className={form.sentido === 'interna' || form.sentido === 'entregar' ? 'hidden' : ''}>
                 <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">

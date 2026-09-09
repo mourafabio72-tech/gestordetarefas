@@ -16,7 +16,7 @@ export function temFiltroAtivo(filtros) {
   return Object.values(filtros || {}).some((v) => String(v || '').trim() !== '');
 }
 
-/** minúsculo e sem acento — quem procura "irpj" acha "IRPJ". */
+/** minúsculo e sem acento: quem procura "irpj" acha "IRPJ". */
 function normalizar(texto) {
   return String(texto || '')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '')

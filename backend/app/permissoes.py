@@ -62,7 +62,7 @@ PRESETS = {
 }
 
 # 'usuario' é o papel legado (default histórico). Mantém o comportamento
-# anterior — só leitura, enxerga tudo — para NÃO quebrar contas existentes.
+# anterior (só leitura, enxerga tudo) para NÃO quebrar contas existentes.
 # Migrar para 'analista' quando quiser o escopo "só as próprias".
 PRESETS["usuario"] = {
     "empresas": "ver", "setores": "ver", "tarefas": "ver",

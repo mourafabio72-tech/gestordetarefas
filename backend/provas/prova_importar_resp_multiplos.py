@@ -1,5 +1,5 @@
 """
-prova_importar_resp_multiplos.py — a planilha de responsáveis aceita mais de um
+prova_importar_resp_multiplos.py: a planilha de responsáveis aceita mais de um
 nome por célula.
 
 O escritório cadastra a matriz inteira por Excel, e não linha a linha na tela.

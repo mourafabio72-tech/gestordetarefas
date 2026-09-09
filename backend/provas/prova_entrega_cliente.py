@@ -1,5 +1,5 @@
 """
-prova_entrega_cliente.py — o documento que o ESCRITÓRIO entrega ao cliente.
+prova_entrega_cliente.py: o documento que o ESCRITÓRIO entrega ao cliente.
 
 Caminho contrário do e-validador: em vez de esperar o comprovante, a tarefa
 carrega uma guia e a envia. Guia do Simples é o caso típico.
@@ -9,7 +9,7 @@ quando nenhum envio funcionou (registra como entregue algo que não chegou, e o
 erro só aparece quando o cliente reclama da multa) e a lista de destinatários
 (mandar guia para quem não devia, ou não mandar para ninguém).
 
-Os envios de verdade são substituídos por dublês — a prova não fala com a API
+Os envios de verdade são substituídos por dublês: a prova não fala com a API
 do Zap nem com o SMTP.
 
     python provas/prova_entrega_cliente.py
@@ -117,7 +117,7 @@ checa("recusa extensão fora da lista", r.status_code == 400, f"({r.status_code}
 r = client.post(f"/api/tarefas/{id_ok}/saida", headers=cabeca(),
                 files={"arquivo": ("vazio.pdf", b"", "application/pdf")})
 checa("recusa arquivo vazio", r.status_code == 400)
-checa("anexar NÃO conclui a tarefa — são dois passos de propósito",
+checa("anexar NÃO conclui a tarefa, são dois passos de propósito",
       client.get(f"/api/tarefas?status=pendente", headers=cabeca()).status_code == 200)
 
 print("\n=== 2. o ensaio mostra para quem vai, sem mandar nada ===")
@@ -141,7 +141,7 @@ checa("quatro envios", r["enviados"] == 4, str(r))
 checa("sem falhas", r["falhas"] == 0)
 checa("a tarefa conclui", r["concluiu"] is True)
 # O WhatsApp leva LINK, não arquivo: é o que dá rastreio e dispensa o provedor
-# aceitar o anexo. O e-mail leva os dois — o cliente arquiva a guia na caixa.
+# aceitar o anexo. O e-mail leva os dois: o cliente arquiva a guia na caixa.
 zaps = [m for c, _, m, _t in enviados if c == "whatsapp"]
 checa("o WhatsApp levou o link do documento",
       all("/api/publico/baixar/" in m for m in zaps), str(zaps)[:120])
@@ -186,7 +186,7 @@ r = client.get(f"/api/publico/baixar/{alvo}", headers={"user-agent": "Mozilla/5.
 checa("o link do destinatário serve o documento sem login", r.status_code == 200, f"({r.status_code})")
 db = SessionLocal()
 acesso = db.query(SA).filter(SA.tarefa_id == id_ok).order_by(SA.id.desc()).first()
-checa("o acesso fica ligado ao envio — é assim que se sabe QUEM abriu",
+checa("o acesso fica ligado ao envio: é assim que se sabe QUEM abriu",
       acesso.envio_id is not None)
 checa("e o envio diz o nome e o endereço",
       por_token[alvo][0] == quem and por_token[alvo][1] == endereco)
@@ -207,7 +207,7 @@ checa("o link do destinatário morre depois da troca",
 db = SessionLocal()
 checa("nenhum envio antigo guarda token",
       all(e.token is None for e in db.query(TE).filter(TE.tarefa_id == id_ok).all()))
-checa("contador zerado — baixaram o documento ANTERIOR",
+checa("contador zerado: baixaram o documento ANTERIOR",
       db.query(Tarefa).get(id_ok).saida_downloads == 0)
 db.close()
 checa("link inventado não abre nada",
@@ -217,7 +217,7 @@ print("\n=== 3c. o contador conta ABERTURA, não requisição ===")
 from app.models import SaidaAcesso as SA                       # noqa: E402
 # O WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
 # visualizador de PDF pede o arquivo em partes. Contar tudo faria "abriu 2×"
-# onde houve uma abertura só — e um número que a pessoa sabe estar errado
+# onde houve uma abertura só, e um número que a pessoa sabe estar errado
 # contamina os outros.
 from app.services.upload import conta_como_abertura, eh_robo   # noqa: E402
 checa("robô do WhatsApp não conta", not conta_como_abertura("WhatsApp/2.23.20.0 A", None))
@@ -232,7 +232,7 @@ checa("segunda requisição em 3s é a MESMA abertura",
       not conta_como_abertura("Mozilla/5.0 Chrome/120", 3))
 checa("recarregar 5 minutos depois é abertura nova",
       conta_como_abertura("Mozilla/5.0 Chrome/120", 300))
-checa("sem user-agent conta — cliente com navegador estranho não pode sumir",
+checa("sem user-agent conta: cliente com navegador estranho não pode sumir",
       conta_como_abertura("", None) and conta_como_abertura(None, None))
 checa("eh_robo não se confunde com 'Robot' no meio de nome de gente",
       eh_robo("WhatsApp/2.0") and not eh_robo("Mozilla/5.0 (Macintosh)"))

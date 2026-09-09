@@ -94,7 +94,7 @@ export default function Layout() {
   // A barra empurra o conteúdo em vez de cobri-lo, então abrir de raspão
   // reorganizaria a página inteira sem a pessoa querer. O atraso na ABERTURA
   // resolve: passar o mouse a caminho de outro lugar não dispara nada. Fechar
-  // é imediato — quem tirou o mouse quer o espaço de volta agora.
+  // é imediato: quem tirou o mouse quer o espaço de volta agora.
   const ATRASO_ABERTURA = 180;
   const entrouNaBarra = () => {
     if (!fixado) return;
@@ -118,7 +118,7 @@ export default function Layout() {
     <div className="flex h-screen bg-gray-100">
       {/* A barra fica NO FLUXO e empurra o conteúdo ao abrir, em vez de crescer
           por cima dele. Coberto, o card e o filtro debaixo da barra ficavam
-          inalcançáveis enquanto o mouse estivesse nela — e é justamente para
+          inalcançáveis enquanto o mouse estivesse nela, e é justamente para
           alcançar algo que a pessoa move o mouse. O preço é o conteúdo
           reorganizar, e é o que o atraso de abertura ameniza. */}
       <aside
@@ -148,7 +148,7 @@ export default function Layout() {
             quem não quiser depender do hover. */}
 
         {/* `rolagem-invisivel`: a barra nativa ocuparia ~15px de dentro do nav,
-            deixando-o mais estreito que o rodapé — que não rola — e os dois
+            deixando-o mais estreito que o rodapé (que não rola) e os dois
             blocos terminariam em pontos diferentes. */}
         <nav className="px-2 py-3 flex-1 overflow-y-auto rolagem-invisivel">
           {menuGroups.map((group) => {
@@ -193,8 +193,8 @@ export default function Layout() {
         </nav>
 
         {/* Rodapé com as MESMAS medidas dos itens do menu: ícone 16, gap-2.5,
-            py-1.5, text-sm. Antes eram quatro diferenças acumuladas — ícone 18,
-            gap-2, py-2 e a fonte herdada de 16px — e o resultado é que "Voltar
+            py-1.5, text-sm. Antes eram quatro diferenças acumuladas: ícone 18,
+            gap-2, py-2 e a fonte herdada de 16px, e o resultado é que "Voltar
             ao Hub" e "Sair" pareciam de outro menu, colados no fim deste. */}
         <div className="w-full border-t border-white/10 p-2">
           {/* O avatar é maior que os ícones do menu, então o texto nunca vai

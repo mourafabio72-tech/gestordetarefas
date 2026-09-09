@@ -1,9 +1,9 @@
 """
-prova_tipo_documento.py — guia a pagar x comprovante de pagamento.
+prova_tipo_documento.py: guia a pagar x comprovante de pagamento.
 
-O par que mais erra, e erra em silêncio: um DARF em branco é GUIA — documento a
+O par que mais erra, e erra em silêncio: um DARF em branco é GUIA: documento a
 pagar, que o escritório entrega ao cliente. O MESMO DARF com autenticação
-bancária é COMPROVANTE — prova de que foi pago, que o cliente devolve. São
+bancária é COMPROVANTE: prova de que foi pago, que o cliente devolve. São
 papéis opostos no fluxo, e a versão anterior chamava os dois de comprovante só
 porque a palavra "DARF" aparecia no texto.
 
@@ -32,7 +32,7 @@ def tipo(t):
     return classificar_tipo(t)
 
 
-print("\n1. O mesmo DARF, dois papéis — é a marca de PAGAMENTO que separa")
+print("\n1. O mesmo DARF, dois papéis: é a marca de PAGAMENTO que separa")
 darf = "DARF Documento de Arrecadacao de Receitas Federais Codigo da Receita 0220"
 checa("DARF em branco é guia", tipo(darf) == "guia", tipo(darf))
 checa("DARF com autenticação bancária é comprovante",
@@ -52,7 +52,7 @@ for t, nome in [("DAS Simples Nacional linha digitavel", "DAS"),
                 ("Boleto bancario codigo de barras", "boleto")]:
     checa(f"{nome} é guia", tipo(t) == "guia", tipo(t))
 
-print("\n3. 'das' é preposição — a armadilha do português")
+print("\n3. 'das' é preposição, a armadilha do português")
 # Foi esta prova que pegou: com \bdas\b na lista de siglas, "apuração das
 # contas" virava guia. Todo relatório contábil tem "das" no meio.
 checa("'das' no meio de frase não vira guia",
@@ -67,7 +67,7 @@ checa("na ordem inversa também",
 checa("'dae' dentro de outra palavra idem",
       tipo("memoria de calculo cidadae") != "guia")
 
-print("\n3b. Declaração x recibo — o par que também se confunde")
+print("\n3b. Declaração x recibo: o par que também se confunde")
 # A declaração é o documento transmitido; o recibo é a prova de que ela foi
 # entregue. O recibo é o que costuma chegar ao escritório, e por isso vence.
 checa("ECF é declaração", tipo("ECF Escrituracao Contabil Fiscal 2025") == "declaracao",
@@ -92,7 +92,7 @@ checa("texto vazio não quebra", tipo("") == "outro" and tipo(None) == "outro")
 
 print("\n5. Acento e caixa não mudam a resposta")
 checa("com acento e maiúscula",
-      tipo("DOCUMENTO DE ARRECADAÇÃO — GUIA DE RECOLHIMENTO") == "guia")
+      tipo("DOCUMENTO DE ARRECADAÇÃO - GUIA DE RECOLHIMENTO") == "guia")
 
 print("\n" + ("TUDO VERDE" if ok else "VERMELHO") + "\n")
 sys.exit(0 if ok else 1)

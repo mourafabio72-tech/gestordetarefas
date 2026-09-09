@@ -1,5 +1,5 @@
 """
-prova_alerta_destinatarios.py — quem recebe o alerta, por qual canal, e quando.
+prova_alerta_destinatarios.py: quem recebe o alerta, por qual canal, e quando.
 
 Estas são as duas regras que decidem se um alerta sai certo ou errado, e as
 duas erram em silêncio: `faixa_da_tarefa` (em que faixa de urgência a tarefa cai
@@ -183,7 +183,7 @@ check("o número do contato do Zap vence o do cadastro local",
       (d[0]["canal"], d[0]["endereco"]) == ("whatsapp", "5521977771111"), str(d))
 check("vai com o userId do atendente", d[0].get("zap_user_id") == 3)
 
-# Quem não está nos contatos cai no telefone local — e sem userId.
+# Quem não está nos contatos cai no telefone local, e sem userId.
 d = destinatarios_alerta(T([sup], None, None), {}, 0, zap=zap)
 check("quem não é contato usa o telefone do Tareffas", d[0]["endereco"] == "5521988880004")
 check("e vai sem userId, porque não é atendente lá", "zap_user_id" not in d[0])
@@ -210,7 +210,7 @@ check("mantém body e connectionFrom", p["body"] == "oi" and p["connectionFrom"]
 # Sem atendente (cliente, empresa): continua a conversa que já existe.
 p = montar_payload_zap("oi", 2)
 check("cliente não leva userId", "userId" not in p)
-check("nem ticketStrategy — a conversa dele não pode ser picotada",
+check("nem ticketStrategy: a conversa dele não pode ser picotada",
       "ticketStrategy" not in p, str(p))
 check("connectionFrom é respeitado", p["connectionFrom"] == 2)
 check("userId vazio conta como ausente", "userId" not in montar_payload_zap("oi", 0, ""))
@@ -294,7 +294,7 @@ check("funciona sem a data entre parênteses",
 atrasada = [{"titulo": "T", "dias": -3, "venc_dias": 4, "venc_data": "15/09"}]
 check("atrasada mostra o fôlego", "para o vencimento" in montar_resumo("X", atrasada, faixa="atrasada"))
 a_vencer = [{"titulo": "T", "dias": 3, "venc_dias": 10, "venc_data": "15/09"}]
-check("a vencer NÃO mostra — a data legal ainda não é a pergunta",
+check("a vencer NÃO mostra: a data legal ainda não é a pergunta",
       "para o vencimento" not in montar_resumo("X", a_vencer, faixa="a_vencer"))
 hoje = [{"titulo": "T", "dias": 0, "venc_dias": 6, "venc_data": "15/09"}]
 check("vence hoje também não mostra",
@@ -319,7 +319,7 @@ sonome = U(8, "Sem Nada")
 check("sem telefone e sem e-mail fica de fora", destinatarios_alerta(T([sonome], None, None), {}, 0) == [])
 lixo = U(11, "Telefone Podre", "podre@bps4.com", telefone="1234")
 d = destinatarios_alerta(T([lixo], None, None), {}, 0)
-check("telefone impossível não vira WhatsApp — usa o e-mail", d[0]["canal"] == "email")
+check("telefone impossível não vira WhatsApp: usa o e-mail", d[0]["canal"] == "email")
 
 print("\n=== 4b. usuário do lado do cliente recebe pelos DOIS canais ===")
 # Ele está fora do escritório, não abre o painel, e não tem supervisor de rede.
@@ -354,7 +354,7 @@ d = destinatarios_alerta(T([cliente_u], None, None), {}, 0, zap=zap_com_cliente)
 check("cliente nunca leva userId, mesmo constando como atendente",
       all("zap_user_id" not in x for x in d))
 
-# Cliente como responsável não tem supervisor — e o alerta não inventa um.
+# Cliente como responsável não tem supervisor, e o alerta não inventa um.
 d = destinatarios_alerta(T([cliente_u], None, None))
 check("nenhum supervisor aparece do nada", not any(x["papel"] == "supervisor" for x in d))
 

@@ -3,13 +3,13 @@
 // Sem JSX e sem React, como os vizinhos, para provar em Node puro.
 //
 // Existe porque o modo de errar aqui é silencioso e caro: o identificador é
-// procurado DENTRO do documento, e quem digita uma descrição — "planilha de
-// apuração de IRPJ" — grava um texto que não existe em lugar nenhum. Nada
+// procurado DENTRO do documento, e quem digita uma descrição ("planilha de
+// apuração de IRPJ") grava um texto que não existe em lugar nenhum. Nada
 // falha na hora. O e-validador simplesmente nunca reconhece aquele documento,
 // e a descoberta vem meses depois, quando alguém pergunta por que a baixa
 // automática não funciona.
 
-/** minúsculo, sem acento e com espaços colapsados — o mesmo que o backend faz. */
+/** minúsculo, sem acento e com espaços colapsados: o mesmo que o backend faz. */
 export function normalizar(texto) {
   return (texto || '')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '')
@@ -20,11 +20,11 @@ export function normalizar(texto) {
  * O identificador aparece no documento?
  *
  * Devolve `{ estado, aviso }`. Estados:
- *   'vazio'      — nada digitado ainda
- *   'sem_texto'  — não há texto extraído para conferir (PDF escaneado)
- *   'achou'      — está no documento
- *   'nao_achou'  — NÃO está, e é isso que precisa gritar
- *   'curto'      — existe, mas é curto demais para distinguir
+ *   'vazio': nada digitado ainda
+ *   'sem_texto': não há texto extraído para conferir (PDF escaneado)
+ *   'achou': está no documento
+ *   'nao_achou': NÃO está, e é isso que precisa gritar
+ *   'curto': existe, mas é curto demais para distinguir
  */
 export function conferirIdentificador(identificador, textoDocumento) {
   const alvo = normalizar(identificador);
@@ -49,7 +49,7 @@ export function conferirIdentificador(identificador, textoDocumento) {
              aviso: 'Muito curto: vai casar com documentos que não são deste tipo.' };
   }
   // Valor e data mudam a cada documento. Um identificador que os contenha casa
-  // com ESTE arquivo e com nenhum outro — o e-validador reconheceria a guia de
+  // com ESTE arquivo e com nenhum outro: o e-validador reconheceria a guia de
   // abril e nunca a de maio, o que é pior do que não reconhecer nenhuma:
   // parece funcionar no teste e falha no uso.
   const movel = trechoMovel(identificador);

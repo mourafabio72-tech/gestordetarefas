@@ -1,5 +1,5 @@
 """
-prova_excecao_obrigacao.py — "não se aplica a esta empresa", e o caminho de volta.
+prova_excecao_obrigacao.py: "não se aplica a esta empresa", e o caminho de volta.
 
 A obrigação pega a empresa pela regra (regime, segmento) ou pelo vínculo. Às
 vezes a regra acerta o perfil e erra o cliente: a empresa é Lucro Real mas não

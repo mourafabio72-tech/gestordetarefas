@@ -1,5 +1,5 @@
 """
-prova_gerador_multiplos.py — a tarefa gerada nasce com TODOS os responsáveis do
+prova_gerador_multiplos.py: a tarefa gerada nasce com TODOS os responsáveis do
 setor daquela empresa, e some da tela só quando todos eles estão bloqueados.
 
 Duas coisas se provam aqui:

@@ -4,7 +4,7 @@
 //
 // Existe porque 36 arquivos numa requisição só não chegam ao servidor: o proxy
 // corta por tamanho (413) ou por tempo, e o erro que volta não diz qual dos dois
-// foi — a tela só mostrava "não consegui ler os arquivos", como se o problema
+// foi: a tela só mostrava "não consegui ler os arquivos", como se o problema
 // fosse o conteúdo.
 
 /** Arquivos por remessa na primeira tentativa. */
@@ -13,7 +13,7 @@ export const POR_REMESSA = 5;
 /**
  * Envia uma remessa; se ela falhar, DIVIDE AO MEIO e tenta cada metade.
  *
- * O limite que derruba a requisição — tamanho ou tempo — depende dos arquivos,
+ * O limite que derruba a requisição (tamanho ou tempo) depende dos arquivos,
  * e não dá para adivinhar um número que sirva para toda pasta. Cinco planilhas
  * pesadas estouram onde cinco PDFs pequenos passam. Dividir na falha encontra o
  * tamanho que passa, sem punir o caso comum com remessas minúsculas.
@@ -74,7 +74,7 @@ export function emRemessas(arquivos, tamanho = POR_REMESSA) {
  * Junta os resultados das remessas num só, como se tivesse sido uma chamada.
  *
  * Remessa que falhou inteira vira uma linha de revisão POR ARQUIVO, com o
- * motivo. Some-la faria a conta não fechar — 36 enviados, 30 respondidos, e
+ * motivo. Some-la faria a conta não fechar: 36 enviados, 30 respondidos, e
  * nenhuma pista dos 6 que evaporaram.
  */
 export function juntarResultados(partes) {

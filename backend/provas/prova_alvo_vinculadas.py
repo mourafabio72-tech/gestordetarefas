@@ -1,5 +1,5 @@
 """
-prova_alvo_vinculadas.py — obrigação de cliente específico.
+prova_alvo_vinculadas.py: obrigação de cliente específico.
 
 O alvo era sempre `regra UNIÃO vinculadas`, e campo de regra vazio significava
 TODOS. Consequência: não existia jeito de dizer "esta obrigação é só destes
@@ -53,7 +53,7 @@ db.add(o); db.commit()
 check("cinco empresas", len(nomes(o)) == 5, f"({len(nomes(o))})")
 check("modo padrão é 'regra'", (o.alvo_modo or "regra") == "regra")
 
-print("\n=== 2. vincular NÃO restringe no modo regra — era a armadilha ===")
+print("\n=== 2. vincular NÃO restringe no modo regra, era a armadilha ===")
 o.empresas = [teste_a]
 db.commit()
 check("continua alcançando as cinco", len(nomes(o)) == 5, f"({nomes(o)})")

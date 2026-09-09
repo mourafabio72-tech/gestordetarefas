@@ -87,7 +87,7 @@ export default function Modelos() {
         const { data } = await modelosAPI.analisar(aceitos[0]);
         setFila([data]);
       } else {
-        // Em remessas: 36 arquivos numa requisição só não chegam ao servidor —
+        // Em remessas: 36 arquivos numa requisição só não chegam ao servidor:
         // o proxy corta por tamanho ou por tempo, e o erro não diz qual foi.
         const remessas = emRemessas(aceitos);
         naoEnviados.current.clear();
@@ -142,7 +142,7 @@ export default function Modelos() {
     obrigacoes.find((o) => String(o.id) === String(form?.obrigacao_id))?.nome || '';
 
   // Abre um modelo salvo no mesmo formulário da revisão. O texto extraído não é
-  // devolvido na listagem, então a conferência do identificador fica sem base —
+  // devolvido na listagem, então a conferência do identificador fica sem base:
   // e dizer isso é melhor do que checar contra vazio e acusar que "não está no
   // documento".
   const editar = (m) => {
@@ -294,7 +294,7 @@ export default function Modelos() {
             </div>
           )}
           {/* Item cuja remessa não chegou ao servidor: não há CNPJ, texto nem
-              candidatos para revisar — o formulário abaixo só produziria a
+              candidatos para revisar: o formulário abaixo só produziria a
               recusa "documento sem CNPJ nem razão social". O que cabe é
               reenviar o arquivo. */}
           {atual.erro && (

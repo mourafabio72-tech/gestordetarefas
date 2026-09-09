@@ -101,7 +101,7 @@ class Empresa(Base):
     regime_tributario = Column(String(30), default="indefinido")  # indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor|imune|isento
     segmento = Column(String(30))  # comercio|servico|comercio_servico|industria
     grupo = Column(String(80))     # grupo econômico (ex.: Markbuilding)
-    # Responsável/supervisor padrão do cliente — as tarefas geradas herdam daqui.
+    # Responsável/supervisor padrão do cliente: as tarefas geradas herdam daqui.
     responsavel_id = Column(Integer, ForeignKey("usuarios.id"))
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"))
     # Marco de fechamento contábil do mês DESTA empresa (ex.: "10º dia útil").
@@ -177,7 +177,7 @@ class ObrigacaoExcecao(Base):
 
 
 class EmpresaObrigacaoDetalhe(Base):
-    """Detalhe/complemento fixo de uma empresa numa obrigação (ex.: 'Empréstimo —
+    """Detalhe/complemento fixo de uma empresa numa obrigação (ex.: 'Empréstimo:
     Banco Itaú'). Herdado na descrição de toda tarefa gerada dessa obrigação
     para essa empresa."""
     __tablename__ = "empresa_obrigacao_detalhe"
@@ -215,8 +215,8 @@ class SaidaAcesso(Base):
 class TarefaEnvio(Base):
     """Cada vez que um documento saiu do escritório para o cliente.
 
-    Tabela em vez de campos na tarefa porque reenvio acontece — o cliente
-    perdeu, o número estava errado, a guia foi retificada — e sobrescrever o
+    Tabela em vez de campos na tarefa porque reenvio acontece (o cliente
+    perdeu, o número estava errado, a guia foi retificada) e sobrescrever o
     registro anterior apagaria justamente a prova de que a primeira via foi
     entregue no prazo.
     """
@@ -227,7 +227,7 @@ class TarefaEnvio(Base):
     arquivo = Column(String(200))
     # Link exclusivo deste destinatário. Um token por pessoa, não por tarefa:
     # com um link só para todos, o acesso diz que ALGUÉM abriu, e a pergunta é
-    # quem — o sócio que paga ou o e-mail geral que ninguém lê.
+    # quem: o sócio que paga ou o e-mail geral que ninguém lê.
     token = Column(String(64), unique=True, index=True)
     canal = Column(String(20))                 # whatsapp | email
     endereco = Column(String(200))
@@ -242,12 +242,12 @@ class Setor(Base):
     __tablename__ = "setores"
 
     # Setor = departamento INTERNO do escritório (Fiscal, Contábil, DP...).
-    # Global — não pertence a nenhuma empresa cliente.
+    # Global, não pertence a nenhuma empresa cliente.
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
     descricao = Column(Text)
     # Gestor do departamento. Vira supervisor das tarefas do setor quando o
-    # responsável não tem gestor próprio — um cadastro por setor cobre a equipe
+    # responsável não tem gestor próprio: um cadastro por setor cobre a equipe
     # inteira, em vez de depender do gestor_id estar preenchido pessoa a pessoa.
     gestor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     ativo = Column(Boolean, default=True)
@@ -268,7 +268,7 @@ class Grupo(Base):
     label = Column(String(60), nullable=False)
     descricao = Column(Text)
     permissoes = Column(Text)          # JSON da matriz completa
-    sistema = Column(Boolean, default=False)  # nativo — não pode ser excluído
+    sistema = Column(Boolean, default=False)  # nativo, não pode ser excluído
     ativo = Column(Boolean, default=True)     # bloqueado -> não pode ser atribuído
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -288,7 +288,7 @@ class Tarefa(Base):
     responsavel_id = Column(Integer, ForeignKey("usuarios.id"), index=True)  # principal (= 1º dos responsaveis); mantido p/ escopo/compat
     supervisor_id = Column(Integer, ForeignKey("usuarios.id"), index=True)
     obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id"), nullable=True, index=True)  # de qual modelo veio
-    competencia = Column(String(7), index=True)  # "MM/AAAA" — chave de baixa do e-validador
+    competencia = Column(String(7), index=True)  # "MM/AAAA", chave de baixa do e-validador
     # Fechamento contábil DO CLIENTE no mês desta tarefa, gravado na geração.
     # Fica no card para dar a régua: "vence dia 10, e o cliente fecha dia 15".
     # Gravado, e não calculado na hora, porque é a foto do que valia quando a
@@ -314,7 +314,7 @@ class Tarefa(Base):
     status = Column(Enum(StatusTarefa), default=StatusTarefa.PENDENTE, index=True)
     prioridade = Column(Enum(PrioridadeTarefa), default=PrioridadeTarefa.MEDIA)
     data_inicio = Column(DateTime(timezone=True))
-    data_prazo = Column(DateTime(timezone=True), index=True)  # prazo interno — comanda alertas (nulo em tarefa-modelo copiada)
+    data_prazo = Column(DateTime(timezone=True), index=True)  # prazo interno, comanda alertas (nulo em tarefa-modelo copiada)
     data_vencimento = Column(DateTime(timezone=True))             # vencimento fiscal/legal
     gera_multa = Column(Boolean, default=False)
     data_conclusao = Column(DateTime(timezone=True))
@@ -350,7 +350,7 @@ class Tarefa(Base):
 
         A tela não pode depender da listagem de setores para isto: aquela rota
         só devolve os ATIVOS, e desativar um setor apagaria o nome dele de todas
-        as tarefas já existentes — o dado continua no banco, mas some da tela.
+        as tarefas já existentes: o dado continua no banco, mas some da tela.
         """
         return self.setor.nome if self.setor else None
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id], back_populates="tarefas")
@@ -401,7 +401,7 @@ class Obrigacao(Base):
     mininome = Column(String(50))                 # nome curto (ex.: "DARF 0220")
     # LISTA de identificadores, separada por vírgula. O limite é da lista
     # inteira, não de um item: cada modelo salvo acrescenta um, e 200 caracteres
-    # acabam em meia dúzia de treinos — o INSERT morria com 500 no meio do
+    # acabam em meia dúzia de treinos: o INSERT morria com 500 no meio do
     # cadastro, sem dizer o que tinha estourado.
     identificadores = Column(String(2000))
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)
@@ -434,10 +434,10 @@ class Obrigacao(Base):
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
-    # Para que lado o documento anda — e há três respostas, não duas:
-    #   receber  — o cliente manda o comprovante e a tarefa baixa pelo e-validador
-    #   entregar — o escritório anexa a guia e envia; o envio conclui a tarefa
-    #   interna  — não troca documento com ninguém (conciliar banco, lançar
+    # Para que lado o documento anda, e há três respostas, não duas:
+    #   receber: o cliente manda o comprovante e a tarefa baixa pelo e-validador
+    #   entregar: o escritório anexa a guia e envia; o envio conclui a tarefa
+    #   interna: não troca documento com ninguém (conciliar banco, lançar
     #              notas, fechar balancete). É trabalho do escritório, e pedir
     #              documento nessas seria travar a baixa por algo que não existe.
     sentido = Column(String(10), default="receber")   # receber | entregar | interna
@@ -471,7 +471,7 @@ class Obrigacao(Base):
 
 
 class Substituicao(Base):
-    """Substituição de responsável — temporária (férias/doença) ou definitiva."""
+    """Substituição de responsável, temporária (férias/doença) ou definitiva."""
     __tablename__ = "substituicoes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -501,7 +501,7 @@ class Modelo(Base):
     Você sobe um comprovante/recibo/relatório, o sistema lê e guarda a
     'impressão digital' (texto + campos identificados). Cada modelo casa com
     uma Empresa (via CNPJ) e uma Obrigação (via identificador), e alimenta o
-    reconhecimento automático do e-validador. Só a leitura é guardada — não o
+    reconhecimento automático do e-validador. Só a leitura é guardada, não o
     arquivo original (sem necessidade de volume em produção)."""
     __tablename__ = "modelos"
 

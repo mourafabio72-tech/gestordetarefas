@@ -1,5 +1,5 @@
 """
-prova_evalidador_interna.py — obrigação interna PODE exigir documento.
+prova_evalidador_interna.py: obrigação interna PODE exigir documento.
 
 Reversão declarada de uma decisão que estava escrita no código com o motivo
 errado. O comentário antigo dizia que "interna não troca documento com ninguém,

@@ -1,4 +1,4 @@
-"""e-validador — lê um comprovante de entrega (PDF), extrai as chaves e casa
+"""e-validador: lê um comprovante de entrega (PDF), extrai as chaves e casa
 com a tarefa correspondente para dar baixa.
 
 Chaves (ver OBRIGACOES_SPEC.md):
@@ -54,7 +54,7 @@ def _ler_xls(conteudo: bytes) -> str:
 
 
 def ler_arquivo(nome: str, conteudo: bytes) -> str:
-    """Extrai o texto do comprovante — PDF, XLSX ou XLS."""
+    """Extrai o texto do comprovante: PDF, XLSX ou XLS."""
     n = (nome or "").lower()
     if n.endswith(".xlsx"):
         return _ler_xlsx(conteudo)
@@ -76,7 +76,7 @@ def conferir_saida(texto: str, cnpj_empresa: str, competencia_tarefa: str) -> di
     é deixar passar em silêncio o documento que diz OUTRO CNPJ.
 
     Devolve `{ok, alertas[], cnpj_lido, competencia_lida}`. `ok` só é falso
-    quando algo lido CONTRADIZ o cadastro — não quando falta.
+    quando algo lido CONTRADIZ o cadastro, não quando falta.
     """
     lido = extrair_dados(texto or "")
     cnpj_doc = _so_digitos(lido.get("cnpj") or "")
@@ -122,7 +122,7 @@ def extrair_dados(texto: str) -> dict:
     if m:
         d["protocolo"] = m.group(1)
 
-    # Data da transmissão (perto de ReceitaNet) — melhor esforço
+    # Data da transmissão (perto de ReceitaNet), melhor esforço
     m = re.search(r"ReceitaNet\s*:?\s*(\d{2}/\d{2}/\d{4})", texto)
     if m:
         try:
@@ -162,8 +162,8 @@ def classificar_tipo(texto: str) -> str:
     """Classifica o documento para organizar o repositório.
 
     A ordem importa, e o par guia/comprovante é o que mais erra: um DARF em
-    branco é GUIA — documento a pagar, que o escritório entrega ao cliente. O
-    mesmo DARF com autenticação bancária é COMPROVANTE — prova de que foi pago,
+    branco é GUIA: documento a pagar, que o escritório entrega ao cliente. O
+    mesmo DARF com autenticação bancária é COMPROVANTE: prova de que foi pago,
     que o cliente devolve. São papéis opostos no fluxo, e a versão anterior
     chamava os dois de comprovante só porque a palavra "DARF" aparecia.
 
@@ -177,7 +177,7 @@ def classificar_tipo(texto: str) -> str:
     # 2. Guia a pagar: o documento em si, sem marca de quitação.
     #
     # "DAS" fica FORA da lista de siglas soltas: "das" é preposição, e
-    # "apuração das contas" viraria guia — a prova pegou isso. Para o DAS do
+    # "apuração das contas" viraria guia: a prova pegou isso. Para o DAS do
     # Simples, exige-se a sigla perto de "simples", que é como o documento
     # sempre se apresenta.
     if re.search(r"\bdarf\b|\bdarj\b|\bgps\b|\bgnre\b|\bdae\b|\bdam\b"
@@ -190,7 +190,7 @@ def classificar_tipo(texto: str) -> str:
     # costuma chegar ao escritório.
     if re.search(r"recibo de entrega|comprovante de entrega|recibo de transmiss|protocolo de entrega|recibo|transmiss", t):
         return "recibo_entrega"
-    # 4. A declaração em si — o documento transmitido ou o espelho dele.
+    # 4. A declaração em si: o documento transmitido ou o espelho dele.
     if re.search(r"declaracao|\becf\b|\becd\b|\bdctf\b|\bdirf\b|\brais\b|\bdefis\b"
                  r"|\bdasn\b|\bdmed\b|\bdimob\b|\bsped\b|\befd\b|escrituracao", t):
         return "declaracao"
@@ -218,7 +218,7 @@ def candidatos_identificador(texto: str) -> list:
             vistos.add(k)
             cands.append(t)
 
-    # 1) "Versão <nome>:" — costuma ser o identificador mais limpo (ex.: EFD-Contribuições, Sped Fiscal)
+    # 1) "Versão <nome>:", costuma ser o identificador mais limpo (ex.: EFD-Contribuições, Sped Fiscal)
     for m in re.finditer(r"Vers[aã]o\s+([^\n:]{3,45}?)\s*:", texto):
         add(m.group(1))
     # 2) linhas-título em CAIXA ALTA (tipo do documento)
@@ -402,7 +402,7 @@ def salvar_modelo(db: Session, dados: dict) -> "object":
 def _esquecer_identificador(db: Session, obrigacao_id, ident: str, ignorar_modelo_id=None):
     """Tira o identificador da obrigação, se nenhum OUTRO modelo ainda o usar.
 
-    Editar um modelo tem de desfazer o treino que ele causou — é justamente
+    Editar um modelo tem de desfazer o treino que ele causou: é justamente
     para isso que se edita, quando o vínculo saiu errado. Mas dois modelos
     podem ter chegado ao mesmo identificador (o mesmo layout em duas empresas),
     e aí apagá-lo cegamente desligaria o reconhecimento dos dois.
@@ -433,7 +433,7 @@ def atualizar_modelo(db: Session, modelo_id: int, dados: dict):
     obrigação antiga, o novo entra na nova.
 
     Sem isso, corrigir um vínculo errado na tela deixaria o erro vivo onde ele
-    importa — na lista de identificadores da obrigação, que é o que o
+    importa, na lista de identificadores da obrigação, que é o que o
     e-validador consulta.
     """
     from ..models import Modelo

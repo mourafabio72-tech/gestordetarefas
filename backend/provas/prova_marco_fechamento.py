@@ -1,5 +1,5 @@
 """
-prova_marco_fechamento.py — prazo que varia por empresa sem cadastro em cruz.
+prova_marco_fechamento.py: prazo que varia por empresa sem cadastro em cruz.
 
 O problema: a entrega do balancete é dia 15 numa empresa, 5º dia útil noutra e
 dia 18 numa terceira. E não é só o balancete: as etapas que o antecedem
@@ -109,7 +109,7 @@ check("5 dias úteis recuam mais que 5 corridos", util < d, f"({util} vs {d})")
 check("nenhum dos dois cai em fim de semana", d.weekday() < 5 and util.weekday() < 5)
 
 print("\n=== 7. o marco atravessa a virada de mês sem quebrar ===")
-# Nov/2026 abre num domingo — o 5º dia útil não é o dia 5
+# Nov/2026 abre num domingo, o 5º dia útil não é o dia 5
 m = calc_marco_fechamento(B, 11, 2026)
 check("5º dia útil de nov/2026 = 06/11", m.isoformat() == "2026-11-06", f"({m})")
 check("é dia útil", m.weekday() < 5)
@@ -188,7 +188,7 @@ t_sem = pega("Balancete", sem_marco)
 check("gravou o fechamento do cliente",
       t_bal and t_bal.fechamento_cliente and t_bal.fechamento_cliente.isoformat() == "2026-09-15",
       f"({t_bal and t_bal.fechamento_cliente})")
-check("o balancete vence NO fechamento — o card dirá 'encerra o fechamento'",
+check("o balancete vence NO fechamento: o card dirá 'encerra o fechamento'",
       t_bal.data_vencimento.date() == t_bal.fechamento_cliente)
 check("a etapa anterior vence antes, e carrega o mesmo marco",
       t_con.fechamento_cliente == t_bal.fechamento_cliente

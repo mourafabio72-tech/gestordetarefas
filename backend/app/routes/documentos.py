@@ -4,7 +4,7 @@ A tela de Tarefas leva ao documento pela tarefa. Auditoria pede o contrário:
 "todos os comprovantes da MKB em 2026", sem saber de qual tarefa cada um veio.
 Este é o caminho por documento.
 
-O download em si continua em `/tarefas/{id}/anexo` — aqui só se acha.
+O download em si continua em `/tarefas/{id}/anexo`, aqui só se acha.
 """
 import os
 from datetime import date

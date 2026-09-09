@@ -1,7 +1,7 @@
 """Upload público de comprovante por tarefa.
 
 O cliente recebe no alerta um link único (com token) por tarefa. Ao subir o
-arquivo, a tarefa é baixada — como o token identifica exatamente a tarefa, não
+arquivo, a tarefa é baixada, como o token identifica exatamente a tarefa, não
 depende do matcher do e-validador.
 """
 import os
@@ -95,7 +95,7 @@ def nome_de_exibicao(nome: str) -> str:
 
     No volume ele é guardado como "{token}_{arquivo}", e o token é a credencial
     do link público de envio. Devolvê-lo no cabeçalho do download vazaria por
-    histórico do navegador e pasta de downloads — e aquele link, enquanto a
+    histórico do navegador e pasta de downloads, e aquele link, enquanto a
     tarefa existir, deixa qualquer um substituir o comprovante.
     """
     base = os.path.basename(nome or "")
@@ -195,7 +195,7 @@ def registrar_baixa(db, tarefa: Tarefa, filename: str, conteudo: bytes) -> dict:
         protocolo = dados.get("protocolo")
         data_entrega = dados.get("data_entrega")
     except Exception:
-        pass  # imagem/planilha sem texto — segue só com o arquivo
+        pass  # imagem/planilha sem texto, segue só com o arquivo
 
     tarefa.anexo_nome = guardado
     tarefa.protocolo_entrega = protocolo

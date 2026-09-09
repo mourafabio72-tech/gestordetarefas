@@ -1,4 +1,4 @@
-"""Uniformiza a razão social na EXIBIÇÃO — não mexe no cadastro.
+"""Uniformiza a razão social na EXIBIÇÃO, não mexe no cadastro.
 
 Porte do `frontend/src/pages/razaoSocial.js`. Existe em dois lugares porque a
 mesma razão social aparece na tela e na mensagem que vai para o cliente, e a

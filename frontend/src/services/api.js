@@ -136,7 +136,7 @@ export const tarefasAPI = {
     const fd = new FormData();
     fd.append('arquivo', arquivo);
     // O `Content-Type: application/json` é padrão desta instância do axios, e
-    // sem sobrescrever aqui o FormData sai como JSON — o FastAPI não encontra o
+    // sem sobrescrever aqui o FormData sai como JSON: o FastAPI não encontra o
     // campo e responde "arquivo: é obrigatório". Todos os outros uploads do
     // projeto fazem o mesmo; este tinha ficado de fora.
     return api.post(`/tarefas/${id}/saida`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -266,7 +266,7 @@ export const documentosAPI = {
 };
 
 export const alertasAPI = {
-  // Sem `ensaio: false` explícito o backend só simula — o alerta de verdade sai
+  // Sem `ensaio: false` explícito o backend só simula: o alerta de verdade sai
   // para o WhatsApp e o e-mail do cliente, e essa chamada não pode disparar sem
   // querer.
   verificar: (params = { ensaio: true }) => api.post('/alertas/verificar', null, { params }),

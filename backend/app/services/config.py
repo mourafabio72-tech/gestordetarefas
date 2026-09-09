@@ -26,7 +26,7 @@ DEFAULTS = {
     "alert_cliente": os.getenv("ALERT_CLIENTE", "0"),
     # Um horário por FAIXA de urgência, não um horário para tudo. Cada faixa
     # tem cadência natural própria: planejamento de manhã, o que vence hoje com
-    # insistência, e o atrasado uma vez por dia — martelar o atrasado quatro
+    # insistência, e o atrasado uma vez por dia, martelar o atrasado quatro
     # vezes ao dia é o que faz a pessoa parar de ler.
     # Escalonados de propósito: horários iguais entregariam três mensagens de
     # uma vez, que é pior que uma só.
@@ -34,7 +34,7 @@ DEFAULTS = {
     "horarios_vence_hoje": "09:30,15:00",
     "horarios_atrasada": "17:45",
     "public_url": os.getenv("PUBLIC_URL", "https://gestordetarefas.zoaria.com.br"),
-    # IA (reforço do e-validador) — OpenAI
+    # IA (reforço do e-validador): OpenAI
     "ia_ativo": "1" if os.getenv("OPENAI_API_KEY") else "0",
     "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
     "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),

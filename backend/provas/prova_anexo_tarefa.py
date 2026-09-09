@@ -1,5 +1,5 @@
 """
-prova_anexo_tarefa.py — quem pode baixar o comprovante de uma tarefa.
+prova_anexo_tarefa.py: quem pode baixar o comprovante de uma tarefa.
 
 O comprovante é a prova da entrega. Servi-lo pela primeira vez abre duas portas
 que erram calado: escopo (analista baixando documento de tarefa que não é dele)
@@ -84,7 +84,7 @@ db.close()
 
 print(f"\n(escopo do analista neste preset: {escopo_analista})")
 
-print("\n=== 1. o caminho feliz — sem ele, uma rota que nega tudo passaria ===")
+print("\n=== 1. o caminho feliz: sem ele, uma rota que nega tudo passaria ===")
 r = client.get(f"/api/tarefas/{ids['Com comprovante']}/anexo", headers=cabeca("dono@x.com"))
 checa("o responsável baixa o comprovante", r.status_code == 200, f"({r.status_code})")
 checa("vem o conteúdo do arquivo", r.content == b"%PDF-1.4 conteudo de prova")
@@ -105,7 +105,7 @@ esperado = 404 if escopo_analista != "todas" else 200
 checa(f"quem não enxerga a tarefa não baixa (esperado {esperado})",
       r.status_code == esperado, f"({r.status_code})")
 if escopo_analista != "todas":
-    checa("e sai como 404, não 403 — 403 confirmaria que a tarefa existe",
+    checa("e sai como 404, não 403: 403 confirmaria que a tarefa existe",
           r.status_code == 404)
 
 print("\n=== 4. sem sessão não passa ===")
@@ -137,7 +137,7 @@ def docs(email, **params):
     return client.get("/api/documentos", params=params, headers=cabeca(email)).json()
 
 r = docs("admin@x.com")
-# Três das quatro tarefas têm anexo_nome — inclusive a de nome malicioso, que
+# Três das quatro tarefas têm anexo_nome, inclusive a de nome malicioso, que
 # existe para provar a travessia de caminho.
 checa("lista só quem TEM comprovante", r["mostrando"] == 3, f"({r['mostrando']} de {r['total']})")
 titulos = {d["titulo"] for d in r["documentos"]}
@@ -179,7 +179,7 @@ def apagar(email, tid, tipo="recebido"):
 
 # O analista enxerga a tarefa dele, mas não tem a flag: ver não é apagar.
 r = apagar("dono@x.com", ids["Com comprovante"])
-checa("sem a flag, 403 — e é 403 mesmo, não 404", r.status_code == 403, f"({r.status_code})")
+checa("sem a flag, 403, e é 403 mesmo, não 404", r.status_code == 403, f"({r.status_code})")
 checa("a mensagem diz qual permissão falta", "apagar_anexo" in r.text, r.text[:80])
 checa("e o arquivo continua lá",
       client.get(f"/api/tarefas/{ids['Com comprovante']}/anexo",

@@ -89,7 +89,7 @@ def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util
     """Data-limite no mês de entrega, ajustada a dia útil conforme a regra."""
     ultimo = calendar.monthrange(ano, mes)[1]
     if tipo == "dia_util":
-        # N-ésimo dia útil — já é dia útil, não precisa de ajuste
+        # N-ésimo dia útil, já é dia útil, não precisa de ajuste
         return _nth_dia_util(ano, mes, int(dia_fixo or 1), sabado_util)
     if tipo == "primeiro_dia_util":
         d = date(ano, mes, 1)
@@ -185,7 +185,7 @@ def calc_prazo_interno(vencimento: date, dias_antes, tipo_dias: str, sabado_util
 
 def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
     """A empresa `e` é alvo da obrigação `o`? Casa a regra (regime/segmento)
-    OU está vinculada explicitamente. (Não checa ativo/bloqueado — quem chama filtra.)"""
+    OU está vinculada explicitamente. (Não checa ativo/bloqueado: quem chama filtra.)"""
     regimes = _csv_set(o.aplica_regimes)
     segmentos = _csv_set(o.aplica_segmentos)
     ok_reg = (not regimes) or (e.regime_tributario in regimes)
@@ -419,7 +419,7 @@ def gerar_mes_atual(db: Session) -> dict:
 
 
 def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entrega: int) -> dict:
-    """Gera as tarefas de UMA empresa para o mês de entrega informado — usada quando
+    """Gera as tarefas de UMA empresa para o mês de entrega informado, usada quando
     a empresa é cadastrada (vínculo automático por regime/segmento). Percorre todas as
     obrigações ativas do mês cuja regra bate com a empresa e cria as tarefas faltantes."""
     if not empresa.ativo or empresa.bloqueado:

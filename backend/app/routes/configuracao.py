@@ -117,7 +117,7 @@ async def zap_usuarios(
         "contatos": len(contatos),
         "contatos_com_numero": len(numeros),
         "atendentes": len(atendentes),
-        # As chaves que a API devolveu de fato — se um dia o schema mudar, o
+        # As chaves que a API devolveu de fato, se um dia o schema mudar, o
         # diagnóstico aparece aqui em vez de virar investigação.
         "campos_contato": sorted({k for c in contatos for k in c}),
         "campos_usuario": sorted({k for a in atendentes for k in a}),

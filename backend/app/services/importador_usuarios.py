@@ -2,7 +2,7 @@
 
 Colunas aceitas (cabeçalho flexível, sem acento/maiúsculas):
   nome*, email*, senha, cargo, telefone, nível (grupo), tipo, empresa, gestor.
-* obrigatórias. Upsert por e-mail — se já existe, atualiza (NÃO troca a senha,
+* obrigatórias. Upsert por e-mail: se já existe, atualiza (NÃO troca a senha,
 a menos que a coluna 'senha' venha preenchida). Sem 'senha' em usuário novo,
 gera uma SENHA TEMPORÁRIA aleatória e a devolve no resultado (para o admin
 repassar; o usuário troca depois).
@@ -61,7 +61,7 @@ TIPOS = {
 
 
 def _carregar_grupos(db) -> dict:
-    """{nome_normalizado: slug} dos grupos ativos do banco — por slug e por label."""
+    """{nome_normalizado: slug} dos grupos ativos do banco, por slug e por label."""
     mapa = {}
     for g in db.query(Grupo).filter(Grupo.ativo == True).all():
         mapa[_norm(g.slug)] = g.slug
@@ -122,7 +122,7 @@ def _resolver_empresa(db, valor: str):
 
 
 def _resolver_setor(db, valor: str):
-    """Setor por nome (normalizado). NÃO cria setor — só vincula a um já
+    """Setor por nome (normalizado). NÃO cria setor: só vincula a um já
     cadastrado. Nome desconhecido devolve None (evita poluir o cadastro com
     valores errados na coluna, ex.: cargos digitados como setor)."""
     if not valor:

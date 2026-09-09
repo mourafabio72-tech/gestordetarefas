@@ -4,7 +4,7 @@
 // Também é o alvo dos links do Painel: cada número de lá abre esta tela já
 // filtrada, e para o número bater com a lista o critério tem de ser o MESMO.
 // Por isso "atrasada" e "vence hoje" saem de `alertaDaTarefa`, que lê o prazo
-// interno — e não da faixa de vencimento, que lê o prazo legal.
+// interno, e não da faixa de vencimento, que lê o prazo legal.
 //
 // Fica em arquivo próprio, sem JSX e sem React, pelo mesmo motivo de
 // `contexts/bilhete.js`: é a única lógica não trivial da tela, e assim ela roda
@@ -13,7 +13,7 @@
 
 import { alertaDaTarefa } from './alertaPrazo.js';   // com extensão: a prova roda em Node puro
 
-/** Marca de "tarefa sem competência" no select — as avulsas, criadas à mão. */
+/** Marca de "tarefa sem competência" no select: as avulsas, criadas à mão. */
 export const SEM_COMPETENCIA = '_sem';
 
 /** Recortes que o Painel manda por link, na chave `alerta` da URL. */
@@ -80,7 +80,7 @@ export function filtrarTarefas(tarefas, filtros, hoje = new Date()) {
     if (f.multa && !t.gera_multa) return false;
 
     // Prioridade: 'alta_urgente' junta as duas, porque na prática elas são a
-    // mesma fila — o que não pode esperar.
+    // mesma fila: o que não pode esperar.
     if (f.prioridade) {
       const aceitas = f.prioridade === 'alta_urgente' ? ['alta', 'urgente'] : [f.prioridade];
       if (!aceitas.includes(t.prioridade)) return false;
@@ -152,7 +152,7 @@ export function filtrosVazios(setor = '') {
 }
 
 /**
- * Filtro montado a partir da URL — é assim que o Painel entrega o recorte.
+ * Filtro montado a partir da URL: é assim que o Painel entrega o recorte.
  *
  * Aceita URLSearchParams ou um objeto simples, para a prova rodar sem
  * navegador. Chave desconhecida é ignorada: link velho no favorito de alguém

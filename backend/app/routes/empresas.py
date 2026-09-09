@@ -47,7 +47,7 @@ class RespSetorItem(BaseModel):
     @field_validator("responsavel_id", mode="before")
     @classmethod
     def _sem_dono(cls, v):
-        """Select sem escolha manda "" — isso é "sem dono ainda", não erro.
+        """Select sem escolha manda "": isso é "sem dono ainda", não erro.
 
         Mesmo caso do marco de fechamento na empresa: campo vazio de formulário
         chegava como texto num campo inteiro e derrubava o salvamento inteiro

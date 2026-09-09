@@ -71,7 +71,7 @@ async def lote(
 
     O salvamento automático ficou DESLIGADO por padrão (`auto=false`), e a razão
     veio do uso: o matcher casou quatro de seis arquivos com a obrigação errada
-    — PIS, ICMS e Simples entrando como IPI — porque um identificador genérico
+    (PIS, ICMS e Simples entrando como IPI) porque um identificador genérico
     salvo antes casava com toda guia. Cada acerto errado era salvo sozinho e
     reforçava o erro, sem ninguém ver.
 
@@ -91,7 +91,7 @@ async def lote(
             continue
 
         # Candidato utilizável: sem colisão, OU colidindo apenas com a própria
-        # obrigação sugerida — que é o caso do segundo layout do mesmo documento
+        # obrigação sugerida, que é o caso do segundo layout do mesmo documento
         # (Lucro Real e Presumido caindo na mesma apuração). Tratar isso como
         # colisão mandaria para revisão manual justamente o que dá para resolver
         # sozinho.
@@ -115,7 +115,7 @@ async def lote(
 
         if pode_auto:
           # O salvamento também precisa estar protegido: fora do try, um único
-          # arquivo que derruba o INSERT leva junto a remessa inteira — os
+          # arquivo que derruba o INSERT leva junto a remessa inteira: os
           # outros quatro, que estavam bem, voltam como "falhou ao enviar" e a
           # pessoa procura defeito onde não há.
           try:
@@ -219,7 +219,7 @@ def excluir(
         raise HTTPException(status_code=404, detail="Modelo não encontrado")
     # O treino sai junto. Apagar o modelo e deixar o identificador na obrigação
     # é o pior dos dois mundos: some o registro de onde aquilo veio, e o
-    # e-validador continua casando por ele — foi assim que os vínculos errados
+    # e-validador continua casando por ele: foi assim que os vínculos errados
     # sobreviveram à limpeza dos modelos.
     from ..services.validador import _esquecer_identificador
     esqueceu = _esquecer_identificador(db, m.obrigacao_id, m.identificador,

@@ -1,4 +1,4 @@
-// Uniformiza a razão social na exibição — NÃO mexe no cadastro.
+// Uniformiza a razão social na exibição, NÃO mexe no cadastro.
 //
 // O cadastro vem de origens diferentes (digitado à mão, importado da Receita,
 // colado de planilha) e chega misturado: "Mark Building Gerenc. Predial Ltda."
@@ -17,7 +17,7 @@ const ATONAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'a', 'o', 'as
  * A lista existe porque nenhuma regra automática separa sigla de palavra:
  * "MKB" e "RIO" têm três letras cada, e só quem conhece o cliente sabe que a
  * primeira é sigla. Cliente novo cuja sigla não esteja aqui sai em Caixa de
- * Título ("Iwc" em vez de "IWC") — o conserto é acrescentar a chave abaixo.
+ * Título ("Iwc" em vez de "IWC"): o conserto é acrescentar a chave abaixo.
  */
 const SIGLAS = {
   LTDA: 'Ltda', ME: 'ME', EPP: 'EPP', EIRELI: 'Eireli', MEI: 'MEI',

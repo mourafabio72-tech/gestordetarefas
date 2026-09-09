@@ -48,7 +48,7 @@ function CardNum({ valor, texto, tom = 'base', icone: Icone, titulo, para }) {
       {corpo}
     </Link>
   ) : (
-    // Sem link quando não há lista equivalente para abrir — melhor um cartão
+    // Sem link quando não há lista equivalente para abrir: melhor um cartão
     // parado que um link que leva ao lugar errado.
     <span className={base} style={estilo} title={titulo}>{corpo}</span>
   );
@@ -156,8 +156,8 @@ function GraficoComAbas({ dados }) {
       {itens.length === 0 && <p className="text-sm text-gray-500">Nada a mostrar com esses filtros.</p>}
 
       {modo === 'pizza' && itens.length > 0 && (
-        /* Uma pizza por linha. A rosca mostra composição e só isso — duas do
-           mesmo diâmetro não dizem qual tem mais trabalho —, por isso o total
+        /* Uma pizza por linha. A rosca mostra composição e só isso (duas do
+           mesmo diâmetro não dizem qual tem mais trabalho), por isso o total
            fica no miolo de cada uma. */
         /* Grade que se estica: com o quadro ocupando a largura toda, uma fila
            encostada à esquerda deixava meio metro de vazio à direita. As
@@ -381,7 +381,7 @@ export default function Dashboard() {
       </div>
 
       {/* Uma faixa, não seis cartões. O que importa é a relação entre os
-          números — quanto do que está aberto já atrasou —, e seis caixas
+          números (quanto do que está aberto já atrasou), e seis caixas
           grandes com um número cada obrigam a fazer essa conta de cabeça. */}
       <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 py-3">
         <Rosca fatias={fatias} centro={emAberto} legenda={`de ${r.total}`} />
@@ -420,7 +420,7 @@ export default function Dashboard() {
       <GraficoComAbas dados={dados} />
 
       {/* Tabela, não mais grupos com seta. A seta escondia justamente o que se
-          procura aqui — qual tarefa, de quem, para quando —, e obrigava a
+          procura aqui (qual tarefa, de quem, para quando), e obrigava a
           abrir setor por setor para varrer a semana. O setor virou coluna. */}
       <div className="card py-3">
         <div className="flex items-baseline gap-2 mb-2">

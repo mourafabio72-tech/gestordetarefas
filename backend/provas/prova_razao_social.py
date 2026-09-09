@@ -1,5 +1,5 @@
 """
-prova_razao_social.py — a razão social escrita igual nos dois lados.
+prova_razao_social.py: a razão social escrita igual nos dois lados.
 
 O mesmo algoritmo existe no backend (mensagem ao cliente) e no frontend (telas).
 Esta prova roda os dois nos MESMOS casos e compara: sem isso, uma correção num

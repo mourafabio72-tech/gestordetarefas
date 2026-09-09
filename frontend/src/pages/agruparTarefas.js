@@ -1,4 +1,4 @@
-// Agrupamento da lista de tarefas — por empresa, por setor, ou nenhum.
+// Agrupamento da lista de tarefas: por empresa, por setor, ou nenhum.
 //
 // Mesmo motivo dos vizinhos `filtroTarefas.js` e `payloadObrigacao.js`: sem
 // JSX e sem React, para rodar em Node puro na prova, sem navegador e sem build.
@@ -27,7 +27,7 @@ export const SEM_GRUPO = 'Sem classificação';
  * `nomes` traduz o id em texto: `{ empresa: fn, setor: fn }`. A tela já tem
  * essas funções, e passá-las evita que este módulo saiba de API ou de estado.
  *
- * Ordena por título, com "Sem classificação" sempre por último — ele não é um
+ * Ordena por título, com "Sem classificação" sempre por último: ele não é um
  * nome, é a ausência de um, e no meio da lista alfabética confundiria. A ordem
  * DENTRO do grupo é preservada: a lista chega ordenada por prazo do backend, e
  * reordenar aqui esconderia o que vence primeiro.

@@ -84,7 +84,7 @@ async def send_whatsapp_message(phone: str, message: str, cfg: dict, user_id=Non
 #   Contact = quem RECEBE mensagem. Tem `number` e `email`.
 #   User    = quem ATENDE. Tem `email`, NÃO tem telefone.
 #
-# Por isso o número sai dos contatos, e dos usuários vem só o `id` — que serve
+# Por isso o número sai dos contatos, e dos usuários vem só o `id`, que serve
 # para o `userId` do envio, o campo que faz o atendimento nascer na conta do
 # colaborador certo. É ele que responde "como o Zap sabe que este aviso é do
 # Fulano" quando a linha é uma só para o escritório inteiro.
@@ -99,7 +99,7 @@ MAX_PAGINAS_ZAP = 20      # trava de segurança: 2000 registros bastam e sobram
 async def _zap_paginado(cfg: dict, caminho: str, chave: str) -> list:
     """Percorre um endpoint paginado do Zap e devolve todos os registros.
 
-    Lista vazia em qualquer contratempo — canal desligado, sem chave, API fora,
+    Lista vazia em qualquer contratempo: canal desligado, sem chave, API fora,
     resposta estranha. É de propósito: esta consulta enriquece o alerta, não o
     autoriza. Se ela cair, o disparo segue pelo telefone do cadastro local ou
     pelo e-mail, em vez de a varredura inteira morrer.
@@ -135,12 +135,12 @@ async def _zap_paginado(cfg: dict, caminho: str, chave: str) -> list:
 
 
 async def contatos_zap(cfg: dict) -> list:
-    """`GET /api/contacts` — quem pode receber mensagem, com número e e-mail."""
+    """`GET /api/contacts`: quem pode receber mensagem, com número e e-mail."""
     return await _zap_paginado(cfg, "/api/contacts", "contacts")
 
 
 async def usuarios_zap(cfg: dict) -> list:
-    """`GET /api/users` — os atendentes. Daqui sai o `id`, não o telefone."""
+    """`GET /api/users`: os atendentes. Daqui sai o `id`, não o telefone."""
     return await _zap_paginado(cfg, "/api/users", "users")
 
 
@@ -165,7 +165,7 @@ def mapa_numero_por_email(contatos: list) -> dict:
 
 
 def mapa_userid_por_email(usuarios: list) -> dict:
-    """{e-mail: id do atendente} — o `userId` que direciona o atendimento.
+    """{e-mail: id do atendente}, o `userId` que direciona o atendimento.
 
     Usuário desabilitado fica de fora: atribuir a ele esconderia o aviso numa
     conta que ninguém abre.
@@ -202,14 +202,14 @@ async def carregar_zap(cfg: dict) -> dict:
 
 async def send_whatsapp_document(phone: str, nome: str, conteudo: bytes, legenda: str,
                                  cfg: dict, user_id=None) -> dict:
-    """Envia um arquivo pelo ZapContábil — `POST /api/send/document/{to}`.
+    """Envia um arquivo pelo ZapContábil: `POST /api/send/document/{to}`.
 
     Multipart, não JSON: o corpo leva o arquivo, e os campos de roteamento vão
     junto como texto. `ticketStrategy` não existe neste endpoint, então o
     atendimento nasce pelo `userId` e pronto.
 
     A legenda só se aplica a imagem, segundo a doc. Para documento ela viaja
-    como mensagem separada logo depois — sem isso a guia chegaria sem dizer de
+    como mensagem separada logo depois, sem isso a guia chegaria sem dizer de
     que empresa e competência é.
     """
     if not cfgmod.ativo(cfg, "whatsapp_ativo"):
@@ -291,7 +291,7 @@ def _base_date(tarefa: Tarefa):
 
 
 # As três faixas de urgência. Cada uma é um disparo próprio, com horários
-# próprios, e rende uma mensagem própria — assim a cobrança do atrasado não
+# próprios, e rende uma mensagem própria, assim a cobrança do atrasado não
 # precisa acontecer na mesma cadência do que vence hoje.
 FAIXAS = ("a_vencer", "vence_hoje", "atrasada")
 
@@ -303,7 +303,7 @@ TITULO_FAIXA = {
 
 
 def faixa_da_tarefa(dias_restantes, dias_antes: int = 3) -> str:
-    """Em que faixa esta tarefa cai hoje — ou None, se ainda não é hora.
+    """Em que faixa esta tarefa cai hoje, ou None, se ainda não é hora.
 
     A tarefa anda sozinha entre as faixas conforme o dia passa: hoje está em
     "a vencer", amanhã em "vence hoje", depois em "atrasada". Ninguém precisa
@@ -561,14 +561,14 @@ def _numero_da_pessoa(u, zap: dict = None) -> str:
 def canais_da_pessoa(u, zap: dict = None) -> list:
     """Por onde avisar esta pessoa: lista de (canal, endereço, id do atendente).
 
-    GENTE DO ESCRITÓRIO não tem WhatsApp próprio no Zap — tem um login, que é o
+    GENTE DO ESCRITÓRIO não tem WhatsApp próprio no Zap: tem um login, que é o
     e-mail. A mensagem vai para a linha única do escritório levando o `userId`
     daquele login, e o atendimento nasce na conta da pessoa. O e-mail dela não
     é endereço de entrega aqui, é a chave que encontra o login.
 
     Sem login no Zap não há como direcionar, e mandar para a linha comum sem
     atribuição só encheria o balaio: nesse caso vale o número que o cadastro
-    tiver e, faltando ele, o e-mail — deixar de avisar quem tem a tarefa na mão
+    tiver e, faltando ele, o e-mail, deixar de avisar quem tem a tarefa na mão
     é falha pior do que avisar pelo canal errado.
 
     USUÁRIO DO LADO DO CLIENTE é outra coisa: ele tem WhatsApp próprio e recebe
@@ -636,7 +636,7 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
         for canal, endereco, uid in canais_da_pessoa(pessoa, zap):
             # A chave inclui o atendente, não só o endereço. Todo o escritório
             # recebe no MESMO número (a linha única), e uma chave só de endereço
-            # colapsaria responsável e supervisor numa mensagem — dois avisos que
+            # colapsaria responsável e supervisor numa mensagem: dois avisos que
             # precisam cair em duas contas diferentes.
             marca = f"{canal}:{endereco}:{uid or ''}"
             if not endereco or marca in vistos:

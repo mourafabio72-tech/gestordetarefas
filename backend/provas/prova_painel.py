@@ -1,5 +1,5 @@
 """
-prova_painel.py — os números do painel.
+prova_painel.py: os números do painel.
 
 O que motivou: a rosca do dashboard somava 101%. "Atrasada" era contada dentro
 de "pendente", então uma tarefa aparecia duas vezes e a soma passava do total.
@@ -74,7 +74,7 @@ db.close()
 d = client.get("/api/painel", headers=cab).json()
 r = d["resumo"]
 
-print("\n1. Situação exclusiva — cada tarefa conta UMA vez")
+print("\n1. Situação exclusiva: cada tarefa conta UMA vez")
 checa("total é 7", r["total"] == 7, str(r["total"]))
 soma = sum(r[s] for s in ("pendente", "em_andamento", "atrasada", "concluida", "cancelada"))
 checa("as situações somam exatamente o total", soma == r["total"], f"({soma} x {r['total']})")
@@ -86,7 +86,7 @@ checa("cancelada", r["cancelada"] == 1)
 
 print("\n2. Multa conta só o que ainda pode dar problema")
 checa("duas em aberto geram multa", r["multa"] == 2, str(r["multa"]))
-checa("a concluída com multa não entra — já não é risco", r["multa"] != 3)
+checa("a concluída com multa não entra: já não é risco", r["multa"] != 3)
 
 print("\n3. Por setor")
 setores = {s["nome"]: s for s in d["por_setor"]}
@@ -95,7 +95,7 @@ checa("e 2 atrasadas", setores["Fiscal"]["atrasada"] == 2)
 checa("Contabilidade com 4", setores["Contabilidade"]["total"] == 4)
 checa("o mais carregado vem primeiro", d["por_setor"][0]["nome"] == "Fiscal", d["por_setor"][0]["nome"])
 
-print("\n4. Por colaborador — tarefa com dois responsáveis conta para os dois")
+print("\n4. Por colaborador: tarefa com dois responsáveis conta para os dois")
 colab = {c["nome"]: c for c in d["por_colaborador"]}
 checa("Ana com 3", colab["Ana"]["total"] == 3, str(colab["Ana"]["total"]))
 checa("Bia com 3", colab["Bia"]["total"] == 3, str(colab["Bia"]["total"]))
@@ -135,7 +135,7 @@ checa("competência certa traz tudo", f(competencia="07/2026")["total"] == 7)
 print("\n7. Sem sessão não abre")
 checa("401 ou 403", client.get("/api/painel").status_code in (401, 403))
 
-print("\n8. Atraso tem dono — travado no cliente x travado aqui dentro")
+print("\n8. Atraso tem dono: travado no cliente x travado aqui dentro")
 db = SessionLocal()
 receber = Obrigacao(nome="DAS", sentido="receber", exige_documento=True)
 entregar = Obrigacao(nome="Guia", sentido="entregar")
@@ -207,7 +207,7 @@ checa("a soma por empresa fecha com o total",
       sum(e["total"] for e in d2["por_empresa"]) == r2["total"])
 checa("a mais carregada vem primeiro", d2["por_empresa"][0]["nome"] == "Cliente")
 
-print("\n12. Fuso — o 500 que a prova em SQLite não pegava")
+print("\n12. Fuso: o 500 que a prova em SQLite não pegava")
 # Postgres devolve datetime AWARE para DateTime(timezone=True); SQLite devolve
 # NAIVE. O painel compara data em Python (as rotas antigas comparavam no SQL,
 # e o banco resolvia sozinho), então `aware < naive` estourava TypeError e a
@@ -230,7 +230,7 @@ try:
     puro = False
 except TypeError:
     puro = True
-checa("comparar aware com naive de fato estoura — era este o 500", puro)
+checa("comparar aware com naive de fato estoura: era este o 500", puro)
 
 try:
     sit_pg = _situacao(StatusTarefa.PENDENTE, _utc(aware), agora_aware)

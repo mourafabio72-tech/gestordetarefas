@@ -1,5 +1,5 @@
 """
-prova_gerar_recorte_empresas.py — gerar o mês de algumas empresas, não de todas.
+prova_gerar_recorte_empresas.py: gerar o mês de algumas empresas, não de todas.
 
 O botão "Gerar tarefas do mês" já sabia recortar por OBRIGAÇÃO (gerar só a que
 acabou de ser cadastrada), mas não por EMPRESA: era o escritório inteiro ou

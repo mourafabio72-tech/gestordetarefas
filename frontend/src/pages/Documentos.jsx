@@ -30,7 +30,7 @@ function Campo({ rotulo, dica, largura = '', children }) {
 export default function Documentos() {
   const { user } = useAuth();
   // Quem apaga é decidido no cadastro de Grupos, pela flag `apagar_anexo`. O
-  // botão nem aparece para quem não tem — mas quem chamar a API direto leva 403
+  // botão nem aparece para quem não tem, mas quem chamar a API direto leva 403
   // do mesmo jeito: esconder na tela é conveniência, não é a trava.
   const podeApagar = Boolean(user?.permissoes_efetivas?.apagar_anexo);
   const [confirmando, setConfirmando] = useState(null);
@@ -133,7 +133,7 @@ export default function Documentos() {
   };
 
   // Quem abriu, quando e por qual link. O contador diz quantas vezes; isto diz
-  // de quem foi cada uma — o sócio que paga ou o e-mail geral que ninguém lê.
+  // de quem foi cada uma: o sócio que paga ou o e-mail geral que ninguém lê.
   const verAcessos = async (doc) => {
     setAcessos({ doc, linhas: null });
     try {

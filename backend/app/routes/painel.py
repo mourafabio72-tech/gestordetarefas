@@ -8,7 +8,7 @@ Três decisões estruturam este arquivo:
 1. SITUAÇÃO EXCLUSIVA. A versão anterior contava "atrasada" dentro de
    "pendente", e a rosca do dashboard somava 101%. Aqui cada tarefa está em uma
    situação e só uma: concluída, cancelada, atrasada, em andamento ou pendente.
-   Atrasada tira de pendente — é o que a pessoa entende ao ver o gráfico.
+   Atrasada tira de pendente: é o que a pessoa entende ao ver o gráfico.
 
 2. AGREGA EM MEMÓRIA. Uma consulta traz as colunas necessárias e o resto é
    contagem em Python. Com centenas de tarefas isso é mais barato que as vinte
@@ -46,7 +46,7 @@ def _utc(dt):
     """Data comparável, venha ela com fuso ou sem.
 
     Postgres devolve datetime aware; SQLite, naive. `aware < naive` é
-    TypeError, e foi o 500 do painel em produção — invisível na prova, que
+    TypeError, e foi o 500 do painel em produção, invisível na prova, que
     roda em SQLite. Sem fuso, assume UTC: é o que `datetime.utcnow()` gravou.
     """
     if dt is None:
@@ -55,7 +55,7 @@ def _utc(dt):
 
 
 def _situacao(status, prazo, agora) -> str:
-    """Em que situação a tarefa está AGORA — uma só, nunca duas.
+    """Em que situação a tarefa está AGORA, uma só, nunca duas.
 
     `prazo` já tem de vir de `_utc()`."""
     if status == StatusTarefa.CONCLUIDA:
@@ -84,7 +84,7 @@ def _somar(alvo: dict, situacao: str, multa: bool):
 
 
 def _perfil_obrigacao(o) -> tuple:
-    """(sentido, exige_documento) da obrigação — mesma regra do model.
+    """(sentido, exige_documento) da obrigação, mesma regra do model.
 
     Repetida aqui porque a consulta do painel não carrega o objeto Tarefa, e
     instanciar centenas de ORM só para ler duas propriedades desfaz a economia
@@ -191,7 +191,7 @@ def painel(
 
         # Travada no cliente: o escritório não tem o que fazer enquanto o
         # documento não chega. Cobrar é a ação, e ela não é a mesma de "sentar
-        # e executar" — por isso sai do balaio geral de atrasadas.
+        # e executar", por isso sai do balaio geral de atrasadas.
         if aberta and sentido == "receber" and exige and not t.anexo_nome:
             resumo["aguardando_cliente"] += 1
             _somar(do_cliente, sit, multa)
@@ -222,7 +222,7 @@ def painel(
     setores = lista(por_setor)
     # Sempre presente, mesmo zerada: "nada parado no cliente" é resposta, e uma
     # coluna que some quando está boa faz a pessoa perguntar se o dado existe.
-    # Vai no fim e marcada — quem somar as linhas tem de saber que esta repete
+    # Vai no fim e marcada: quem somar as linhas tem de saber que esta repete
     # tarefas já contadas nos setores.
     setores.append({"nome": "Cliente", **do_cliente, "derivado": True})
 

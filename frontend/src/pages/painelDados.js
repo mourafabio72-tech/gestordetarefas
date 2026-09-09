@@ -14,7 +14,7 @@ export const SITUACOES = [
 /**
  * Percentual de cada situação, somando exatamente 100.
  *
- * Arredondar cada fatia por conta própria faz a soma dar 99 ou 101 — foi o que
+ * Arredondar cada fatia por conta própria faz a soma dar 99 ou 101: foi o que
  * a rosca antiga mostrava. Aqui a maior fatia absorve a diferença: é a que
  * menos sente um ponto a mais, e o total continua verdadeiro.
  */
@@ -74,7 +74,7 @@ export function filtrosVazios() {
   return { empresa_id: '', setor_id: '', usuario_id: '', competencia: '', so_multa: false };
 }
 
-/** Só o que está preenchido vira parâmetro — vazio derruba a consulta com 422. */
+/** Só o que está preenchido vira parâmetro: vazio derruba a consulta com 422. */
 export function paraConsulta(filtros) {
   const saida = {};
   for (const [k, v] of Object.entries(filtros || {})) {
@@ -102,7 +102,7 @@ export const DIMENSOES = [
  *
  * Todo o resto do painel é foto do agora: quanto falta, o que atrasou. Este é
  * o único número que olha para trás e diz se o escritório entrega no prazo.
- * Só conta tarefa concluída que tinha prazo — sem prazo não há o que cumprir,
+ * Só conta tarefa concluída que tinha prazo, sem prazo não há o que cumprir,
  * e incluí-la inflaria o índice de graça.
  */
 export function pontualidade(resumo) {
@@ -131,7 +131,7 @@ export function haQuantosDias(iso, agora = new Date()) {
  *
  * Cada fatia vira um traço no mesmo círculo: `dash` é o comprimento do arco,
  * `gap` o resto da volta, `offset` onde ele começa. Usa os percentuais já
- * fechados em 100 por `percentuais`, então a volta fecha exata — desenhar a
+ * fechados em 100 por `percentuais`, então a volta fecha exata: desenhar a
  * partir dos valores crus deixaria uma fresta ou uma sobreposição.
  */
 export function arcosRosca(fatias, raio = 42) {
@@ -148,8 +148,8 @@ export function arcosRosca(fatias, raio = 42) {
 /**
  * Barras empilhadas: uma por setor, colaborador ou empresa.
  *
- * A LARGURA da barra é o volume relativo ao maior — é o que responde "quem tem
- * mais trabalho". A divisão DENTRO dela é a composição — "e como esse trabalho
+ * A LARGURA da barra é o volume relativo ao maior: é o que responde "quem tem
+ * mais trabalho". A divisão DENTRO dela é a composição: "e como esse trabalho
  * está". O heatmap responde só a segunda; junto com a largura, o gráfico diz
  * as duas coisas de uma vez.
  */
@@ -164,7 +164,7 @@ export function barras(itens, situacoes = SITUACOES) {
       multa: i.multa || 0,
       derivado: Boolean(i.derivado),
       // Piso de 2%: linha com uma tarefa só some ao lado de outra com 300, e
-      // sumir é pior que exagerar — quem tem 1 precisa aparecer para ser clicado.
+      // sumir é pior que exagerar: quem tem 1 precisa aparecer para ser clicado.
       largura: total ? Math.max((total / maior) * 100, 2) : 0,
       segmentos: situacoes
         .map((s) => ({ ...s, valor: i[s.chave] || 0 }))
@@ -177,7 +177,7 @@ export function barras(itens, situacoes = SITUACOES) {
 /**
  * Link do Painel para a lista de Tarefas, já com o recorte do número clicado.
  *
- * Carrega junto os filtros que já estavam no Painel — clicar em "2 atrasadas"
+ * Carrega junto os filtros que já estavam no Painel: clicar em "2 atrasadas"
  * com a empresa filtrada tem de abrir as 2 atrasadas DAQUELA empresa, não as
  * atrasadas do escritório inteiro.
  */
@@ -197,7 +197,7 @@ export function urlTarefas(filtros, recorte = {}) {
 /**
  * Uma rosca por linha (setor, colaborador ou empresa).
  *
- * A rosca mostra composição e nada mais — não dá para comparar volume entre
+ * A rosca mostra composição e nada mais: não dá para comparar volume entre
  * duas roscas do mesmo tamanho. Por isso o total vai no miolo: sem ele, um
  * setor com 3 tarefas e outro com 300 desenham o mesmo círculo.
  */
@@ -247,7 +247,7 @@ const PALETA_SETOR = [
 ];
 
 // Os setores do escritório têm cor FIXA, não sorteada. O sorteio por hash é
-// bom para nome que ninguém previu, mas com quatro ou cinco nomes ele colide —
+// bom para nome que ninguém previu, mas com quatro ou cinco nomes ele colide:
 // e dois setores da mesma cor é pior que nenhuma cor. Cliente e "sem setor"
 // ficam em tons apagados de propósito: não são fila de trabalho de ninguém.
 const COR_FIXA = {

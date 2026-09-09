@@ -471,7 +471,7 @@ export default function Tarefas() {
 
   // Documento que CONTRADIZ a tarefa não sai com um clique. Não é bloqueio:
   // CNPJ diferente pode ser matriz e filial, e travar de vez atrapalharia caso
-  // legítimo. É um segundo passo — o suficiente para o envio errado não
+  // legítimo. É um segundo passo: o suficiente para o envio errado não
   // acontecer por reflexo, que é como ele acontece.
   const confirmarEnvio = async (forcado = false) => {
     const contradiz = entrega?.conferencia && !entrega.conferencia.ok;
@@ -556,7 +556,7 @@ export default function Tarefas() {
     const pr = prioSage[tarefa.prioridade] || prioSage.media;
     const ativa = tarefa.status !== 'concluida' && tarefa.status !== 'cancelada';
     // O nome vem na própria tarefa. A listagem de setores só traz os ATIVOS, e
-    // desativar um setor apagava o badge de todas as tarefas dele — o dado
+    // desativar um setor apagava o badge de todas as tarefas dele: o dado
     // estava no banco, só não chegava na tela. A lista fica como reserva, para
     // registro antigo que ainda não traga o campo.
     const setorAchado = tarefa.setor_nome || (tarefa.setor_id ? getSetorNome(tarefa.setor_id) : null);
@@ -663,7 +663,7 @@ export default function Tarefas() {
             que não disputa mais espaço com eles. */}
         <div className="mt-auto flex items-center gap-1">
           {ativa && entregaCliente ? (
-            // Na tarefa de entrega, enviar É a ação principal — deixá-la no
+            // Na tarefa de entrega, enviar É a ação principal: deixá-la no
             // menu de três pontos esconderia justamente o que se faz ali.
             <button type="button" onClick={() => abrirEntrega(tarefa)}
               className="flex-1 min-w-0 flex items-center justify-center gap-1 text-[10px] font-medium
