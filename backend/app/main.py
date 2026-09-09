@@ -2,8 +2,9 @@ import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .database import engine, Base
-from .seguranca import abrir_contexto, aplicar_headers
+from .seguranca import abrir_contexto, aplicar_headers, ip_cliente, log_event
 from .versao import BUILD
 from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos, painel
 from .services.scheduler import start_scheduler
@@ -73,6 +74,42 @@ async def _contexto_de_log(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     return response
+
+
+@app.exception_handler(Exception)
+async def _erro_nao_tratado(request: Request, exc: Exception):
+    """Excecao sem tratamento vira 500 generico, com id e com os cabecalhos.
+
+    O `ServerErrorMiddleware` do Starlette e o mais externo de todos, entao a
+    resposta de erro sai por FORA dos dois middlewares acima: sem
+    `X-Request-ID` e sem cabecalho de seguranca nenhum. E justo o caso em que o
+    id mais serviria, porque e o que liga a tela de erro do usuario a linha do
+    log.
+
+    O id vem do `request.state`, e nao da contextvar, porque este tratador roda
+    em contexto ancestral ao do request. Ao cliente vai pouco (Familia 6 do
+    `Mapa_de_Conceitos_de_Seguranca`, e item 9 da `Revisao_Vulnerabilidades`);
+    o detalhe fica no log e no traceback, que o Starlette continua levantando
+    depois daqui.
+    """
+    request_id = getattr(request.state, "request_id", None)
+    log_event(
+        "ERRO_NAO_TRATADO",
+        level="ERROR",
+        request_id=request_id,
+        path=request.url.path,
+        method=request.method,
+        ip=ip_cliente(request),
+        excecao=type(exc).__name__,
+    )
+    resposta = JSONResponse(
+        status_code=500,
+        content={"detail": "Erro interno. Tente novamente."},
+    )
+    if request_id:
+        resposta.headers["X-Request-ID"] = request_id
+    return aplicar_headers(resposta, request.url.path)
+
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")

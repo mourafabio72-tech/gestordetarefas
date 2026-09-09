@@ -78,6 +78,11 @@ def abrir_contexto(request) -> str:
     """
     request_id = uuid.uuid4().hex[:16]
     _request_id.set(request_id)
+    # O mesmo id tambem no `state`, que vive no `scope` e por isso atravessa a
+    # fronteira de task: o tratador de erro global do app roda em contexto
+    # ancestral, onde a contextvar acima ja nao existe. Os dois convivem, e o
+    # `log_event` continua lendo do contexto, sem depender de quem chama.
+    request.state.request_id = request_id
     _rota.set((request.url.path, request.method, ip_cliente(request)))
     _usuario.set(None)
     return request_id
