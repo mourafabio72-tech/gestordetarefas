@@ -1,5 +1,5 @@
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
@@ -10,6 +10,7 @@ from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
 from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
 from ..auth import get_current_user, require_perm, require_flag
 from ..services.gerador import gerar_tarefas
+from ..seguranca import log_event, ip_cliente
 
 router = APIRouter(prefix="/obrigacoes", tags=["obrigacoes"])
 
@@ -21,6 +22,48 @@ class DetalheItem(BaseModel):
 
 class DetalhesBody(BaseModel):
     itens: List[DetalheItem]
+
+
+@router.get("/{obrigacao_id}/excecoes")
+def get_excecoes(obrigacao_id: int, db: Session = Depends(get_db),
+                 current_user: Usuario = Depends(require_perm("obrigacoes", "ver"))):
+    """Empresas que alguém decidiu que esta obrigação NÃO alcança."""
+    from ..models import ObrigacaoExcecao
+    out = []
+    for x in (db.query(ObrigacaoExcecao)
+              .filter(ObrigacaoExcecao.obrigacao_id == obrigacao_id)
+              .order_by(ObrigacaoExcecao.created_at.desc()).all()):
+        out.append({"id": x.id, "empresa_id": x.empresa_id,
+                    "empresa_nome": x.empresa.razao_social if x.empresa else "?",
+                    "motivo": x.motivo or "",
+                    "decidido_por": x.decidido_por.nome if x.decidido_por else None,
+                    "created_at": x.created_at})
+    return out
+
+
+@router.delete("/{obrigacao_id}/excecoes/{excecao_id}")
+def remover_excecao(obrigacao_id: int, excecao_id: int, request: Request,
+                    db: Session = Depends(get_db),
+                    current_user: Usuario = Depends(require_perm("obrigacoes", "editar"))):
+    """Desfaz a exceção: a empresa volta a gerar tarefa desta obrigação.
+
+    A volta é o que impede um clique errado de prender a empresa fora da
+    obrigação para sempre. A tarefa que já foi cancelada continua cancelada:
+    desfazer a regra não ressuscita o passado, e a próxima geração cria a do
+    mês corrente se ela ainda não existir."""
+    from ..models import ObrigacaoExcecao
+    x = (db.query(ObrigacaoExcecao)
+         .filter(ObrigacaoExcecao.id == excecao_id,
+                 ObrigacaoExcecao.obrigacao_id == obrigacao_id).first())
+    if not x:
+        raise HTTPException(status_code=404, detail="Exceção não encontrada")
+    empresa_id = x.empresa_id
+    db.delete(x)
+    db.commit()
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="removida",
+              obrigacao_id=obrigacao_id, empresa_id=empresa_id,
+              user_id=current_user.id, ip=ip_cliente(request))
+    return {"ok": True}
 
 
 @router.get("/{obrigacao_id}/detalhes-empresa")

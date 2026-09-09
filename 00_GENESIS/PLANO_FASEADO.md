@@ -159,7 +159,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 15: desconsiderar a tarefa e virar excecao da obrigacao
 
-- status: pending
+- status: **done** (2026-09-09; 24 provas rc=0, e a prova reprova com o furo do modo vinculadas)
 - depende de: Fase 8
 - duracao estimada: 2h
 - pedido do usuario em 2026-09-09: "caso uma obrigacao/tarefa seja gerada para uma

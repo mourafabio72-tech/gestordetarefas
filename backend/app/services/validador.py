@@ -535,6 +535,17 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         res.update(status="ja_baixada",
                    detalhe=f"Tarefa já estava baixada em {tarefa.data_entrega or tarefa.data_conclusao}")
         return res
+    # Tarefa cancelada não recebe baixa automática. Vale sobretudo para a que
+    # alguém marcou como "não se aplica a esta empresa": um documento chegando
+    # depois reverteria a decisão em silêncio, concluindo um trabalho que uma
+    # pessoa disse por escrito que não era daquele cliente.
+    if tarefa.status == StatusTarefa.CANCELADA:
+        motivo = ("marcada como 'não se aplica a esta empresa'"
+                  if tarefa.nao_se_aplica else "cancelada")
+        res.update(status="cancelada",
+                   detalhe=f"Tarefa #{tarefa.id} está {motivo}. "
+                           f"Para dar baixa, reabra a tarefa antes.")
+        return res
 
     # Baixa
     tarefa.status = StatusTarefa.CONCLUIDA

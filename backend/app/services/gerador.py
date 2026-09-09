@@ -195,6 +195,13 @@ def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
     return any(x.id == e.id for x in o.empresas)  # inclusão explícita
 
 
+def excecoes_da(db: Session, o: Obrigacao) -> set:
+    """Ids das empresas que alguém decidiu que esta obrigação não alcança."""
+    from ..models import ObrigacaoExcecao
+    return {x.empresa_id for x in db.query(ObrigacaoExcecao.empresa_id)
+            .filter(ObrigacaoExcecao.obrigacao_id == o.id).all()}
+
+
 def empresas_alvo(db: Session, o: Obrigacao):
     """Empresas que esta obrigação alcança.
 
@@ -206,8 +213,14 @@ def empresas_alvo(db: Session, o: Obrigacao):
       específico, e não de um perfil. Antes isso era impossível: com a regra
       vazia a obrigação pegava todo mundo, e vincular empresas só somava.
     """
+    # As exceções saem nos DOIS modos. Subtrair só no modo 'regra' deixaria a
+    # decisão furada no outro: a empresa voltaria a gerar tarefa sem ninguém
+    # ter desfeito nada, só porque a obrigação mudou de modo de alvo.
+    fora = excecoes_da(db, o)
+
     if (o.alvo_modo or "regra") == "vinculadas":
-        return [e for e in o.empresas if e.ativo and not e.bloqueado]
+        return [e for e in o.empresas
+                if e.ativo and not e.bloqueado and e.id not in fora]
 
     alvo = {}
     for e in db.query(Empresa).filter(Empresa.ativo == True, Empresa.bloqueado == False).all():
@@ -216,7 +229,7 @@ def empresas_alvo(db: Session, o: Obrigacao):
     for e in o.empresas:            # inclusões explícitas (mesmo fora da regra)
         if e.ativo and not e.bloqueado:
             alvo[e.id] = e
-    return list(alvo.values())
+    return [e for e in alvo.values() if e.id not in fora]
 
 
 def _resp_do_setor(db: Session, empresa_id: int, setor_id) -> list:
@@ -416,6 +429,12 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
         if str(mes_entrega) not in _csv_set(o.meses_ativos):
             continue
         if not _no_alvo(o, empresa):
+            continue
+        # A exceção vale aqui também. Hoje é raro (empresa recém-cadastrada não
+        # tem exceção), mas esta função é o caminho de "regerar o mês de UMA
+        # empresa", e sem isto ela ressuscitaria a tarefa que alguém decidiu
+        # que não se aplica.
+        if empresa.id in excecoes_da(db, o):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
         vencimento = calc_vencimento(o, empresa, mes_entrega, ano_entrega)

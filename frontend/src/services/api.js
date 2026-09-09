@@ -123,6 +123,9 @@ export const tarefasAPI = {
   list: (params) => api.get('/tarefas', { params }),
   get: (id) => api.get(`/tarefas/${id}`),
   create: (data) => api.post('/tarefas', data),
+  // Nao se aplica a esta empresa: cancela a tarefa E cria a excecao na
+  // obrigacao, para o mesmo trabalho nao voltar todo mes.
+  naoSeAplica: (id, motivo) => api.post(`/tarefas/${id}/nao-se-aplica`, { motivo }),
   // O comprovante exige o cabeçalho de sessão, então não dá para apontar um
   // <a href> para ele: vem como blob e a tela abre a partir daí.
   anexo: (id, baixar) => api.get(`/tarefas/${id}/anexo`, {
@@ -167,6 +170,8 @@ export const obrigacoesAPI = {
   gerar: (mes, ano, obrigacao_ids, empresa_ids) =>
     api.post('/obrigacoes/gerar', { mes, ano, obrigacao_ids, empresa_ids }),
   getDetalhes: (id) => api.get(`/obrigacoes/${id}/detalhes-empresa`),
+  getExcecoes: (id) => api.get(`/obrigacoes/${id}/excecoes`),
+  removerExcecao: (id, excecaoId) => api.delete(`/obrigacoes/${id}/excecoes/${excecaoId}`),
   setDetalhes: (id, itens) => api.put(`/obrigacoes/${id}/detalhes-empresa`, { itens }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
   baixarRelatorio: async () => {

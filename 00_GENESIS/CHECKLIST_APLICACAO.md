@@ -326,29 +326,58 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 15: desconsiderar a tarefa e virar excecao
 
-- [ ] tabela de excecao por (obrigacao, empresa), SEPARADA de `obrigacao_empresa`
+- [x] tabela de excecao por (obrigacao, empresa), SEPARADA de `obrigacao_empresa`
+      EVIDENCIA: `models.py:ObrigacaoExcecao`, com UNIQUE (obrigacao, empresa) e
+      `ondelete=CASCADE` nas duas chaves. O indice `ix_excecao_obrigacao` entrou em
+      `init_db.criar_indices()`, porque a geracao pergunta as excecoes de CADA
+      obrigacao do mes
       MOTIVO: `obrigacao_empresa` alimenta o relationship `Obrigacao.empresas`, que
       significa inclusao. Coluna "excluida" ali faria o mesmo relationship devolver
       inclusao e exclusao misturadas
       PROVA: `grep -n "excecao" backend/app/init_db.py` acha o DDL
-- [ ] `empresas_alvo()` subtrai as excecoes nos DOIS modos, `regra` e `vinculadas`
-      PROIBIDO: subtrair so no modo `regra`, deixando a excecao furada no outro
-      PROVA: a prova cobre os dois modos
-- [ ] a tarefa ganha a acao "nao se aplica a esta empresa", pedindo motivo
-- [ ] a acao grava quem decidiu, quando e o motivo, e leva a tarefa para `CANCELADA`
+- [x] `empresas_alvo()` subtrai as excecoes nos DOIS modos, `regra` e `vinculadas`
+      EVIDENCIA: a prova roda o cenario inteiro DUAS vezes, uma por modo, e passa
+      nos dois. REPROVA com o furo, verificado: subtraindo so no modo `regra`, saem
+      `FALHA [vinculadas] a empresa saiu do alvo` e `FALHA [vinculadas] o mes
+      seguinte NAO gera de novo para ela`. Achado do verificador, corrigido junto:
+      `gerar_para_empresa()` tambem passou a subtrair, senao regerar o mes de UMA
+      empresa ressuscitaria a tarefa desconsiderada
+- [x] a tarefa ganha a acao "nao se aplica a esta empresa", pedindo motivo
+      EVIDENCIA: rota `POST /tarefas/{id}/nao-se-aplica` e o modal em `Tarefas.jsx`.
+      O motivo tem minimo de 3 caracteres no schema, e o botao fica desabilitado
+      ate ele existir. A acao so aparece em tarefa ATIVA que veio de obrigacao
+- [x] a acao grava quem decidiu, quando e o motivo, e leva a tarefa para `CANCELADA`
+      EVIDENCIA: `OK a tarefa NAO foi apagada, foi para cancelada` e `OK com o
+      motivo, o autor e a data gravados`, nos dois modos
       MOTIVO: `CANCELADA` ja existe, ja tem lixeira e ja e ignorada pelo e-validador
       (`routes/tarefas.py:392`). Status novo exigiria `ALTER TYPE` no enum nativo do
       Postgres, risco sem ganho (Escada, degrau 2)
-- [ ] a tela mostra "nao se aplica" no lugar de "cancelada" quando for esse o caso
-- [ ] no cadastro da obrigacao, a lista de excecoes com motivo e botao de remover
-      MOTIVO: sem a volta, um clique errado prende a empresa fora da obrigacao para
-      sempre
-      PROVA: caso na prova removendo a excecao e vendo a empresa voltar a geracao
-- [ ] `log_event` na criacao e na remocao da excecao
-      MOTIVO: "mutacao de dado critico SEMPRE entra" (Padrao_Logging_Estruturado)
-- [ ] tarefa desconsiderada nao conta como pendente nem atrasada
-      PROVA: caso na prova conferindo os contadores do painel
-- [ ] `prova_excecao_obrigacao.py` criada
+- [x] a tela mostra "nao se aplica" no lugar de "cancelada" quando for esse o caso
+      EVIDENCIA: `Tarefas.jsx`, a etiqueta le `tarefa.nao_se_aplica` e troca o texto,
+      com o motivo no tooltip. Cancelar e desistir; isto e decidir que o trabalho
+      nunca coube aquele cliente, e a tela precisa dizer qual dos dois foi
+- [x] no cadastro da obrigacao, a lista de excecoes com motivo e botao de remover
+      EVIDENCIA: secao "Nao se aplica a estas empresas" em `Obrigacoes.jsx`, com o
+      motivo, quem decidiu e o botao "voltar". Na prova: `OK remover a excecao
+      responde ok`, `OK e a empresa volta ao alvo`, `OK a geracao seguinte inclui
+      ela de novo`, nos dois modos. A COPIA de uma obrigacao nao herda as excecoes
+      da original: sao decisao tomada sobre aquela obrigacao, e a copia nem existe
+      no banco para ter em quem desfazer
+- [x] `log_event` na criacao e na remocao da excecao
+      EVIDENCIA: `routes/tarefas.py:804` (criada) e `routes/obrigacoes.py:63`
+      (removida), com obrigacao, empresa, autor e IP. Sem senha, token nem nome
+- [x] tarefa desconsiderada nao conta como pendente nem atrasada
+      EVIDENCIA: a prova poe o prazo VENCIDO de proposito antes da acao, para o caso
+      valer alguma coisa: `OK com o prazo vencido, antes da acao ela e atrasada`,
+      depois `OK depois da acao ela sai de atrasada (cancelada)` e `OK e nao vira
+      pendente`. E de graca, pelo reuso do status: `_situacao()` do painel ja
+      separava CANCELADA
+- [x] `prova_excecao_obrigacao.py` criada, com PRAGMA foreign_keys=ON
+      EVIDENCIA: 30 casos. Alem do que o item pedia, cobre as recusas (tarefa
+      avulsa, motivo curto, id inexistente com 404, campo inventado) e os dois
+      achados do verificador: apagar a obrigacao nao deixa excecao pendurada, e
+      duas tarefas da mesma empresa marcadas em sequencia nao estouram a unique.
+      24 de 24 provas do backend rc=0
 
 ## Fase 16: o check "Aplicar a todas as empresas"
 

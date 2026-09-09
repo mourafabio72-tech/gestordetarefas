@@ -6,7 +6,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download,
-         Send, Upload, X, MessageCircle, Mail } from 'lucide-react';
+         Send, Upload, X, MessageCircle, Mail, Ban } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento, filtrosVazios,
          temFiltroAtivo, filtrosDaUrl, rotuloDoRecorte, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
@@ -144,6 +144,8 @@ export default function Tarefas() {
   const [filtros, setFiltros] = useState(() => filtrosDaUrl(searchParams));
   const recorte = rotuloDoRecorte(filtros);
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
+  const [showNaoSeAplica, setShowNaoSeAplica] = useState(null); // tarefa que não cabe nesta empresa
+  const [motivoNaoSeAplica, setMotivoNaoSeAplica] = useState('');
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
@@ -352,6 +354,18 @@ export default function Tarefas() {
     } catch {
       // Falhar aqui não pode travar o cadastro: quem escolhe a pessoa na mão
       // continua conseguindo, e o campo fica como estava.
+    }
+  };
+
+  const handleNaoSeAplica = async () => {
+    if (!showNaoSeAplica || motivoNaoSeAplica.trim().length < 3) return;
+    try {
+      await tarefasAPI.naoSeAplica(showNaoSeAplica.id, motivoNaoSeAplica.trim());
+      setShowNaoSeAplica(null);
+      setMotivoNaoSeAplica('');
+      loadTarefas();
+    } catch (error) {
+      alert(mensagemDeErro(error, 'Erro ao marcar que a obrigação não se aplica.'));
     }
   };
 
@@ -569,7 +583,15 @@ export default function Tarefas() {
               style={{ background: corSet + '22', color: corSet }} title={setorNome}>{setorNome}</span>
           ) : <span />}
           <div className="flex items-center gap-1 shrink-0">
-            <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}>{statusLabels[tarefa.status]}</span>
+            {/* Cancelar é desistir; "não se aplica" é decidir que o trabalho
+                nunca coube àquele cliente. As duas coisas moram no mesmo status
+                CANCELADA, e é o campo próprio que diz qual é qual na tela. */}
+            <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: st.bg, color: st.fg }}
+              title={tarefa.nao_se_aplica
+                ? `Não se aplica a esta empresa. Motivo: ${tarefa.nao_se_aplica_motivo || '(não escrito)'}`
+                : undefined}>
+              {tarefa.nao_se_aplica ? 'Não se aplica' : statusLabels[tarefa.status]}
+            </span>
             <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: pr.bg, color: pr.fg }}>{prioridadeLabels[tarefa.prioridade]}</span>
           </div>
         </div>
@@ -1186,6 +1208,54 @@ export default function Tarefas() {
                 </button>
                 <button type="button" onClick={handleCopiar} disabled={!copyOrigem || copyDestinos.length === 0} className="btn-primary flex-1">
                   Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Não se aplica a esta empresa: cancela a tarefa de hoje E ajusta a regra
+          da obrigação, para o mesmo trabalho não voltar no mês que vem. O motivo
+          é obrigatório porque quem vier depois precisa saber por quê, e porque a
+          decisão fica no histórico com nome e data. */}
+      {showNaoSeAplica && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">Não se aplica a esta empresa</h2>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-600">
+                <strong>{showNaoSeAplica.titulo}</strong> deixa de valer para esta empresa.
+                A tarefa sai das pendências e fica no histórico, e a obrigação para de
+                gerá-la para este cliente nos próximos meses.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Por quê?</label>
+                <textarea
+                  value={motivoNaoSeAplica}
+                  onChange={(e) => setMotivoNaoSeAplica(e.target.value)}
+                  rows={3}
+                  placeholder="Ex.: a empresa não é contribuinte de IPI."
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Fica registrado com o seu nome e a data. Dá para desfazer na lista de
+                  exceções, no cadastro da obrigação.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowNaoSeAplica(null)} className="btn-secondary flex-1">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={motivoNaoSeAplica.trim().length < 3}
+                  onClick={handleNaoSeAplica}
+                  className="btn-primary flex-1 disabled:opacity-50"
+                >
+                  Confirmar
                 </button>
               </div>
             </div>

@@ -54,6 +54,12 @@ def migrate():
         ("ancora", "ALTER TABLE obrigacoes ADD COLUMN ancora VARCHAR(20)"),
         ("ancora_dias_antes", "ALTER TABLE obrigacoes ADD COLUMN ancora_dias_antes INTEGER DEFAULT 0"),
         ("ancora_tipo_dias", "ALTER TABLE obrigacoes ADD COLUMN ancora_tipo_dias VARCHAR(10) DEFAULT 'uteis'"),
+        # "Não se aplica a esta empresa": a tarefa vai para CANCELADA e estes
+        # campos dizem que foi decisão, e não desistência.
+        ("nao_se_aplica", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica BOOLEAN DEFAULT FALSE"),
+        ("nao_se_aplica_motivo", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_motivo TEXT"),
+        ("nao_se_aplica_por_id", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_por_id INTEGER REFERENCES usuarios(id)"),
+        ("nao_se_aplica_em", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_em TIMESTAMP"),
     ]
 
     for col_name, sql in migrations:
@@ -179,6 +185,9 @@ def criar_indices():
         # quem pergunta "de que setores esta pessoa é responsável" busca pelo
         # outro lado. Sem isto, varre a tabela.
         ("ix_resp_setor_usuario",     "CREATE INDEX IF NOT EXISTS ix_resp_setor_usuario ON empresa_setor_resp_usuarios (usuario_id)"),
+        # a geração pergunta "quais empresas esta obrigação NÃO alcança" a cada
+        # obrigação do mês, e a busca é sempre por obrigacao_id
+        ("ix_excecao_obrigacao",      "CREATE INDEX IF NOT EXISTS ix_excecao_obrigacao ON obrigacao_excecao (obrigacao_id)"),
         # subordinados diretos, lidos a cada request para montar o escopo
         ("ix_usuarios_gestor_id",     "CREATE INDEX IF NOT EXISTS ix_usuarios_gestor_id ON usuarios (gestor_id)"),
     ]

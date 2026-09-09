@@ -210,6 +210,12 @@ class TarefaResponse(BaseModel):
     saida_baixada_em: Optional[datetime] = None
     sentido: Optional[str] = "receber"          # vem da obrigação: receber | entregar
     exige_documento: bool = False   # baixa só pelo e-validador (deriva da obrigação)
+    # "Não se aplica a esta empresa". A tarefa fica CANCELADA, e é este campo
+    # que diz à tela para mostrar o rótulo certo: cancelar é desistir, e isto
+    # aqui é uma decisão de que o trabalho nunca coube àquele cliente.
+    nao_se_aplica: bool = False
+    nao_se_aplica_motivo: Optional[str] = None
+    nao_se_aplica_em: Optional[datetime] = None
     created_at: datetime
 
     class Config:

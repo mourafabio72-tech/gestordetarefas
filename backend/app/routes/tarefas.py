@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_, func, case
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from ..database import get_db
 from ..visibilidade import responsavel_visivel
+from ..seguranca import log_event, ip_cliente
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
@@ -739,6 +741,70 @@ def copiar_tarefas(
 
     db.commit()
     return {"message": f"{copiadas} tarefa(s) copiada(s) como modelo (defina os prazos depois).", "copiadas": copiadas}
+
+
+class NaoSeAplicaRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    motivo: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/{tarefa_id}/nao-se-aplica", response_model=TarefaResponse)
+def marcar_nao_se_aplica(
+    tarefa_id: int,
+    body: NaoSeAplicaRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
+):
+    """A obrigação não se aplica a esta empresa: marca a tarefa e cria a exceção.
+
+    Duas coisas de uma vez, e é por isso que a ação existe: a tarefa de HOJE sai
+    das pendências, e a obrigação para de gerar essa tarefa para essa empresa
+    nos meses seguintes. Fazer só a primeira deixaria o mesmo trabalho voltando
+    todo mês; só a segunda deixaria a tarefa deste mês pendurada.
+
+    A tarefa NÃO é apagada: vai para CANCELADA com motivo, autor e data, e fica
+    no histórico. Quem decidiu tem nome, e a decisão tem volta pela lista de
+    exceções no cadastro da obrigação."""
+    from ..models import ObrigacaoExcecao
+    db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
+    if not db_tarefa:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    if not _no_escopo(db_tarefa, db, current_user):
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    if not db_tarefa.obrigacao_id:
+        # Tarefa avulsa não veio de obrigação nenhuma, então não há regra para
+        # ajustar. Recusar é mais honesto do que cancelar e não impedir nada.
+        raise HTTPException(status_code=422,
+                            detail="Esta tarefa não veio de uma obrigação, então não há "
+                                   "regra para ajustar. Use a lixeira.")
+
+    db_tarefa.status = StatusTarefa.CANCELADA
+    db_tarefa.nao_se_aplica = True
+    db_tarefa.nao_se_aplica_motivo = body.motivo.strip()
+    db_tarefa.nao_se_aplica_por_id = current_user.id
+    db_tarefa.nao_se_aplica_em = datetime.utcnow()
+
+    # A exceção entra num ponto de salvamento próprio, e quem decide o vencedor
+    # é a UNIQUE do banco. Olhar antes e inserir depois é uma corrida: duas
+    # tarefas da MESMA obrigação e empresa (competências diferentes) marcadas ao
+    # mesmo tempo passavam as duas pela checagem e a segunda derrubava o commit
+    # com 500. Aqui, quem perde a corrida já tem o que queria: a exceção existe.
+    try:
+        with db.begin_nested():
+            db.add(ObrigacaoExcecao(obrigacao_id=db_tarefa.obrigacao_id,
+                                    empresa_id=db_tarefa.empresa_id,
+                                    motivo=body.motivo.strip(),
+                                    decidido_por_id=current_user.id))
+    except IntegrityError:
+        pass                      # já existia: a decisão é a mesma
+    db.commit()
+    db.refresh(db_tarefa)
+    log_event("EXCLUSAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="criada",
+              obrigacao_id=db_tarefa.obrigacao_id, empresa_id=db_tarefa.empresa_id,
+              tarefa_id=db_tarefa.id, user_id=current_user.id, ip=ip_cliente(request))
+    return db_tarefa
 
 
 @router.post("/{tarefa_id}/transferir", response_model=TarefaResponse)

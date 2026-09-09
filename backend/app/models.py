@@ -143,6 +143,39 @@ class EmpresaSetorResponsavel(Base):
                                 order_by=empresa_setor_resp_usuarios.c.ordem)
 
 
+class ObrigacaoExcecao(Base):
+    """A obrigação NÃO se aplica a esta empresa, e alguém decidiu isso.
+
+    Tabela separada da `obrigacao_empresa` de propósito, e a razão não é
+    estética: aquela alimenta o relationship `Obrigacao.empresas`, que significa
+    INCLUSÃO. Uma coluna "excluida" ali faria o mesmo relationship devolver
+    inclusão e exclusão misturadas, e `empresas_alvo()` passaria a somar empresa
+    que deveria subtrair, em silêncio.
+
+    A exceção tem volta: some da lista no cadastro da obrigação e a empresa
+    volta a gerar. Sem a volta, um clique errado prenderia a empresa fora da
+    obrigação para sempre."""
+    __tablename__ = "obrigacao_excecao"
+    __table_args__ = (UniqueConstraint("obrigacao_id", "empresa_id",
+                                       name="uq_obrigacao_excecao"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    # `ondelete="CASCADE"` nos dois: apagar a obrigação de vez, ou a empresa,
+    # levava esta linha junto ou estourava FOREIGN KEY no meio do delete, porque
+    # nenhuma das duas rotas de exclusão sabe desta tabela. Quem resolve isso é
+    # o banco, e não uma limpeza escrita em cada chamador.
+    obrigacao_id = Column(Integer, ForeignKey("obrigacoes.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    motivo = Column(Text)
+    decidido_por_id = Column(Integer, ForeignKey("usuarios.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    empresa = relationship("Empresa", foreign_keys=[empresa_id])
+    decidido_por = relationship("Usuario", foreign_keys=[decidido_por_id])
+
+
 class EmpresaObrigacaoDetalhe(Base):
     """Detalhe/complemento fixo de uma empresa numa obrigação (ex.: 'Empréstimo —
     Banco Itaú'). Herdado na descrição de toda tarefa gerada dessa obrigação
@@ -285,6 +318,14 @@ class Tarefa(Base):
     data_vencimento = Column(DateTime(timezone=True))             # vencimento fiscal/legal
     gera_multa = Column(Boolean, default=False)
     data_conclusao = Column(DateTime(timezone=True))
+    # "Não se aplica a esta empresa". Reusa o status CANCELADA, que já existe,
+    # já tem lixeira e já é ignorado pelo e-validador: status novo exigiria
+    # ALTER TYPE no enum nativo do Postgres, que é risco sem ganho. O que
+    # distingue os dois é este campo, e a tela mostra o rótulo certo por ele.
+    nao_se_aplica = Column(Boolean, default=False)
+    nao_se_aplica_motivo = Column(Text)
+    nao_se_aplica_por_id = Column(Integer, ForeignKey("usuarios.id"))
+    nao_se_aplica_em = Column(DateTime(timezone=True))
     observacoes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

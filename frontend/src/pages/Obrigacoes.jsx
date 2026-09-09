@@ -61,8 +61,23 @@ export default function Obrigacoes() {
   const [form, setForm] = useState(emptyForm);
   const [buscaEmp, setBuscaEmp] = useState('');
   const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false, detalhes: false });
+  const removerExcecao = async (x) => {
+    if (!editing) return;
+    try {
+      await obrigacoesAPI.removerExcecao(editing.id, x.id);
+      setExcecoes((arr) => arr.filter((e) => e.id !== x.id));
+    } catch (error) {
+      alert(mensagemDeErro(error, 'Erro ao desfazer a exceção.'));
+    }
+  };
+
   const toggleSecao = (k) => setSecoes((s) => ({ ...s, [k]: !s[k] }));
   const [detalhes, setDetalhes] = useState([]);   // [{empresa_id, empresa_nome, observacao}]
+  // Empresas que alguém decidiu que esta obrigação NÃO alcança, com o motivo
+  // e o autor. Vem do servidor e some daqui pelo botão de remover, que é o
+  // caminho de volta: sem ele, um clique errado prenderia a empresa fora da
+  // obrigação para sempre.
+  const [excecoes, setExcecoes] = useState([]);
   const [filtros, setFiltros] = useState({ obrigacao: '', empresa: '', setor: '', status: 'todas' });
 
   const so = (s) => (s || '').toString().toLowerCase();
@@ -166,7 +181,7 @@ export default function Obrigacoes() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setDetalhes([]); setShowModal(true); };
+  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setModelo(null); setDetalhes([]); setExcecoes([]); setShowModal(true); };
   const abrirEdicao = (o) => {
     setEditing(o);
     setForm({
@@ -180,6 +195,7 @@ export default function Obrigacoes() {
     setModelo(null);
     setDetalhes([]);
     obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
+    obrigacoesAPI.getExcecoes(o.id).then((r) => setExcecoes(r.data)).catch(() => setExcecoes([]));
     setShowModal(true);
   };
   const duplicar = (o) => {
@@ -197,6 +213,11 @@ export default function Obrigacoes() {
     setModelo(null);
     setDetalhes([]);
     obrigacoesAPI.getDetalhes(o.id).then((r) => setDetalhes(r.data)).catch(() => {});
+    // A cópia NÃO herda as exceções da original: elas são uma decisão tomada
+    // sobre aquela obrigação, com motivo e autor. Mostrar as da original aqui
+    // ainda ofereceria um botão "voltar" que não teria em quem mexer, porque
+    // a cópia nem existe no banco ainda.
+    setExcecoes([]);
     setShowModal(true);
   };
 
@@ -772,6 +793,38 @@ export default function Obrigacoes() {
                   </div>
                 )}
               </div>
+
+              {excecoes.length > 0 && (
+                <div className="border-t border-gray-100 pt-3">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">
+                    Não se aplica a estas empresas
+                    <span className="text-gray-400 font-normal ml-1">({excecoes.length})</span>
+                  </p>
+                  <div className="space-y-1.5">
+                    {excecoes.map((x) => (
+                      <div key={x.id} className="flex items-start gap-2 text-sm">
+                        <span className="w-40 shrink-0 text-gray-600 truncate" title={x.empresa_nome}>
+                          {formatarRazaoSocial(x.empresa_nome)}
+                        </span>
+                        <span className="flex-1 text-gray-500">
+                          {x.motivo || '(sem motivo escrito)'}
+                          {x.decidido_por && (
+                            <span className="text-xs text-gray-400"> por {x.decidido_por}</span>
+                          )}
+                        </span>
+                        <button type="button" title="Voltar a gerar para esta empresa"
+                          onClick={() => removerExcecao(x)}
+                          className="text-gray-400 hover:text-primary-600 shrink-0">voltar</button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Estas empresas não recebem tarefa desta obrigação. Clicar em "voltar"
+                    faz a próxima geração incluir a empresa de novo. A tarefa já cancelada
+                    continua no histórico.
+                  </p>
+                </div>
+              )}
 
               <div className="border-t border-gray-100 pt-3">
                 <button type="button" onClick={() => toggleSecao('empresas')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-1">
