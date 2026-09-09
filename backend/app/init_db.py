@@ -175,6 +175,10 @@ def criar_indices():
         # M2M: a PK é (tarefa_id, usuario_id), então buscar POR USUÁRIO -- que é
         # o que o escopo faz -- não aproveita a chave primária.
         ("ix_tarefa_resp_usuario",    "CREATE INDEX IF NOT EXISTS ix_tarefa_resp_usuario ON tarefa_responsaveis (usuario_id)"),
+        # mesmo caso na matriz (empresa, setor): a PK começa por vinculo_id, e
+        # quem pergunta "de que setores esta pessoa é responsável" busca pelo
+        # outro lado. Sem isto, varre a tabela.
+        ("ix_resp_setor_usuario",     "CREATE INDEX IF NOT EXISTS ix_resp_setor_usuario ON empresa_setor_resp_usuarios (usuario_id)"),
         # subordinados diretos, lidos a cada request para montar o escopo
         ("ix_usuarios_gestor_id",     "CREATE INDEX IF NOT EXISTS ix_usuarios_gestor_id ON usuarios (gestor_id)"),
     ]

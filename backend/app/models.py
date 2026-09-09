@@ -21,6 +21,33 @@ tarefa_responsaveis = Table(
     Column("usuario_id", Integer, ForeignKey("usuarios.id"), primary_key=True),
 )
 
+# O par (empresa, setor) também pode ter vários responsáveis. A lista inteira
+# mora AQUI, inclusive o principal, com `ordem` guardando a posição escolhida na
+# tela. O `responsavel_id` do vínculo continua existindo e vale o primeiro da
+# lista: quem grava é um ponto só (`services/resp_setor.py:gravar`), senão as
+# duas verdades divergem.
+#
+# `ondelete="CASCADE"` nas duas pontas porque quem apaga o vínculo nem sempre é
+# o ORM: apagar a EMPRESA dispara o cascade dela até o vínculo, e ali as linhas
+# daqui já não são carregadas, então sobrariam órfãs apontando para um vínculo
+# que não existe mais. O banco resolve isso melhor do que uma limpeza escrita
+# em cada chamador. No Postgres vale sempre; no SQLite local, só com
+# `PRAGMA foreign_keys=ON`, e é assim que a prova roda.
+#
+# A tabela nasce do `Base.metadata.create_all` de `main.py:14`, que roda ANTES
+# do `migrate()`: `create_all` cria tabela que não existe, e o que ele não faz
+# é acrescentar coluna em tabela existente -- por isso o índice dela precisa
+# entrar em `init_db.criar_indices()`, e a tabela em si, não.
+empresa_setor_resp_usuarios = Table(
+    "empresa_setor_resp_usuarios",
+    Base.metadata,
+    Column("vinculo_id", Integer,
+           ForeignKey("empresa_setor_responsavel.id", ondelete="CASCADE"), primary_key=True),
+    Column("usuario_id", Integer,
+           ForeignKey("usuarios.id", ondelete="CASCADE"), primary_key=True),
+    Column("ordem", Integer, nullable=False, default=0),
+)
+
 class StatusTarefa(str, enum.Enum):
     PENDENTE = "pendente"
     EM_ANDAMENTO = "em_andamento"
@@ -96,8 +123,13 @@ class Empresa(Base):
 
 
 class EmpresaSetorResponsavel(Base):
-    """Responsável (analista) por setor, específico de cada empresa. O gestor da
-    tarefa sai do gestor_id desse responsável — não se cadastra aqui."""
+    """Responsáveis (analistas) por setor, específicos de cada empresa. O gestor
+    da tarefa sai do gestor_id do primeiro deles, não se cadastra aqui.
+
+    São VÁRIOS desde 2026-09-09. A lista fica em `responsaveis`; o
+    `responsavel_id` é o PRINCIPAL e vale sempre o primeiro da lista. Ele
+    continua aqui porque o gerador, o importador e a tela antiga leem esse
+    campo, e porque a tarefa gerada precisa de um dono único na coluna dela."""
     __tablename__ = "empresa_setor_responsavel"
     __table_args__ = (UniqueConstraint("empresa_id", "setor_id", name="uq_empresa_setor"),)
 
@@ -107,6 +139,8 @@ class EmpresaSetorResponsavel(Base):
     responsavel_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
+    responsaveis = relationship("Usuario", secondary=empresa_setor_resp_usuarios,
+                                order_by=empresa_setor_resp_usuarios.c.ordem)
 
 
 class EmpresaObrigacaoDetalhe(Base):

@@ -11,6 +11,7 @@ import io
 import re
 import unicodedata
 from ..models import Empresa, Usuario, Setor, EmpresaSetorResponsavel
+from . import resp_setor
 
 
 def _norm(s: str) -> str:
@@ -97,11 +98,13 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                 if not resp:
                     detalhes.append({"linha": emp.razao_social, "status": "aviso",
                                      "detalhe": f"{setor.nome}: responsável '{valor}' não encontrado, setor marcado sem responsável."})
-                if existente:
-                    existente.responsavel_id = resp.id if resp else None
-                else:
-                    db.add(EmpresaSetorResponsavel(empresa_id=emp.id, setor_id=setor.id,
-                                                   responsavel_id=resp.id if resp else None))
+                if not existente:
+                    existente = EmpresaSetorResponsavel(empresa_id=emp.id, setor_id=setor.id)
+                    db.add(existente)
+                # Passa pelo mesmo ponto que a tela usa: o principal e a lista
+                # se escrevem juntos, senão a planilha gravaria um responsável
+                # que a tela não mostraria.
+                resp_setor.gravar(db, existente, [resp.id] if resp else [])
                 marcados += 1
             else:
                 if existente:

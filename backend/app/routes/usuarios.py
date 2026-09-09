@@ -262,12 +262,22 @@ def update_usuario(
     return db_usuario
 
 def _usuario_em_uso(db: Session, uid: int) -> int:
-    from ..models import Obrigacao, Empresa, tarefa_responsaveis
+    from ..models import (Obrigacao, Empresa, tarefa_responsaveis,
+                          EmpresaSetorResponsavel, empresa_setor_resp_usuarios)
     n = db.query(Obrigacao).filter((Obrigacao.responsavel_id == uid) | (Obrigacao.supervisor_id == uid)).count()
     n += db.query(Tarefa).filter((Tarefa.responsavel_id == uid) | (Tarefa.supervisor_id == uid)).count()
     n += db.query(Empresa).filter((Empresa.responsavel_id == uid) | (Empresa.supervisor_id == uid)).count()
     n += db.query(Usuario).filter(Usuario.gestor_id == uid).count()
     n += db.query(tarefa_responsaveis).filter(tarefa_responsaveis.c.usuario_id == uid).count()
+    # Ser responsável por um setor de uma empresa também é vínculo. Sem estas
+    # duas linhas, a pessoa era APAGADA de vez e a matriz ficava apontando para
+    # um id que não existe mais: o principal some da tela e o secundário vira
+    # linha pendurada. Vale para os dois papéis, porque com vários responsáveis
+    # o secundário não aparece em `responsavel_id`.
+    n += db.query(EmpresaSetorResponsavel).filter(
+        EmpresaSetorResponsavel.responsavel_id == uid).count()
+    n += db.query(empresa_setor_resp_usuarios).filter(
+        empresa_setor_resp_usuarios.c.usuario_id == uid).count()
     return n
 
 

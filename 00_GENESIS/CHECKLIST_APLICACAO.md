@@ -1,0 +1,277 @@
+# CHECKLIST DE APLICACAO
+
+Trabalho: varios responsaveis por (empresa, setor). Aberto em 2026-09-09.
+
+**So marcar `[x]` com evidencia apontavel: arquivo e linha, ou saida de teste.**
+
+## Decisoes do topo, para nao esquecer no meio do caminho
+
+```
+Cor de marca: paleta `primary` do tailwind.config.js (Sage e Creme, oliva #5f7057)
+              PROIBIDO hex escrito direto em JSX
+Icones:       lucide-react (desvio declarado de Icones_Phosphor, ver LASTRO)
+Tema:         light
+Acesso:       login proprio por perfil (JWT de 8h), ja existente
+Modelo:       principal (responsavel_id) mais M2M, espelhando a Tarefa
+Retroativo:   NAO. Tarefa ja gerada nao muda.
+```
+
+## Fase 9: modelo e API
+
+- [x] tabela associativa nova ligando o vinculo (empresa, setor) a N usuarios,
+      declarada em `models.py:41-49` e criada pelo `Base.metadata.create_all` de
+      `main.py:14`, que roda ANTES do `migrate()`
+      MOTIVO CORRIGIDO EM 2026-09-09: o motivo escrito aqui na abertura estava
+      errado, e o verificador de evidencia pegou. `Base.metadata.create_all` cria
+      sim tabela nova, inclusive em base ja existente. O que ele NAO faz e
+      acrescentar coluna em tabela que ja existe, e e por isso que coluna entra
+      no `migrate()`. Escrever o DDL a mao no `migrate()` seria uma segunda
+      definicao da mesma tabela, para divergir da primeira no dia que uma coluna
+      mudar. O que precisa entrar no `init_db` e o INDICE, que o `create_all` nao
+      cria em tabela pre-existente, e esse esta la
+      PROVA: banco vazio, `DATABASE_URL=sqlite:///novo.db python -c "import app.main"`
+      e depois `select name from sqlite_master`:
+      TABELAS: ['empresa_setor_responsavel', 'empresa_setor_resp_usuarios', 'tarefa_responsaveis']
+      INDICES: ['ix_resp_setor_usuario']
+- [x] indice em `usuario_id` da tabela nova
+      EVIDENCIA: `init_db.py:181` -- `("ix_resp_setor_usuario", "CREATE INDEX IF NOT EXISTS ix_resp_setor_usuario ON empresa_setor_resp_usuarios (usuario_id)")`, e o indice aparece no `sqlite_master` do banco novo (saida acima)
+      MOTIVO: mesmo caso de `tarefa_responsaveis(usuario_id)`, resolvido em 2026-08-20:
+      a PK comeca pelo outro lado e a busca por usuario varre a tabela
+      PROVA: `grep -n "ix_.*resp_setor.*usuario" backend/app/init_db.py`
+- [x] `responsavel_id` continua na tabela como PRINCIPAL, gravado num unico ponto,
+      sempre igual ao primeiro da lista
+      EVIDENCIA: o ponto unico e `services/resp_setor.py:gravar`, e os DOIS chamadores
+      passam por ele: `routes/empresas.py:203` (tela) e
+      `services/importador_resp_setor.py:107` (planilha). O importador gravava o
+      `responsavel_id` por conta propria e era a segunda verdade que a regra 3 do
+      LASTRO teme; foi ligado ao mesmo ponto agora, ainda com um id so, e a fase 12
+      so troca o que le a celula. Itens 3 e 4 da prova: `ok 3. responsavel_id
+      continua saindo, e vale o primeiro da lista` e `ok 4. inverter a lista inverte
+      o principal`
+      PROVA: a prova nova tem um caso que grava tres pessoas e confere que o
+      `responsavel_id` e o primeiro; trocar a ordem muda o principal
+- [x] GET devolve `responsavel_ids` (lista), mantendo `responsavel_id` para nao
+      quebrar quem le o campo antigo
+      EVIDENCIA: `routes/empresas.py:139-142` devolve as duas chaves; itens 2 e 3 da
+      prova leem as duas pelo HTTP real. O `curl` previsto aqui nao roda contra
+      producao porque a funcionalidade ainda nao foi publicada: a fase 17 confere no ar
+      PROVA: `curl` do GET traz as duas chaves
+- [x] PUT aceita `responsavel_ids: List[int]`
+      EVIDENCIA: `grep -n "responsavel_ids" backend/app/routes/empresas.py` devolve 7
+      linhas, a declaracao em `44: responsavel_ids: List[int] = Field(...)`
+      PROVA: `grep -n "responsavel_ids" backend/app/routes/empresas.py`
+- [x] o body valida ANTES de gravar: setor existe e esta ativo; cada usuario existe,
+      nao e `tipo == "cliente"` e nao esta bloqueado; ids repetidos colapsam
+      EVIDENCIA: `routes/empresas.py:164-183`, tudo antes do primeiro `delete` (`:185`).
+      Itens 6 a 9 e 12 da prova. O item 11 e o que prova a ordem: `ok 11. recusa nao
+      altera o que ja estava gravado`
+      PROIBIDO: `db.add(...)` com id vindo do body sem checagem previa
+      MOTIVO: "Todo endpoint que receber ID de recurso na URL ou no body deve validar
+      que o usuario autenticado tem direito ao recurso ANTES de retornar dado.
+      Sem excecao." (Padrao_IDOR:22-26)
+      PROVA: a prova manda id inexistente e id de usuario cliente, e exige recusa
+- [x] teto de tamanho na lista de ids
+      EVIDENCIA: `MAX_RESP_POR_SETOR = 20` em `routes/empresas.py:36`, aplicado no
+      schema (`:45`). Item 13: `ok 13. lista acima de 20 e recusada` (422, vindo do
+      Pydantic, antes da funcao da rota)
+      MOTIVO: a vault NAO tem regra para isso (buscado e nao encontrado, ver
+      NOTAS_LIDAS). O teto entra por decisao local, com o numero escrito no codigo
+      PROVA: a prova manda uma lista acima do teto e exige recusa
+- [x] `extra = "forbid"` no schema do body
+      EVIDENCIA: `grep -n "forbid"` devolve `40:` e `88:`, um por schema. Item 14 da prova
+      MOTIVO: "Backend define a whitelist de campos editaveis. Tudo que veio no body
+      e nao esta na whitelist eh ignorado." (Padrao_Mass_Assignment)
+      PROVA: `grep -n "forbid" backend/app/routes/empresas.py`
+- [x] recusa devolve 404, nunca 403
+      EVIDENCIA: item 10, reforcado depois do verificador apontar que a versao
+      anterior era tautologia. Agora exige que os cinco status sejam exatamente
+      `{404}` E que o `detail` seja UM so entre "nao existe", "e cliente" e "esta
+      bloqueado"
+      MOTIVO: 403 confirma que o recurso existe (Padrao_IDOR)
+      PROVA: a prova confere o status
+- [x] `log_event` na regravacao da matriz, reusando `backend/app/seguranca.py:57`
+      EVIDENCIA: `routes/empresas.py:205` (tela) e `:115` (planilha, achado do
+      verificador: regravava a mesma matriz sem deixar rastro). Linha real capturada
+      na saida da prova, com ids e contagem, sem nome, e-mail, senha ou token.
+      NAO COBERTO: `request_id`, `path` e `method` nao existem no `log_event` deste
+      projeto desde a Fase 7. Registrado na matriz como desvio declarado
+      MOTIVO: "mutacao de dado critico SEMPRE entra" (Padrao_Logging_Estruturado)
+      PROIBIDO: senha, token ou PII dentro do log
+      PROVA: `grep -n "log_event" backend/app/routes/empresas.py`
+- [x] `backend/provas/prova_responsaveis_multiplos.py` criada, com 19 casos, e
+      verificado que ela REPROVA com a validacao removida
+      EVIDENCIA: com o bloco `routes/empresas.py:164-183` retirado, a saida foi
+      `HOUVE FALHA nos itens [6, 7, 8, 9, 11]`; com ele de volta, `TODAS AS PROVAS
+      PASSARAM`. As duas saidas estao no LOG de 2026-09-09
+      MOTIVO: "Regra listada nao e regra cumprida. So vira cumprida quando alguem
+      prova." (Verificacoes_Mecanicas_de_Tela)
+- [x] as 18 provas antigas do backend seguem passando
+      EVIDENCIA: laco por `provas/prova_*.py` com o venv, rodado tres vezes (depois
+      da rota, depois da extracao do ponto unico, e depois das correcoes dos
+      verificadores): `provas com falha: 0 de 19`
+
+## Fase 10: gerador
+
+- [ ] `_resp_do_setor` devolve lista, e `nova.responsaveis` recebe todos
+      PROVA: prova nova, cenario de dois responsaveis gerando UMA tarefa com os dois
+- [ ] supervisor sai do primeiro da lista, escada intacta (gestor da pessoa, gestor
+      do setor, supervisor padrao da obrigacao)
+      PROVA: `prova_gestor_setor.py` segue passando, mais caso novo
+- [ ] `routes/tarefas.py:37` deixa de esconder a tarefa quando so o principal esta
+      bloqueado; some apenas quando TODOS estiverem
+      MOTIVO: bug adjacente que nasce com N responsaveis
+      PROVA: caso na prova nova com um dos dois bloqueado; a tarefa continua visivel
+- [ ] varridos os outros consumidores de responsavel unico (alertas, whatsapp, email,
+      documentos) e corrigido o que passa a estar errado com N
+      MOTIVO: "procure TODOS os chamadores da funcao que voce vai tocar" (Escada,
+      regra 1: correcao e na causa raiz)
+      PROVA: `grep -rn "responsaveis\[0\]\|\.responsavel\b" backend/app` revisado item
+      a item, e a decisao de cada um escrita no LOG
+
+## Fase 11: tela
+
+- [ ] `components/SeletorResponsaveis.jsx` criado a partir do que ja existe em
+      `pages/Tarefas.jsx:1287`, com modo inline e modo popover
+      MOTIVO: degrau 2 da escada. O componente ja existe, nao se reescreve
+- [ ] `pages/Tarefas.jsx` passa a usar o componente extraido, sem mudar de aparencia
+      PROVA: `grep -c "responsavel_ids.includes" frontend/src/pages/Tarefas.jsx` cai
+      para zero, e a tela continua com o contador "N selecionado(s)"
+- [ ] cada linha de setor mostra os escolhidos como chips e abre o popover num botao
+- [ ] o checkbox de marcar pessoa nao e o cru do sistema operacional
+      MOTIVO: ".tsel{ appearance:none; ...} Nunca o do sistema operacional."
+      (Padrao_Selecao_em_Lote). Aqui vale o PRINCIPIO em Tailwind (`appearance-none`
+      ou `accent-primary-600`), nao a classe `.tsel` de CSS puro, pelo precedente de
+      2026-08-20 registrado no LOG
+      PROVA: `grep -rn 'type="checkbox"' frontend/src/components/SeletorResponsaveis.jsx`
+      e conferir que toda ocorrencia tem classe de aparencia propria
+- [ ] o checkbox "atende" CONTINUA checkbox, nao vira toggle
+      MOTIVO: "O teste de uma pergunta: clicar nisso muda alguma coisa agora? Sim ->
+      toggle. Nao, so marca para depois -> checkbox." (Padrao_Selecao_em_Lote). O
+      "atende" so grava no submit do modal (`Empresas.jsx:147`), entao e checkbox
+- [ ] a aba NAO ganha filtro por coluna, ordenacao, exportar nem menu sanduiche
+      MOTIVO: "as linhas sao registros comparaveis entre si? Se nao sao, e grade, nao
+      tabela de listagem." (Padrao_Tabela). Um comentario no codigo diz por que
+      PROVA: `grep -n "data-col-key\|TabelaAvancada" frontend/src/pages/Empresas.jsx`
+      volta vazio
+- [ ] o popover nao fica cortado dentro do modal
+      MOTIVO: "SEM `overflow:visible` o dropdown do SelectBusca fica CORTADO pelas
+      bordas do modal" (Padrao_Modal_Popup_Centrado)
+      PROVA: CONFERENCIA_VISUAL, tela de cadastro de empresa, aba de responsaveis,
+      com o popover aberto no ultimo setor da lista
+- [ ] ESC e clique fora fecham o POPOVER e nao o modal
+      MOTIVO: "O modal sai pelo X ou pelo Cancelar, e por mais nada." (Padrao_Modal_
+      Nao_Fecha_Sozinho)
+      PROVA: CONFERENCIA_VISUAL, mais caso na prova Node do estado do popover
+- [ ] nenhum hex escrito na tela
+      MOTIVO: "PROIBIDO: o hex aparecer em qualquer template" (Sistema_de_Estilos)
+      PROVA: `grep -rniE "#[0-9a-f]{6}" frontend/src/components/SeletorResponsaveis.jsx`
+      volta vazio
+- [ ] nenhum travessao no texto que o usuario le
+      MOTIVO: regra do CLAUDE.md da vault, ja fechada neste projeto na Fase 6
+      PROVA: `grep -rn "—" frontend/src` volta vazio
+- [ ] logica fora do JSX, em `pages/seletorResponsaveis.js`, com
+      `frontend/provas/prova_seletor_responsaveis.js` rodando em Node puro
+- [ ] `npm run build` sem erro
+
+## Fase 12: importador
+
+- [ ] celula aceita varios nomes separados por ponto e virgula
+      PROVA: caso na prova com "Ana; Bruno"
+- [ ] nome desconhecido no meio vira aviso e nao derruba a linha
+      PROVA: caso na prova com um nome valido e um invalido na mesma celula
+- [ ] celula vazia continua desmarcando o setor, como e hoje
+      PROVA: caso na prova
+- [ ] o modelo XLSX baixavel traz a instrucao do ponto e virgula
+      PROVA: CONFERENCIA_VISUAL do arquivo baixado
+
+## Fase 13: o responsavel sai da obrigacao
+
+- [ ] `services/gerador.py:305` deixa de cair em `o.responsavel`; quem atende sai SO da
+      matriz da empresa
+      MOTIVO: pedido do usuario, 2026-09-09. Obrigacao serve varias empresas, entao
+      dono de tarefa nao mora nela
+      PROVA: `grep -n "or o.responsavel" backend/app/services/gerador.py` volta vazio
+- [ ] o select de responsavel sai do cadastro da obrigacao
+      PROVA: `grep -n "form.responsavel_id" frontend/src/pages/Obrigacoes.jsx` volta vazio
+- [ ] a coluna `obrigacoes.responsavel_id` FICA no banco, com comentario de legado
+      MOTIVO: apagar coluna e destrutivo e nao traz ganho
+- [ ] `pages/Tarefas.jsx:338` para de puxar responsavel da obrigacao, e passa a puxar
+      da matriz da empresa quando ela ja estiver escolhida
+- [ ] `services/substituicao.py:58` para de trocar responsavel em obrigacao
+      MOTIVO: "procure TODOS os chamadores" (Escada, correcao e na causa raiz)
+- [ ] a resposta da geracao diz quantas tarefas nasceram sem responsavel, e de quais
+      empresas
+      MOTIVO: sem isso, tirar o fallback ESCONDE o buraco de cadastro em vez de
+      revelar. Era o fallback que mascarava empresa sem responsavel no setor
+      PROVA: caso na prova conferindo o contador na resposta
+- [ ] `prova_responsavel_so_da_matriz.py` criada, e verificado que REPROVA com o
+      fallback de volta
+
+## Fase 14: e-validador em obrigacao interna
+
+- [ ] `models.py:305` passa a deixar a flag EXPLICITA vencer o sentido interna
+      MOTIVO: pedido do usuario, 2026-09-09. REVERSAO declarada de uma decisao escrita
+      no codigo com o motivo "exigir um travaria a baixa por algo que nunca vai
+      existir". A premissa era que interna nao tem documento; tem, so que quem anexa e
+      o analista, nao o cliente
+- [ ] `exige_documento = NULL` continua derivando de `identificadores`, e interna sem
+      flag continua sem documento
+      MOTIVO: nenhuma obrigacao interna de hoje pode mudar de comportamento sozinha
+      PROVA: caso na prova com interna sem flag
+- [ ] a tela da obrigacao libera o campo de documento quando o sentido e interna
+- [ ] o comentario de `models.py:302-306` reescrito com a regra nova e o porque
+      MOTIVO: comentario que contradiz o codigo e pior que comentario nenhum
+- [ ] `prova_evalidador_interna.py` com tres casos (interna sem flag, interna com flag,
+      nao interna)
+- [ ] `prova_sentido_obrigacao.py` e `prova_tipo_documento.py` seguem passando
+
+## Fase 15: desconsiderar a tarefa e virar excecao
+
+- [ ] tabela de excecao por (obrigacao, empresa), SEPARADA de `obrigacao_empresa`
+      MOTIVO: `obrigacao_empresa` alimenta o relationship `Obrigacao.empresas`, que
+      significa inclusao. Coluna "excluida" ali faria o mesmo relationship devolver
+      inclusao e exclusao misturadas
+      PROVA: `grep -n "excecao" backend/app/init_db.py` acha o DDL
+- [ ] `empresas_alvo()` subtrai as excecoes nos DOIS modos, `regra` e `vinculadas`
+      PROIBIDO: subtrair so no modo `regra`, deixando a excecao furada no outro
+      PROVA: a prova cobre os dois modos
+- [ ] a tarefa ganha a acao "nao se aplica a esta empresa", pedindo motivo
+- [ ] a acao grava quem decidiu, quando e o motivo, e leva a tarefa para `CANCELADA`
+      MOTIVO: `CANCELADA` ja existe, ja tem lixeira e ja e ignorada pelo e-validador
+      (`routes/tarefas.py:392`). Status novo exigiria `ALTER TYPE` no enum nativo do
+      Postgres, risco sem ganho (Escada, degrau 2)
+- [ ] a tela mostra "nao se aplica" no lugar de "cancelada" quando for esse o caso
+- [ ] no cadastro da obrigacao, a lista de excecoes com motivo e botao de remover
+      MOTIVO: sem a volta, um clique errado prende a empresa fora da obrigacao para
+      sempre
+      PROVA: caso na prova removendo a excecao e vendo a empresa voltar a geracao
+- [ ] `log_event` na criacao e na remocao da excecao
+      MOTIVO: "mutacao de dado critico SEMPRE entra" (Padrao_Logging_Estruturado)
+- [ ] tarefa desconsiderada nao conta como pendente nem atrasada
+      PROVA: caso na prova conferindo os contadores do painel
+- [ ] `prova_excecao_obrigacao.py` criada
+
+## Fase 16: o check "Aplicar a todas as empresas"
+
+- [ ] vincular empresa desmarca o check e poe `alvo_modo='vinculadas'`
+      MOTIVO: hoje o check e derivado de `!aplica_regimes && !aplica_segmentos`
+      (`Obrigacoes.jsx:694`) e fica MARCADO mesmo com empresas vinculadas, dizendo o
+      contrario do que a tela faz
+- [ ] desvincular a ultima empresa devolve o estado anterior
+      MOTIVO: obrigacao presa em `vinculadas` com lista vazia nao gera para ninguem
+      PROVA: caso na prova
+- [ ] desmarcar o check para de FORCAR um regime (`Obrigacoes.jsx:707`)
+- [ ] o aviso ambar que ja existe passa a explicar o que aconteceu
+- [ ] a logica sai do JSX para `pages/alvoObrigacao.js`, com
+      `frontend/provas/prova_alvo_check.js` em Node puro
+- [ ] `prova_alvo_vinculadas.py` segue passando
+
+## Fase 17: entrega
+
+- [ ] `CONFORMIDADE_VAULT.md` sem nenhuma linha pendente
+- [ ] `grep -rn "escada:" .` registrado no LOG, com o gatilho de cada marcador
+- [ ] `graphify update .` rodado
+- [ ] `OBRIGACOES_SPEC.md` e `CLAUDE.md` do projeto atualizados
+- [ ] carimbo de producao conferido contra o HEAD do repositorio
+      PROVA: `curl -s https://gestordetarefas.zoaria.com.br/api/health` comparado com
+      `git log -1 --date=format:'%Y%m%d-%H%M'`
