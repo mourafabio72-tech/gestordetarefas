@@ -231,3 +231,23 @@ linhas, e passou a provar por leitura de AST."
 so pela aba Logs do servico no EasyPanel. O que o usuario tem de olhar esta no
 relatorio de parada. Todo o resto das fases 18 e 19 esta fechado, publicado e
 conferido de fora."
+
+[2026-09-09T19:05:00] fase=0 acao=escopo_ampliado resultado=ok obs="O usuario
+mandou abrir as fases para os dois achados que a Fase 18 produziu e que eu nao
+consertei por conta propria. PLANO_FASEADO ganhou a Fase 20 (resposta de erro sai
+sem cabecalho e sem X-Request-ID) e a Fase 21 (cerca de 90 travessoes em
+comentario e docstring), com criterio de aceite verificavel em cada uma, mais uma
+secao de historico dizendo o que mudou e quando. CHECKLIST ganhou 18 itens, e a
+matriz ganhou 6 linhas pendentes. Notas lidas para lastrar as fases novas, nesta
+sessao e integrais: `CSRF_Cookies_Headers` (117 linhas, fim 'Ver também', a secao
+'Headers de seguranca (em toda resposta)' com os seis cabecalhos) e
+`Revisao_Vulnerabilidades` (36 linhas, fim 'Ver também', item 9, mensagem generica
+ao cliente). Nenhuma fase anterior mudou de escopo: as 18 e 19 seguem fechadas."
+
+[2026-09-09T19:10:00] fase=0 acao=plano_ampliado_aprovado resultado=ok obs="O
+usuario aprovou as fases 20 e 21 e escolheu retomar em CONVERSA NOVA, para nao
+carregar o historico desta. Fase 20 e a proxima acao, e o primeiro item dela e o
+20.1: escrever `backend/provas/prova_erro_500.py` e ve-la falhar ANTES de tocar no
+codigo. O modo segue `autonomo`, ja gravado no topo do PLANO_FASEADO: quem retomar
+nao repergunta. Pendente do usuario, e so dele: o item 19.4, conferencia visual da
+linha de log na aba Logs do EasyPanel."

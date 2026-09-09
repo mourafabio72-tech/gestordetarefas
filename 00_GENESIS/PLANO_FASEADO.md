@@ -54,6 +54,77 @@ nota aparece na linha.
 `X-Request-ID` com valor diferente a cada chamada. A matriz
 `CONFORMIDADE_VAULT.md` fecha sem linha pendente das fases 18 e 19.
 
+## Fase 20: a resposta de erro para de sair pelada
+
+- **Status:** pending
+- **Aberta em:** 2026-09-09, a pedido do usuário, depois do achado do verificador
+  funcional da Fase 18. Não estava no plano aprovado de manhã.
+- **Duração estimada:** 1 sessão curta
+- **Notas que regem:** `CSRF_Cookies_Headers` (seção "Headers de segurança (em
+  toda resposta)"), `Padrao_Logging_Estruturado`, `Mapa_de_Conceitos_de_Seguranca`
+  (Família 6), `Revisao_Vulnerabilidades` (item 9), `Escada_Preguica_de_Codigo`,
+  `TDD_RED_GREEN_REFACTOR`, `Fechar_Tarefa_Rodar_Verifica`, `Sem_Travessao`
+- **Dependências:** fase 18 (o contexto de log é o que essa fase carrega para o
+  handler)
+- **Output esperado:** exceção não tratada devolve 500 com corpo genérico, com os
+  cabeçalhos de segurança e com o `X-Request-ID` que liga aquela tela de erro à
+  linha de log do request que quebrou.
+
+O problema, medido e não suposto: `ServerErrorMiddleware` do Starlette é o mais
+externo de todos, então quando a rota levanta exceção sem tratamento a resposta
+sai por fora dos nossos dois middlewares. Prova do verificador: `GET` numa rota
+que só faz `raise ValueError` volta 500 sem `X-Request-ID` e sem
+`X-Content-Type-Options`. A parte dos cabeçalhos é anterior a esta fase e vale
+para todo erro 500 que o app já deu.
+
+O desenho, para o critério não ficar vago: `abrir_contexto` passa a gravar o id
+também em `request.state`, que vive no `scope` e por isso atravessa a fronteira
+de task; e um `@app.exception_handler(Exception)` emite `ERRO_NAO_TRATADO` e monta
+a resposta genérica, reusando o `aplicar_headers` que já existe. O handler lê o id
+do `state`, e não da `contextvar`, justamente porque roda em contexto ancestral.
+
+**Ponto que a execução tem de medir, e não presumir:** registrar handler de
+`Exception` não pode fazer o traceback sumir do stdout. Se sumir, o conserto trocou
+um problema por outro pior, e a fase muda de desenho.
+
+**Critério de aceite, verificável por quem não escreveu:**
+`python backend/provas/prova_erro_500.py` sai com código 0, e com código 1 no
+código de hoje. Entre os itens, obrigatoriamente: a resposta de erro traz
+`X-Request-ID` igual ao `request_id` da linha de log daquele request; traz os
+cabeçalhos de segurança da nota; o corpo NÃO carrega traceback, nome de exceção,
+caminho de arquivo nem query; a linha `ERRO_NAO_TRATADO` sai com os oito campos; e
+o traceback continua aparecendo no stdout do servidor. Publicado, com o carimbo de
+`/api/health` batendo com o HEAD.
+
+## Fase 21: travessão fora de comentário e docstring
+
+- **Status:** pending
+- **Aberta em:** 2026-09-09, a pedido do usuário, junto com a Fase 20.
+- **Duração estimada:** 1 sessão curta
+- **Notas que regem:** `Sem_Travessao`, `Escada_Preguica_de_Codigo` (mudança
+  cirúrgica), `Fechar_Tarefa_Rodar_Verifica`
+- **Dependências:** nenhuma. Roda depois da 20 só para não misturar diff de
+  segurança com diff de escrita.
+- **Output esperado:** zero travessão no projeto inteiro, e não só no texto que
+  aparece na tela.
+
+O que a varredura de 2026-09-09 de manhã fez, e o que ela não fez: zerou 51
+travessões no frontend e 3 no backend, medindo pela AST só as STRINGS DE DADO. A
+nota diz outra coisa, verbatim: "Nunca usar o caractere travessão (em-dash) em
+lugar nenhum: Código, Comentários, Templates, Documentação". Sobraram cerca de 90
+em comentário e docstring do backend, e o frontend não foi medido desse jeito.
+
+Escada aplicada antes de virar fase: a prova é `grep -rn` e não precisa de
+ferramenta nova, porque o alvo é zero em qualquer lugar, e aí não é preciso
+distinguir comentário de string. A reescrita em si é a mão, porque trocar
+travessão por dois-pontos, vírgula ou parênteses é decisão de pontuação, uma por
+uma, e substituição cega deixa frase errada.
+
+**Critério de aceite:** `grep -rn "—" backend/app backend/provas frontend/src`
+volta vazio; a suíte inteira de `backend/provas` continua em exit 0; o
+`npm run build` do frontend continua compilando; e nenhum arquivo teve mudança
+além da pontuação, provado pelo `git diff` lido antes do commit.
+
 ## Fora de escopo (cortado pela escada)
 
 - **Os eventos que faltam na tabela da nota** (`ACESSO_NEGADO_403`,
@@ -71,3 +142,11 @@ nota aparece na linha.
   política de PII do escritório mudar.
 - **Infra de pytest**: o projeto testa por `provas/prova_*.py` executável.
   Trocar de padrão no meio de uma fase de logging é escopo de outro trabalho.
+
+## Histórico deste plano
+
+- **2026-09-09, manhã:** plano aberto com as fases 18 e 19, aprovado sem ajustes.
+- **2026-09-09, tarde:** fases 20 e 21 acrescentadas a pedido do usuário, depois
+  que a verificação adversarial da Fase 18 achou a resposta 500 saindo sem
+  cabeçalho nenhum, e a varredura de travessões achou que a medição de manhã
+  cobria só string de dado. Nenhuma fase anterior mudou de escopo.
