@@ -431,3 +431,50 @@ verificadores adversariais rodaram: um voltou LIMPO com 31 checagens de carga
 real, um voltou LIMPO na evidencia e achou um erro de redacao (25 provas virou
 26), e um achou o `user_id` errado, que virou conserto e nao marcador. Fase 20:
 done."
+
+[2026-09-09T20:58:00] fase=21 acao=reescrita resultado=ok obs="21.2 e 21.3. As
+224 ocorrencias sairam, uma por uma, com a pontuacao decidida pela frase:
+dois-pontos quando o que vem depois explica, virgula quando e adendo, e
+parenteses nos DEZ casos de aposto entre dois travessoes, tres deles cruzando
+duas linhas (`models.py:218-219`, `identificador.js:6-7`, `Dashboard.jsx:159-160`)
+e dois com a forma `—,` no fechamento (`Dashboard.jsx:384` e `:423`). Um unico
+caso virou hifen e nao pontuacao de frase: `prova_tipo_documento.py:95`, onde o
+travessao esta DENTRO do texto simulado de um documento
+(`DOCUMENTO DE ARRECADACAO - GUIA DE RECOLHIMENTO`), e trocar por dois-pontos
+mudaria o dado de teste. `grep -rn` em `backend/app`, `backend/provas` e
+`frontend/src` volta vazio nos tres."
+
+[2026-09-09T20:58:30] fase=21 acao=diff_conferido resultado=ok obs="21.4. O diff
+tem 217 linhas removidas e 217 acrescentadas, troca de uma para uma, sem linha
+movida nem arquivo fora da lista. A conferencia nao foi so de olho: um script
+compara o ESQUELETO de cada par de linhas, que e o texto sem pontuacao e sem
+espaco, e os 217 pares sao identicos. Mudanca de palavra, de nome ou de codigo
+apareceria ai. Os dez casos de parenteses foram lidos a olho por cima disso, um
+a um, inclusive os tres que fecham na linha seguinte."
+
+[2026-09-09T20:59:00] fase=21 acao=regressao resultado=ok obs="21.5. 26 provas do
+backend em exit 0, 18 provas do frontend em exit 0 (inclusive a
+`prova_ordem_hooks.js`, que varre o `src` inteiro), e `npm run build` compilando
+em 1.26s."
+
+[2026-09-09T21:01:00] fase=21 acao=publicado resultado=ok_com_criterio_corrigido obs="21.6.
+Commit `a959446`, push, e o carimbo de producao subiu para `20260909-2058`,
+igual ao HEAD. A METADE DO CRITERIO ESCRITO NO PLANO NAO SE APLICA A ESTA FASE, e
+isso e medida, nao desculpa: o item pedia `o hash do bundle do Vite mudando, que
+e o que prova frontend novo no ar`. O bundle NAO muda, e nao poderia mudar: as 68
+ocorrencias do frontend estavam todas em COMENTARIO de .js, .jsx e .css, e
+comentario o minificador remove. Prova de que o bundle e o mesmo por conteudo, e
+nao por acaso: `npm run build` DEPOIS da mudanca gera `index-DwKXh0Cp.js`, o
+mesmo nome que producao ja servia, e o md5 do arquivo local bate com o md5 do
+arquivo baixado de producao (`85c80e27b50cc269e4a87fa7689127e3` nos dois). Hash
+igual aqui NAO e sinal de deploy parado: e a prova de que nao havia frontend novo
+a subir. Quem prova esta fase no ar e o carimbo do backend, que se moveu porque
+os arquivos .py mudaram."
+
+[2026-09-09T21:01:30] fase=21 acao=matriz resultado=ok obs="21.7. A linha da
+`Sem_Travessao` na matriz saiu de pendente. Restam 3 pendentes na matriz inteira,
+todas da fase 22."
+
+[2026-09-09T21:02:00] fase=21 acao=fase_fechada_aguardando_verificadores resultado=ok obs="Os
+sete itens marcados com evidencia. Dois verificadores adversariais disparados
+antes de mudar o status da fase para done."

@@ -174,26 +174,26 @@ Formato de teste:       backend/provas/prova_erro_500.py, executavel por python.
       `backend/app`, `backend/provas` e `frontend/src`, colada no LOG.
       PROVA: `grep -rc "—" <caminhos> | grep -v ":0"`
 
-- [ ] **21.2** Reescrita do backend, arquivo por arquivo, trocando travessão por
+- [x] **21.2** Reescrita do backend, arquivo por arquivo, trocando travessão por
       dois-pontos, vírgula, parênteses ou hífen conforme a frase pede.
       PROIBIDO: substituição cega por um único caractere; tocar em `venv/`,
       `node_modules/`, `00_GENESIS/` ou histórico
       PROVA: `grep -rn "—" backend/app backend/provas` volta vazio
 
-- [ ] **21.3** Reescrita do frontend, mesma regra.
+- [x] **21.3** Reescrita do frontend, mesma regra.
       PROVA: `grep -rn "—" frontend/src` volta vazio
 
-- [ ] **21.4** `git diff` lido inteiro antes do commit: nenhuma mudança além de
+- [x] **21.4** `git diff` lido inteiro antes do commit: nenhuma mudança além de
       pontuação. Qualquer linha que mude sentido volta atrás.
       (Escada_Preguica_de_Codigo: mudanças cirúrgicas)
 
-- [ ] **21.5 (regressão)** As 25 provas em exit 0 e `npm run build` do frontend
+- [x] **21.5 (regressão)** As 25 provas em exit 0 e `npm run build` do frontend
       compilando, saída colada no LOG.
 
-- [ ] **21.6** Publicado e conferido: carimbo do `/api/health` batendo com o HEAD,
+- [x] **21.6** Publicado e conferido: carimbo do `/api/health` batendo com o HEAD,
       e o hash do bundle do Vite mudando, que é o que prova frontend novo no ar.
 
-- [ ] **21.7** Matriz com a linha da `Sem_Travessao` desta fase preenchida.
+- [x] **21.7** Matriz com a linha da `Sem_Travessao` desta fase preenchida.
 
 ## Fase 22: o boot para de escrever 45 erros falsos no log do banco
 
