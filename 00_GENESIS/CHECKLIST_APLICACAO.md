@@ -414,10 +414,25 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 17: entrega
 
-- [ ] `CONFORMIDADE_VAULT.md` sem nenhuma linha pendente
-- [ ] `grep -rn "escada:" .` registrado no LOG, com o gatilho de cada marcador
-- [ ] `graphify update .` rodado
-- [ ] `OBRIGACOES_SPEC.md` e `CLAUDE.md` do projeto atualizados
+- [x] `CONFORMIDADE_VAULT.md` sem nenhuma linha pendente
+      EVIDENCIA: `grep -c "| pendente |"` devolve `0`. As 18 linhas novas fecharam
+      em 15 `ok`, 2 `desvio declarado` (icone lucide, e os campos `request_id`,
+      `path` e `method` que o `log_event` deste projeto nao tem) e 1 `parcial`, a
+      do travessao, com o alcance medido e escrito
+- [x] `grep -rn "escada:" .` registrado no LOG, com o gatilho de cada marcador
+      EVIDENCIA: ZERO marcadores em `backend/app` e `frontend/src`. Nada foi cortado
+      com teto conhecido nestas nove fases. O que foi cortado esta no plano, na
+      secao "Fora de escopo", que e outra coisa: aquilo nem foi construido
+- [x] `graphify update .` rodado
+      EVIDENCIA: `Rebuilt: 1480 nodes, 3319 edges, 70 communities`, contra 1336 nos
+      e 2977 arestas medidos na abertura, em 09/09
+- [x] `OBRIGACOES_SPEC.md` e `CLAUDE.md` do projeto atualizados
+      EVIDENCIA: secao 7.2 nova na spec, cobrindo as seis mudancas de comportamento,
+      e a linha de `responsavel_id` da obrigacao marcada como legado na tabela de
+      campos. No `CLAUDE.md`: bloco novo "Quem responde por uma tarefa", o mapa de
+      pastas com as duas tabelas novas e o `visibilidade.py`, e dois quirks que
+      custaram tempo nesta rodada (o PRAGMA do SQLite e o DELETE em massa que nao
+      passa pelo ORM)
 - [ ] carimbo de producao conferido contra o HEAD do repositorio
       PROVA: `curl -s https://gestordetarefas.zoaria.com.br/api/health` comparado com
       `git log -1 --date=format:'%Y%m%d-%H%M'`

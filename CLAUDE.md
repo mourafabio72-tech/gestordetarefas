@@ -108,9 +108,13 @@ e `cd frontend && npm run dev`. O `.bat` não existe aqui: a máquina é macOS.
 ```
 backend/app/
   main.py          sobe o FastAPI, registra os 15 routers, roda migrate/seed no import
-  models.py        11 tabelas (usuarios, empresas, setores, grupos, tarefas,
+  models.py        13 tabelas (usuarios, empresas, setores, grupos, tarefas,
                    obrigacoes, substituicoes, configuracoes, modelos,
-                   empresa_setor_responsavel, empresa_obrigacao_detalhe)
+                   empresa_setor_responsavel, empresa_obrigacao_detalhe,
+                   empresa_setor_resp_usuarios, obrigacao_excecao)
+  visibilidade.py  quando a tarefa some por causa de quem responde por ela.
+                   Mora sozinha porque a listagem e os alertas fazem a MESMA
+                   pergunta, e escrita duas vezes ela divergiria
   schemas.py       Pydantic de entrada e saída
   auth.py          JWT, hash de senha e as dependências de permissão
   permissoes.py    a matriz (ver abaixo)
@@ -185,6 +189,25 @@ A configuração de notificações também vive no banco (tabela `configuracoes`
 os segredos mascarados na API. O `.env` é o piso; o banco tem a última palavra
 quando a chave existe nos dois lugares.
 
+## Quem responde por uma tarefa (mudou em 09/2026)
+
+O par (empresa, setor) tem VÁRIOS responsáveis, e a obrigação não tem nenhum.
+
+```
+quem atende = matriz (empresa, setor), e só ela
+principal   = o PRIMEIRO da lista, gravado num ponto só (services/resp_setor.py)
+supervisor  = gestor do principal > gestor do setor > supervisor da obrigação
+```
+
+- `obrigacoes.responsavel_id` é **legado**: a coluna existe, ninguém lê. A
+  obrigação serve várias empresas, então dono de tarefa não mora nela.
+- Empresa sem responsável no setor gera tarefa **sem dono**, e a resposta da
+  geração diz quantas e de quais empresas. Antes ela herdava o da obrigação, e o
+  buraco de cadastro ficava invisível.
+- A tarefa só some da tela quando **todos** os responsáveis estão bloqueados
+  (`app/visibilidade.py`). Tarefa sem dono nenhum continua aparecendo.
+- Detalhe completo em `OBRIGACOES_SPEC.md`, seção 7.2.
+
 ## Quirks que já custaram tempo
 
 - `redirect_slashes=False` no FastAPI. A rota tem que bater exatamente, com ou sem
@@ -202,6 +225,13 @@ quando a chave existe nos dois lugares.
   middleware de `main.py` cuida das respostas de API (`default-src 'none'`).
   Mexer só num deixa metade das respostas descoberta.
 - `backend/gestor_local.db` é SQLite de teste local. Produção é Postgres.
+- **SQLite só checa chave estrangeira se mandarem** (`PRAGMA foreign_keys=ON`), e
+  o Postgres checa sempre. Prova que mexe em exclusão sem ligar o PRAGMA roda num
+  banco mais permissivo que o real e deixa passar linha órfã. As provas de
+  exclusão, de responsáveis múltiplos e de exceção ligam.
+- **`query().delete()` é DELETE em massa e não passa pelo ORM**: não dispara
+  cascade nem limpa tabela associativa. Ou se limpa a associativa antes, na mão,
+  ou a FK leva `ondelete="CASCADE"` e o banco resolve.
 - Os volumes `uploads` e `pgdata` são persistentes. `UPLOAD_DIR=/app/data/uploads`
   guarda comprovante enviado por cliente: apagar volume perde documento.
 

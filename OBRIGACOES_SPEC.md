@@ -22,7 +22,7 @@ OBRIGAÇÃO (modelo) --vínculo N empresas--> GERADOR --> TAREFA (empresa+compet
 | nome | str(200) | Nome da obrigação |
 | mininome | str(50) | Mininome — **chave e-validador** |
 | setor_id | FK setores (null) | Departamento |
-| responsavel_id | FK usuarios (null) | Responsável (default) |
+| responsavel_id | FK usuarios (null) | **LEGADO desde 09/2026.** Ninguém lê. Quem atende vem da matriz (empresa, setor) |
 | tempo_previsto_min | int (null) | Tempo previsto (min) |
 | regra_prazo_tipo | str | Entrega: `ultimo_dia_util` \| `dia_fixo` \| `primeiro_dia_util` \| `dia_util` (N-ésimo dia útil — `regra_prazo_dia` diz qual) |
 | regra_prazo_dia | int (null) | dia do mês quando `dia_fixo` (ex.: 20) |
@@ -133,10 +133,46 @@ gerar = editar. (matriz de permissões já implementada.)
   campos na Tarefa (protocolo_entrega/data_entrega/anexo_nome), tela
   `frontend/src/pages/EValidador.jsx` (upload + resultado). ✅ FEITO e testado com 2 recibos reais.
 
+## 7.2 Vários responsáveis por (empresa, setor), e o que saiu junto (FEITO 09/2026)
+
+Quem atende um setor de uma empresa passou a ser uma LISTA, e a obrigação deixou
+de ter dono.
+
+- **Matriz (empresa, setor) com N pessoas.** A lista mora em
+  `empresa_setor_resp_usuarios` (vinculo, usuario, ordem); o `responsavel_id` do
+  vínculo é o PRINCIPAL e vale sempre o primeiro da lista. Um ponto só grava os
+  dois (`services/resp_setor.py`), por onde passam a tela e o importador de
+  planilha. A célula da planilha aceita vários nomes separados por ponto e
+  vírgula.
+- **UMA tarefa por competência, com N responsáveis.** Nunca uma por pessoa. O
+  supervisor sai do primeiro da lista, com a escada de sempre (gestor da pessoa,
+  gestor do setor, supervisor padrão da obrigação).
+- **A tarefa some da tela só quando TODOS os responsáveis estão bloqueados**
+  (`app/visibilidade.py`, usada pela listagem e pelos alertas). Tarefa SEM dono
+  aparece: esconder buraco de cadastro é o que faz ninguém arrumar.
+- **`obrigacao.responsavel_id` virou legado.** A obrigação serve várias
+  empresas, então dono de tarefa não mora nela. A coluna fica no banco, ninguém
+  lê, e a tela parou de MANDAR o campo (mandar `null` apagaria o valor antigo de
+  toda obrigação editada). A resposta da geração passou a dizer quantas tarefas
+  nasceram sem responsável e de quais empresas.
+- **Obrigação interna pode exigir documento.** A flag explícita vence o
+  `sentido`; `NULL` continua derivando de `identificadores`, então interna de
+  hoje não muda sozinha. Interna com a flag entra na busca do e-validador, senão
+  a tarefa exigiria documento sem ninguém conseguir dar baixa.
+- **"Não se aplica a esta empresa".** A tarefa vai para `CANCELADA` com motivo,
+  autor e data, e a empresa entra em `obrigacao_excecao`, que `empresas_alvo()`
+  subtrai nos DOIS modos de alvo. A exceção aparece no cadastro da obrigação e
+  tem volta. O e-validador não dá baixa em tarefa cancelada.
+- **O check "aplicar a todas as empresas"** deixou de ser derivado: vincular a
+  primeira empresa o desmarca e põe `alvo_modo='vinculadas'`; desvincular a
+  última devolve o modo e o perfil anteriores. Desmarcá-lo não força mais um
+  regime. Lógica em `frontend/src/pages/alvoObrigacao.js`.
+
 ## 7.1 Tarefa: responsáveis múltiplos + supervisor + vínculo de obrigação (FEITO)
 - Tarefa: M2M `responsaveis` (tabela `tarefa_responsaveis`) + `supervisor_id`; `responsavel_id`
   mantido como "principal" sincronizado (= 1º responsável) para escopo/compat.
 - Obrigação ganhou `supervisor_id` (+ responsavel_id) → gerador propaga ambos para a tarefa.
+  (O `responsavel_id` da obrigação saiu em 09/2026, ver 7.2. O supervisor continua.)
 - Escopo "proprias"/"setor" considera responsáveis (M2M) + supervisor.
 - Alertas: todos os responsáveis + supervisor por e-mail; empresa por WhatsApp+e-mail.
 - Tela Tarefas: obrigação (opcional, auto-preenche), responsáveis (checkboxes), supervisor.
