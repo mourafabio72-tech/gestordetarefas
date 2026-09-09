@@ -54,3 +54,23 @@ alguem pode precisar mostrar a terceiro.
   `index-DRT8Tced.js`, a corrigida gera `index-DwKXh0Cp.js`, e o
   `curl https://gestordetarefas.zoaria.com.br/` devolve
   `assets/index-DwKXh0Cp.js`.
+
+## Fases 18 e 19, abertas em 2026-09-09
+
+[2026-09-09T17:52:00] fase=0 acao=genesis_ampliado resultado=ok obs="Trabalho novo:
+os campos obrigatorios do Padrao_Logging_Estruturado no log_event central. Modo
+ampliacao. 5 notas lidas integrais pelo principal, 17 fichas de 2 batedores em
+paralelo (sonnet), 6 notas aplicam e 12 foram descartadas com motivo escrito.
+LASTRO, NOTAS_LIDAS, PLANO_FASEADO e CHECKLIST_APLICACAO recriados nesta pasta,
+que tinha so LOG e matriz depois do checkpoint de 11:28. Matriz ganhou 11 linhas
+novas, todas pendentes. Brainstorming socratico rodado antes do plano, 4
+perguntas: cinco campos automaticos em vez de tres, campo chamado user_id,
+eventos que faltam ficam para fase propria, e X-Request-ID na resposta."
+
+[2026-09-09T18:02:00] fase=0 acao=graphify_atualizado resultado=ok obs="graphify
+update . rodou na versao 0.9.45, custo zero de token: 72 arquivos reextraidos por
+AST, 1461 nos e 3299 arestas, mapa antigo salvo em graphify-out/2026-09-09/. O
+aviso de 'run graphify label' fica sem acao de proposito: renomear comunidade
+usa LLM e nao muda o mapa de quem chama quem, que e para o que ele serve aqui."
+[2026-09-09T18:02:00] fase=0 acao=plano_aprovado resultado=ok obs="Aprovado sem
+ajustes pelo usuario. Fase 18 e 19 liberadas para execucao pela genesis-continuar."
