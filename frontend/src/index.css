@@ -27,6 +27,37 @@ body {
     @apply bg-red-600 text-white px-3.5 py-1.5 rounded-lg hover:bg-red-700 transition-colors font-medium;
   }
 
+  /* Checkbox de marcar vários, desenhado por nós.
+     Nunca o do sistema operacional: ele muda de cara entre Windows, Mac e
+     Linux, não aceita raio nem cor, e destoa do resto da tela. O "check" é uma
+     borda em L girada 45 graus, então acompanha cor e tamanho sem imagem, sem
+     fonte de ícone e sem SVG embutido. Cor sai do token, nunca de hex escrito
+     na tela. */
+  .check-app {
+    @apply appearance-none w-4 h-4 shrink-0 m-0 relative rounded border border-gray-300 cursor-pointer transition-colors;
+    background: theme('colors.white');
+  }
+  .check-app:hover { border-color: theme('colors.primary.400'); }
+  .check-app:checked {
+    background: theme('colors.primary.600');
+    border-color: theme('colors.primary.600');
+  }
+  .check-app:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0px;
+    width: 4px;
+    height: 9px;
+    border: solid theme('colors.white');
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .check-app:focus-visible {
+    outline: 2px solid theme('colors.primary.500');
+    outline-offset: 2px;
+  }
+
   .input-field {
     @apply w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-transparent outline-none;
     background: #fffdf9;

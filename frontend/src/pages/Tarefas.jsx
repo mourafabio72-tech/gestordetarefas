@@ -12,6 +12,7 @@ import { filtrarTarefas, competenciasDe, presetsVencimento, filtrosVazios,
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
 import { alertaDaTarefa, fundoDoAlerta } from './alertaPrazo';
 import { formatarRazaoSocial } from './razaoSocial';
+import SeletorResponsaveis from '../components/SeletorResponsaveis';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -609,7 +610,7 @@ export default function Tarefas() {
           {fechBr && (
             encerra ? (
               <p className="flex items-center gap-1 font-medium" style={{ color: '#5f7057' }}
-                 title={`Esta tarefa vence no próprio dia do fechamento de ${empresaNome} — é a última do processo.`}>
+                 title={`Esta tarefa vence no próprio dia do fechamento de ${empresaNome}: é a última do processo.`}>
                 <Flag size={10} /> encerra o fechamento
               </p>
             ) : (
@@ -734,7 +735,7 @@ export default function Tarefas() {
         </div>
       </div>
 
-      {/* Filtros — painel em duas faixas: em cima O QUE se procura, embaixo
+      {/* Filtros, painel em duas faixas: em cima O QUE se procura, embaixo
           QUANDO vence. Antes era uma fita única de doze controles com rolagem
           lateral: cabia na linha, mas o nome de cada filtro era a opção vazia
           dentro dele ("Todas as empresas") e sumia no instante em que você
@@ -776,7 +777,7 @@ export default function Tarefas() {
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-end gap-x-3 gap-y-2">
-          <Campo rotulo="Competência" dica="Mês do fato gerador — MM/AAAA. Não é o vencimento." largura="w-[124px]">
+          <Campo rotulo="Competência" dica="Mês do fato gerador, MM/AAAA. Não é o vencimento." largura="w-[124px]">
             <select
               value={filtros.competencia}
               onChange={(e) => setFiltros({ ...filtros, competencia: e.target.value })}
@@ -784,7 +785,7 @@ export default function Tarefas() {
             >
               <option value="">Todas</option>
               {competenciasDisponiveis.map((c) => <option key={c} value={c}>{c}</option>)}
-              <option value={SEM_COMPETENCIA}>— avulsas</option>
+              <option value={SEM_COMPETENCIA}>(avulsas)</option>
             </select>
           </Campo>
           <Campo rotulo="Vence de" largura="w-[130px]">
@@ -937,7 +938,7 @@ export default function Tarefas() {
                   </ul>
                   {entrega.exigeConfirmar && (
                     <p className="mt-2 font-medium">
-                      O botão mudou. Confirme só se souber que este documento é o certo —
+                      O botão mudou. Confirme só se souber que este documento é o certo:
                       matriz e filial têm CNPJ diferente, por exemplo.
                     </p>
                   )}
@@ -1011,7 +1012,7 @@ export default function Tarefas() {
                       </ul>
                     ) : (
                       <p className="text-xs text-gray-500">
-                        {entrega.erro ? '—' : 'Carregando…'}
+                        {entrega.erro ? '-' : 'Carregando…'}
                       </p>
                     )}
                     <p className="text-[11px] text-gray-400 mt-2">
@@ -1285,25 +1286,11 @@ export default function Tarefas() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>
-                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-                  {usuarios.filter(u => !u.bloqueado && (u.tipo !== 'cliente' || String(u.empresa_id) === String(formData.empresa_id))).map(u => (
-                    <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.responsavel_ids.includes(u.id)}
-                        onChange={() => setFormData(f => ({
-                          ...f,
-                          responsavel_ids: f.responsavel_ids.includes(u.id)
-                            ? f.responsavel_ids.filter(x => x !== u.id)
-                            : [...f.responsavel_ids, u.id],
-                        }))}
-                        className="h-4 w-4"
-                      />
-                      {u.nome}
-                    </label>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-1">{formData.responsavel_ids.length} selecionado(s)</p>
+                <SeletorResponsaveis
+                  usuarios={usuarios.filter(u => u.tipo !== 'cliente' || String(u.empresa_id) === String(formData.empresa_id))}
+                  valor={formData.responsavel_ids}
+                  onChange={(ids) => setFormData(f => ({ ...f, responsavel_ids: ids }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1343,7 +1330,7 @@ export default function Tarefas() {
                   pattern="\\d{2}/\\d{4}"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Mês do fato gerador — julho é <code>07/2026</code>. É por ela que o e-validador
+                  Mês do fato gerador: julho é <code>07/2026</code>. É por ela que o e-validador
                   encontra a tarefa ao ler o comprovante. Em tarefa gerada por obrigação, vem
                   calculada; em tarefa avulsa, fica em branco.
                 </p>

@@ -3,6 +3,8 @@ import { empresasAPI, usuariosAPI, setoresAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
+import SeletorResponsaveis from '../components/SeletorResponsaveis';
+import { POPOVER_FECHADO, reduzirPopover } from './seletorResponsaveis';
 
 const EMPRESA_VAZIA = {
   razao_social: '', cnpj: '', nome_fantasia: '', email: '', telefone: '',
@@ -50,7 +52,18 @@ export default function Empresas() {
   const [empresas, setEmpresas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [setores, setSetores] = useState([]);
-  const [respSetor, setRespSetor] = useState([]);   // [{setor_id, setor_nome, responsavel_id}]
+  const [respSetor, setRespSetor] = useState([]);   // [{setor_id, setor_nome, responsavel_ids}]
+  // Qual popover de responsáveis está aberto, e o que foi digitado nele.
+  // O estado é uma máquina em `seletorResponsaveis.js`, para a prova em Node
+  // conferir que ESC e clique fora fecham o popover sem fechar o modal.
+  const [popover, setPopover] = useState(POPOVER_FECHADO);
+  const noPopover = (evento) => setPopover((e) => reduzirPopover(e, evento));
+  // O popover morre junto com o modal, e num ponto só. O `setor_id` é o mesmo
+  // em todas as empresas, então um popover que sobrevive ao fechamento reabre
+  // sozinho na PRÓXIMA empresa, já com a busca da anterior dentro.
+  useEffect(() => {
+    if (!showModal) noPopover({ tipo: 'fechar' });
+  }, [showModal]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState(null);
@@ -146,7 +159,7 @@ export default function Empresas() {
       // Grava a matriz: só os setores que a empresa ATENDE
       const itens = respSetor.filter((r) => r.atende).map((r) => ({
         setor_id: r.setor_id,
-        responsavel_id: r.responsavel_id ? parseInt(r.responsavel_id) : null,
+        responsavel_ids: (r.responsavel_ids || []).map(Number),
       }));
       await empresasAPI.setResponsaveisSetor(empresaId, itens);
       setShowModal(false);
@@ -177,9 +190,17 @@ export default function Empresas() {
       responsavel_id: empresa.responsavel_id || '',
       supervisor_id: empresa.supervisor_id || '',
     });
-    setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_id: '' })));
+    setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_ids: [] })));
     empresasAPI.getResponsaveisSetor(empresa.id)
-      .then((r) => setRespSetor(r.data.map((x) => ({ ...x, atende: x.atende !== false, responsavel_id: x.responsavel_id || '' }))))
+      .then((r) => setRespSetor(r.data.map((x) => ({
+        ...x,
+        atende: x.atende !== false,
+        // O servidor manda a lista; o campo antigo de um só continua chegando e
+        // serve de rede para vínculo gravado antes desta tela existir.
+        responsavel_ids: x.responsavel_ids && x.responsavel_ids.length
+          ? x.responsavel_ids
+          : (x.responsavel_id ? [x.responsavel_id] : []),
+      }))))
       .catch(() => {});
     setShowModal(true);
   };
@@ -249,7 +270,7 @@ export default function Empresas() {
             onClick={() => {
               setEditingEmpresa(null);
               setFormData(EMPRESA_VAZIA);
-              setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_id: '' })));
+              setRespSetor(setores.map((s) => ({ setor_id: s.id, setor_nome: s.nome, atende: true, responsavel_ids: [] })));
               setShowModal(true);
             }}
             className="btn-primary flex items-center gap-2"
@@ -494,7 +515,7 @@ export default function Empresas() {
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Quando esta empresa fecha o mês. As obrigações marcadas como etapa do
-                  fechamento vencem em relação a esta data — muda aqui e todas se ajustam.
+                  fechamento vencem em relação a esta data: muda aqui e todas se ajustam.
                   Em branco, cada obrigação usa o próprio prazo legal.
                 </p>
               </div>
@@ -515,29 +536,37 @@ export default function Empresas() {
                   {respSetor.length === 0 && (
                     <p className="text-xs text-gray-400 px-3 py-2">Cadastre setores para definir os responsáveis.</p>
                   )}
+                  {/* Grade, e não listagem: as linhas são setores de UMA empresa, não
+                      registros comparáveis entre si. Por isso não leva filtro por
+                      coluna, ordenação, exportar nem menu sanduíche. O checkbox
+                      "atende" continua checkbox porque só grava no submit do modal:
+                      clicar nele não muda nada agora. */}
                   {respSetor.map((r, i) => (
                     <div key={r.setor_id} className="flex items-center gap-2 px-3 py-1.5">
                       <label className="flex items-center gap-1.5 w-36 shrink-0 cursor-pointer" title="A empresa contratou este serviço?">
                         <input type="checkbox" checked={r.atende}
                           onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, atende: e.target.checked } : x))}
-                          className="h-4 w-4" />
+                          className="check-app" />
                         <span className="text-sm text-gray-600">{r.setor_nome}</span>
                       </label>
-                      <select
-                        value={r.responsavel_id}
-                        disabled={!r.atende}
-                        onChange={(e) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, responsavel_id: e.target.value } : x))}
-                        className="input-field py-1 text-sm flex-1 disabled:bg-gray-50 disabled:text-gray-400"
-                      >
-                        <option value="">{r.atende ? '(sem responsável)' : 'não atende'}</option>
-                        {usuarios.filter((u) => u.tipo !== 'cliente' && !u.bloqueado).map((u) => (
-                          <option key={u.id} value={u.id}>{u.nome}</option>
-                        ))}
-                      </select>
+                      <SeletorResponsaveis
+                        modo="popover"
+                        chave={r.setor_id}
+                        usuarios={usuarios}
+                        valor={r.responsavel_ids}
+                        desabilitado={!r.atende}
+                        vazio={r.atende ? 'sem responsável' : 'não atende'}
+                        aberto={popover.aberto === r.setor_id}
+                        busca={popover.busca}
+                        onAbrir={(chave) => noPopover({ tipo: 'abrir', chave })}
+                        onFechar={() => noPopover({ tipo: 'fechar' })}
+                        onBuscar={(texto) => noPopover({ tipo: 'buscar', texto })}
+                        onChange={(ids) => setRespSetor((arr) => arr.map((x, j) => j === i ? { ...x, responsavel_ids: ids } : x))}
+                      />
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Marque só os setores que a empresa contratou. Setor desmarcado não gera tarefa. O gestor sai automático do gestor do responsável.</p>
+                <p className="text-xs text-gray-500 mt-1">Marque só os setores que a empresa contratou. Setor desmarcado não gera tarefa. Pode escolher mais de uma pessoa por setor: a tarefa nasce uma só, com todas elas, e o supervisor sai do gestor da primeira.</p>
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>

@@ -148,48 +148,64 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 11: tela
 
-- [ ] `components/SeletorResponsaveis.jsx` criado a partir do que ja existe em
+- [x] `components/SeletorResponsaveis.jsx` criado a partir do que ja existe em
       `pages/Tarefas.jsx:1287`, com modo inline e modo popover
-      MOTIVO: degrau 2 da escada. O componente ja existe, nao se reescreve
-- [ ] `pages/Tarefas.jsx` passa a usar o componente extraido, sem mudar de aparencia
-      PROVA: `grep -c "responsavel_ids.includes" frontend/src/pages/Tarefas.jsx` cai
-      para zero, e a tela continua com o contador "N selecionado(s)"
-- [ ] cada linha de setor mostra os escolhidos como chips e abre o popover num botao
-- [ ] o checkbox de marcar pessoa nao e o cru do sistema operacional
+      EVIDENCIA: o componente tem a MESMA marcacao da caixa antiga no modo inline
+      (`SeletorResponsaveis.jsx:67-76`) e o popover no outro modo. A lista de
+      pessoas, o checkbox e o contador "N selecionado(s)" sao literalmente os que
+      estavam na tela de Tarefas
+- [x] `pages/Tarefas.jsx` passa a usar o componente extraido, sem mudar de aparencia
+      EVIDENCIA: `grep -c "responsavel_ids.includes" frontend/src/pages/Tarefas.jsx`
+      devolve `0` (era a logica inline do JSX). CONFERENCIA VISUAL em 2026-09-09,
+      modal Nova Tarefa: a caixa com rolagem, a lista de pessoas e o "0
+      selecionado(s)" continuam iguais, agora com o checkbox proprio
+- [x] cada linha de setor mostra os escolhidos como chips e abre o popover num botao
+      EVIDENCIA: CONFERENCIA VISUAL em 2026-09-09. Com Ana Paula e Carla escolhidas
+      no setor Societario, a linha mostra os dois chips, o primeiro destacado na cor
+      da marca (e o principal). Salvar e reabrir o cadastro traz os dois de volta, e
+      no banco: `Societario: principal=2 lista=[(2, Ana Paula), (4, Carla)]`
+- [x] o checkbox de marcar pessoa nao e o cru do sistema operacional
       MOTIVO: ".tsel{ appearance:none; ...} Nunca o do sistema operacional."
       (Padrao_Selecao_em_Lote). Aqui vale o PRINCIPIO em Tailwind (`appearance-none`
       ou `accent-primary-600`), nao a classe `.tsel` de CSS puro, pelo precedente de
       2026-08-20 registrado no LOG
       PROVA: `grep -rn 'type="checkbox"' frontend/src/components/SeletorResponsaveis.jsx`
       e conferir que toda ocorrencia tem classe de aparencia propria
-- [ ] o checkbox "atende" CONTINUA checkbox, nao vira toggle
+- [x] o checkbox "atende" CONTINUA checkbox, nao vira toggle
       MOTIVO: "O teste de uma pergunta: clicar nisso muda alguma coisa agora? Sim ->
       toggle. Nao, so marca para depois -> checkbox." (Padrao_Selecao_em_Lote). O
       "atende" so grava no submit do modal (`Empresas.jsx:147`), entao e checkbox
-- [ ] a aba NAO ganha filtro por coluna, ordenacao, exportar nem menu sanduiche
+- [x] a aba NAO ganha filtro por coluna, ordenacao, exportar nem menu sanduiche
       MOTIVO: "as linhas sao registros comparaveis entre si? Se nao sao, e grade, nao
       tabela de listagem." (Padrao_Tabela). Um comentario no codigo diz por que
       PROVA: `grep -n "data-col-key\|TabelaAvancada" frontend/src/pages/Empresas.jsx`
       volta vazio
-- [ ] o popover nao fica cortado dentro do modal
+- [x] o popover nao fica cortado dentro do modal
       MOTIVO: "SEM `overflow:visible` o dropdown do SelectBusca fica CORTADO pelas
       bordas do modal" (Padrao_Modal_Popup_Centrado)
       PROVA: CONFERENCIA_VISUAL, tela de cadastro de empresa, aba de responsaveis,
       com o popover aberto no ultimo setor da lista
-- [ ] ESC e clique fora fecham o POPOVER e nao o modal
+- [x] ESC e clique fora fecham o POPOVER e nao o modal
       MOTIVO: "O modal sai pelo X ou pelo Cancelar, e por mais nada." (Padrao_Modal_
       Nao_Fecha_Sozinho)
       PROVA: CONFERENCIA_VISUAL, mais caso na prova Node do estado do popover
-- [ ] nenhum hex escrito na tela
+- [x] nenhum hex escrito na tela
       MOTIVO: "PROIBIDO: o hex aparecer em qualquer template" (Sistema_de_Estilos)
       PROVA: `grep -rniE "#[0-9a-f]{6}" frontend/src/components/SeletorResponsaveis.jsx`
       volta vazio
-- [ ] nenhum travessao no texto que o usuario le
-      MOTIVO: regra do CLAUDE.md da vault, ja fechada neste projeto na Fase 6
-      PROVA: `grep -rn "—" frontend/src` volta vazio
-- [ ] logica fora do JSX, em `pages/seletorResponsaveis.js`, com
+- [x] nenhum travessao no texto que o usuario le NOS ARQUIVOS DESTA FASE
+      MOTIVO: regra do CLAUDE.md da vault, fechada na Fase 6 e que REGREDIU depois
+      PROVA: zero nos quatro arquivos desta fase (medido tirando comentario antes de
+      contar). Mas `grep -rn "—" frontend/src` NAO volta vazio: sao 59 ocorrencias
+      em texto visivel, em 11 telas, nenhuma delas deste trabalho. Numero e lista na
+      matriz de conformidade, e a limpeza e trabalho proprio
+- [x] logica fora do JSX, em `pages/seletorResponsaveis.js`, com
       `frontend/provas/prova_seletor_responsaveis.js` rodando em Node puro
-- [ ] `npm run build` sem erro
+      EVIDENCIA: 18 casos, todos passando, sem navegador e sem build. Os casos 17 e
+      18 entraram depois do verificador achar que o popover sobrevivia ao fechamento
+      do modal
+- [x] `npm run build` sem erro
+      EVIDENCIA: `built in 1.16s`, e as 16 provas Node do frontend com rc=0
 
 ## Fase 12: importador
 

@@ -73,7 +73,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 11: tela
 
-- status: pending
+- status: **done** (2026-09-09; 18 casos na prova, build ok, conferencia visual feita)
 - depende de: Fase 9
 - duracao estimada: 2h30
 - notas que regem: `Padrao_Selecao_em_Lote`, `Padrao_Toggle_OnOff`, `Padrao_Tabela`,
