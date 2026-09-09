@@ -648,7 +648,11 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
                 item["zap_user_id"] = uid
             dest.append(item)
 
-    for u in list(tarefa.responsaveis):
+    # Lista vazia cai no principal: tarefa gravada antes do M2M existir aparece
+    # na varredura e ficava sem destinatario nenhum, entao o alerta dela nao
+    # saia e ninguem percebia -- ela some da conta, nao da tela.
+    quem = list(tarefa.responsaveis) or ([tarefa.responsavel] if tarefa.responsavel else [])
+    for u in quem:
         alvo = subs_map.get(u.id, u)  # ausente -> substituto recebe no lugar
         juntar("substituto" if alvo and alvo.id != u.id else "colaborador", alvo)
         for g in _cadeia_gestores(u, niveis):
@@ -711,11 +715,13 @@ async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: 
     # Uma consulta por varredura, não uma por destinatário.
     zap = await carregar_zap(cfg)
 
-    # Bloqueados somem dos alertas também (empresa ou responsável principal bloqueado).
+    # Bloqueados somem dos alertas também, pela MESMA regra da tela: empresa
+    # bloqueada, ou todos os responsáveis bloqueados (`visibilidade.py`).
+    from ..visibilidade import responsavel_visivel
     tarefas = (db.query(Tarefa)
                .filter(Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO]),
                        ~Tarefa.empresa.has(Empresa.bloqueado == True),
-                       ~Tarefa.responsavel.has(Usuario.bloqueado == True))
+                       responsavel_visivel())
                .all())
 
     na_regua = []       # o que o ensaio mostra, tarefa a tarefa
@@ -757,7 +763,11 @@ async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: 
             "tarefa_id": tarefa.id,
             "tarefa_titulo": tarefa.titulo,
             "empresa": empresa_nome,
-            "responsavel": (tarefa.responsaveis[0].nome if tarefa.responsaveis else None),
+            # Todos, e não só o primeiro: o ensaio existe para o escritório
+            # conferir quem vai receber, e mostrar um nome de dois é mentir por
+            # omissão justamente na tela feita para checar.
+            "responsavel": (", ".join(u.nome for u in tarefa.responsaveis)
+                            if tarefa.responsaveis else None),
             "dias_restantes": dias,
             "despachos": despachos,
         })

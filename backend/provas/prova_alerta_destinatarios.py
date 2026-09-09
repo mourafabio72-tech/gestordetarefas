@@ -40,8 +40,11 @@ class E:
         self.razao_social, self.email, self.telefone = razao_social, email, telefone
 
 class T:
-    def __init__(self, responsaveis=(), supervisor=None, empresa=None):
+    def __init__(self, responsaveis=(), supervisor=None, empresa=None, responsavel=None):
         self.responsaveis, self.supervisor, self.empresa = list(responsaveis), supervisor, empresa
+        # O principal existe na tarefa real e o dublê não tinha. Ele é a rede
+        # de quem foi gravado antes do M2M: sem lista, o alerta cai nele.
+        self.responsavel = responsavel
 
 
 print("\n=== 1. as três faixas de urgência ===")

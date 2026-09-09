@@ -112,21 +112,39 @@ Retroativo:   NAO. Tarefa ja gerada nao muda.
 
 ## Fase 10: gerador
 
-- [ ] `_resp_do_setor` devolve lista, e `nova.responsaveis` recebe todos
-      PROVA: prova nova, cenario de dois responsaveis gerando UMA tarefa com os dois
-- [ ] supervisor sai do primeiro da lista, escada intacta (gestor da pessoa, gestor
+- [x] `_resp_do_setor` devolve lista, e `nova.responsaveis` recebe todos
+      EVIDENCIA: `services/gerador.py:222-241` (lista, com o `responsavel` do vinculo
+      servindo de rede para cadastro antigo sem lista) e `:296-300` + `:330`.
+      `prova_gerador_multiplos.py`, bloco 1: `OK gerou UMA tarefa, e nao uma por
+      pessoa (1)`, `OK os tres responsaveis estao na tarefa ([Ana, Bruno, Carla])`,
+      `OK a ordem do cadastro e a ordem da tarefa`
+- [x] supervisor sai do primeiro da lista, escada intacta (gestor da pessoa, gestor
       do setor, supervisor padrao da obrigacao)
-      PROVA: `prova_gestor_setor.py` segue passando, mais caso novo
-- [ ] `routes/tarefas.py:37` deixa de esconder a tarefa quando so o principal esta
+      EVIDENCIA: bloco 2 da prova nova, um caso por degrau: `OK degrau 1: gestor da
+      primeira pessoa da lista`, `OK degrau 2: sem gestor na pessoa, entra o gestor
+      do setor`, `OK degrau 3: sem os dois, entra o supervisor da obrigacao`.
+      `prova_gestor_setor.py` segue passando
+- [x] `routes/tarefas.py:41` deixa de esconder a tarefa quando so o principal esta
       bloqueado; some apenas quando TODOS estiverem
-      MOTIVO: bug adjacente que nasce com N responsaveis
-      PROVA: caso na prova nova com um dos dois bloqueado; a tarefa continua visivel
-- [ ] varridos os outros consumidores de responsavel unico (alertas, whatsapp, email,
+      EVIDENCIA: a regra virou `app/visibilidade.py:responsavel_visivel()`, usada
+      pela listagem (`routes/tarefas.py:41`), pela varredura de alertas
+      (`services/whatsapp.py:720`) e pelo disparo manual. Fica num arquivo so
+      porque a mesma regra em dois lugares diverge, e ai a tarefa aparece na tela
+      sem gerar alerta. Bloco 3 da prova: `OK bloquear o principal NAO some com a
+      tarefa`, `OK com TODOS bloqueados, ai sim a tarefa some (0)`, `OK desbloquear
+      um traz a tarefa de volta`. Bloco 4: tarefa SEM dono nenhum continua
+      aparecendo, porque buraco de cadastro escondido nao se arruma.
+      REPROVA sem o fix, verificado: voltando a regra antiga, falham 4 casos
+- [x] varridos os outros consumidores de responsavel unico (alertas, whatsapp, email,
       documentos) e corrigido o que passa a estar errado com N
-      MOTIVO: "procure TODOS os chamadores da funcao que voce vai tocar" (Escada,
-      regra 1: correcao e na causa raiz)
-      PROVA: `grep -rn "responsaveis\[0\]\|\.responsavel\b" backend/app` revisado item
-      a item, e a decisao de cada um escrita no LOG
+      EVIDENCIA: varredura do backend E do frontend por um verificador de contexto
+      limpo, mais os greps. TRES corrigidos: `routes/alertas.py:58` (disparo manual
+      filtrava so `responsavel_id`, entao o segundo responsavel nao recebia nada e
+      via a tarefa na tela), `services/whatsapp.py:764` (o ensaio mostrava so o
+      primeiro nome de dois, mentindo por omissao na tela feita para conferir) e
+      `services/whatsapp.py:651` (tarefa sem lista ficava sem destinatario nenhum).
+      Blocos 6 e 7 da prova. Os demais ja tratavam a lista, e o que ficou de fora
+      esta com o motivo no LOG
 
 ## Fase 11: tela
 

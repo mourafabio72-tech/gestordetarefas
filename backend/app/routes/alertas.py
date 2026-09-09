@@ -55,10 +55,11 @@ async def enviar_alerta_usuario(
 
     cfg = cfgmod.carregar(db)
     zap_phone = cfg.get("zap_phone") or ""
-    tarefas = db.query(Tarefa).filter(
-        Tarefa.responsavel_id == usuario_id,
-        Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
-    ).all()
+    # Quem responde pela tarefa e a LISTA, nao so o principal, e o que a tela
+    # esconde nao se cobra aqui. A regra mora em `visibilidade.py` porque a
+    # varredura automatica usa a mesma, e escrita duas vezes ela divergiria.
+    from ..visibilidade import tarefas_abertas_do_usuario
+    tarefas = tarefas_abertas_do_usuario(db, usuario_id)
 
     now = datetime.now()
     results = []

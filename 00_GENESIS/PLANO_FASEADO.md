@@ -52,7 +52,7 @@ Passa a ter N, e a tarefa nasce com todos, numa tarefa so.
 
 ## Fase 10: gerador de tarefas
 
-- status: pending
+- status: **done** (2026-09-09; 20 provas rc=0, e a prova reprova sem o fix)
 - depende de: Fase 9
 - duracao estimada: 1h30
 - o que entra:

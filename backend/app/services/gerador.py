@@ -219,16 +219,27 @@ def empresas_alvo(db: Session, o: Obrigacao):
     return list(alvo.values())
 
 
-def _resp_do_setor(db: Session, empresa_id: int, setor_id):
-    """Responsável (analista) da empresa naquele setor, pela matriz. None se não definido."""
+def _resp_do_setor(db: Session, empresa_id: int, setor_id) -> list:
+    """Responsáveis (analistas) da empresa naquele setor, pela matriz.
+
+    Devolve LISTA, na ordem cadastrada, e o primeiro é o principal. Lista vazia
+    quando a obrigação não tem setor, quando a empresa não configurou aquele
+    setor, ou quando configurou sem escolher ninguém."""
     if not setor_id:
-        return None
+        return []
     from ..models import EmpresaSetorResponsavel
     vin = (db.query(EmpresaSetorResponsavel)
            .filter(EmpresaSetorResponsavel.empresa_id == empresa_id,
                    EmpresaSetorResponsavel.setor_id == setor_id)
            .first())
-    return vin.responsavel if (vin and vin.responsavel) else None
+    if not vin:
+        return []
+    # `responsaveis` é a lista inteira, principal incluído. O `responsavel`
+    # continua servindo de rede para vínculo antigo, gravado antes da tabela
+    # nova existir, que tem o principal e não tem lista.
+    if vin.responsaveis:
+        return list(vin.responsaveis)
+    return [vin.responsavel] if vin.responsavel else []
 
 
 def _gestor_do_setor(db: Session, setor_id):
@@ -279,9 +290,13 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
               .first())
     if existe:
         return False
-    # Responsável = analista da empresa no setor da obrigação (matriz); fallback
-    # no responsável padrão da obrigação. Supervisor = gestor desse responsável.
-    resp = _resp_do_setor(db, emp.id, o.setor_id) or o.responsavel
+    # Responsáveis = analistas da empresa no setor da obrigação (matriz);
+    # fallback no responsável padrão da obrigação. UMA tarefa com todos eles,
+    # nunca uma tarefa por pessoa. Supervisor = gestor do PRIMEIRO da lista.
+    resps = _resp_do_setor(db, emp.id, o.setor_id)
+    if not resps and o.responsavel:
+        resps = [o.responsavel]
+    resp = resps[0] if resps else None
     # Supervisor, do mais específico ao mais geral -- a mesma escada que o app
     # já usa para o responsável (matriz da empresa vence o padrão da obrigação):
     #   1. gestor da própria pessoa;
@@ -312,8 +327,8 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
         fechamento_cliente=fechamento,
         gera_multa=bool(o.passivel_multa),
     )
-    if resp:
-        nova.responsaveis = [resp]
+    if resps:
+        nova.responsaveis = list(resps)
     db.add(nova)
     return True
 

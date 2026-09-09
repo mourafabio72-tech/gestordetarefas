@@ -6,6 +6,7 @@ from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from ..database import get_db
+from ..visibilidade import responsavel_visivel
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
@@ -32,9 +33,12 @@ def _escopo_ids(db: Session, user: Usuario):
 
 
 def _aplicar_escopo(query, db: Session, user: Usuario):
-    # Bloqueados somem: tarefas de empresa bloqueada ou de responsável bloqueado não aparecem.
+    # Bloqueados somem: tarefa de empresa bloqueada não aparece, e tarefa cujos
+    # responsáveis estão TODOS bloqueados também não. Antes bastava o PRINCIPAL
+    # estar bloqueado para a tarefa sumir, e com vários responsáveis isso fazia
+    # o trabalho desaparecer da tela de quem continuava tocando ele.
     query = query.filter(~Tarefa.empresa.has(Empresa.bloqueado == True))
-    query = query.filter(~Tarefa.responsavel.has(Usuario.bloqueado == True))
+    query = query.filter(responsavel_visivel())
     ids = _escopo_ids(db, user)
     if ids is not None:
         query = query.filter(or_(
