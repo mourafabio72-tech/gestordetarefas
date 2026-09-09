@@ -205,3 +205,29 @@ de request com os cinco em null, o default que o chamador vence e a lista proibi
 vazia: todos na prova. Tres verificadores adversariais rodaram em paralelo, um
 achou item marcado sem estar cumprido (corrigido), um voltou LIMPO e um provou a
 ausencia de vazamento com carga real. Fase 18: done."
+
+[2026-09-09T18:38:00] fase=19 acao=publicado resultado=ok obs="19.1 a 19.3.
+Commit `e3c14e6`, push em `origin main`, e o webhook publicou sozinho, sem clique
+em Implantar. 19.2: producao devolve
+`{\"status\":\"healthy\",\"build\":\"20260909-1835\"}` e o HEAD e `e3c14e6
+20260909-1835`, os dois iguais, entao a imagem no ar e a desta fase. Antes do
+deploy o carimbo era `20260909-1141`, o do commit anterior: a comparacao foi feita
+nas duas pontas, e nao so depois. 19.3: `curl -sI .../api/health | grep -i
+x-request-id` em tres chamadas devolve `9543699a3cbc4512`, `a325449b76254a10` e
+`15c1ff5d47e347a4`, tres valores distintos de 16 hexadecimais. O `Dockerfile` do
+backend usa `COPY . .`, conferido ANTES do push, entao o arquivo novo
+(`provas/prova_logging.py`) entra na imagem em vez de ficar de fora como
+aconteceu no broker em 01/09."
+
+[2026-09-09T18:39:00] fase=19 acao=matriz_fechada resultado=ok obs="19.5. As 11
+linhas que as fases 18 e 19 acrescentaram a `CONFORMIDADE_VAULT.md` estao todas
+preenchidas com a saida real do comando, e `grep -c '| pendente |'` na matriz
+inteira devolve 0. Uma delas teve a PROVA trocada, e nao so a evidencia colada: a
+linha do `user_id` provava por `grep -n`, que e cego a chamada quebrada em duas
+linhas, e passou a provar por leitura de AST."
+
+[2026-09-09T18:39:30] fase=19 acao=parada resultado=blocked obs="Falta o item
+19.4, e ele e CONFERENCIA_VISUAL por natureza: o log de producao nao sai por curl,
+so pela aba Logs do servico no EasyPanel. O que o usuario tem de olhar esta no
+relatorio de parada. Todo o resto das fases 18 e 19 esta fechado, publicado e
+conferido de fora."

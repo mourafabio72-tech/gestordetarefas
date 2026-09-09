@@ -86,19 +86,19 @@ próprio processo.
 
 ## Fase 19: entrega e prova no ar
 
-- [ ] **19.1** Commit e push. O auto-deploy publica sozinho, e o webhook deste
+- [x] **19.1** Commit e push. O auto-deploy publica sozinho, e o webhook deste
       repositório já está provado desde 2026-09-01.
 
-- [ ] **19.2** Carimbo de produção bate com o HEAD:
+- [x] **19.2** Carimbo de produção bate com o HEAD:
       `curl -s https://gestordetarefas.zoaria.com.br/api/health` traz o `build`
       do commit desta fase. Comparar com
       `git log -1 --date=format:'%Y%m%d-%H%M'` antes de acusar qualquer coisa.
 
-- [ ] **19.3** `X-Request-ID` provado no ar:
+- [x] **19.3** `X-Request-ID` provado no ar:
       `curl -sI https://gestordetarefas.zoaria.com.br/api/health | grep -i x-request-id`
       duas vezes, com valores diferentes.
 
 - [ ] **19.4** Linha de log real conferida na aba Logs do EasyPanel, com os oito
       campos. CONFERENCIA_VISUAL, porque o log de produção não sai por curl.
 
-- [ ] **19.5** `CONFORMIDADE_VAULT.md` sem linha pendente das fases 18 e 19.
+- [x] **19.5** `CONFORMIDADE_VAULT.md` sem linha pendente das fases 18 e 19.
