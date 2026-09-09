@@ -56,7 +56,7 @@ nota aparece na linha.
 
 ## Fase 20: a resposta de erro para de sair pelada
 
-- **Status:** pending
+- **Status:** done (2026-09-09)
 - **Aberta em:** 2026-09-09, a pedido do usuário, depois do achado do verificador
   funcional da Fase 18. Não estava no plano aprovado de manhã.
 - **Duração estimada:** 1 sessão curta

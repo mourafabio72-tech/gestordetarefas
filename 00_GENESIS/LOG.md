@@ -374,3 +374,60 @@ observacao dele nasceu de leitura no meio do caminho: 20.9 e 20.10 ja estavam
 gravados no LOG e ainda nao no CHECKLIST quando ele leu, porque o `startswith`
 que usei para marcar exigia um espaco que aquelas duas linhas nao tinham. Os dois
 itens ja estao marcados."
+
+[2026-09-09T20:52:00] fase=20 acao=verificador_funcional resultado=LIMPO obs="O
+verificador funcional atacou o desenho com carga real contra um uvicorn de
+verdade, 3 rodadas de 31 checagens, todas verdes: 25 requests simultaneos que
+estouram, com IP e caminho distintos, sem um unico id vazando para a linha de
+outro; rota `async def` e rota `def` em threadpool, as duas mantendo a
+correlacao; excecao dentro de `Depends`, tratada igual; `HTTPException`, 404 e
+422 de validacao intactos, com o corpo de sempre e sem disparar
+`ERRO_NAO_TRATADO`; e o traceback no stderr do processo. Registrou tambem que o
+`log_event` nunca grava `str(exc)`, so `type(exc).__name__`, o que e mais
+estrito do que a Familia 6 pede.
+DOIS LIMITES DO DESENHO, que ele nomeou e eu registro em vez de esconder: (1)
+excecao depois que o streaming ja comecou nao vira 500, porque nao da para
+trocar um 200 ja enviado, mas o servidor ainda escreve `ERRO_NAO_TRATADO`; (2)
+excecao dentro de `BackgroundTask` nao passa pelo handler e NAO deixa linha
+nenhuma. O segundo nao afeta este app hoje, e isso foi medido, nao suposto:
+`grep -rn 'BackgroundTask' backend/app/` volta vazio. Se um dia entrar, a
+lacuna vira decisao explicita."
+
+[2026-09-09T20:52:30] fase=20 acao=achado_verificador_conformidade resultado=corrigido obs="O
+verificador de conformidade derrubou a ressalva que eu mesmo tinha escrito, e
+ele estava certo. Eu tratei o `user_id` null da linha de erro como limite
+aceitavel; a nota nao permite isso. `Padrao_Logging_Estruturado` define o campo
+como 'ID do usuario autenticado, ou null se anonimo', e null com usuario logado e
+VALOR ERRADO, nao campo ausente. Item de nota de padrao nao passa pela escada, e
+por isso nao cabia marcador `escada:` aqui: cabia conserto. Ele provou com script
+proprio, JWT valido e rota atras de `Depends(get_current_user)`, e apontou a
+incoerencia dentro do proprio commit: eu resolvi a fronteira de contexto para o
+`request_id` e deixei o usuario no fallback da contextvar, pelo mesmissimo motivo
+que o meu docstring citava.
+Achado irmao, e o mais util dos dois: a PROVA era cega. O item 8 conferia
+presenca de chave, e a rota que estoura nao passa por autenticacao nenhuma,
+entao as 14 verdes fechavam com o campo quebrado por baixo.
+Duas correcoes, na ordem do TDD: (1) a prova ganhou os itens 15 e 16, com rota
+autenticada que quebra, e o 15 REPROVA o codigo publicado (`PROVA FALHOU nos
+itens: [15]`, exit 1); (2) `registrar_usuario` ganhou o `request` opcional e
+grava no `state`, nos quatro pontos onde o usuario passa a existir
+(`auth.py:55`, `routes/auth.py:68`, `:195`, `:202`), e o handler le de la.
+`get_current_user` passou a receber `request`, que o FastAPI injeta sozinho.
+`PROVA OK: 16 checagens verdes` depois. As 26 provas do backend em exit 0, o que
+importa aqui porque a assinatura da dependencia de autenticacao mudou e ela rege
+o app inteiro. Publicado em `c9c0eb6`."
+
+[2026-09-09T20:53:00] fase=20 acao=fase_fechada resultado=ok obs="Criterio de
+aceite do PLANO atendido e verificavel por quem nao escreveu:
+`python backend/provas/prova_erro_500.py` sai com codigo 0 (16 verdes) e saia com
+codigo 1 no codigo anterior, provado duas vezes, na abertura da fase e de novo
+depois do conserto do `user_id`. Na resposta de erro: `X-Request-ID` igual ao
+`request_id` da linha, os seis cabecalhos da nota, corpo sem traceback, sem nome
+de excecao, sem caminho e sem SQL. Na linha `ERRO_NAO_TRATADO`: os oito campos, e
+agora com o `user_id` de quem derrubou. E o ponto que o plano mandava medir: o
+traceback CONTINUA no stdout do servidor, provado com uvicorn de verdade.
+Publicado em `c9c0eb6`, carimbo `20260909-2052` batendo com o HEAD. Tres
+verificadores adversariais rodaram: um voltou LIMPO com 31 checagens de carga
+real, um voltou LIMPO na evidencia e achou um erro de redacao (25 provas virou
+26), e um achou o `user_id` errado, que virou conserto e nao marcador. Fase 20:
+done."
