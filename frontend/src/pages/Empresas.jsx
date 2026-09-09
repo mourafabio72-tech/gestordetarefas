@@ -58,14 +58,14 @@ export default function Empresas() {
   // conferir que ESC e clique fora fecham o popover sem fechar o modal.
   const [popover, setPopover] = useState(POPOVER_FECHADO);
   const noPopover = (evento) => setPopover((e) => reduzirPopover(e, evento));
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
   // O popover morre junto com o modal, e num ponto só. O `setor_id` é o mesmo
   // em todas as empresas, então um popover que sobrevive ao fechamento reabre
   // sozinho na PRÓXIMA empresa, já com a busca da anterior dentro.
   useEffect(() => {
     if (!showModal) noPopover({ tipo: 'fechar' });
   }, [showModal]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [editingEmpresa, setEditingEmpresa] = useState(null);
   const [formData, setFormData] = useState(EMPRESA_VAZIA);
   const [importResult, setImportResult] = useState(null);
