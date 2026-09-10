@@ -87,8 +87,8 @@ ou linha de log real. Marcar sem evidência é fraude com o próprio processo.
       pontas: antes do deploy e depois.
 - [x] **25.4** `curl` na rota de logout: sem token devolve 401, com token
       devolve 200.
-- [ ] **25.5** CONFERENCIA_VISUAL, e é do usuário: fazer logout no app e achar
+- [x] **25.5** CONFERENCIA_VISUAL, e é do usuário: fazer logout no app e achar
       a linha `LOGOUT` na aba Logs do serviço `backend`, com o `user_id` dele e
       o `request_id` que o `X-Request-ID` devolveu ao navegador.
-- [ ] **25.6** `CONFORMIDADE_VAULT.md` sem nenhuma linha pendente das fases 23
+- [x] **25.6** `CONFORMIDADE_VAULT.md` sem nenhuma linha pendente das fases 23
       a 25 (`grep -c '| pendente |'` devolve 0).

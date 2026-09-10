@@ -597,3 +597,62 @@ prova de deploy parado, e antes de acusar o webhook compara-se com o HEAD e
 confere-se se houve commit que MUDE aquela imagem.
 Falta o item 25.5, que continua sendo do usuario: sair do app de novo e achar a
 linha `LOGOUT` no log do `backend`."
+
+[2026-09-10T13:56:00] fase=25 acao=item_25_5_conferido resultado=ok obs="25.5
+FECHADO, na SEGUNDA tentativa, e a primeira e que valeu o item. O usuario saiu
+do app e a linha veio, verbatim do log do `backend-1`:
+{\"timestamp\": \"2026-09-10T13:55:06.088858+00:00\", \"level\": \"INFO\", \"event\": \"LOGOUT\", \"user_id\": 1, \"ip\": \"186.205.160.122\", \"request_id\": \"2ad0c8e686b6499a\", \"path\": \"/api/auth/logout\", \"method\": \"POST\", \"email\": \"fabio@bps4.com.br\"}
+E o uvicorn na linha seguinte: `POST /api/auth/logout HTTP/1.1\" 200 OK`, contra
+o `401` da tentativa anterior.
+O QUE SO ESTE ITEM PODIA PROVAR, e por isso ele nunca foi burocracia: (1) o
+`ip` e `186.205.160.122`, publico e do usuario, e nao um `172.16.x` da rede do
+Docker que aparece nas linhas de acesso do uvicorn ao lado; (2) e, sobretudo,
+ELE DERRUBOU A FASE. Todas as provas estavam verdes, o carimbo batia, o curl
+sem token devolvia 401 como esperado, e o logout NAO FUNCIONAVA. Uma
+conferencia visual que so confirma o que as provas ja disseram e barata; esta
+aqui pagou o trabalho inteiro que ela custou ao usuario ao longo do dia.
+Sequencia completa do mesmo request no log: `SSO_OK` as 13:55:02 com
+`request_id` proprio, as chamadas autenticadas em 200, e o `LOGOUT` as
+13:55:06 com outro `request_id`. Comeco e fim de sessao na mesma tela, que era
+o que faltava."
+
+[2026-09-10T13:57:00] fase=25 acao=fase_fechada resultado=ok obs="Criterio de
+aceite completo: carimbo de `/api/health` batendo com o HEAD nas duas pontas;
+a rota de logout no ar, com 401 sem token e 404 numa rota inventada do mesmo
+prefixo; a linha `LOGOUT` real conferida no log de producao; e a matriz
+`CONFORMIDADE_VAULT.md` sem nenhuma linha pendente (`grep -c '| pendente |'`
+devolve 0). Fase 25: done."
+
+[2026-09-10T13:58:00] fase=0 acao=trabalho_fechado resultado=ok obs="As fases
+23, 24 e 25 estao em done. O CHECKLIST nao tem um unico item aberto
+(`grep -c '^- \[ \]'` devolve 0), a matriz nao tem linha pendente, e o
+inventario de simplificacoes deliberadas devolve ZERO marcadores `escada:` no
+projeto inteiro: nada foi cortado pela metade neste trabalho.
+COM ISTO A `Padrao_Logging_Estruturado` ESTA CUMPRIDA POR INTEIRO. Ela tem
+duas tabelas: a dos oito campos obrigatorios, fechada pelas fases 18 a 20 em
+09/09, e a dos treze eventos minimos, fechada agora. Dos treze, quatro ja
+existiam, um existe com outro nome mantido pela escada (`LOGIN_RECUSADO`),
+dois nao se aplicam a este app com o motivo escrito no codigo
+(`CSRF_INVALIDO` e `RATE_LIMIT_HIT`), e SEIS entraram nestas fases. Esta
+frente acaba aqui, e nao continua.
+O que este trabalho entregou, em uma linha cada: quem tenta o que nao pode
+deixa rastro, e quem sai tambem (23); criar, editar e apagar cadastro critico
+deixa linha com o nome certo, e os dois nomes que estavam trocados voltaram ao
+lugar (24); tudo publicado e provado em producao, com a linha real conferida
+no log (25).
+SEIS verificadores adversariais rodaram, e os SEIS acharam algo real, o que
+nao tinha acontecido em nenhum trabalho anterior deste projeto: a guarda de
+IDOR aplicada pela metade em quatro rotas, a importacao trocando papel sem
+rastro, as linhas de evidencia que eu colei sem serem captura literal, o
+logger que podia derrubar quem ele registra, sete rotas irmas mudando as
+mesmas tabelas por outro verbo, e log afirmando o que o banco nao gravou.
+TODOS viraram conserto, e NENHUM virou marcador de divida.
+E o setimo achado nao veio de verificador nenhum: veio do USUARIO, colando o
+log de producao. O logout devolvia 401 com todas as provas verdes.
+FICA UM PENDENTE DECLARADO, e ele NAO e desta frente, e sim de autorizacao:
+`GET /api/tarefas/{tarefa_id}/link-envio` (`routes/tarefas.py:208`) nao aplica
+escopo nenhum, e qualquer usuario autenticado pede o link publico de qualquer
+tarefa, inclusive de empresa que ele nao atende. O irmao menor e
+`POST /{tarefa_id}/transferir` (`:847`), que so morde se existir gestor de
+escopo reduzido. Registrado em 09/09 as 22:15 e repetido aqui para nao se
+perder: e decisao do usuario, e vira fase propria."

@@ -151,7 +151,7 @@ em nenhuma linha nova. A suíte inteira de `backend/provas` continua em exit 0.
 
 ## Fase 25: entrega, prova no ar e matriz fechada
 
-- **Status:** a fazer
+- **Status:** done (2026-09-10)
 - **Duração estimada:** 1 sessão curta
 - **Notas que regem:** `Fechar_Tarefa_Rodar_Verifica`,
   `Padrao_Logging_Estruturado`
