@@ -621,3 +621,49 @@ cumprida; quem for correlacionar log com horario de reclamacao precisa lembrar
 das 3 horas. (2) O `email` aparece na linha, e isso e decisao ja registrada no
 LASTRO: a propria nota registra `email_tentado` no exemplo dela, entao nao e PII
 vazando por descuido, e continua fora da lista proibida."
+
+[2026-09-09T21:31:00] fase=22 acao=verificador_funcional resultado=ok_com_dois_achados obs="O
+verificador funcional rodou os sete ataques com scripts proprios em /tmp. O RISCO
+CENTRAL NAO SE CONFIRMOU: ele derrubou 37 das 48 colunas de ADD COLUMN num SQLite
+(as 11 restantes sao FK, e o SQLite recusa DROP COLUMN nelas, limitacao do
+harness dele e nao do codigo), rodou o migrate, e as 37 renasceram. Banco vazio
+nao fica em silencio: as 51 tentam e cada uma reporta `no such table`, que e o
+desenho. Cinco rodadas contra banco em dia: silencio total. As 11 decisoes das
+tres migracoes especiais, testadas caso a caso, bateram todas. Cobertura das
+regex: 48 no _ADD, 2 no _DROP_NOT_NULL, 1 no _TIPO_MAIOR, ZERO caindo no
+`return True` cego. E o cache invalida por tabela depois de cada tentativa,
+provado com a cadeia real `identificadores` -> `sentido` -> `identificadores_maior`.
+ACHADO 1, CORRIGIDO: `identificadores_maior` e um `ALTER COLUMN ... TYPE`, que o
+SQLite nao aceita. Num banco onde a coluna existe com o tamanho ANTIGO, a decisao
+acerta, a execucao falha com erro de sintaxe, e como a coluna nunca cresce o erro
+se repete em TODO boot, para sempre. Nao afeta producao, que e Postgres; afeta
+quem restaura banco antigo em SQLite para cacar bug, que e exatamente quem esta
+lendo o log. A prova nao pegava porque ela nao derrubava essa coluna. Corrigido
+em `e8de598`: a prova ganhou os itens 10 e 11, que montam o cenario e exigem
+silencio em cinco rodadas (o 11 reprova o codigo anterior), e o codigo ganhou uma
+linha que pula esse tipo de migracao em SQLite, com o motivo verdadeiro escrito:
+SQLite tambem nao IMPOE o tamanho declarado num VARCHAR.
+ACHADO 2, NAO VIRA CODIGO E EXPLICO POR QUE: ele apontou assimetria: quando a
+COLUNA falta, o `_ADD` roda e os outros dois ramos pulam calados, enquanto o
+comentario ao lado promete que nada se pula em silencio. A assimetria e
+deliberada e continua: relaxar `NOT NULL` de coluna que nao existe e migracao
+orfa, como a `setor_empresa_nullable`, e reportar aquilo seria a linha de erro
+falso que esta fase veio tirar do log. O que estava errado era o COMENTARIO, que
+prometia o que o codigo nao fazia. Reescrito, com o preco declarado: migracao de
+tipo cuja coluna DEVERIA existir some sem aviso. Ele tem razao no risco; a troca
+e consciente."
+
+[2026-09-09T21:34:00] fase=19 acao=fase_fechada resultado=ok obs="A fase 19 estava
+parada desde as 18:39 esperando um unico item, o 19.4, que so o usuario podia
+fazer. Ele fez, a linha veio, e a fase fecha agora. Criterio de aceite completo:
+provas de regressao verdes, carimbo avancando com o commit, `X-Request-ID`
+diferente a cada chamada, matriz sem pendencia, e a linha de log real conferida
+em producao com os oito campos. Fase 19: done."
+
+[2026-09-09T21:34:30] fase=22 acao=codigo_fechado resultado=ok obs="Os dez itens
+de codigo da fase 22 estao marcados com evidencia, e o conserto do achado do
+verificador esta publicado: commit `e8de598`, producao em `20260909-2131`,
+batendo com o HEAD. A fase nao muda para done ainda por um motivo so, e ele esta
+no proprio criterio de aceite: o item 22.9 e conferencia visual no log do servico
+`db`, que nao sai por curl. Quando o usuario disser que nao ha mais
+`already exists` la, a fase fecha."

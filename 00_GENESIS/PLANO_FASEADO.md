@@ -40,7 +40,7 @@ nota aparece na linha.
 
 ## Fase 19: entrega, prova no ar e matriz fechada
 
-- **Status:** pending
+- **Status:** done (2026-09-09)
 - **Duração estimada:** 1 sessão curta
 - **Notas que regem:** `Fechar_Tarefa_Rodar_Verifica`, `Padrao_Logging_Estruturado`
 - **Dependências:** fase 18
@@ -127,7 +127,9 @@ além da pontuação, provado pelo `git diff` lido antes do commit.
 
 ## Fase 22: o boot para de escrever 45 erros falsos no log do banco
 
-- **Status:** pending
+- **Status:** codigo fechado e publicado em 2026-09-09. Fecha de vez quando o
+  item 22.9 for conferido: e CONFERENCIA_VISUAL no log do servico `db`, e so o
+  usuario alcanca aquela tela.
 - **Aberta em:** 2026-09-09, a pedido do usuário, a partir do log de produção que
   ele mesmo trouxe ao conferir o item 19.4.
 - **Duração estimada:** 1 sessão curta
