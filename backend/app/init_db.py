@@ -89,6 +89,21 @@ def _precisa_rodar(insp, sql, cache, tabelas):
     rodam em SQLite, que nao aceita essa forma, e a suite inteira quebraria. O
     `inspect` do SQLAlchemy ja vem instalado e responde pelos dois bancos.
     """
+    if _TIPO_MAIOR.search(sql) and engine.dialect.name == "sqlite":
+        # SQLite nao aceita `ALTER COLUMN ... TYPE`, e tambem nao IMPOE o tamanho
+        # declarado num VARCHAR: o tipo ali e afinidade, nao limite. Entao nao ha
+        # o que fazer, e tentar so produz o mesmo erro de sintaxe a cada boot,
+        # para sempre, porque a coluna nunca cresce. Achado de verificador
+        # adversarial em 2026-09-09, num banco antigo restaurado em SQLite.
+        return False
+
+    # A assimetria abaixo e deliberada, e vale dizer qual e: quando a COLUNA
+    # falta, o `ADD COLUMN` roda (e o que ele existe para fazer) e os outros dois
+    # pulam em silencio. Relaxar `NOT NULL` ou aumentar um VARCHAR de coluna que
+    # nao existe nao e erro a reportar: e migracao orfa, como a
+    # `setor_empresa_nullable`, cuja coluna saiu do model. Reportar aquilo seria
+    # a linha de erro falso que esta fase veio tirar do log. O preco, declarado:
+    # migracao de tipo cuja coluna DEVERIA existir some sem aviso.
     for regex, decidir in (
         (_ADD, lambda m, cols: m.group(2) not in cols),
         # `nullable` e o tipo vem no mesmo `get_columns`, entao as tres

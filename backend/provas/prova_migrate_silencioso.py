@@ -148,6 +148,30 @@ checa(8, "o migrate aceita uma lista propria, que e como a prova injeta a "
 checa(9, f"migracao invalida CONTINUA reportando erro (saida: {saida3.strip()[:80]!r})",
       "Erro na coluna" in saida3 and "migracao_quebrada_de_proposito" in saida3)
 
+# ------------------ 10: o caso que o verificador adversarial achou, e que esta
+#     prova nao cobria. `identificadores_maior` e um `ALTER COLUMN ... TYPE`, que
+#     o SQLite NAO aceita. Num banco em que a coluna existe com o tamanho ANTIGO,
+#     a decisao "precisa rodar" acerta, a execucao falha com erro de sintaxe, e
+#     como a coluna nunca cresce o erro se repete em TODO boot, para sempre. Nao
+#     acontece em producao, que e Postgres; acontece em quem restaura um banco
+#     antigo em SQLite para caçar bug, que e justamente quem esta lendo o log.
+
+with engine.begin() as conn:
+    conn.execute(text("ALTER TABLE obrigacoes DROP COLUMN identificadores"))
+capturar(init_db.migrate)          # recria a coluna com o VARCHAR(200) da lista
+
+tamanho = {c["name"]: c for c in inspect(engine).get_columns("obrigacoes")}
+tamanho = getattr(tamanho["identificadores"]["type"], "length", None)
+
+saidas = [capturar(init_db.migrate) for _ in range(5)]
+
+checa(10, f"a coluna voltou com o tamanho antigo, que e o cenario do caso "
+          f"(length={tamanho})", tamanho == 200)
+
+checa(11, "cinco rodadas seguidas contra esse banco ficam em silencio, em vez de "
+          "repetir o mesmo erro de sintaxe para sempre",
+      all(s.strip() == "" for s in saidas))
+
 for arquivo in Path(_tmp).glob("*"):
     arquivo.unlink()
 os.rmdir(_tmp)
@@ -155,4 +179,4 @@ os.rmdir(_tmp)
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 9 checagens verdes")
+print("\nPROVA OK: 11 checagens verdes")
