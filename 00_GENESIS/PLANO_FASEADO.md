@@ -98,7 +98,7 @@ o traceback continua aparecendo no stdout do servidor. Publicado, com o carimbo 
 
 ## Fase 21: travessão fora de comentário e docstring
 
-- **Status:** pending
+- **Status:** done (2026-09-09)
 - **Aberta em:** 2026-09-09, a pedido do usuário, junto com a Fase 20.
 - **Duração estimada:** 1 sessão curta
 - **Notas que regem:** `Sem_Travessao`, `Escada_Preguica_de_Codigo` (mudança

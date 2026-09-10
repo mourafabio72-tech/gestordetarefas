@@ -508,3 +508,34 @@ Varredura do repositorio inteiro depois do conserto, fora de `venv`,
 `node_modules`, `dist`, `.git`, `graphify-out`, `.claude` e `00_GENESIS`: zero
 travessoes. O `00_GENESIS` fica de fora de proposito: e registro de auditoria e
 append-only por regra da propria skill. Publicado em `970c5b7`."
+
+[2026-09-09T21:12:00] fase=21 acao=verificador_final resultado=ok_com_achado obs="O
+verificador de evidencia sustentou seis dos sete itens rodando tudo por conta
+propria, inclusive reconstruindo o estado anterior num worktree de `a959446~1`
+para recontar o inventario: 224 ocorrencias em 63 arquivos, igual ao LOG; 217
+inserções e 217 delecoes no diff; 26 provas do backend e 18 do frontend em exit
+0; `npm run build` limpo; e o md5 do bundle identico entre local e producao,
+conferido por curl.
+ACHADO QUE ACEITO, e e de auditoria, nao de codigo: o TEXTO do item 21.6 no
+CHECKLIST continuava dizendo `o hash do bundle do Vite mudando, que e o que
+prova frontend novo no ar`, que e o oposto do que aconteceu. Eu tinha corrigido
+isso no LOG das 21:01 e deixado o item marcado com a frase antiga. Quem lesse so
+o checklist, que e o artefato que fica, receberia uma afirmacao falsa. O item foi
+reescrito com a medicao dentro dele. De quebra, o 21.5 dizia `As 25 provas` e
+agora diz 26 do backend e 18 do frontend.
+Registrado tambem o que ele varreu e decidiu excluir, para nao virar surpresa
+depois: `graphify-out/` tem 44 travessoes e esta no `.gitignore` (artefato
+gerado, analogo ao `dist/`); o `00_GENESIS` tem 11, e fica de fora por ser
+registro append-only; e o en-dash de `PERMISSOES_SPEC.md:8-9` e notacao de faixa
+(`A1–A3`), corretamente intocado."
+
+[2026-09-09T21:13:00] fase=21 acao=fase_fechada resultado=ok obs="Criterio de
+aceite atendido: `grep -rn` volta vazio nos tres caminhos do plano E no
+repositorio inteiro fora dos gerados; a suite continua em exit 0 nas duas pontas;
+o `npm run build` compila; e nenhum arquivo mudou alem da pontuacao, provado
+mecanicamente nos dois lotes (217 e 99 pares de linha com esqueleto identico) e
+lido a olho nos dez casos de parenteses. Publicado em `a959446` e `970c5b7`,
+carimbo `20260909-2106`. Dois verificadores adversariais rodaram: o primeiro
+achou o escopo curto (frontend/provas e a documentacao da raiz), que virou o
+segundo lote, e o segundo achou o texto do item 21.6 contradizendo a propria
+evidencia, que virou reescrita do item. Fase 21: done."

@@ -187,11 +187,19 @@ Formato de teste:       backend/provas/prova_erro_500.py, executavel por python.
       pontuação. Qualquer linha que mude sentido volta atrás.
       (Escada_Preguica_de_Codigo: mudanças cirúrgicas)
 
-- [x] **21.5 (regressão)** As 25 provas em exit 0 e `npm run build` do frontend
-      compilando, saída colada no LOG.
+- [x] **21.5 (regressão)** As 26 provas do backend e as 18 do frontend em exit 0,
+      e `npm run build` compilando, saída colada no LOG.
 
-- [x] **21.6** Publicado e conferido: carimbo do `/api/health` batendo com o HEAD,
-      e o hash do bundle do Vite mudando, que é o que prova frontend novo no ar.
+- [x] **21.6** Publicado e conferido: carimbo do `/api/health` batendo com o HEAD.
+      CRITÉRIO CORRIGIDO EM 2026-09-09, depois de medido: este item pedia também
+      "o hash do bundle do Vite mudando, que é o que prova frontend novo no ar",
+      e isso está ERRADO para esta fase. As ocorrências do frontend estavam todas
+      em comentário, que o minificador remove, então o bundle é o mesmo e tem de
+      ser: `npm run build` depois da mudança gera o mesmo `index-DwKXh0Cp.js`, e
+      o md5 do arquivo local bate com o do arquivo baixado de produção
+      (`85c80e27b50cc269e4a87fa7689127e3` nos dois). Aqui, hash igual é a prova
+      de que não havia frontend novo a subir. A correção estava só no LOG, e o
+      verificador cobrou que ela entrasse também aqui, no item marcado.
 
 - [x] **21.7** Matriz com a linha da `Sem_Travessao` desta fase preenchida.
 
