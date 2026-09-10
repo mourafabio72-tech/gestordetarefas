@@ -478,3 +478,33 @@ todas da fase 22."
 [2026-09-09T21:02:00] fase=21 acao=fase_fechada_aguardando_verificadores resultado=ok obs="Os
 sete itens marcados com evidencia. Dois verificadores adversariais disparados
 antes de mudar o status da fase para done."
+
+[2026-09-09T21:06:00] fase=21 acao=achado_verificador resultado=corrigido obs="O
+verificador adversarial derrubou a fase, e tinha razao em tres pontos. O ERRO DE
+FUNDO foi meu: eu medi o escopo que o PLANO escreveu (`backend/app`,
+`backend/provas`, `frontend/src`) em vez do escopo que a NOTA manda ('em lugar
+nenhum: Codigo, Comentarios, Templates, Documentacao, README'). Plano e resumo,
+nota e contrato.
+(1) `frontend/provas` inteiro ficou de fora: 44 ocorrencias em 14 arquivos
+versionados, o irmao exato de `backend/provas`, que eu limpei. Uma delas era
+DADO de teste (`prova_identificador.js:13`, texto simulado de documento) e virou
+hifen, como o outro caso ja registrado. (2) A documentacao da raiz, 45
+ocorrencias em quatro `.md` e um comentario do `.gitignore`; celula vazia de
+tabela markdown virou hifen, e nao dois-pontos. (3) Duas correcoes de escrita:
+`colisaoIdentificador.js:17` tinha ficado com dois-pontos duplicado na mesma
+frase, e cinco blocos de lista tinham travessao alinhado em coluna por
+espacamento, que a troca desalinhou. Realinhados, inclusive as duas linhas de
+continuacao de `models.py:441-442`, orfas da indentacao antiga.
+ACHADO DELE QUE EU NAO TRATO COMO ERRO, e explico por que: ele aponta que o meu
+metodo de conferencia (comparar o esqueleto da linha sem pontuacao) nao
+distingue travessao de COMENTARIO de travessao dentro de LITERAL testado. Esta
+certo, e o buraco existe. So que o unico caso desse tipo no diff eu ja tinha
+achado e registrado por leitura, antes dele, no LOG das 20:58: e o
+`prova_tipo_documento.py:95`. O metodo mecanico nao pega, a leitura pegou, e as
+duas coisas rodaram. Fica dito para quem repetir a varredura noutro projeto: o
+esqueleto prova que nao houve mudanca de PALAVRA, nao prova que a linha era
+comentario.
+Varredura do repositorio inteiro depois do conserto, fora de `venv`,
+`node_modules`, `dist`, `.git`, `graphify-out`, `.claude` e `00_GENESIS`: zero
+travessoes. O `00_GENESIS` fica de fora de proposito: e registro de auditoria e
+append-only por regra da propria skill. Publicado em `970c5b7`."
