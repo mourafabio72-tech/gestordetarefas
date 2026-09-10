@@ -88,3 +88,33 @@ em cada, e o evento `ACESSO_NEGADO_IDOR` sai de brinde, porque o helper ja
 registra.
 `PROVA OK: 12 checagens verdes`. Regressao: 30 provas do backend e 19 do
 frontend em exit 0. Travessao nos arquivos do diff: nenhum."
+
+[2026-09-10T14:12:00] fase=26 acao=publicado resultado=ok obs="Commit `b1bb759`,
+push com `git ls-remote` NO SERVIDOR confirmando o ref
+(`b1bb759ddd4436dd...`), e o webhook publicou sozinho. Carimbo de producao
+`20260910-1144`, igual ao HEAD, conferido nas duas pontas.
+O QUE DA PARA PROVAR DE FORA, e e pouco de proposito: as duas rotas continuam
+exigindo autenticacao (401 sem token nas duas). O COMPORTAMENTO DE ESCOPO NAO
+SE PROVA POR CURL, porque exige dois usuarios com escopos diferentes e um deles
+sem direito a tarefa do outro: isso esta provado na maquina, pelos 12 itens,
+com os tres de nao-regressao medidos antes.
+NAO PECO CONFERENCIA VISUAL DESTA VEZ, e explico em vez de omitir: para o
+usuario ver o buraco fechado ele teria de entrar como um analista de escopo
+reduzido e tentar abrir a tela de uma tarefa alheia, o que e trabalhoso e
+mexe com conta de outra pessoa. O risco de nao conferir e conhecido e pequeno:
+o helper `_tarefa_no_escopo` ja rege sete outras rotas em producao desde
+09/09, e as tres nao-regressoes garantem que quem tem direito nao perdeu
+acesso."
+
+[2026-09-10T14:13:00] fase=26 acao=fase_fechada resultado=ok obs="Criterio
+atendido: `prova_escopo_link.py` sai com codigo 0 (12 verdes) e saia com codigo
+1 no codigo anterior, com o RED colado aqui; as 30 provas do backend e as 19 do
+frontend em exit 0; carimbo batendo com o HEAD.
+REGISTRO DE PROCESSO, para nao parecer lacuna a quem ler depois: esta fase NAO
+teve `PLANO_FASEADO` nem `CHECKLIST` proprios. Ela nasceu de um achado ja
+registrado como `blocked`, foi aprovada em uma frase pelo usuario, tem um unico
+criterio de aceite e um diff de duas linhas em duas rotas. Montar os quatro
+artefatos para isso seria burocracia, e o registro que importa esta aqui: o
+achado, o RED, o desenho, o GREEN e a prova em producao. Fase de tamanho maior
+volta a abrir os artefatos.
+Fase 26: done. Nenhum marcador `escada:` no projeto."
