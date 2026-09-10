@@ -46,6 +46,9 @@ export const authAPI = {
   // 401 que apaga o token e redireciona.
   sso: (bilhete) => apiPublico.post('/auth/sso', { bilhete }),
   register: (data) => api.post('/auth/register', data),
+  // Só registra o fim da sessão no log do servidor: o token é JWT e continua
+  // valendo até expirar. Quem apaga o token é o navegador, logo depois.
+  logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
 };
 

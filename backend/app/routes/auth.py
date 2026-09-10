@@ -215,6 +215,28 @@ def _limpar_bilhetes_antigos(db: Session) -> None:
     limpar_tentativas_antigas(db)
 
 
+@router.post("/logout")
+def logout(current_user: Usuario = Depends(get_current_user)):
+    """Registra o fim da sessão. NÃO invalida o token, e isso é deliberado.
+
+    O projeto autentica por JWT, que é stateless: o token vale até o `exp`
+    dele, e derrubá-lo antes exigiria uma lista de revogados consultada a cada
+    requisição autenticada do app inteiro. Isso é trabalho próprio, e não item
+    de uma fase de logging.
+
+    O que esta rota entrega é o que faltava: a `Padrao_Logging_Estruturado`
+    lista `LOGOUT` entre os eventos que sempre entram, e sem ela a trilha tinha
+    começo de sessão e não tinha fim. Quem sai deixa linha, com o `user_id` e o
+    `request_id` que o navegador recebeu no cabeçalho.
+
+    Quem apaga o token continua sendo o navegador. Se esta chamada falhar, a
+    saída acontece do mesmo jeito: log não pode prender ninguém dentro do
+    sistema.
+    """
+    log_event("LOGOUT", email=current_user.email)
+    return {"ok": True}
+
+
 @router.get("/me", response_model=MeResponse)
 def get_me(current_user: Usuario = Depends(get_current_user)):
     return MeResponse(

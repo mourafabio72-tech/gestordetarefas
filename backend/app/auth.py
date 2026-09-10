@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Usuario
-from .seguranca import registrar_usuario
+from .seguranca import registrar_usuario, log_event
 from . import permissoes
 import os
 
@@ -60,6 +60,14 @@ def require_grupos(*grupos):
     """Dependência: exige que o usuário logado pertença a um dos grupos."""
     def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
         if current_user.grupo not in grupos:
+            # Toda negativa vertical do app passa por esta função e pelas duas
+            # abaixo. A `Padrao_Logging_Estruturado` pede `ACESSO_NEGADO_403`, e
+            # o lugar de escrevê-lo é aqui: as quatorze rotas que devolvem 403
+            # continuam sem saber que existe log. O motivo vai junto porque
+            # evento sem motivo não é acionável: "alguém tomou 403" não diz o
+            # que a pessoa tentou nem o que faltava a ela.
+            log_event("ACESSO_NEGADO_403", level="WARN",
+                      exigido=",".join(grupos), tinha=current_user.grupo)
             raise HTTPException(status_code=403, detail="Você não tem permissão para esta ação")
         return current_user
     return _dep
@@ -78,6 +86,8 @@ def require_perm(recurso: str, nivel: str = "ver"):
     """Dependência: exige `nivel` (ver|editar) no `recurso` da matriz."""
     def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
         if not permissoes.pode(permissao_efetiva(current_user), recurso, nivel):
+            log_event("ACESSO_NEGADO_403", level="WARN",
+                      recurso=recurso, nivel=nivel)
             raise HTTPException(
                 status_code=403,
                 detail=f"Sem permissão de '{nivel}' em '{recurso}'",
@@ -90,6 +100,7 @@ def require_flag(flag: str):
     """Dependência: exige que a flag de ação sensível esteja ligada."""
     def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
         if not permissoes.tem_flag(permissao_efetiva(current_user), flag):
+            log_event("ACESSO_NEGADO_403", level="WARN", flag=flag)
             raise HTTPException(
                 status_code=403,
                 detail=f"Sem permissão para a ação '{flag}'",

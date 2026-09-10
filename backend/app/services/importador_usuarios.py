@@ -17,6 +17,7 @@ import secrets
 import unicodedata
 from ..models import Usuario, Empresa, Setor, Grupo
 from ..auth import get_password_hash
+from ..seguranca import log_event
 
 
 def _norm(s: str) -> str:
@@ -152,6 +153,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes, executor_email: str = None)
 
     criadas = atualizadas = erros = 0
     detalhes = []
+    papeis_trocados = []  # emitidos só depois do commit, ver abaixo
     gestor_pendente = []  # (usuario, valor_gestor) resolvidos na 2ª passada
     grupos_db = _carregar_grupos(db)
 
@@ -199,6 +201,24 @@ def importar(db, nome_arquivo: str, conteudo: bytes, executor_email: str = None)
                 detalhes.append({"linha": nome, "status": "aviso",
                                  "detalhe": "Seu próprio nível foi mantido (não é possível rebaixar a si mesmo pela importação)."})
             else:
+                # Trocar papel por planilha é a mesma mutação que o PUT de
+                # usuários registra como MUDANCA_ROLE, e sem isto era a porta
+                # lateral: quem quisesse mudar nível sem deixar rastro subia um
+                # arquivo. Só sai quando o papel mudou de fato, e por usuário:
+                # numa importação comum quase ninguém troca de nível, e quando
+                # muitos trocam é exatamente isso que se quer ver. "Criei 200
+                # usuários" é um fato só; "fulano virou admin" é um fato por
+                # pessoa, e é o que uma auditoria vem perguntar.
+                #
+                # As linhas ficam GUARDADAS e só saem depois do commit, que
+                # nesta função é único e roda no fim, depois da planilha
+                # inteira. Emitindo aqui, uma falha na última linha do arquivo
+                # descartaria tudo e as trocas de papel já teriam sido
+                # anunciadas no log sem nunca chegar ao banco.
+                if existente.grupo != grupo:
+                    papeis_trocados.append(dict(
+                        alvo_id=existente.id, alvo_email=existente.email,
+                        de=existente.grupo, para=grupo, origem="importacao"))
                 existente.grupo = grupo
                 existente.tipo = tipo
             existente.empresa_id = empresa.id if empresa else None
@@ -248,6 +268,9 @@ def importar(db, nome_arquivo: str, conteudo: bytes, executor_email: str = None)
                              "detalhe": f"Gestor não encontrado: {valor}"})
 
     db.commit()
+    # Só agora, com o banco gravado. Ver o comentário lá em cima.
+    for papel in papeis_trocados:
+        log_event("MUDANCA_ROLE", level="WARN", **papel)
     return {"resumo": {"total": criadas + atualizadas + erros,
                        "criadas": criadas, "atualizadas": atualizadas, "erros": erros},
             "detalhes": detalhes}

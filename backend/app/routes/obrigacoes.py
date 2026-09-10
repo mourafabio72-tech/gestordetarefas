@@ -60,7 +60,9 @@ def remover_excecao(obrigacao_id: int, excecao_id: int, request: Request,
     empresa_id = x.empresa_id
     db.delete(x)
     db.commit()
-    log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="removida",
+    # Aqui a exceção é APAGADA, então o evento é o de exclusão. Saía como
+    # `EDICAO_REGISTRO_CRITICO`, o irmão do nome trocado em `routes/tarefas.py`.
+    log_event("EXCLUSAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="removida",
               obrigacao_id=obrigacao_id, empresa_id=empresa_id,
               user_id=current_user.id, ip=ip_cliente(request))
     return {"ok": True}
@@ -86,11 +88,18 @@ def set_detalhes_empresa(obrigacao_id: int, body: DetalhesBody, db: Session = De
     if not db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first():
         raise HTTPException(status_code=404, detail="Obrigação não encontrada")
     db.query(EmpresaObrigacaoDetalhe).filter(EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).delete()
+    gravados = 0
     for it in body.itens:
         texto = (it.observacao or "").strip()
         if texto:
             db.add(EmpresaObrigacaoDetalhe(obrigacao_id=obrigacao_id, empresa_id=it.empresa_id, observacao=texto))
+            gravados += 1
     db.commit()
+    # A rota irmã de responsáveis por setor (`routes/empresas.py`) já emitia
+    # este evento na mesma forma, apaga e regrava. Ficar de fora aqui era
+    # inconsistência, e não decisão.
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="empresa_obrigacao_detalhe",
+              obrigacao_id=obrigacao_id, quantidade=gravados)
     return {"ok": True}
 
 _COMP = {"mes_anterior": "Mês anterior", "mesmo_mes": "Mesmo mês",
@@ -170,6 +179,11 @@ def relatorio_obrigacoes(
         ])
     buf = io.BytesIO()
     wb.save(buf)
+    # Export de massa de verdade: a planilha sai com o cadastro inteiro. A
+    # contagem é o que torna a linha útil, porque "exportou" sem tamanho não
+    # distingue conferir uma obrigação de levar a base toda embora.
+    log_event("EXPORT_DADOS", recurso="obrigacoes", formato="xlsx",
+              quantidade=ws.max_row - 1)
     return Response(
         content=buf.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -238,6 +252,12 @@ def copiar_modelo_empresa(
             o.empresas.append(destino)
             vinculadas += 1
     db.commit()
+    # UMA linha, com a contagem: a decisão foi uma só, e registrar cada
+    # obrigação viraria dezenas de linhas para um clique.
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao", lote=True,
+              acao="copiar_empresa", quantidade=vinculadas,
+              origem_empresa_id=body.origem_empresa_id,
+              destino_empresa_id=body.destino_empresa_id)
     return {"message": f"{vinculadas} obrigação(ões) vinculada(s) à empresa destino.",
             "vinculadas": vinculadas, "total_origem": len(obrigacoes)}
 
@@ -264,6 +284,12 @@ def desvincular_empresa(
             o.empresas.remove(emp)
             n += 1
     db.commit()
+    # Tirar a empresa de N obrigações é o inverso do copiar, e sai igual: uma
+    # linha, com a contagem. Muda o que o escritório deve entregar por aquele
+    # cliente, então não pode ficar sem rastro.
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao", lote=True,
+              acao="desvincular_empresa", quantidade=n,
+              empresa_id=body.empresa_id)
     return {"desvinculadas": n, "empresa": emp.razao_social}
 
 
@@ -279,6 +305,8 @@ def create_obrigacao(
     db.add(o)
     db.commit()
     db.refresh(o)
+    log_event("CRIACAO_REGISTRO_CRITICO", tabela="obrigacao",
+              alvo_id=o.id, nome=o.nome, empresas=len(o.empresas or []))
     return o
 
 
@@ -300,6 +328,8 @@ def update_obrigacao(
     _set_empresas(db, o, empresa_ids)
     db.commit()
     db.refresh(o)
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao",
+              alvo_id=o.id, nome=o.nome, campos=sorted(dados.keys()))
     return o
 
 
@@ -325,12 +355,18 @@ def delete_obrigacao(
     o = db.query(Obrigacao).filter(Obrigacao.id == obrigacao_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Obrigação não encontrada")
+    # Um nome só para os dois desfechos: `definitivo` apaga a obrigação e as
+    # tarefas geradas, e sem a flag ela apenas fica inativa. A nota trata soft
+    # delete dentro do mesmo evento de exclusão.
+    alvo = {"tabela": "obrigacao", "alvo_id": o.id, "nome": o.nome}
     if definitivo:
         _excluir_definitivo(db, o)
         db.commit()
+        log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", inativado=False, **alvo)
         return {"message": "Obrigação excluída"}
     o.ativa = False
     db.commit()
+    log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", inativado=True, **alvo)
     return {"message": "Obrigação desativada"}
 
 
@@ -357,6 +393,12 @@ def excluir_lote(
             o.ativa = False
         n += 1
     db.commit()
+    # UMA linha com a contagem, e não uma por obrigação: o lote é uma decisão
+    # só, e registrar cada item transformaria uma limpeza de cadastro em
+    # dezenas de linhas WARN que ninguém lê até o fim.
+    log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", tabela="obrigacao",
+              lote=True, quantidade=n, pedidas=len(body.ids),
+              inativado=not body.definitivo)
     return {"processadas": n}
 
 
@@ -376,4 +418,15 @@ def status_obrigacao(
         raise HTTPException(status_code=404, detail="Obrigação não encontrada")
     o.ativa = body.ativa
     db.commit()
+    # Este é o caminho lateral do soft delete: mexe no MESMO campo `ativa` que
+    # o `DELETE` sem a flag `definitivo` mexe, e aquele já registrava. Sai com
+    # o mesmo evento, senão quem filtra exclusão acha um caminho e perde o
+    # outro. Reativar é outra coisa, e sai como edição: ressuscitar não é
+    # excluir.
+    if body.ativa:
+        log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao",
+                  alvo_id=o.id, nome=o.nome, reativada=True)
+    else:
+        log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", tabela="obrigacao",
+                  alvo_id=o.id, nome=o.nome, inativado=True)
     return {"message": "Ativada" if body.ativa else "Inativada"}

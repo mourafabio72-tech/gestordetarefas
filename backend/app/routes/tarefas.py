@@ -51,6 +51,37 @@ def _aplicar_escopo(query, db: Session, user: Usuario):
     return query
 
 
+def _nao_encontrada(db, tarefa_id: int, detalhe: str = "Tarefa não encontrada",
+                    existe: bool = None):
+    """Levanta o 404 de sempre, e antes disso decide se aquilo foi tentativa.
+
+    A `Padrao_IDOR` manda registrar quando "o usuário recebe 404 por IDOR
+    (recurso existe mas não é dele)". A condição é o ponto todo: id que não
+    existe é digitação errada, e logar os dois juntos encheria a trilha de
+    ruído até ninguém mais olhar.
+
+    `existe` é para quem já buscou a tarefa e portanto já sabe a resposta. Sem
+    ele, uma consulta responde, e ela roda só no caminho da recusa: quem tem
+    direito ao recurso não paga nada por isto.
+
+    TODA recusa de escopo de tarefa passa por aqui, e não só as que usam o
+    `_tarefa_no_escopo`. Quatro rotas fazem a mesma pergunta pelo caminho do
+    predicado `_no_escopo`, e deixá-las de fora seria a guarda aplicada pela
+    metade: entre elas está o `GET /api/tarefas/{id}`, que é onde trocar o id
+    na URL é mais fácil.
+
+    A resposta ao cliente é a mesma nos dois casos, de propósito. Um 403 aqui
+    confirmaria a quem tenta adivinhar que aquela tarefa existe, que é o
+    anti-padrão nomeado na mesma nota.
+    """
+    if existe is None:
+        existe = bool(db.query(Tarefa.id).filter(Tarefa.id == tarefa_id).first())
+    if existe:
+        log_event("ACESSO_NEGADO_IDOR", level="WARN",
+                  recurso="tarefa", recurso_id=tarefa_id)
+    raise HTTPException(status_code=404, detail=detalhe)
+
+
 def _no_escopo(tarefa: Tarefa, db: Session, user: Usuario) -> bool:
     ids = _escopo_ids(db, user)
     if ids is None:
@@ -235,7 +266,7 @@ def get_tarefa(
 ):
     tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not tarefa or not _no_escopo(tarefa, db, current_user):
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id, existe=tarefa is not None)
     return tarefa
 
 @router.post("", response_model=TarefaResponse, status_code=201)
@@ -269,9 +300,10 @@ def update_tarefa(
     current_user: Usuario = Depends(require_perm("tarefas", "editar"))
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    # Fora do escopo → 404 (não vaza existência de tarefa de outro).
+    # Fora do escopo → 404 (não vaza existência de tarefa de outro), e a
+    # recusa vira linha de log quando a tarefa existe: e o IDOR da nota.
     if not db_tarefa or not _no_escopo(db_tarefa, db, current_user):
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id, existe=db_tarefa is not None)
 
     perm = permissao_efetiva(current_user)
     update_data = tarefa.model_dump(exclude_unset=True)
@@ -350,7 +382,12 @@ def baixar_anexo(
 
     tarefa = (_aplicar_escopo(db.query(Tarefa), db, current_user)
               .filter(Tarefa.id == tarefa_id).first())
-    if not tarefa or not tarefa.anexo_nome:
+    if not tarefa:
+        # Os dois casos continuam saindo pelo mesmo 404, e o que muda é só o
+        # log. Separado do `if` de baixo de propósito: tarefa que a pessoa PODE
+        # ver e que não tem comprovante não é tentativa de nada.
+        _nao_encontrada(db, tarefa_id, detalhe="Comprovante não encontrado")
+    if not tarefa.anexo_nome:
         raise HTTPException(status_code=404, detail="Comprovante não encontrado")
 
     caminho = up.caminho_do_anexo(tarefa.anexo_nome)
@@ -373,7 +410,7 @@ def _tarefa_no_escopo(db, user, tarefa_id):
     t = (_aplicar_escopo(db.query(Tarefa), db, user)
          .filter(Tarefa.id == tarefa_id).first())
     if not t:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id)
     return t
 
 
@@ -430,8 +467,11 @@ def excluir_documento(
 
     # Quem apagou, o quê e quando. Documento apagado sem rastro é o tipo de
     # coisa que só se descobre quando alguém pede a prova da entrega.
-    log_event("DOCUMENTO_EXCLUIDO", level="WARN", email=current_user.email,
-              tarefa_id=tarefa.id,
+    # O nome era `DOCUMENTO_EXCLUIDO`, fora da tabela da nota, e por isso não
+    # aparecia em nenhum filtro de exclusão. O nome antigo virou campo, então
+    # nada se perde: o que muda é que agora dá para filtrar.
+    log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", tabela="tarefa_anexo",
+              email=current_user.email, tarefa_id=tarefa.id,
               arquivo=nome, tipo="entregue" if entregue else "recebido",
               arquivo_existia=removido, tarefa_reaberta=reaberta)
     return {"excluido": True, "arquivo": up.nome_de_exibicao(nome),
@@ -770,9 +810,9 @@ def marcar_nao_se_aplica(
     from ..models import ObrigacaoExcecao
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id, existe=False)
     if not _no_escopo(db_tarefa, db, current_user):
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id, existe=True)
     if not db_tarefa.obrigacao_id:
         # Tarefa avulsa não veio de obrigação nenhuma, então não há regra para
         # ajustar. Recusar é mais honesto do que cancelar e não impedir nada.
@@ -801,7 +841,12 @@ def marcar_nao_se_aplica(
         pass                      # já existia: a decisão é a mesma
     db.commit()
     db.refresh(db_tarefa)
-    log_event("EXCLUSAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="criada",
+    # Aqui NASCE uma exceção, então o evento é o de criação. Saía como
+    # `EXCLUSAO_REGISTRO_CRITICO`, e o nome errado não muda comportamento
+    # nenhum: quebra o filtro, que é a única razão de o nome ser padronizado.
+    # Quem procurasse exclusão achava esta criação, e a exclusão de verdade
+    # (em `routes/obrigacoes.py`) não aparecia em busca nenhuma.
+    log_event("CRIACAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="criada",
               obrigacao_id=db_tarefa.obrigacao_id, empresa_id=db_tarefa.empresa_id,
               tarefa_id=db_tarefa.id, user_id=current_user.id, ip=ip_cliente(request))
     return db_tarefa
@@ -839,7 +884,7 @@ def delete_tarefa(
 ):
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa or not _no_escopo(db_tarefa, db, current_user):
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+        _nao_encontrada(db, tarefa_id, existe=db_tarefa is not None)
 
     # Dois passos, de propósito: a primeira vez CANCELA (reversível, e o
     # histórico fica); a segunda, numa tarefa já cancelada, EXCLUI de vez.

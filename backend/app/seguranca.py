@@ -128,7 +128,22 @@ def log_event(event: str, level: str = "INFO", **campos) -> None:
     for campo in ("user_id", "ip", "request_id", "path", "method"):
         linha[campo] = campos.pop(campo)
     linha.update(campos)
-    print(json.dumps(linha, ensure_ascii=False), file=sys.stdout, flush=True)
+    # `default=str` porque o logger NAO pode derrubar quem ele registra. Sem
+    # ele, um campo extra que o JSON nao serializa levanta TypeError dentro da
+    # guarda que chamou, e a recusa vira 500. Nas rotas de IDOR isso e pior do
+    # que um erro qualquer: id inexistente nao chama o logger e segue 404, id
+    # de outro dono estoura e vira 500, e o STATUS passa a dizer se o recurso
+    # existe, que e o oraculo que o `_nao_encontrada` existe para fechar.
+    # Convertendo em texto, a linha sai inteira em vez de sumir.
+    try:
+        print(json.dumps(linha, ensure_ascii=False, default=str),
+              file=sys.stdout, flush=True)
+    except Exception as erro:
+        # Rede final, e ela NAO engole: `except: pass` e anti-padrao nomeado na
+        # propria nota de logging. Se nem a linha degradada sair, o servidor
+        # ainda fica sabendo, pelo stderr, qual evento se perdeu e por que.
+        print(f"FALHA_AO_LOGAR event={event} erro={erro!r}",
+              file=sys.stderr, flush=True)
 
 
 def registrar_tentativa(db: Session, email: str, ip: str, sucesso: bool,

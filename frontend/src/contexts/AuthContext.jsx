@@ -86,6 +86,11 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    // Avisa o servidor para a trilha ter fim de sessão, e não só começo. A
+    // falha é engolida de propósito: se a rede cair ou o token já tiver
+    // expirado, a pessoa sai do mesmo jeito. Log não pode prender ninguém
+    // dentro do sistema.
+    authAPI.logout().catch(() => {});
     localStorage.removeItem('token');
     setUser(null);
   };

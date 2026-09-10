@@ -234,9 +234,25 @@ async def importar_empresas(
 ):
     conteudo = await arquivo.read()
     try:
-        return imp.importar(db, arquivo.filename, conteudo)
+        resultado = imp.importar(db, arquivo.filename, conteudo)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
+    # UMA linha por lote, com a contagem, e não uma por empresa: importar
+    # duzentas viraria duzentas linhas e afogaria justamente o sinal que estes
+    # eventos existem para criar.
+    resumo = resultado.get("resumo") or {}
+    criadas = int(resumo.get("criadas") or 0)
+    atualizadas = int(resumo.get("atualizadas") or 0)
+    # Planilha sem a coluna obrigatória devolve 200 com um erro dentro e não
+    # grava nada. A linha saía assim mesmo, com zero: o número não mentia, mas
+    # o EVENTO sim, anunciando criação crítica onde não houve criação nenhuma.
+    # As rotas singulares nunca logam em caminho de erro, e o lote segue a
+    # mesma regra.
+    if criadas or atualizadas:
+        log_event("CRIACAO_REGISTRO_CRITICO", tabela="empresa", lote=True,
+                  quantidade=criadas, atualizadas=atualizadas,
+                  arquivo=arquivo.filename)
+    return resultado
 
 @router.get("", response_model=List[EmpresaResponse])
 def list_empresas(
@@ -290,6 +306,9 @@ def create_empresa(
     except Exception:
         db.rollback()
         response.headers["X-Tarefas-Geradas"] = "0"
+    log_event("CRIACAO_REGISTRO_CRITICO", tabela="empresa",
+              alvo_id=db_empresa.id, razao_social=db_empresa.razao_social,
+              cnpj=db_empresa.cnpj)
     return db_empresa
 
 @router.put("/{empresa_id}", response_model=EmpresaResponse)
@@ -311,6 +330,8 @@ def update_empresa(
 
     db.commit()
     db.refresh(db_empresa)
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="empresa",
+              alvo_id=db_empresa.id, razao_social=db_empresa.razao_social)
     return db_empresa
 
 @router.post("/{empresa_id}/bloquear", response_model=EmpresaResponse)
@@ -325,6 +346,11 @@ def bloquear_empresa(
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
     emp.bloqueado = body.bloqueado
     db.commit()
+    # Bloquear decide se a empresa opera no sistema, e as tarefas dela somem
+    # das telas: e mudanca de estado critico, e a nota manda registrar.
+    log_event("EDICAO_REGISTRO_CRITICO", level="WARN", tabela="empresa",
+              alvo_id=emp.id, razao_social=emp.razao_social,
+              bloqueado=emp.bloqueado)
     db.refresh(emp)
     return emp
 
@@ -339,10 +365,16 @@ def delete_empresa(
     if not db_empresa:
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
 
+    # Um nome de evento só para os dois desfechos, com um campo distinguindo:
+    # a nota lista o soft delete dentro do próprio evento de exclusão.
+    alvo = {"tabela": "empresa", "alvo_id": db_empresa.id,
+            "razao_social": db_empresa.razao_social}
     if _empresa_em_uso(db, empresa_id) > 0:
         db_empresa.ativo = False
         db.commit()
+        log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", inativado=True, **alvo)
         return {"message": "Empresa tem tarefas/obrigações/usuários vinculados, então foi inativada e não excluída.", "inativado": True}
     db.delete(db_empresa)
     db.commit()
+    log_event("EXCLUSAO_REGISTRO_CRITICO", level="WARN", inativado=False, **alvo)
     return {"message": "Empresa excluída.", "inativado": False}
