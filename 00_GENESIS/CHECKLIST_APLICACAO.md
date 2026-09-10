@@ -79,13 +79,13 @@ ou linha de log real. Marcar sem evidência é fraude com o próprio processo.
 
 ## Fase 25: entrega, prova no ar e matriz fechada
 
-- [ ] **25.1** `Dockerfile` do backend conferido ANTES do push: `COPY . .`, para
+- [x] **25.1** `Dockerfile` do backend conferido ANTES do push: `COPY . .`, para
       os arquivos de prova novos entrarem na imagem.
-- [ ] **25.2** Commit e push, com `git ls-remote` confirmando o ref no
+- [x] **25.2** Commit e push, com `git ls-remote` confirmando o ref no
       servidor, e o webhook publicando sozinho.
-- [ ] **25.3** Carimbo de `/api/health` batendo com o HEAD, comparado nas duas
+- [x] **25.3** Carimbo de `/api/health` batendo com o HEAD, comparado nas duas
       pontas: antes do deploy e depois.
-- [ ] **25.4** `curl` na rota de logout: sem token devolve 401, com token
+- [x] **25.4** `curl` na rota de logout: sem token devolve 401, com token
       devolve 200.
 - [ ] **25.5** CONFERENCIA_VISUAL, e é do usuário: fazer logout no app e achar
       a linha `LOGOUT` na aba Logs do serviço `backend`, com o `user_id` dele e

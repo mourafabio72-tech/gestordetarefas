@@ -511,3 +511,32 @@ conformidade achou sete rotas irmas mudando as mesmas tabelas sem rastro, e o
 funcional achou log afirmando o que o banco nao gravou. Somando com a fase 23,
 sao CINCO verificadores e cinco acertos seguidos.
 `grep -rn 'escada:'`: ZERO marcadores. Fase 24: done."
+
+## Fase 25, publicada em 2026-09-09 a noite
+
+[2026-09-09T22:42:00] fase=25 acao=publicado resultado=ok obs="25.1 a 25.4.
+`Dockerfile` do backend conferido ANTES do push: `COPY . .` na linha 17, e
+`grep -c provas backend/.dockerignore` devolve 0, entao os dois arquivos de
+prova novos entram na imagem. E o cuidado que faltou no broker em 01/09.
+Commit `3a11f81`, push em `origin main`, e `git ls-remote origin main` NO
+SERVIDOR confirmando o ref (`3a11f812337d13e4...`). O webhook publicou sozinho.
+CARIMBO CONFERIDO NAS DUAS PONTAS, e nao so depois: antes do deploy producao
+respondia `20260909-2131`, e agora responde
+`{\"status\":\"healthy\",\"build\":\"20260909-2242\"}`, igual ao HEAD
+(`3a11f81 20260909-2242`). A imagem no ar e a desta fase.
+A ROTA NOVA ESTA NO AR, e a prova distingue 'existe e recusa' de 'nao existe',
+que e o ponto: `POST /api/auth/logout` sem token devolve 401, com token
+invalido devolve 401, e uma rota inventada no mesmo prefixo devolve 404. Se a
+rota nao tivesse subido, o primeiro curl teria dado 404 igual ao terceiro.
+Os cabecalhos das fases anteriores continuam de pe: `x-request-id:
+760b93316c994d05` e `x-content-type-options: nosniff`.
+O QUE NAO DA PARA PROVAR DE FORA, e fica dito: nenhum destes curl esta
+autenticado, entao o caminho feliz do logout (200 mais a linha `LOGOUT` com o
+`user_id`) so se ve de dentro. E o item 25.5, e e do usuario."
+
+[2026-09-09T22:44:00] fase=25 acao=parada resultado=blocked obs="As fases 23 e
+24 estao done e publicadas. A 25 esta esperando UM item, o 25.5, que so o
+usuario pode fazer: sair do app e achar a linha `LOGOUT` na aba Logs do
+servico `backend`, com o `user_id` dele. O log do EasyPanel nao sai por curl.
+Junto com isso vai ao usuario o achado que registrei as 22:15 e que NAO e
+desta frente: `GET /api/tarefas/{id}/link-envio` nao aplica escopo nenhum."
