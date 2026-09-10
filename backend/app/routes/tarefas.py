@@ -211,10 +211,16 @@ def link_envio(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Link público (com token) para o cliente enviar o comprovante desta tarefa."""
-    t = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    if not t:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    """Link público (com token) para o cliente enviar o comprovante desta tarefa.
+
+    O escopo é o MESMO da listagem: quem não enxerga a tarefa não pede o link
+    dela. Antes esta rota só exigia estar logado, e o buraco era maior do que
+    uma leitura indevida: o `link_publico` chama `get_or_create_token`, então
+    este GET CRIA o token quando ainda não existe. Quem passasse por aqui
+    abria uma porta de upload sem senha numa tarefa de empresa que não
+    atende.
+    """
+    t = _tarefa_no_escopo(db, current_user, tarefa_id)
     from ..services import upload as up, config as cfgmod
     return {"link": up.link_publico(cfgmod.carregar(db), t, db)}
 
@@ -861,9 +867,10 @@ def transferir_tarefa(
 ):
     if current_user.grupo not in ("admin", "gestor"):
         raise HTTPException(status_code=403, detail="Apenas gestor ou admin pode trocar o responsável.")
-    db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
-    if not db_tarefa:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    # O grupo sozinho não bastava: o preset de gestor tem escopo `todas`, mas
+    # o app permite reduzir isso por override, e aí um gestor de setor
+    # transferia tarefa que nem enxerga na própria tela.
+    db_tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
 
     novo_resp = db.query(Usuario).filter(Usuario.id == body.responsavel_id, Usuario.ativo == True).first()
     if not novo_resp:
