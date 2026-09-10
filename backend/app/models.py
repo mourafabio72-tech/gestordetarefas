@@ -435,11 +435,11 @@ class Obrigacao(Base):
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
     # Para que lado o documento anda, e há três respostas, não duas:
-    #   receber: o cliente manda o comprovante e a tarefa baixa pelo e-validador
+    #   receber:  o cliente manda o comprovante e a tarefa baixa pelo e-validador
     #   entregar: o escritório anexa a guia e envia; o envio conclui a tarefa
-    #   interna: não troca documento com ninguém (conciliar banco, lançar
-    #              notas, fechar balancete). É trabalho do escritório, e pedir
-    #              documento nessas seria travar a baixa por algo que não existe.
+    #   interna:  não troca documento com ninguém (conciliar banco, lançar
+    #             notas, fechar balancete). É trabalho do escritório, e pedir
+    #             documento nessas seria travar a baixa por algo que não existe.
     sentido = Column(String(10), default="receber")   # receber | entregar | interna
     passivel_multa = Column(Boolean, default=False)
     alerta_guia_nao_lida = Column(Boolean, default=False)

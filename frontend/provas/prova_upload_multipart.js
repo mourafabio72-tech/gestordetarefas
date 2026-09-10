@@ -1,10 +1,10 @@
-// Prova de frontend/src/services/api.js — Node puro, sem build.
+// Prova de frontend/src/services/api.js: Node puro, sem build.
 //   node frontend/provas/prova_upload_multipart.js
 //
 // Verificação ESTÁTICA, e é o único jeito de pegar isto: a instância do axios
 // tem `Content-Type: application/json` como padrão, e um POST com FormData que
 // não sobrescreva esse cabeçalho sai como JSON. O build passa, o lint passa, e
-// só o servidor reclama — "arquivo: é obrigatório" — depois de a pessoa ter
+// só o servidor reclama ("arquivo: é obrigatório") depois de a pessoa ter
 // escolhido o arquivo.
 //
 // Aconteceu com o upload do documento de saída em 2026-08-22. Os outros seis
@@ -23,7 +23,7 @@ const check = (nome, cond, extra = '') => {
   else { falhou++; console.log(`FALHA  ${nome}${extra ? '\n       ' + extra : ''}`); }
 };
 
-console.log('\n1) A instância declara JSON como padrão — é a origem da armadilha');
+console.log('\n1) A instância declara JSON como padrão: é a origem da armadilha');
 check('o padrão é application/json', /headers:\s*\{\s*'Content-Type':\s*'application\/json'/.test(fonte));
 
 console.log('\n2) Todo upload com FormData declara multipart');
@@ -51,7 +51,7 @@ const semMultipart = uploadsSemMultipart(fonte);
 check('nenhum upload esqueceu o cabeçalho', semMultipart.length === 0,
       semMultipart.length ? `sem multipart: ${semMultipart.join(', ')}` : '');
 
-console.log('\n3) A verificação PEGA o erro — sem isto ela poderia estar sempre verde');
+console.log('\n3) A verificação PEGA o erro: sem isto ela poderia estar sempre verde');
 const erradoDeProposito = `
   enviar: (id, arquivo) => {
     const fd = new FormData();
@@ -67,5 +67,5 @@ check('anexarSaida manda multipart',
       /anexarSaida[\s\S]*?multipart\/form-data/.test(fonte.slice(fonte.indexOf('anexarSaida'),
                                                                   fonte.indexOf('anexarSaida') + 900)));
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

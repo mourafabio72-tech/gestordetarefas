@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/painelDados.js — Node puro, sem build.
+// Prova de frontend/src/pages/painelDados.js: Node puro, sem build.
 //   node frontend/provas/prova_painel_dados.js
 
 import { percentuais, linhasMapa, diaMes, filtrosVazios, paraConsulta, temFiltroAtivo,
@@ -13,7 +13,7 @@ const eq = (nome, obtido, esperado) => {
 };
 const soma = (p) => p.reduce((s, x) => s + x.pct, 0);
 
-console.log('\n1) Os percentuais somam 100 — foi o 101% que motivou tudo');
+console.log('\n1) Os percentuais somam 100: foi o 101% que motivou tudo');
 // O painel antigo mostrava 24 + 67 + 0 + 10 = 101.
 const p1 = percentuais({ concluida: 5, pendente: 14, em_andamento: 0, atrasada: 2, cancelada: 0 });
 eq('soma exata', soma(p1), 100);
@@ -40,7 +40,7 @@ const cel = (i, chave) => linhas[i].celulas.find((c) => c.chave === chave);
 eq('setor pequeno todo atrasado fica no máximo', cel(0, 'atrasada').intensidade, 1);
 eq('setor grande com 3 atrasadas fica fraco', cel(1, 'atrasada').intensidade < 0.2, true);
 // Comparar contra o total geral pintaria o Fiscal de cinza e esconderia o pior caso.
-eq('mas nunca invisível — 3 em 300 ainda aparece', cel(1, 'atrasada').intensidade >= 0.12, true);
+eq('mas nunca invisível: 3 em 300 ainda aparece', cel(1, 'atrasada').intensidade >= 0.12, true);
 eq('zero é zero mesmo', cel(1, 'concluida').intensidade, 0);
 eq('lista vazia não quebra', linhasMapa([]), []);
 eq('nula também', linhasMapa(null), []);
@@ -58,7 +58,7 @@ eq('texto é aparado', paraConsulta({ competencia: ' 07/2026 ' }), { competencia
 eq('sem filtro', temFiltroAtivo(filtrosVazios()), false);
 eq('com filtro', temFiltroAtivo({ ...filtrosVazios(), setor_id: '3' }), true);
 
-console.log('\n6) Pontualidade — o único número que olha para trás');
+console.log('\n6) Pontualidade: o único número que olha para trás');
 // Sem base, devolve null em vez de 0%: "0% no prazo" e "nada concluído ainda"
 // são coisas diferentes, e a segunda não é notícia ruim.
 eq('sem concluída com prazo, não há índice',
@@ -81,7 +81,7 @@ console.log('\n8) Dimensões do mapa');
 eq('são três, e batem com as chaves da API',
   DIMENSOES.map((d) => d.chave), ['por_setor', 'por_colaborador', 'por_empresa']);
 
-console.log('\n9) Rosca — os arcos têm de fechar a volta');
+console.log('\n9) Rosca: os arcos têm de fechar a volta');
 const fat = percentuais({ atrasada: 2, pendente: 5, em_andamento: 1, concluida: 4, cancelada: 0 });
 const arcos = arcosRosca(fat, 42);
 const volta = 2 * Math.PI * 42;
@@ -93,7 +93,7 @@ eq('cada arco começa onde o anterior parou',
   Math.round(-arcos[1].offset * 1000), Math.round(arcos[0].dash * 1000));
 eq('painel vazio não desenha nada', arcosRosca(percentuais({})).length, 0);
 
-console.log('\n10) Barras — largura é volume, divisão é composição');
+console.log('\n10) Barras: largura é volume, divisão é composição');
 const bs = barras([
   { nome: 'Fiscal', total: 100, atrasada: 50, pendente: 50, em_andamento: 0, concluida: 0, cancelada: 0, multa: 3 },
   { nome: 'DP', total: 50, atrasada: 0, pendente: 50, em_andamento: 0, concluida: 0, cancelada: 0 },
@@ -101,7 +101,7 @@ const bs = barras([
 ]);
 eq('o maior ocupa a largura toda', bs[0].largura, 100);
 eq('metade do volume, metade da barra', bs[1].largura, 50);
-// 1 de 100 daria 1% — invisível. Some, e some justamente o caso que alguém
+// 1 de 100 daria 1%: invisível. Some, e some justamente o caso que alguém
 // precisa clicar.
 eq('a linha minúscula não some', bs[2].largura, 2);
 eq('só as situações presentes viram segmento', bs[1].segmentos.length, 1);
@@ -129,7 +129,7 @@ const rs = roscasPorLinha([
 ]);
 eq('cada linha vira uma rosca', rs.length, 2);
 eq('as fatias fecham 100', rs.map((r) => r.fatias.reduce((s, f) => s + f.pct, 0)), [100, 100]);
-// Duas roscas do mesmo tamanho não dizem qual tem mais trabalho — o total no
+// Duas roscas do mesmo tamanho não dizem qual tem mais trabalho: o total no
 // miolo é o que separa um setor de 3 de um setor de 300.
 eq('o total vai junto, senão 3 e 300 desenham o mesmo círculo',
   rs.map((r) => r.total), [3, 300]);
@@ -154,7 +154,7 @@ console.log('\n15) Cor de etiqueta por setor');
 eq('a mesma entrada dá sempre a mesma cor', corDoSetor('Fiscal'), corDoSetor('Fiscal'));
 eq('não depende de caixa nem de espaço', corDoSetor('Fiscal'), corDoSetor('  fiscal '));
 // Os setores reais do escritório não podem colidir. Com hash puro, dois deles
-// caíam na mesma cor — e duas etiquetas iguais não etiquetam nada.
+// caíam na mesma cor, e duas etiquetas iguais não etiquetam nada.
 eq('os setores do escritório têm cada um a sua',
   new Set(['Fiscal', 'Contabilidade', 'DP', 'Financeiro', 'Societário', 'Controladoria']
     .map(corDoSetor)).size, 6);
@@ -172,5 +172,5 @@ eq('e o mapa', linhasMapa(comCliente)[0].derivado, true);
 eq('setor de verdade não vem marcado',
   roscasPorLinha([{ nome: 'Fiscal', total: 1, atrasada: 1 }])[0].derivado, false);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

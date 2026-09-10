@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/lotesModelos.js — Node puro, sem build.
+// Prova de frontend/src/pages/lotesModelos.js: Node puro, sem build.
 //   node frontend/provas/prova_lotes_modelos.js
 
 import { separarAceitos, emRemessas, juntarResultados, enviarComDivisao, POR_REMESSA }
@@ -22,7 +22,7 @@ eq('o resto volta para ser AVISADO, não descartado calado',
 eq('lista vazia não quebra', separarAceitos([]).aceitos, []);
 eq('nula também', separarAceitos(null).recusados, []);
 
-console.log('\n2) Remessas — 36 numa requisição não chegam ao servidor');
+console.log('\n2) Remessas: 36 numa requisição não chegam ao servidor');
 const trintaESeis = Array.from({ length: 36 }, (_, i) => arq(`d${i}.pdf`));
 const remessas = emRemessas(trintaESeis);
 eq('divide em grupos do tamanho certo', remessas.length, Math.ceil(36 / POR_REMESSA));
@@ -102,5 +102,5 @@ const sempreOk = async (lista) => {
 await enviarComDivisao(cinco, sempreOk, () => {});
 eq('caso comum não paga pela retentativa', chamadas, [5]);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

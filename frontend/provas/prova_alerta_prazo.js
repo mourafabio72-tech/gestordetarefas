@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/alertaPrazo.js — Node puro, sem build.
+// Prova de frontend/src/pages/alertaPrazo.js: Node puro, sem build.
 //   node frontend/provas/prova_alerta_prazo.js
 
 import { alertaDaTarefa, fundoDoAlerta, NIVEIS } from '../src/pages/alertaPrazo.js';
@@ -55,5 +55,5 @@ eq('gradiente do vermelho',
    fundoDoAlerta(a({ data_prazo: '2026-09-20' })),
    `linear-gradient(135deg, ${NIVEIS.atrasada.suave} 0%, #fffdf9 78%)`);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

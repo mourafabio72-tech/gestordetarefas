@@ -1,4 +1,4 @@
-// Prova de ordem de declaração nos componentes — Node puro, sem build.
+// Prova de ordem de declaração nos componentes: Node puro, sem build.
 //   node frontend/provas/prova_ordem_hooks.js
 //
 // O que ela pega: dependência de useEffect, useMemo ou useCallback que aparece

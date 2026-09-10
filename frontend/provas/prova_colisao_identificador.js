@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/colisaoIdentificador.js — Node puro, sem build.
+// Prova de frontend/src/pages/colisaoIdentificador.js: Node puro, sem build.
 //   node frontend/provas/prova_colisao_identificador.js
 
 import { estadoDoCandidato, explicar } from '../src/pages/colisaoIdentificador.js';
@@ -41,5 +41,5 @@ eq('espaço em volta idem', est(['  apuração_irpj_csll  '], 'apuração_irpj_c
 eq('sem obrigação escolhida, tudo é conflito', est(['apuração_irpj_csll'], ''), 'conflito');
 eq('nome nulo na lista é ignorado', est([null, 'sped_fiscal'], 'sped_fiscal'), 'variacao');
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

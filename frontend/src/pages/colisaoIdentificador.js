@@ -13,8 +13,8 @@
 /**
  * Estado de um candidato diante da obrigação escolhida agora.
  *
- * 'livre': não parece com identificador de ninguém
- * 'variacao': parece só com a obrigação escolhida: é outro layout do mesmo documento
+ * 'livre':    não parece com identificador de ninguém
+ * 'variacao': parece só com a obrigação escolhida, é outro layout do mesmo documento
  * 'conflito': parece com OUTRA obrigação; aí o matcher ficaria ambíguo
  */
 export function estadoDoCandidato(candidato, nomeObrigacaoEscolhida) {

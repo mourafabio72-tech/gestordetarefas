@@ -137,7 +137,7 @@ const ids = (lista) => lista.map(t => t.id);
   ok('"limpar filtros" só aparece com filtro ativo');
 }
 
-// 14. Busca pelo título — com centenas de tarefas no mês, os selects não bastam.
+// 14. Busca pelo título: com centenas de tarefas no mês, os selects não bastam.
 {
   const r = filtrarTarefas(COM_GENTE, { ...filtrosVazios(), texto: 'balan' });
   assert.deepStrictEqual(ids(r), [6]);
@@ -190,7 +190,7 @@ const ids = (lista) => lista.map(t => t.id);
   assert.deepStrictEqual(rec('hoje'), [2], 'vence hoje');
   assert.deepStrictEqual(rec('semana'), [2, 3], 'hoje e os próximos 7 dias');
   // 'aberta' não pode sair do semáforo: a 7 não tem prazo, e no semáforo isso
-  // é 'neutro' — o mesmo balaio da cancelada. Ela está aberta do mesmo jeito.
+  // é 'neutro': o mesmo balaio da cancelada. Ela está aberta do mesmo jeito.
   assert.deepStrictEqual(rec('aberta'), [1, 2, 3, 4, 7], 'aberta inclui a sem prazo');
   assert.deepStrictEqual(rec('aberta', { prioridade: 'alta_urgente' }), [2, 3],
     'urgentes do painel = em aberto com prioridade alta ou urgente');

@@ -6,7 +6,7 @@
 //
 // O buraco que isto fecha, medido na tela antes de mexer: o check era DERIVADO
 // de `!aplica_regimes && !aplica_segmentos`, então ficava MARCADO mesmo com dez
-// empresas vinculadas em "somente estas" — dizendo o contrário do que a tela
+// empresas vinculadas em "somente estas", dizendo o contrário do que a tela
 // fazia. E desmarcá-lo FORÇAVA o primeiro regime da lista, então não existia
 // caminho por ali para "só estas empresas".
 

@@ -1,4 +1,4 @@
-# Deploy — Gestor de Tarefas (padrão Zoaria / EasyPanel)
+# Deploy: Gestor de Tarefas (padrão Zoaria / EasyPanel)
 
 Guia de deploy do app em `https://gestordetarefas.zoaria.com.br`.
 
@@ -25,7 +25,7 @@ Servidor: `2.25.192.225:3000` (mesmo projeto dos outros apps Zoaria).
 1. **Create Service → Compose**, conectado ao repo `gestordetarefas`, branch `main`,
    com **auto-deploy (webhook) ligado**.
 2. Apontar para o `docker-compose.yml` da raiz.
-3. **Volume persistente** `postgres_data` (o banco mora aqui — não pode ser efêmero).
+3. **Volume persistente** `postgres_data` (o banco mora aqui: não pode ser efêmero).
 4. **Domínio:** `gestordetarefas.zoaria.com.br` → serviço **frontend**, porta **80**,
    com SSL (Let's Encrypt).
 

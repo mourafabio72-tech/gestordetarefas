@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/filtroDocumentos.js — Node puro, sem build.
+// Prova de frontend/src/pages/filtroDocumentos.js: Node puro, sem build.
 //   node frontend/provas/prova_filtro_documentos.js
 
 import { filtrosVazios, paraConsulta, temFiltroAtivo, periodos, dataBr, dataHoraBr, paraCSV }
@@ -11,7 +11,7 @@ const eq = (nome, obtido, esperado) => {
   else { falhou++; console.log(`FALHA  ${nome}\n       obtido:   ${a}\n       esperado: ${b}`); }
 };
 
-console.log('\n1) Campo vazio não vira parâmetro — é o que devolve 422');
+console.log('\n1) Campo vazio não vira parâmetro: é o que devolve 422');
 // `tipo` sempre acompanha: é o acervo que se está olhando, não um filtro.
 eq('só o acervo, nada mais', paraConsulta(filtrosVazios()), { tipo: 'recebidos' });
 eq('só o que tem valor', paraConsulta({ ...filtrosVazios(), empresa_id: '7', texto: '' }),
@@ -84,5 +84,5 @@ eq('quem não pegou aparece dito', csvE.split('\n')[1].includes('"não baixou"')
 eq('lista vazia devolve só o cabeçalho', paraCSV([]).split('\n').length, 1);
 eq('nula não quebra', paraCSV(null).split('\n').length, 1);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

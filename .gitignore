@@ -9,7 +9,7 @@ build/
 venv/
 .env
 
-# Banco local de dev (SQLite) — nunca versionar
+# Banco local de dev (SQLite): nunca versionar
 *.db
 *.sqlite3
 

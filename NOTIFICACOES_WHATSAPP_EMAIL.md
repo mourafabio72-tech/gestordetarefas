@@ -1,4 +1,4 @@
-# Disparo de mensagens — WhatsApp e E-mail (Tareffas)
+# Disparo de mensagens: WhatsApp e E-mail (Tareffas)
 
 Guia completo do sistema de notificações do **Tareffas**: como funciona, como
 configurar, as regras de disparo, e **como reimplementar** o mesmo mecanismo em
@@ -10,8 +10,8 @@ outro app. Escrito a partir do código real (`backend/app/services/*`).
 
 O app dispara **alertas de tarefas** por dois canais:
 
-- **E-mail** (SMTP) — para colaboradores, gestores, supervisores e clientes.
-- **WhatsApp** (API ZapContábil) — para o cliente (empresa).
+- **E-mail** (SMTP): para colaboradores, gestores, supervisores e clientes.
+- **WhatsApp** (API ZapContábil): para o cliente (empresa).
 
 A cada horário configurado, um **agendador** (APScheduler) varre as tarefas em
 aberto, decide **quais** notificar (pela proximidade do prazo) e **quem** recebe
@@ -35,7 +35,7 @@ scheduler (cron) ──> check_and_send_alerts(db, slot)
 | Arquivo | Papel |
 |---|---|
 | `services/config.py` | Config chave-valor (banco + fallback env) + mascaramento de segredos |
-| `services/email.py` | `send_email()` — envio SMTP |
+| `services/email.py` | `send_email()`: envio SMTP |
 | `services/whatsapp.py` | Envio WhatsApp + regras de disparo + destinatários + varredura |
 | `services/scheduler.py` | Agendador (cron) que chama a varredura nos horários |
 | `services/upload.py` | Link público de envio do comprovante (entra na mensagem) |
@@ -77,7 +77,7 @@ Funções-chave:
 
 - `carregar(db)` → dict com defaults sobrescritos pelo que está no banco.
 - `salvar(db, dados)` → grava só as chaves conhecidas; **segredo vazio não
-  sobrescreve** (mantém o valor guardado — permite salvar a tela sem redigitar a
+  sobrescreve** (mantém o valor guardado: permite salvar a tela sem redigitar a
   senha).
 - `para_api(cfg)` → **mascara segredos** para a tela: devolve `smtp_pass=""` +
   `smtp_pass_set=true/false` (nunca manda a senha de volta ao navegador).
@@ -91,25 +91,25 @@ Funções-chave:
 | `smtp_host` | `SMTP_HOST` | servidor SMTP (ex.: `smtp.office365.com`) |
 | `smtp_port` | `SMTP_PORT` (587) | porta |
 | `smtp_user` | `SMTP_USER` | usuário/login SMTP |
-| `smtp_pass` | `SMTP_PASS` | **segredo** — senha/app password |
+| `smtp_pass` | `SMTP_PASS` | **segredo**: senha/app password |
 | `smtp_from` | `SMTP_FROM` | remetente (From) |
 | `smtp_tls` | `SMTP_TLS` (1) | usar STARTTLS |
 | `whatsapp_ativo` | (auto se `ZAP_API_KEY`) | liga/desliga WhatsApp |
 | `zap_url` | `ZAP_API_URL` | base da API ZapContábil |
-| `zap_api_key` | `ZAP_API_KEY` | **segredo** — token Bearer |
+| `zap_api_key` | `ZAP_API_KEY` | **segredo**: token Bearer |
 | `zap_phone` | `ZAP_PHONE` | número de origem (referência) |
 | `zap_connection_from` | `ZAP_CONNECTION_FROM` (0) | id da conexão/instância |
 | `alert_dias_antes` | `ALERT_DAYS_BEFORE` (3) | antecedência do 1º aviso |
 | `alert_gestor_niveis` | `ALERT_GESTOR_NIVEIS` (2) | níveis da cadeia de gestores |
-| `horarios_principal` | — | horários dos avisos principais (CSV `HH:MM`) |
-| `horarios_extra` | — | horários extras (só p/ vence hoje/atrasada) |
+| `horarios_principal` | - | horários dos avisos principais (CSV `HH:MM`) |
+| `horarios_extra` | - | horários extras (só p/ vence hoje/atrasada) |
 | `public_url` | `PUBLIC_URL` | base do link de envio de comprovante |
 
 ---
 
 ## 3. E-mail (SMTP)
 
-`services/email.py` — `send_email(to, subject, body, cfg)`:
+`services/email.py`: `send_email(to, subject, body, cfg)`:
 
 - **No-op gracioso**: se `email_ativo` != 1 ou sem `smtp_host`, retorna
   `{"success": False, "skipped": True}` sem estourar erro.
@@ -124,19 +124,19 @@ with smtplib.SMTP(host, port, timeout=30) as s:
     s.send_message(msg)
 ```
 
-### Passo a passo — Outlook / Microsoft 365
+### Passo a passo: Outlook / Microsoft 365
 
 Na tela **Configuração → Notificações**:
 
 1. **Servidor SMTP:** `smtp.office365.com`
 2. **Porta:** `587`
 3. **Usuário:** o e-mail completo (ex.: `voce@bps4.com.br`)
-4. **Senha:** uma **senha de app** (App Password) — não a senha normal se a
+4. **Senha:** uma **senha de app** (App Password), não a senha normal se a
    conta tem MFA. Gere em *Segurança da conta Microsoft → Senhas de app*.
 5. **Remetente (From):** o mesmo e-mail do usuário.
 6. **TLS:** marcado (STARTTLS na 587).
 7. **Ativar e-mail** → **Salvar**.
-8. **Testar** enviando para você — confira inclusive o spam.
+8. **Testar** enviando para você: confira inclusive o spam.
 
 > Se a organização bloquear **SMTP AUTH**, um admin precisa habilitar
 > "Authenticated SMTP" para a caixa, ou usar um relay/servidor dedicado.
@@ -145,7 +145,7 @@ Na tela **Configuração → Notificações**:
 
 ## 4. WhatsApp (API ZapContábil)
 
-`services/whatsapp.py` — `send_whatsapp_message(phone, message, cfg)`:
+`services/whatsapp.py`: `send_whatsapp_message(phone, message, cfg)`:
 
 ```python
 url = cfg.get("zap_url") or "https://api-bps4.zapcontabil.chat"
@@ -246,11 +246,11 @@ try:
     message += f"\n\n📎 Enviar o comprovante: {link_publico(cfg, tarefa, db)}"
 except Exception:
     pass
-assunto = f"[Tareffas] {tarefa.titulo} — {tarefa.empresa.razao_social}"
+assunto = f"[Tareffas] {tarefa.titulo}: {tarefa.empresa.razao_social}"
 ```
 
 O cliente clica no link (`{public_url}/enviar/{token}`), sobe o arquivo, e a
-**tarefa baixa sozinha** (o token identifica a tarefa — não depende do matcher).
+**tarefa baixa sozinha** (o token identifica a tarefa, não depende do matcher).
 
 ---
 
@@ -262,8 +262,8 @@ O cliente clica no link (`{public_url}/enviar/{token}`), sobe o arquivo, e a
 - `start_scheduler()` (chamado no `main.py`, no startup):
   - cria um job por horário de `horarios_principal` e `horarios_extra`
     (ids `alerta_<slot>_<HHMM>`), cada um chamando `scheduled_check(slot)`;
-  - cria `gerar_mensal` — gera as tarefas do mês **todo dia 1 às 06:00**.
-- `reconfigurar_alertas(db)` — **reagenda** os jobs com os horários atuais.
+  - cria `gerar_mensal`: gera as tarefas do mês **todo dia 1 às 06:00**.
+- `reconfigurar_alertas(db)`: **reagenda** os jobs com os horários atuais.
   É chamado pelo `PUT /configuracao/notificacoes` **ao salvar**, então mudar os
   horários na tela vale na hora, sem reiniciar o serviço.
 - `scheduled_check(slot)` abre uma sessão, chama `check_and_send_alerts(db, slot)`
@@ -300,7 +300,7 @@ O teste usa a config **salva** (`carregar(db)`), então salve antes de testar.
 1. Preencher SMTP → **Ativar** → **Salvar** → **Testar e-mail** para você.
 2. Preencher ZAP → **Ativar** → **Salvar** → **Testar WhatsApp** (`55DDDNUMERO`).
 3. Fim-a-fim: crie uma tarefa com `data_prazo` a `dias_antes`, 1 dia, hoje ou
-   atrasada, e espere o horário — ou chame `check_and_send_alerts(db, "principal")`
+   atrasada, e espere o horário, ou chame `check_and_send_alerts(db, "principal")`
    manualmente num shell para forçar a varredura.
 
 > **Cuidado ao testar SMTP com host inválido + e-mail ativo:** o `starttls`/
@@ -314,7 +314,7 @@ O teste usa a config **salva** (`carregar(db)`), então salve antes de testar.
 - **Segredos nunca no código nem no Git.** `smtp_pass` e `zap_api_key` só via
   tela (gravados no banco) ou env. `para_api` nunca devolve o segredo ao front.
 - **Não commitar** o banco local (`*.db` no `.gitignore`).
-- Em produção (EasyPanel), setar as env como fallback é opcional — o recomendado
+- Em produção (EasyPanel), setar as env como fallback é opcional: o recomendado
   é configurar pela tela (config é **por banco**; não migra de dev → prod).
 - O **link público** de comprovante usa token aleatório (`secrets.token_urlsafe`),
   escopo de uma tarefa só, e recusa empresa bloqueada.
@@ -330,15 +330,15 @@ Passo a passo mínimo para levar esse disparo a outro projeto (FastAPI + SQLAlch
    `config.py` com `DEFAULTS` (lendo env), `carregar/salvar/para_api/ativo` e um
    set `SEGREDOS` para mascarar. **Não** devolver segredo ao front; **não**
    sobrescrever segredo com valor vazio.
-3. **E-mail:** copiar `send_email(to, subject, body, cfg)` — no-op se inativo,
+3. **E-mail:** copiar `send_email(to, subject, body, cfg)`: no-op se inativo,
    STARTTLS + login condicional.
-4. **WhatsApp:** copiar `send_whatsapp_message(phone, message, cfg)` — POST
+4. **WhatsApp:** copiar `send_whatsapp_message(phone, message, cfg)`: POST
    `"{zap_url}/api/send/{phone}"` com Bearer e `connectionFrom`. Ajustar ao
    provedor se não for ZapContábil (o contrato muda pouco: URL + token + body).
 5. **Regras + destinatários:** adaptar `should_notify` (proximidade do prazo) e
    `destinatarios_alerta` (quem/qual canal) ao seu modelo de dados. Deduplicar
    e-mails; excluir bloqueados.
-6. **Varredura:** `check_and_send_alerts(db, slot)` — carrega config, filtra
+6. **Varredura:** `check_and_send_alerts(db, slot)`: carrega config, filtra
    tarefas abertas, monta mensagem, itera destinatários, chama `_enviar`.
 7. **Scheduler:** APScheduler com um job por horário (CronTrigger + timezone),
    `start_scheduler()` no startup e `reconfigurar_alertas()` chamado ao salvar a

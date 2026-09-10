@@ -61,7 +61,7 @@ const erro422 = (lista) => ({ response: { status: 422, data: { detail: lista } }
   ok('403, 404 e queda de rede têm mensagem própria');
 }
 
-// 6. Sempre string, mesmo com entrada estranha — é o que vai para o alert.
+// 6. Sempre string, mesmo com entrada estranha: é o que vai para o alert.
 {
   for (const caso of [undefined, null, {}, { response: {} }, { response: { data: {} } },
                       { response: { data: { detail: [] } } },

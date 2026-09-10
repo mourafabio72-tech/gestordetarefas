@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/agruparTarefas.js — Node puro, sem build.
+// Prova de frontend/src/pages/agruparTarefas.js: Node puro, sem build.
 //   node frontend/provas/prova_agrupar_tarefas.js
 
 import { agruparTarefas, AGRUPAMENTOS, GRUPO_UNICO, SEM_GRUPO } from '../src/pages/agruparTarefas.js';
@@ -66,5 +66,5 @@ eq('nula sem modo', agruparTarefas(null, '', nomes)[0].tarefas, []);
 console.log('\n8) O seletor oferece as três opções, com "não agrupar" por último');
 eq('valores', AGRUPAMENTOS.map(a => a.valor), ['empresa', 'setor', '']);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

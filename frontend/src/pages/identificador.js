@@ -20,11 +20,11 @@ export function normalizar(texto) {
  * O identificador aparece no documento?
  *
  * Devolve `{ estado, aviso }`. Estados:
- *   'vazio': nada digitado ainda
+ *   'vazio':     nada digitado ainda
  *   'sem_texto': não há texto extraído para conferir (PDF escaneado)
- *   'achou': está no documento
+ *   'achou':     está no documento
  *   'nao_achou': NÃO está, e é isso que precisa gritar
- *   'curto': existe, mas é curto demais para distinguir
+ *   'curto':     existe, mas é curto demais para distinguir
  */
 export function conferirIdentificador(identificador, textoDocumento) {
   const alvo = normalizar(identificador);

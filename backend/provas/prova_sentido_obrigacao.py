@@ -2,9 +2,9 @@
 prova_sentido_obrigacao.py: para que lado o documento anda.
 
 São três respostas, não duas:
-  receber: o cliente manda o comprovante e a tarefa baixa pelo e-validador
+  receber:  o cliente manda o comprovante e a tarefa baixa pelo e-validador
   entregar: o escritório anexa a guia e envia; o envio conclui a tarefa
-  interna: não troca documento com ninguém
+  interna:  não troca documento com ninguém
 
 A terceira faltava, e a falta tinha consequência: obrigação interna herdava
 "receber" e, com identificadores cadastrados, passava a EXIGIR um comprovante

@@ -1,4 +1,4 @@
-# Spec — Matriz de Permissões (JSON) do Gestor de Tarefas
+# Spec: Matriz de Permissões (JSON) do Gestor de Tarefas
 
 > Origem: comparação com o cadastro de usuário/permissões do **Acessórias**.
 > Objetivo: substituir o modelo atual de 3 papéis "tudo-ou-nada" por uma
@@ -11,7 +11,7 @@
 > em si é projeto à parte.
 >
 > F2: página `frontend/src/pages/Grupos.jsx` (modal da matriz por usuário) +
-> `frontend/src/permissoes.js` (espelho dos presets — MANTER EM SINCRONIA com
+> `frontend/src/permissoes.js` (espelho dos presets, MANTER EM SINCRONIA com
 > `app/permissoes.py`). Salva só os overrides (diferenças do preset); `{}` limpa.
 >
 > Arquivos: `app/permissoes.py` (presets+resolução), `app/auth.py`
@@ -83,7 +83,7 @@ Cada recurso aceita: `nenhum` | `ver` | `editar` (editar inclui criar/excluir).
 | disparar_emails       | ✔ | ✔ | ✔ | ✘ |
 
 ## 4. Formato do JSON (`usuarios.permissoes`)
-Exemplo — Andreia (Analista) igual ao print do Acessórias, mas liberando
+Exemplo: Andreia (Analista) igual ao print do Acessórias, mas liberando
 edição de empresa (que ela tem lá como "Sim"):
 ```json
 {

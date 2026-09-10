@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/identificador.js — Node puro, sem build.
+// Prova de frontend/src/pages/identificador.js: Node puro, sem build.
 //   node frontend/provas/prova_identificador.js
 
 import { conferirIdentificador, normalizar, trechoMovel } from '../src/pages/identificador.js';
@@ -10,7 +10,7 @@ const eq = (nome, obtido, esperado) => {
 };
 
 const DOC = `RELATÓRIO CONTÁBIL
-Apuração do IRPJ e CSLL — Lucro Presumido
+Apuração do IRPJ e CSLL - Lucro Presumido
 CONTA   DESCRIÇÃO   SALDO
 1.1.01  Caixa       1.000,00`;
 
@@ -37,7 +37,7 @@ eq('quatro já passa', est('IRPJ'), 'achou');
 console.log('\n3b) Trecho que muda a cada documento');
 // O candidato sugerido para um DARF veio "2089 IRPJ - LUCRO PRESUMIDO 45.410,58
 // 45.410,58": o valor do imposto está dentro. Casaria com a guia de abril e com
-// nenhuma outra — pior que não casar, porque passa no teste e falha no uso.
+// nenhuma outra: pior que não casar, porque passa no teste e falha no uso.
 const COM_VALOR = 'Documento 2089 IRPJ - LUCRO PRESUMIDO 45.410,58 45.410,58 vencimento 30/04/2026';
 eq('valor em reais é acusado', est('2089 IRPJ - LUCRO PRESUMIDO 45.410,58', COM_VALOR), 'volatil');
 eq('e o aviso diz o que é', conferirIdentificador('45.410,58', COM_VALOR).aviso.includes('valor em reais'), true);
@@ -57,9 +57,9 @@ eq('documento sem texto extraído avisa que não deu para conferir',
 eq('e diz que não conseguiu ler',
    conferirIdentificador('x', '').aviso.includes('não dá para conferir'), true);
 
-console.log('\n5) Normalização — a mesma do backend');
+console.log('\n5) Normalização: a mesma do backend');
 eq('acento, caixa e espaço', normalizar('  APURAÇÃO   do  IRPJ '), 'apuracao do irpj');
 eq('vazio e nulo', [normalizar(''), normalizar(null)], ['', '']);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);

@@ -1,4 +1,4 @@
-// Prova de frontend/src/pages/filtroModelos.js — Node puro, sem build.
+// Prova de frontend/src/pages/filtroModelos.js: Node puro, sem build.
 //   node frontend/provas/prova_filtro_modelos.js
 
 import { filtrosVazios, temFiltroAtivo, filtrarModelos, valoresDe }
@@ -47,7 +47,7 @@ eq('combinação sem resultado', ids({ ...filtrosVazios(), empresa: 'TROPS', tip
 console.log('\n5) Os selects só oferecem o que existe');
 eq('empresas', valoresDe(MODELOS, 'empresa_nome'), ['Mark Building', 'TROPS']);
 eq('tipos', valoresDe(MODELOS, 'tipo_documento'), ['declaracao', 'guia', 'relatorio']);
-eq('obrigações — o nulo fica de fora', valoresDe(MODELOS, 'obrigacao_nome'),
+eq('obrigações: o nulo fica de fora', valoresDe(MODELOS, 'obrigacao_nome'),
    ['apuracao_ipi', 'apuracao_ipi_extra']);
 eq('lista vazia não quebra', valoresDe([], 'empresa_nome'), []);
 eq('nula também', valoresDe(null, 'empresa_nome'), []);
@@ -56,5 +56,5 @@ console.log('\n6) Bordas');
 eq('modelos nulos', filtrarModelos(null, filtrosVazios()), []);
 eq('filtros nulos devolvem tudo', filtrarModelos(MODELOS, null).length, 4);
 
-console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'} — ${ok} ok, ${falhou} falhou\n`);
+console.log(`\n${falhou === 0 ? 'TUDO VERDE' : 'VERMELHO'}: ${ok} ok, ${falhou} falhou\n`);
 process.exit(falhou === 0 ? 0 : 1);
