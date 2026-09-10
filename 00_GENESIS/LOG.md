@@ -539,3 +539,59 @@ carimbo `20260909-2106`. Dois verificadores adversariais rodaram: o primeiro
 achou o escopo curto (frontend/provas e a documentacao da raiz), que virou o
 segundo lote, e o segundo achou o texto do item 21.6 contradizendo a propria
 evidencia, que virou reescrita do item. Fase 21: done."
+
+## Fase 22, executada em 2026-09-09 a noite
+
+[2026-09-09T21:16:00] fase=22 acao=prova_RED resultado=ok obs="22.1.
+`backend/provas/prova_migrate_silencioso.py`, 9 checagens, escrita ANTES do
+codigo e reprovando o codigo de hoje: `PROVA FALHOU nos itens: [3, 4, 5, 6, 8,
+9]`, exit 1. O cenario nao e um banco que ja nasce completo, e isso e o item 1 da
+propria prova: depois do `create_all` ela DERRUBA tres colunas (`usuarios.telefone`,
+`tarefas.anexo_nome`, `obrigacoes.ancora`) para o banco parecer desatualizado, e
+so entao roda o `migrate` duas vezes. Correcao no meio do caminho, medida e nao
+suposta: a primeira escolha incluia `tarefas.competencia`, e o SQLite recusa
+`DROP COLUMN` de coluna indexada (`error in index ix_tarefas_competencia`). A
+prova estava medindo o proprio tropeco, e a coluna foi trocada por uma sem
+indice. O numero real de migracoes tambem entra aqui: sao 51, e nao 64 como o
+PLANO estimou. 48 `ADD COLUMN` e 3 `ALTER COLUMN`."
+
+[2026-09-09T21:18:00] fase=22 acao=migrate_pergunta_antes resultado=ok obs="22.2 e
+22.3. `init_db.py` ganhou `inspect(engine)`, a lista saiu de dentro da funcao e
+virou a constante `MIGRACOES`, e `migrate()` aceita uma lista propria, que e como
+a prova injeta a migracao quebrada. Uma leitura por TABELA, guardada em cache, e
+nao uma consulta por migracao. As tres que nao sao `ADD COLUMN` respondem pelo
+mesmo `get_columns`: `nullable` decide as duas de `DROP NOT NULL`, e o `length`
+do tipo decide a de `TYPE VARCHAR`. NENHUM `ADD COLUMN IF NOT EXISTS` entrou, e o
+motivo esta no docstring: SQLite nao aceita essa forma e a suite inteira
+quebraria."
+
+[2026-09-09T21:18:30] fase=22 acao=silencio_que_nao_engole resultado=ok obs="22.4.
+O `except` que sobrou continua reportando: item 9 da prova injeta
+`ALTER TABLE tabela_que_nao_existe ADD COLUMN nada` e exige a linha
+`Erro na coluna 'migracao_quebrada_de_proposito'` no stdout.
+DESENHO QUE MUDEI NO MEIO, e o motivo importa: a primeira versao PULAVA migracao
+cuja tabela nao existe, tratando como orfa. Isso fez o item 9 falhar, e o item
+tinha razao contra mim: do lado do banco, tabela sumida por engano e tabela que
+nunca existiu sao a mesma coisa, e pular as duas trocaria erro FALSO por erro
+ESCONDIDO, que e pior. Agora tabela inexistente deixa rodar, e o log diz o que
+houve. A migracao orfa de verdade (`setor_empresa_nullable`, cuja coluna saiu do
+model) ja e resolvida pelo outro caminho: a coluna nao existe, entao o
+`DROP NOT NULL` nao e necessario e nao roda."
+
+[2026-09-09T21:19:00] fase=22 acao=GREEN_e_regressao resultado=ok obs="22.5 e
+22.6. `PROVA OK: 9 checagens verdes`, exit 0. As 27 provas do backend em exit 0.
+E a medida que da nome a fase: o boot de cada prova cuspia 45 linhas de
+`Coluna ... ja existe` mais 3 de `Erro na coluna` (as tres ALTER COLUMN, que
+falhavam com erro de sintaxe em SQLite a CADA rodada de prova). Agora
+`grep -cE 'já existe|Erro na coluna|adicionada com sucesso'` no boot de
+prova_painel, prova_logging e prova_erro_500 devolve ZERO nas tres."
+
+[2026-09-09T21:20:00] fase=22 acao=publicado resultado=ok obs="22.7 e 22.8.
+Travessao nos dois arquivos do diff: nenhum. `grep -rn 'escada:' backend/`: zero
+marcadores, e esta fase nao criou nenhum. Commit `0a67db6`, push, e producao
+responde `{\"status\":\"healthy\",\"build\":\"20260909-2120\"}`, igual ao HEAD."
+
+[2026-09-09T21:21:00] fase=22 acao=matriz resultado=ok obs="22.10. As tres linhas
+da fase 22 preenchidas com a saida real, e a matriz INTEIRA fica sem nenhuma
+linha pendente: `grep -c '| pendente |'` devolve 0. Falta so o 22.9, que e
+CONFERENCIA_VISUAL no log do servico `db` no EasyPanel, e e do usuario."
