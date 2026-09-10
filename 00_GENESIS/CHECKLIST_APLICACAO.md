@@ -98,8 +98,11 @@ próprio processo.
       `curl -sI https://gestordetarefas.zoaria.com.br/api/health | grep -i x-request-id`
       duas vezes, com valores diferentes.
 
-- [ ] **19.4** Linha de log real conferida na aba Logs do EasyPanel, com os oito
+- [x] **19.4** Linha de log real conferida na aba Logs do EasyPanel, com os oito
       campos. CONFERENCIA_VISUAL, porque o log de produção não sai por curl.
+      Conferido em 2026-09-09 pelo usuário, serviço `backend-1`, linha colada no
+      LOG das 21:30. Os oito campos, `user_id` com número e `ip` público de
+      verdade.
 
 - [x] **19.5** `CONFORMIDADE_VAULT.md` sem linha pendente das fases 18 e 19.
 

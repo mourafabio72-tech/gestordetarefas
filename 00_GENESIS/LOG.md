@@ -595,3 +595,29 @@ responde `{\"status\":\"healthy\",\"build\":\"20260909-2120\"}`, igual ao HEAD."
 da fase 22 preenchidas com a saida real, e a matriz INTEIRA fica sem nenhuma
 linha pendente: `grep -c '| pendente |'` devolve 0. Falta so o 22.9, que e
 CONFERENCIA_VISUAL no log do servico `db` no EasyPanel, e e do usuario."
+
+[2026-09-09T21:30:00] fase=19 acao=item_19_4_conferido resultado=ok obs="19.4
+FECHADO. O usuario fez o login em producao e trouxe a linha do servico
+`backend-1`, achada pelo `request_id` que o cabecalho `X-Request-ID` devolveu ao
+navegador dele (`bb3db6abfe6c4866`), que e exatamente o caminho que a ampliacao
+da Fase 18 existe para permitir. A linha, verbatim:
+{\"timestamp\": \"2026-09-10T00:26:22.596201+00:00\", \"level\": \"INFO\",
+\"event\": \"LOGIN_OK\", \"user_id\": 1, \"ip\": \"186.205.160.122\",
+\"request_id\": \"bb3db6abfe6c4866\", \"path\": \"/api/auth/login\",
+\"method\": \"POST\", \"email\": \"fabio@bps4.com.br\"}
+Os oito campos da nota, na ordem da tabela dela, com o `email` como campo extra
+do evento, que a propria nota autoriza no exemplo do LOGIN_FALHA.
+O QUE SO ESTE ITEM PODIA PROVAR, e por isso ele nao era burocracia: o `ip` e
+`186.205.160.122`, publico e do usuario, e nao um `172.16.x` da rede do Docker.
+Nenhuma prova local alcanca isso, porque o `X-Forwarded-For` de verdade so existe
+atras do nginx e do Traefik. O contraste esta na mesma tela: as linhas de acesso
+do uvicorn, ao lado, mostram `172.16.2.4` em todas, que e o proxy. O
+`ip_cliente`, que le a lista de tras para frente com `PROXIES_ANEXADOS = 1`, esta
+acertando o alvo em producao.
+DUAS OBSERVACOES REGISTRADAS, nenhuma delas violacao: (1) o `timestamp` sai em
+UTC (`+00:00`) porque o container roda em UTC, enquanto na maquina local sai
+`-03:00`. A nota pede ISO 8601 COM timezone, e o campo tem timezone, entao esta
+cumprida; quem for correlacionar log com horario de reclamacao precisa lembrar
+das 3 horas. (2) O `email` aparece na linha, e isso e decisao ja registrada no
+LASTRO: a propria nota registra `email_tentado` no exemplo dela, entao nao e PII
+vazando por descuido, e continua fora da lista proibida."
