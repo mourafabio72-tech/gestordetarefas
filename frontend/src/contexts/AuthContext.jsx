@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authAPI } from '../services/api';
 import { colherBilhete } from './bilhete';
+import { sair } from './saida';
 import { decidirEntrada } from './entrada';
 
 const AuthContext = createContext(null);
@@ -86,12 +87,10 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    // Avisa o servidor para a trilha ter fim de sessão, e não só começo. A
-    // falha é engolida de propósito: se a rede cair ou o token já tiver
-    // expirado, a pessoa sai do mesmo jeito. Log não pode prender ninguém
-    // dentro do sistema.
-    authAPI.logout().catch(() => {});
-    localStorage.removeItem('token');
+    // A ordem das operações vive em `saida.js`, com prova própria: aqui ela
+    // seria três linhas dentro de um componente, e foi assim que o token
+    // acabou sendo apagado antes de a requisição sair, gerando 401.
+    sair({ armazenamento: localStorage, chamarLogout: authAPI.logout });
     setUser(null);
   };
 

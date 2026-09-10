@@ -540,3 +540,43 @@ usuario pode fazer: sair do app e achar a linha `LOGOUT` na aba Logs do
 servico `backend`, com o `user_id` dele. O log do EasyPanel nao sai por curl.
 Junto com isso vai ao usuario o achado que registrei as 22:15 e que NAO e
 desta frente: `GET /api/tarefas/{id}/link-envio` nao aplica escopo nenhum."
+
+[2026-09-10T13:30:00] fase=25 acao=defeito_em_producao resultado=corrigido obs="O
+USUARIO TROUXE O LOG E ELE DESMENTIU A FASE. A linha, verbatim do log do
+`frontend-1`: `POST /api/auth/logout HTTP/1.1\" 401 30`, as 13:19:40 UTC. O
+logout devolveu 401 e a linha `LOGOUT` NUNCA foi escrita. O login das 13:19:27
+deu 200, o `/api/auth/me` deu 200 e as quatro chamadas autenticadas seguintes
+deram 200: so o logout falhou.
+CAUSA, lida no codigo e nao suposta: o interceptor de request do axios
+(`services/api.js:10`) le o token do `localStorage` NA HORA DE MONTAR a
+requisicao, e interceptor de axios e assincrono. O meu `logout` fazia
+`authAPI.logout().catch(...)` e `localStorage.removeItem('token')` na linha
+seguinte, sincrona. A remocao rodava ANTES de o interceptor buscar o token, a
+requisicao saia sem `Authorization`, e o servidor recusava. Duas linhas na
+ordem errada.
+POR QUE NADA PEGOU, e esta e a parte que importa: a prova do backend estava
+verde e ESTAVA CERTA, porque a rota devolve 200 com token valido e devolvia
+mesmo. As 29 provas do backend passavam, as 18 do frontend passavam, o
+`npm run build` compilava, o carimbo batia com o HEAD, e o `curl` sem token
+devolvia 401 exatamente como o esperado. TODAS as provas mediam a coisa certa,
+e o defeito morava entre o navegador e a rota, onde nenhuma delas olhava. E o
+mesmo tipo de buraco do `useEffect` do `Empresas.jsx` em 09/09, registrado no
+inicio deste LOG: 'o build compila igual, e nenhuma prova montava o
+componente'. Aconteceu de novo, em outro lugar, um dia depois.
+CORRECAO, no padrao que o projeto ja usa para logica de frontend testavel
+(`colherBilhete`): a ordem saiu do componente e virou
+`src/contexts/saida.js`, com `armazenamento` e `chamarLogout` recebidos como
+parametro. O token e lido ANTES de ser apagado e vai EXPLICITO na chamada, em
+vez de ser buscado de novo. A chamada passou a ir pela instancia PUBLICA do
+axios, e isso conserta um segundo problema que eu nao tinha visto: o
+interceptor de RESPOSTA redireciona para `/login` em qualquer 401, entao o
+logout estava chegando ao destino certo por um caminho de ERRO, por acaso.
+`frontend/provas/prova_saida.js`, 7 checagens, escrita ANTES do modulo e
+reprovando com `ERR_MODULE_NOT_FOUND`. O item 2 e o defeito de producao virado
+prova: confere que o token chega na chamada MESMO ja tendo saido do
+armazenamento, que e a distincao que o codigo antigo nao fazia. Entraram
+tambem o armazenamento que estoura na leitura (Safari em navegacao privada) e
+o caso sem token, que so renderia um 401 no log do servidor com cara de
+tentativa de acesso indevido.
+`PROVA OK: 7 checagens verdes`. Regressao: 19 provas js do frontend e 29 do
+backend em exit 0, `npm run build` em 1.17s."

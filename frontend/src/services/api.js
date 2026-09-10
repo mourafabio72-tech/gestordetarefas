@@ -48,7 +48,17 @@ export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   // Só registra o fim da sessão no log do servidor: o token é JWT e continua
   // valendo até expirar. Quem apaga o token é o navegador, logo depois.
-  logout: () => api.post('/auth/logout'),
+  //
+  // Vai pela instância PÚBLICA, com o token no header explícito, e as duas
+  // coisas são de propósito. O interceptor de request da instância normal
+  // buscaria o token no `localStorage` de onde ele já saiu, e mandaria a
+  // requisição sem credencial: foi esse o 401 visto no log de produção em
+  // 2026-09-10. E o interceptor de resposta redireciona para `/login` em
+  // qualquer 401, o que faria a saída depender de um caminho de erro para
+  // chegar onde deveria chegar por decisão.
+  logout: (token) => apiPublico.post('/auth/logout', null, {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
   me: () => api.get('/auth/me'),
 };
 
