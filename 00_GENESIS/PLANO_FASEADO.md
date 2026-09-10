@@ -8,7 +8,7 @@ A numeração continua de lá.
 
 ## Fase 0: aprovação deste plano
 
-- **Status:** pending
+- **Status:** done (2026-09-09, aprovado sem ajustes; ver LOG das 18:02)
 - **Critério de aceite:** o usuário aprova, e a aprovação fica registrada no LOG.
 
 ## Fase 18: os cinco campos entram sozinhos no `log_event`
@@ -127,9 +127,7 @@ além da pontuação, provado pelo `git diff` lido antes do commit.
 
 ## Fase 22: o boot para de escrever 45 erros falsos no log do banco
 
-- **Status:** codigo fechado e publicado em 2026-09-09. Fecha de vez quando o
-  item 22.9 for conferido: e CONFERENCIA_VISUAL no log do servico `db`, e so o
-  usuario alcanca aquela tela.
+- **Status:** done (2026-09-09)
 - **Aberta em:** 2026-09-09, a pedido do usuário, a partir do log de produção que
   ele mesmo trouxe ao conferir o item 19.4.
 - **Duração estimada:** 1 sessão curta

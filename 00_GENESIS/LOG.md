@@ -667,3 +667,46 @@ batendo com o HEAD. A fase nao muda para done ainda por um motivo so, e ele esta
 no proprio criterio de aceite: o item 22.9 e conferencia visual no log do servico
 `db`, que nao sai por curl. Quando o usuario disser que nao ha mais
 `already exists` la, a fase fecha."
+
+[2026-09-09T21:40:00] fase=22 acao=item_22_9_conferido resultado=ok obs="22.9
+FECHADO, e com a prova mais bonita deste trabalho, porque ela e uma AUSENCIA
+datada. O usuario trouxe o log do servico `db-1`. Antes: cinco boots visiveis no
+trecho (23:58:51, 00:00:04, 00:07:15, 00:08:01 e 00:16:42 UTC), cada um cuspindo
+a lista inteira de `ADD COLUMN` como `ERROR: column ... already exists`, do
+`telefone` ao `nao_se_aplica_em`. Depois: o ULTIMO `already exists` do log e o de
+00:16:42 UTC, que e anterior ao deploy desta fase (commit `0a67db6`, publicado por
+volta de 00:22 UTC). Dali em diante, ate 00:27:30 UTC, o log do banco tem
+`checkpoint starting` e `checkpoint complete`, e mais nada. Zero ERROR, com um
+boot novo dentro do intervalo.
+O RIGOR QUE A PROVA TEM, e o que ela nao tem: ela prova ausencia de erro num
+intervalo em que sabidamente houve boot, e nao a existencia de um boot silencioso
+carimbado. O Postgres nao loga conexao nova por padrao, entao nao ha linha
+positiva a exigir. O trecho colado termina em 00:27:30 e por isso nao cobre o
+segundo deploy, o do conserto (`e8de598`, ~00:31 UTC): quem olhar o log amanha
+confirma de graca, mas o que a fase precisava provar ja esta provado."
+
+[2026-09-09T21:41:00] fase=22 acao=fase_fechada resultado=ok obs="Criterio de
+aceite completo: `prova_migrate_silencioso.py` sai com codigo 0 (11 verdes) e saia
+com 1 no codigo anterior, provado duas vezes (na abertura e depois do achado do
+verificador); a suite inteira de `backend/provas` em exit 0, agora 27; carimbo de
+`/api/health` batendo com o HEAD; e a conferencia visual no log do banco, com
+zero `already exists` depois do deploy. Fase 22: done. Com ela, as fases 18 a 22
+estao todas fechadas."
+
+[2026-09-09T21:42:00] fase=0 acao=trabalho_fechado resultado=ok obs="As fases 0 e
+18 a 22 estao todas em done. O CHECKLIST nao tem um unico item aberto
+(`grep -c '^- \[ \]'` devolve 0), a matriz nao tem linha pendente, e o inventario
+de simplificacoes deliberadas devolve ZERO marcadores `escada:` no projeto
+inteiro: nada foi cortado pela metade neste trabalho.
+O que este trabalho entregou, em uma linha cada: os oito campos obrigatorios
+entram sozinhos em toda linha de log (18); a mudanca foi publicada e provada em
+producao, com a linha real conferida na aba Logs (19); a resposta de erro 500
+parou de sair sem id e sem cabecalho, e agora diz quem derrubou a rota (20); o
+projeto inteiro ficou sem travessao, inclusive em comentario, docstring e
+documentacao (21); e o boot parou de escrever a lista inteira de migracoes como
+erro no log do banco (22).
+Sete verificadores adversariais rodaram ao longo do trabalho. Cinco acharam algo
+real: item marcado sem estar cumprido, `user_id` saindo null com usuario
+autenticado, escopo de varredura curto, texto de item contradizendo a propria
+evidencia, e erro de sintaxe que se repetiria para sempre em SQLite antigo. Todos
+viraram correcao, e nenhum virou marcador de divida."

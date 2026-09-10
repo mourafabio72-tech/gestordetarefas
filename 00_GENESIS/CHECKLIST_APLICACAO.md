@@ -258,8 +258,13 @@ Formato de teste:                  backend/provas/prova_migrate_silencioso.py
 
 - [x] **22.8** Publicado: carimbo de `/api/health` batendo com o HEAD.
 
-- [ ] **22.9** CONFERENCIA_VISUAL, porque log de banco não sai por curl: na aba
+- [x] **22.9** CONFERENCIA_VISUAL, porque log de banco não sai por curl: na aba
       Logs do EasyPanel, depois do deploy, o serviço `db` não mostra nenhum
       `already exists`. Registrar `conferido em <data>`.
+      Conferido em 2026-09-09 pelo usuário, log do serviço `db-1`. O último
+      `already exists` é de 00:16:42 UTC, ANTERIOR ao deploy desta fase. Do
+      deploy em diante, no intervalo que vai até 00:27:30 UTC e que contém um
+      boot novo, o log traz só `checkpoint starting` e `checkpoint complete`:
+      zero ERROR.
 
 - [x] **22.10** Matriz `CONFORMIDADE_VAULT.md` com as linhas desta fase preenchidas.
