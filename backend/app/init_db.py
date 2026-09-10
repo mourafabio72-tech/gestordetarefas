@@ -1,77 +1,146 @@
 import os
-from sqlalchemy import text
+import re
+from sqlalchemy import inspect, text
 from .database import engine, SessionLocal
 from .models import Usuario
 from .auth import get_password_hash
 
-def migrate():
-    migrations = [
-        ("telefone", "ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"),
-        ("gestor_id", "ALTER TABLE usuarios ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
-        ("grupo", "ALTER TABLE usuarios ADD COLUMN grupo VARCHAR(20) DEFAULT 'usuario'"),
-        ("data_vencimento", "ALTER TABLE tarefas ADD COLUMN data_vencimento TIMESTAMP"),
-        ("gera_multa", "ALTER TABLE tarefas ADD COLUMN gera_multa BOOLEAN DEFAULT FALSE"),
-        ("regime_tributario", "ALTER TABLE empresas ADD COLUMN regime_tributario VARCHAR(30) DEFAULT 'indefinido'"),
-        ("segmento", "ALTER TABLE empresas ADD COLUMN segmento VARCHAR(30)"),
-        ("data_prazo_nullable", "ALTER TABLE tarefas ALTER COLUMN data_prazo DROP NOT NULL"),
-        ("permissoes", "ALTER TABLE usuarios ADD COLUMN permissoes TEXT"),
-        ("obrigacao_id", "ALTER TABLE tarefas ADD COLUMN obrigacao_id INTEGER REFERENCES obrigacoes(id)"),
-        ("competencia", "ALTER TABLE tarefas ADD COLUMN competencia VARCHAR(7)"),
-        ("identificadores", "ALTER TABLE obrigacoes ADD COLUMN identificadores VARCHAR(200)"),
-        ("sentido", "ALTER TABLE obrigacoes ADD COLUMN sentido VARCHAR(10) DEFAULT 'receber'"),
-        ("identificadores_maior", "ALTER TABLE obrigacoes ALTER COLUMN identificadores TYPE VARCHAR(2000)"),
-        ("saida_nome", "ALTER TABLE tarefas ADD COLUMN saida_nome VARCHAR(200)"),
-        ("saida_token", "ALTER TABLE tarefas ADD COLUMN saida_token VARCHAR(64)"),
-        ("saida_baixada_em", "ALTER TABLE tarefas ADD COLUMN saida_baixada_em TIMESTAMP"),
-        ("saida_downloads", "ALTER TABLE tarefas ADD COLUMN saida_downloads INTEGER DEFAULT 0"),
-        ("acesso_contado", "ALTER TABLE saida_acessos ADD COLUMN contado BOOLEAN DEFAULT TRUE"),
-        ("acesso_envio", "ALTER TABLE saida_acessos ADD COLUMN envio_id INTEGER REFERENCES tarefa_envios(id)"),
-        ("envio_token", "ALTER TABLE tarefa_envios ADD COLUMN token VARCHAR(64)"),
-        ("protocolo_entrega", "ALTER TABLE tarefas ADD COLUMN protocolo_entrega VARCHAR(120)"),
-        ("data_entrega", "ALTER TABLE tarefas ADD COLUMN data_entrega TIMESTAMP"),
-        ("anexo_nome", "ALTER TABLE tarefas ADD COLUMN anexo_nome VARCHAR(200)"),
-        ("usuario_tipo", "ALTER TABLE usuarios ADD COLUMN tipo VARCHAR(20) DEFAULT 'colaborador'"),
-        ("usuario_empresa_id", "ALTER TABLE usuarios ADD COLUMN empresa_id INTEGER REFERENCES empresas(id)"),
-        ("tarefa_supervisor_id", "ALTER TABLE tarefas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
-        ("obrigacao_supervisor_id", "ALTER TABLE obrigacoes ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
-        ("empresa_responsavel_id", "ALTER TABLE empresas ADD COLUMN responsavel_id INTEGER REFERENCES usuarios(id)"),
-        ("empresa_supervisor_id", "ALTER TABLE empresas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
-        ("empresa_bloqueado", "ALTER TABLE empresas ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
-        ("usuario_bloqueado", "ALTER TABLE usuarios ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
-        # setor virou interno/global: relaxa o NOT NULL antigo em produção
-        ("setor_empresa_nullable", "ALTER TABLE setores ALTER COLUMN empresa_id DROP NOT NULL"),
-        ("empresa_grupo", "ALTER TABLE empresas ADD COLUMN grupo VARCHAR(80)"),
-        ("tarefa_upload_token", "ALTER TABLE tarefas ADD COLUMN upload_token VARCHAR(64)"),
-        ("usuario_setor_id", "ALTER TABLE usuarios ADD COLUMN setor_id INTEGER REFERENCES setores(id)"),
-        ("usuario_convite_token", "ALTER TABLE usuarios ADD COLUMN convite_token VARCHAR(64)"),
-        ("usuario_ativado", "ALTER TABLE usuarios ADD COLUMN ativado BOOLEAN"),
-        ("obrigacao_exige_documento", "ALTER TABLE obrigacoes ADD COLUMN exige_documento BOOLEAN"),
-        ("fechamento_cliente", "ALTER TABLE tarefas ADD COLUMN fechamento_cliente DATE"),
-        ("alvo_modo", "ALTER TABLE obrigacoes ADD COLUMN alvo_modo VARCHAR(12) DEFAULT 'regra'"),
-        ("setor_gestor_id", "ALTER TABLE setores ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
-        ("fechamento_tipo", "ALTER TABLE empresas ADD COLUMN fechamento_tipo VARCHAR(20)"),
-        ("fechamento_dia", "ALTER TABLE empresas ADD COLUMN fechamento_dia INTEGER"),
-        ("ancora", "ALTER TABLE obrigacoes ADD COLUMN ancora VARCHAR(20)"),
-        ("ancora_dias_antes", "ALTER TABLE obrigacoes ADD COLUMN ancora_dias_antes INTEGER DEFAULT 0"),
-        ("ancora_tipo_dias", "ALTER TABLE obrigacoes ADD COLUMN ancora_tipo_dias VARCHAR(10) DEFAULT 'uteis'"),
-        # "Não se aplica a esta empresa": a tarefa vai para CANCELADA e estes
-        # campos dizem que foi decisão, e não desistência.
-        ("nao_se_aplica", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica BOOLEAN DEFAULT FALSE"),
-        ("nao_se_aplica_motivo", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_motivo TEXT"),
-        ("nao_se_aplica_por_id", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_por_id INTEGER REFERENCES usuarios(id)"),
-        ("nao_se_aplica_em", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_em TIMESTAMP"),
-    ]
+# A lista vive fora da funcao para a prova poder conferir o schema final contra
+# ela, e para o `migrate` poder receber outra no lugar.
+MIGRACOES = [
+    ("telefone", "ALTER TABLE usuarios ADD COLUMN telefone VARCHAR(20)"),
+    ("gestor_id", "ALTER TABLE usuarios ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
+    ("grupo", "ALTER TABLE usuarios ADD COLUMN grupo VARCHAR(20) DEFAULT 'usuario'"),
+    ("data_vencimento", "ALTER TABLE tarefas ADD COLUMN data_vencimento TIMESTAMP"),
+    ("gera_multa", "ALTER TABLE tarefas ADD COLUMN gera_multa BOOLEAN DEFAULT FALSE"),
+    ("regime_tributario", "ALTER TABLE empresas ADD COLUMN regime_tributario VARCHAR(30) DEFAULT 'indefinido'"),
+    ("segmento", "ALTER TABLE empresas ADD COLUMN segmento VARCHAR(30)"),
+    ("data_prazo_nullable", "ALTER TABLE tarefas ALTER COLUMN data_prazo DROP NOT NULL"),
+    ("permissoes", "ALTER TABLE usuarios ADD COLUMN permissoes TEXT"),
+    ("obrigacao_id", "ALTER TABLE tarefas ADD COLUMN obrigacao_id INTEGER REFERENCES obrigacoes(id)"),
+    ("competencia", "ALTER TABLE tarefas ADD COLUMN competencia VARCHAR(7)"),
+    ("identificadores", "ALTER TABLE obrigacoes ADD COLUMN identificadores VARCHAR(200)"),
+    ("sentido", "ALTER TABLE obrigacoes ADD COLUMN sentido VARCHAR(10) DEFAULT 'receber'"),
+    ("identificadores_maior", "ALTER TABLE obrigacoes ALTER COLUMN identificadores TYPE VARCHAR(2000)"),
+    ("saida_nome", "ALTER TABLE tarefas ADD COLUMN saida_nome VARCHAR(200)"),
+    ("saida_token", "ALTER TABLE tarefas ADD COLUMN saida_token VARCHAR(64)"),
+    ("saida_baixada_em", "ALTER TABLE tarefas ADD COLUMN saida_baixada_em TIMESTAMP"),
+    ("saida_downloads", "ALTER TABLE tarefas ADD COLUMN saida_downloads INTEGER DEFAULT 0"),
+    ("acesso_contado", "ALTER TABLE saida_acessos ADD COLUMN contado BOOLEAN DEFAULT TRUE"),
+    ("acesso_envio", "ALTER TABLE saida_acessos ADD COLUMN envio_id INTEGER REFERENCES tarefa_envios(id)"),
+    ("envio_token", "ALTER TABLE tarefa_envios ADD COLUMN token VARCHAR(64)"),
+    ("protocolo_entrega", "ALTER TABLE tarefas ADD COLUMN protocolo_entrega VARCHAR(120)"),
+    ("data_entrega", "ALTER TABLE tarefas ADD COLUMN data_entrega TIMESTAMP"),
+    ("anexo_nome", "ALTER TABLE tarefas ADD COLUMN anexo_nome VARCHAR(200)"),
+    ("usuario_tipo", "ALTER TABLE usuarios ADD COLUMN tipo VARCHAR(20) DEFAULT 'colaborador'"),
+    ("usuario_empresa_id", "ALTER TABLE usuarios ADD COLUMN empresa_id INTEGER REFERENCES empresas(id)"),
+    ("tarefa_supervisor_id", "ALTER TABLE tarefas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+    ("obrigacao_supervisor_id", "ALTER TABLE obrigacoes ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+    ("empresa_responsavel_id", "ALTER TABLE empresas ADD COLUMN responsavel_id INTEGER REFERENCES usuarios(id)"),
+    ("empresa_supervisor_id", "ALTER TABLE empresas ADD COLUMN supervisor_id INTEGER REFERENCES usuarios(id)"),
+    ("empresa_bloqueado", "ALTER TABLE empresas ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
+    ("usuario_bloqueado", "ALTER TABLE usuarios ADD COLUMN bloqueado BOOLEAN DEFAULT FALSE"),
+    # setor virou interno/global: relaxa o NOT NULL antigo em produção
+    ("setor_empresa_nullable", "ALTER TABLE setores ALTER COLUMN empresa_id DROP NOT NULL"),
+    ("empresa_grupo", "ALTER TABLE empresas ADD COLUMN grupo VARCHAR(80)"),
+    ("tarefa_upload_token", "ALTER TABLE tarefas ADD COLUMN upload_token VARCHAR(64)"),
+    ("usuario_setor_id", "ALTER TABLE usuarios ADD COLUMN setor_id INTEGER REFERENCES setores(id)"),
+    ("usuario_convite_token", "ALTER TABLE usuarios ADD COLUMN convite_token VARCHAR(64)"),
+    ("usuario_ativado", "ALTER TABLE usuarios ADD COLUMN ativado BOOLEAN"),
+    ("obrigacao_exige_documento", "ALTER TABLE obrigacoes ADD COLUMN exige_documento BOOLEAN"),
+    ("fechamento_cliente", "ALTER TABLE tarefas ADD COLUMN fechamento_cliente DATE"),
+    ("alvo_modo", "ALTER TABLE obrigacoes ADD COLUMN alvo_modo VARCHAR(12) DEFAULT 'regra'"),
+    ("setor_gestor_id", "ALTER TABLE setores ADD COLUMN gestor_id INTEGER REFERENCES usuarios(id)"),
+    ("fechamento_tipo", "ALTER TABLE empresas ADD COLUMN fechamento_tipo VARCHAR(20)"),
+    ("fechamento_dia", "ALTER TABLE empresas ADD COLUMN fechamento_dia INTEGER"),
+    ("ancora", "ALTER TABLE obrigacoes ADD COLUMN ancora VARCHAR(20)"),
+    ("ancora_dias_antes", "ALTER TABLE obrigacoes ADD COLUMN ancora_dias_antes INTEGER DEFAULT 0"),
+    ("ancora_tipo_dias", "ALTER TABLE obrigacoes ADD COLUMN ancora_tipo_dias VARCHAR(10) DEFAULT 'uteis'"),
+    # "Não se aplica a esta empresa": a tarefa vai para CANCELADA e estes
+    # campos dizem que foi decisão, e não desistência.
+    ("nao_se_aplica", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica BOOLEAN DEFAULT FALSE"),
+    ("nao_se_aplica_motivo", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_motivo TEXT"),
+    ("nao_se_aplica_por_id", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_por_id INTEGER REFERENCES usuarios(id)"),
+    ("nao_se_aplica_em", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_em TIMESTAMP"),
+]
 
-    for col_name, sql in migrations:
+_ADD = re.compile(r"ALTER TABLE (\w+) ADD COLUMN (\w+)", re.I)
+_DROP_NOT_NULL = re.compile(
+    r"ALTER TABLE (\w+) ALTER COLUMN (\w+) DROP NOT NULL", re.I)
+_TIPO_MAIOR = re.compile(
+    r"ALTER TABLE (\w+) ALTER COLUMN (\w+) TYPE VARCHAR\((\d+)\)", re.I)
+
+
+def _colunas(insp, tabela, cache):
+    """Colunas de uma tabela, lidas UMA vez por tabela e guardadas."""
+    if tabela not in cache:
+        cache[tabela] = {c["name"]: c for c in insp.get_columns(tabela)}
+    return cache[tabela]
+
+
+def _precisa_rodar(insp, sql, cache, tabelas):
+    """Pergunta ao banco se esta migracao ainda tem o que fazer.
+
+    Perguntar antes e o que troca dezenas de `ERROR: column ... already exists`
+    por silencio. Nao e frescura de log: erro de migracao de VERDADE morava no
+    meio dessas linhas, e por isso ninguem olhava nenhuma.
+
+    Nao usa `ADD COLUMN IF NOT EXISTS` de proposito. As provas deste projeto
+    rodam em SQLite, que nao aceita essa forma, e a suite inteira quebraria. O
+    `inspect` do SQLAlchemy ja vem instalado e responde pelos dois bancos.
+    """
+    for regex, decidir in (
+        (_ADD, lambda m, cols: m.group(2) not in cols),
+        # `nullable` e o tipo vem no mesmo `get_columns`, entao as tres
+        # migracoes que nao sao ADD COLUMN respondem pelo mesmo caminho.
+        (_DROP_NOT_NULL,
+         lambda m, cols: m.group(2) in cols and not cols[m.group(2)].get("nullable", True)),
+        (_TIPO_MAIOR, lambda m, cols: (
+            m.group(2) in cols
+            and (getattr(cols[m.group(2)]["type"], "length", None) or 0) < int(m.group(3))
+            and getattr(cols[m.group(2)]["type"], "length", None) is not None)),
+    ):
+        m = regex.search(sql)
+        if m:
+            if m.group(1).lower() not in tabelas:
+                # Tabela que nao existe: NAO se pula em silencio. Do lado do
+                # banco, tabela sumida por engano e tabela que nunca existiu sao
+                # a mesma coisa, e pular as duas trocaria erro falso por erro
+                # ESCONDIDO, que e pior. Deixa rodar, e o log diz o que houve.
+                return True
+            return decidir(m, _colunas(insp, m.group(1), cache))
+    # Forma que este codigo nao conhece: tenta, e o erro aparece no log.
+    return True
+
+
+def migrate(migracoes=None):
+    """Aplica so o que falta, e cala a boca sobre o que ja esta feito."""
+    migracoes = MIGRACOES if migracoes is None else migracoes
+    insp = inspect(engine)
+    tabelas = {t.lower() for t in insp.get_table_names()}
+    cache = {}
+
+    for col_name, sql in migracoes:
+        if not _precisa_rodar(insp, sql, cache, tabelas):
+            continue
         with engine.begin() as conn:
             try:
                 conn.execute(text(sql))
                 print(f"Coluna '{col_name}' adicionada com sucesso!")
             except Exception as e:
+                # A rede continua aqui: dois containers subindo ao mesmo tempo
+                # podem disputar a mesma migracao, e quem perder a corrida ve o
+                # erro do banco. Raro, e honesto de registrar quando acontece.
                 if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
                     print(f"Coluna '{col_name}' já existe.")
                 else:
                     print(f"Erro na coluna '{col_name}': {e}")
+        cache.pop(_tabela_do_sql(sql), None)
+
+
+def _tabela_do_sql(sql):
+    m = re.search(r"ALTER TABLE (\w+)", sql, re.I)
+    return m.group(1) if m else None
 
 
 def alcance_do_alerta():
