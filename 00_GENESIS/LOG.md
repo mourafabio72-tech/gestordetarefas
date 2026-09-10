@@ -580,3 +580,20 @@ o caso sem token, que so renderia um 401 no log do servidor com cara de
 tentativa de acesso indevido.
 `PROVA OK: 7 checagens verdes`. Regressao: 19 provas js do frontend e 29 do
 backend em exit 0, `npm run build` em 1.17s."
+
+[2026-09-10T13:40:00] fase=25 acao=correcao_publicada resultado=ok obs="Commit
+`561214f`, push com `git ls-remote` NO SERVIDOR confirmando o ref
+(`561214f7b97eac54...`), e o webhook publicou sozinho.
+QUEM PROVA ESTA CORRECAO E O BUNDLE, E NAO O CARIMBO, porque o diff e de
+frontend. O bundle no ar mudou de `index-D6KJd01Y.js` para `index-DSLBXDBs.js`,
+e a prova nao e o NOME e sim o conteudo: o md5 do arquivo local e do baixado de
+producao e o mesmo, `7f379efe05b0b12e71eca2b0b5a1f031`.
+O CARIMBO DO BACKEND CONTINUA `20260909-2242`, E ISSO ESTA CERTO. O commit
+mexeu em `frontend/src` e no `00_GENESIS`, e nenhum dos dois entra na imagem do
+backend: o `COPY` do Docker tem cache por conteudo, a camada nao muda e o
+carimbo fica no commit anterior. E a regra que o `CLAUDE.md` da vault ja
+registra desde 03/09, e que ja me fez errar duas vezes: carimbo velho nao e
+prova de deploy parado, e antes de acusar o webhook compara-se com o HEAD e
+confere-se se houve commit que MUDE aquela imagem.
+Falta o item 25.5, que continua sendo do usuario: sair do app de novo e achar a
+linha `LOGOUT` no log do `backend`."
