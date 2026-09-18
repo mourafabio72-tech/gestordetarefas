@@ -176,3 +176,20 @@ Linhas novas, todas pendentes.
 | Sem_Travessao | "Nunca usar o caractere travessão (em-dash, `—`) em lugar nenhum" | travessão em arquivo tocado | fases 32 e 33 | `grep -n "—\|–"` vazio nas linhas `+` | `grep -n "—\|–"` rc=1 em `routes/obrigacoes.py`, `routes/empresas.py`, `prova_gerar_log.py`, `Obrigacoes.jsx`, `recorteGeracao.js`, `prova_recorte_regime.js` | ok |
 | Portugues_BR_Acentuacao | "Todo texto que o usuário final vai LER deve estar em português brasileiro com acentuação completa" | "regime tributario", "Proxima" na tela | fase 33 | leitura do diff frase a frase | leitura frase a frase das 12 strings novas (rótulos, 3 `title`, contagem, resumo, 3 bloqueios) pelo principal e pelo verificador de conformidade: acento, concordância e crase ok; `pasquale.py` ausente, declarado | ok |
 | Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | fechar sem prova em produção | fase 34 | carimbo igual ao HEAD, curl do bundle, conferência do usuário | carimbo `20260918-1847` = HEAD `b612b2d`; bundle com `Por regime tribut` (1); token inventado 404; usuário: "está ok" em 2026-09-18 | ok |
+| TDD_RED_GREEN_REFACTOR | "escreve-se o teste ANTES do codigo" | prova que passa de primeira | fases 35 e 36 | as duas provas com exit 1 antes e 0 depois, saídas no LOG | | pendente |
+| Padrao_Validacao_de_Input | "Validação acontece no servidor." | flag checada só na tela; lista de ids sem validação | rotas de não se aplica e desvincular | itens (a) da 35 e (d), (e) da 36 | | pendente |
+| Nunca_DELETE_Fisico | "Regra inegociável em qualquer sistema, qualquer modo, qualquer tabela." | `DELETE` ou `db.delete` no cancelamento | `aplicar_excecao` | grep de `delete` na função vazio; tarefas canceladas continuam no banco (prova) | | pendente |
+| Escada_Preguica_de_Codigo | "Perda de dados: transacao, rollback" | lote aplicado pela metade | desvincular | item (d) da 36: pedido com uma inválida não muda nada | | pendente |
+| Padrao_Mass_Assignment | "Backend define a whitelist de campos editaveis." | campo a mais aceito no desvincular | body do desvincular | `extra="forbid"`; item (d) da 36 | | pendente |
+| Padrao_Logging_Estruturado | "mutação de dado crítico SEMPRE entram" | cancelamento em lote sem linha | fases 35 e 36 | itens (f) das duas provas | | pendente |
+| Sem_Select_Nativo | "Nunca usar `<select>` nativo." | `<select` no modal do Desvincular | fase 36 | grep no bloco do modal vazio | | pendente |
+| Padrao_Estado_Vazio | "Três estados distintos com textos diferentes" | lista vazia sem texto, ou o mesmo texto para "nada escolhido" e "nada encontrado" | modal do Desvincular | CONFERENCIA_VISUAL | | pendente |
+| Sempre_Mostrar_Loading | "Os três juntos. Não basta um." | clique sem spinner | as duas janelas | grep de `Loader2`/`animate-spin` no bloco; CONFERENCIA_VISUAL | | pendente |
+| Padrao_Modal | botão genérico "OK"/"Sim" proibido; ação destrutiva em `.btn-perigo` | "Confirmar" num botão que cancela tarefas | as duas janelas | grep do texto do botão; `btn-danger` | | pendente |
+| Acao_Primaria_a_Direita | "O botão que executa a ação principal de um bloco fica ancorado na DIREITA" | primário à esquerda ou `flex-1` dividindo | rodapé das duas janelas | CONFERENCIA_VISUAL | | pendente |
+| Sem_Popup_Nativo | "Nunca usar `window.alert`, `window.confirm`, `window.prompt`" | `alert(`/`confirm(` nos fluxos novos | fases 35 e 36 | linhas `+` do diff: 0 | | pendente |
+| Tela_Nao_Tem_Manual | "PROIBIDO usar o parágrafo para compensar rótulo ruim." | parágrafo de manual no topo do modal | fase 36 | CONFERENCIA_VISUAL | | pendente |
+| Padrao_Selecao_em_Lote | "Nunca o do sistema operacional." | `h-4 w-4` nos checkboxes novos | lista de obrigações | grep nas linhas `+` vazio | | pendente |
+| Sem_Travessao / Portugues_BR_Acentuacao | zero travessão; acentuação completa | travessão ou texto sem acento | fases 35 e 36 | grep vazio; leitura do diff | | pendente |
+| Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | fase 37 | carimbo, curls, conferência do usuário | | pendente |
+

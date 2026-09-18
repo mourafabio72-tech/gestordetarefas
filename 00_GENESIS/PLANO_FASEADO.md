@@ -6,13 +6,15 @@
 
 > **modo=autonomo** (escolhido em 2026-09-15)
 
+> **Fases 35 a 37 (2026-09-18, a pedido do usuário):** executar antes das 29, 30 e 31.
+
 > Fases 1 a 26 fechadas, planos nos checkpoints. Aberto em 2026-09-15.
 > Fase 0 deste trabalho: aprovação do usuário. Fase 1 (CLAUDE.md do projeto)
 > já existe desde 16/08 e não se refaz.
 
 ## Fase 0: aprovação
 
-- **Status:** done (aprovado sem ajustes em 2026-09-15; fases 32 a 34 aprovadas em 2026-09-18, estilo tipo 1)
+- **Status:** done (aprovado sem ajustes em 2026-09-15; fases 32 a 34 aprovadas em 2026-09-18, estilo tipo 1; fases 35 a 37 aprovadas em 2026-09-18)
 - **Critério de aceite:** o usuário aprova este plano por escrito no chat.
 
 ---
@@ -217,6 +219,81 @@ Itens:
 
 ---
 
+## Fase 35: "Não se aplica a esta empresa" no menu da tarefa
+
+- **Status:** pending
+- **Duração estimada:** 45 min
+- **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo, Padrao_IDOR, Padrao_Logging_Estruturado, Nunca_DELETE_Fisico, Padrao_Validacao_de_Input, Padrao_Modal, Sempre_Mostrar_Loading, Padrao_Loading_Estado, Acao_Primaria_a_Direita, Sem_Popup_Nativo, Portugues_BR_Acentuacao, Sem_Travessao
+- **Dependências:** nenhuma
+- **Output esperado:** `backend/app/services/excecao.py` novo (ou função no `gerador.py`, decidido no 35.2 pela escada); `routes/tarefas.py` e `Tarefas.jsx` alterados; `backend/provas/prova_nao_se_aplica_lote.py` novo.
+
+O que existe e está desligado: rota `POST /tarefas/{id}/nao-se-aplica` (`routes/tarefas.py:802`) e a janela de motivo (`Tarefas.jsx:1222`). Nenhum item do menu abre a janela desde o commit `3500ca8`, de 09/09.
+
+Itens:
+
+1. **35.1 RED.** Prova escrita antes, com exit 1 no código de hoje:
+   (a) sem a flag `alocar_obrigacao`, a rota devolve 403 e nada muda (hoje basta editar tarefa);
+   (b) com a flag, a tarefa marcada vai para cancelada com `nao_se_aplica`, motivo, autor e data;
+   (c) as OUTRAS tarefas em aberto (pendente, em andamento, atrasada) da mesma obrigação e empresa, de outras competências, também vão para cancelada com o mesmo motivo;
+   (d) tarefa concluída da mesma obrigação e empresa não muda; tarefa de outra empresa ou de outra obrigação não muda;
+   (e) a exceção nasce uma vez só, e a próxima geração não cria a tarefa para essa empresa;
+   (f) uma linha `EDICAO_REGISTRO_CRITICO` com `tabela="tarefa"`, `lote=True`, `acao="nao_se_aplica"` e a contagem de canceladas, além da `CRIACAO_REGISTRO_CRITICO` da exceção que já existe;
+   (g) não-regressão medida antes: tarefa avulsa continua 422, tarefa fora do escopo continua 404, motivo com menos de 3 letras continua 422.
+2. **35.2** Uma função só, `aplicar_excecao(db, obrigacao_id, empresa_id, motivo, usuario)`, cria a exceção (idempotente, como hoje) e cancela as abertas em uma transação. A rota passa a usar `require_flag("alocar_obrigacao")` e chama a função. Soft sempre: `UPDATE` de status, nunca `DELETE`.
+3. **35.3** Menu ⋯ (`Tarefas.jsx:~717`): item "Não se aplica a esta empresa", ícone `Ban`, entre Editar e Cancelar tarefa, só quando `ativa && tarefa.obrigacao_id && user.permissoes_efetivas.alocar_obrigacao` (precedente: `Documentos.jsx:35`).
+4. **35.4** Janela existente revisada: texto diz que as outras tarefas em aberto da mesma obrigação também saem; botão primário `btn-danger` com texto de ação ("Não se aplica"), à direita; enquanto envia, botão desabilitado, texto no gerúndio e spinner; erro aparece dentro da janela, sem `alert()`.
+5. **35.5 GREEN, suíte, build, gates.** Prova em exit 0; suítes do backend e do frontend em exit 0; build; travessão, hex e popup vazios nas linhas `+`.
+6. **35.6 Conferência visual local:** o item aparece para admin e gestor e some para analista; a janela cancela a tarefa e as irmãs abertas.
+
+**Critério de aceite:** prova 1 antes e 0 depois; suítes verdes; conferência visual no LOG.
+
+---
+
+## Fase 36: Desvincular escolhe as obrigações e respeita a regra
+
+- **Status:** pending
+- **Duração estimada:** 70 min
+- **Notas:** as da fase 35, mais Padrao_Mass_Assignment, Sem_Select_Nativo, Componente_SelectBusca, Padrao_Estado_Vazio, Padrao_Selecao_em_Lote (precedente `check-app`), Tela_Nao_Tem_Manual, Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela
+- **Dependências:** fase 35 (usa `aplicar_excecao`)
+- **Output esperado:** `routes/obrigacoes.py` e `Obrigacoes.jsx` alterados; `frontend/src/components/SelectBusca.jsx` novo; `backend/provas/prova_desvincular_regra.py` novo.
+
+Itens:
+
+1. **36.1 RED backend.** Prova com exit 1 hoje:
+   (a) `GET /obrigacoes/alcance-empresa/{empresa_id}` devolve as obrigações ATIVAS que alcançam a empresa, cada uma com `via` (`regra`, `vinculo` ou `ambos`) e quantas tarefas em aberto ela tem ali; não lista a que já tem exceção;
+   (b) `POST /obrigacoes/desvincular-empresa` com `empresa_id`, `obrigacao_ids` (lista de inteiros, não vazia) e `motivo` (3 a 500): tira o vínculo à mão quando existe, cria a exceção quando a empresa entra pela regra, e cancela as tarefas em aberto daquelas obrigações para aquela empresa;
+   (c) depois disso, a geração do mês não cria tarefa dessas obrigações para essa empresa, e cria das outras;
+   (d) validação: lista vazia, id que não é número, motivo curto, campo a mais (`extra="forbid"`) dão 422; obrigação que não alcança a empresa, ou que não existe, dá 422 e NADA muda (tudo ou nada);
+   (e) sem a flag `alocar_obrigacao`, 403 nas duas rotas;
+   (f) uma linha de log por chamada, com a contagem de exceções criadas, vínculos removidos e tarefas canceladas, sem razão social.
+2. **36.2 GREEN backend.** Rota nova de alcance e a de desvincular reescrita em cima de `aplicar_excecao`, numa transação só.
+3. **36.3 SelectBusca.** Componente pequeno em `src/components/SelectBusca.jsx`: campo de busca, lista filtrada, escolha única, sem `<select>`. Usado só neste modal.
+4. **36.4 Modal reescrito.** Empresa pelo SelectBusca; lista das obrigações que a alcançam, com `check-app`, etiqueta "pela regra" ou "vinculada" e "N em aberto"; "Marcar todas" e "Limpar"; motivo obrigatório; estado vazio quando a empresa não recebe nenhuma obrigação; botão `btn-danger` "Desvincular N obrigação(ões)" à direita, com spinner e texto no gerúndio; resultado e erro dentro do modal, sem `confirm()` nem `alert()`. O botão "Desvincular empresa" da tela só aparece com a flag.
+5. **36.5 GREEN, suíte, build, gates**, com os mesmos greps da fase 35 e `grep -n "<select"` vazio no modal.
+6. **36.6 Conferência visual local:** escolher a empresa, ver as obrigações com a origem, desvincular duas e conferir que as tarefas em aberto delas saíram.
+
+**Critério de aceite:** prova 1 antes e 0 depois; suítes verdes; conferência visual no LOG; CONFORMIDADE sem linha pendente das fases 35 e 36.
+
+---
+
+## Fase 37: publicar as fases 35 e 36
+
+- **Status:** pending
+- **Duração estimada:** 20 min
+- **Notas:** Fechar_Tarefa_Rodar_Verifica
+- **Dependências:** fases 35 e 36
+
+Itens:
+
+1. **37.1** Suítes e build verdes; `COPY . .` nos dois Dockerfile conferido (o componente e a prova são arquivos novos).
+2. **37.2** Push, `git ls-remote`, carimbo de `/api/health` igual ao HEAD.
+3. **37.3** Prova de fora, sem login: o bundle servido contém `Não se aplica a esta empresa` e `pela regra`; as duas rotas sem login devolvem 401.
+4. **37.4** Conferência do usuário em produção, na Trops: desvincular `calculo_difal`, `entrega_DeSTDA` e `entrega_dirb` (ou as que ele escolher) e ver as tarefas em aberto delas sumirem da lista.
+
+**Critério de aceite:** carimbo igual ao HEAD; os curls; conferência do usuário no LOG.
+
+---
+
 ## Fora de escopo (cortado pela escada ou por decisão)
 
 - **`alert()` e `prompt()` nativos já existentes em `Tarefas.jsx`** (`:305`, `:498`, `:500`, `:503` e outros): violam `Sem_Popup_Nativo`, mas são anteriores e espalhados pela tela. Código novo deste trabalho não usa nenhum. Volta como trabalho próprio de tela.
@@ -238,3 +315,13 @@ Itens:
 - **2026-09-15:** aberto com as fases 27 a 31. Sete decisões do usuário antes da primeira linha, em duas rodadas; a segunda nasceu da `Padrao_Toggle_Tipos`, conferida pelo principal depois de o batedor ter lido errado.
 - **2026-09-18:** acrescentadas as fases 32 a 34 (recorte por regime na geração e log da geração em lote). Quatro decisões do usuário numa rodada (1a, 2b, 3a, 4a). A fase 32 nasceu da ficha de segurança, confirmada no código pelo principal.
 - **2026-09-18, fase 32:** o verificador de segurança achou o irmão da geração do mês, `POST /empresas`, que gera as tarefas da empresa nova em lote sem linha de tarefa. Entrou na própria fase, com RED próprio, sem pergunta ao usuário: é achado de verificador sobre o mesmo critério de aceite, e o precedente é a fase 23 (sete rotas irmãs). O item 32.2 dizia `log_event` só em `gerar_competencia`; a trava que ele protegia, `gerador.py` sem diff, continua de pé.
+- **2026-09-18, fases 35 a 37:** abertas a pedido do usuário depois de ver 37 tarefas da Trops que não se aplicavam. Diagnóstico medido no código: o Desvincular só tirava vínculo à mão, e a regra de regime em branco alcança todas as empresas; o "Não se aplica" existia sem item de menu desde `3500ca8`. Quatro decisões numa rodada (1a, 2a, 3a, 4a). Executam antes das 29 a 31.
+
+## Fora de escopo das fases 35 a 37
+
+- **Os outros 66 `<select>` nativos do projeto:** o SelectBusca nasce para o modal do Desvincular, e o resto volta num trabalho de revisão das telas.
+- **Tamanho de modal em `vw` (Padrao_Modal):** o projeto usa `max-w-*` do Tailwind em todos os modais; trocar só estes criaria dois padrões na mesma tela. Declarado como desvio do projeto.
+- **ESC e clique fora:** os modais do projeto já não fecham por nenhum dos dois; nada a fazer.
+- **Desfazer em lote:** a exceção se desfaz uma a uma no cadastro da obrigação, como hoje. Tarefa cancelada não volta sozinha ao desfazer (regra de 09/09). Volta se aparecer desvinculação errada em massa.
+- **Desvincular a empresa de TODAS de uma vez:** decisão 1a. "Marcar todas" na lista cobre o caso com um clique.
+- **Flag nova de permissão:** usa a `alocar_obrigacao`, que já existe. A `Matriz_VER_EDITAR` manda não criar ação além de ver e editar; as flags do projeto são anteriores a este trabalho (`PERMISSOES_SPEC.md`), e nenhuma nova entra.

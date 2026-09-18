@@ -80,3 +80,21 @@ Descartadas, com motivo: `Padrao_Modal_Popup_Centrado` (não há SelectBusca no 
 `Forca_Bruta_Login`, `Timeout_de_Sessao`, `Vazamento_de_Chaves`, `Controle_de_IP`,
 `Admin_Inicial_Padrao`, `Auto_Liberacao_por_Grupo`, `Painel_Desenvolvedor` (nenhuma toca
 esta mudança). `Padrao_Texto_e_Linguagem` e `70_ESTILO/` não existem nesta vault.
+
+## Fases 35 a 37 (2026-09-18)
+
+| Nota | Como chegou | Trecho que importa | Fase |
+|---|---|---|---|
+| 08_Processo_Dev/Brainstorming_Socratico_por_Tarefa | skill genesis-iniciar, modo ampliação | "2 a 4 perguntas curtas ... ANTES de escrever a primeira linha" | 0 |
+| 01_Padroes_Gerais/Padrao_Modal | batedor UI | botão genérico "OK"/"Sim" proibido; ação destrutiva em vermelho; primário à direita | 35, 36 |
+| 07_Regras_de_Ouro/Sem_Select_Nativo e 01_Padroes_Gerais/Componente_SelectBusca | batedor UI | "Nunca usar `<select>` nativo." | 36 |
+| 01_Padroes_Gerais/Padrao_Loading_Estado e 07_Regras_de_Ouro/Sempre_Mostrar_Loading | batedor UI | "Os três juntos. Não basta um." | 35, 36 |
+| 01_Padroes_Gerais/Padrao_Estado_Vazio | batedor UI | três estados, três textos | 36 |
+| 01_Padroes_Gerais/Acao_Primaria_a_Direita | batedor UI | primário ancorado à direita do bloco | 35, 36 |
+| 01_Padroes_Gerais/Padrao_Formulario | batedor UI | label 13px 600 sem uppercase | 36 |
+| 01_Padroes_Gerais/Padrao_Modal_Popup_Centrado | batedor UI | DESCARTADA: só vale com SelectBusca dentro de `<dialog>`, e o projeto não usa `<dialog>` | - |
+| 01_Padroes_Gerais/Padrao_Origem_Ancorada | batedor UI | menu nasce do controle; o menu ⋯ já abre ancorado, nada muda | - |
+| 02_Seguranca/Padrao_Validacao_de_Input, Mapa_de_Conceitos_de_Seguranca | batedor segurança | validação no servidor; A01 a cada requisição | 35, 36 |
+| 03_Auth_Perfis_Permissoes/Matriz_VER_EDITAR, Perfis_e_Modulos | batedor segurança | "não adiciona ação nova": desvio anterior declarado | 35, 36 |
+| 07_Regras_de_Ouro/Nunca_DELETE_Fisico | batedor segurança | cancelamento é status, nunca DELETE | 35, 36 |
+| 07_Regras_de_Ouro/Escada_Preguica_de_Codigo | batedor segurança | transação em operação de lote; marcador `escada:` | 35, 36 |

@@ -167,3 +167,43 @@ Lidas pelos batedores em 2026-09-18, com as fichas conferidas pelo principal:
 `Mapa_de_Conceitos_de_Seguranca`, `Perfis_e_Modulos`, `Matriz_VER_EDITAR`.
 Lida pelo principal: `08_Processo_Dev/Brainstorming_Socratico_por_Tarefa.md` (126 linhas),
 e `02_Seguranca/Padrao_IDOR.md` conferida nos trechos citados (`:22`, `:26`, `:122`).
+
+---
+
+# Acréscimo de 2026-09-18: "Não se aplica" e Desvincular pela regra (fases 35 a 37)
+
+## O pedido
+
+"A forma como seleciono as empresas × obrigações não está boa, parece que não estão acatando. Tem como criar um botão ou opção nos 3 pontos que desvincule essa tarefa ou obrigação por empresa." Veio com print da Trops Centro de Esp. e Lazer, 37 tarefas de 08/2026 em atraso, várias que não se aplicam a ela.
+
+## Medido no código
+
+- O Desvincular (`routes/obrigacoes.py:273-301`) só tira o vínculo À MÃO. A obrigação alcança pela regra de regime e segmento OU pelo vínculo (`gerador.py:186-195`), e regra em branco quer dizer todas. Por isso "não acata".
+- Ele também tira a empresa de TODAS as obrigações de uma vez, e não mexe em tarefa já gerada.
+- O "Não se aplica a esta empresa" existe desde `3500ca8` (09/09): rota `routes/tarefas.py:802` e janela `Tarefas.jsx:1222`. Nenhum item de menu abre a janela.
+- A tela já conhece as flags do usuário por `user.permissoes_efetivas` (precedente `Documentos.jsx:35`).
+
+## Decisões do usuário (2026-09-18)
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| 1 | Como o Desvincular escolhe | **Empresa + marcar quais obrigações** |
+| 2 | Tarefas em aberto já geradas | **Canceladas junto**, como "não se aplica", com motivo, autor e data; concluída não muda |
+| 3 | Quem pode | **Só quem tem `alocar_obrigacao`** (hoje admin e gestor), nos dois caminhos |
+| 4 | Motivo | **Obrigatório nos dois**; no Desvincular, um motivo para o lote |
+
+## Regras locais novas
+
+1. **Uma função, dois chamadores.** `aplicar_excecao` cria a exceção e cancela as abertas; a rota do "Não se aplica" e a do Desvincular chamam a mesma.
+2. **Tudo ou nada no lote.** Uma obrigação inválida no pedido derruba o pedido inteiro antes de mudar qualquer coisa.
+3. **Soft sempre.** Cancelar é mudar status; nada de `DELETE`.
+
+## Notas que regem este acréscimo
+
+Lidas pelo principal nesta sessão, integrais: `Brainstorming_Socratico_por_Tarefa` (126), `Padrao_Logging_Estruturado` (210), `TDD_RED_GREEN_REFACTOR` (204), `Padrao_IDOR` (199), `Padrao_Mass_Assignment` (210), `Padrao_Selecao_em_Lote` (283), `Tela_Nao_Tem_Manual` (112), `Sistema_de_Estilos` (215), `Verificacoes_Mecanicas_de_Tela` (278), `Protocolo_Revisao_de_Tela` (234), `Portugues_BR_Acentuacao` (165), `Sem_Travessao` (43), `Sem_Popup_Nativo` (116), `Fechar_Tarefa_Rodar_Verifica` (118).
+Fichadas por batedores sonnet em paralelo (fichas conferidas pelo principal): `Padrao_Modal` (406), `Padrao_Modal_Popup_Centrado` (172, não se aplica: o SelectBusca não fica dentro de `<dialog>`), `Sem_Select_Nativo` (66), `Componente_SelectBusca` (84), `Padrao_Loading_Estado` (341), `Sempre_Mostrar_Loading` (94), `Padrao_Formulario` (188), `Padrao_Estado_Vazio` (219), `Acao_Primaria_a_Direita` (162), `Padrao_Origem_Ancorada` (75), `Padrao_Validacao_de_Input` (197), `Mapa_de_Conceitos_de_Seguranca` (509), `Matriz_VER_EDITAR` (132), `Perfis_e_Modulos` (85), `Nunca_DELETE_Fisico` (92), `Escada_Preguica_de_Codigo` (241). Nota de menu de três pontos: não existe na vault.
+
+## Desvios declarados
+
+- **Flag de ação além de ver e editar:** a `Matriz_VER_EDITAR` diz "não adiciona ação nova". As flags do Tareffas são anteriores (`PERMISSOES_SPEC.md`), e este trabalho usa uma que já existe.
+- **Tamanho de modal:** `Padrao_Modal` pede `vw`; o projeto usa `max-w-*` em todos os modais. Mantido, para não haver dois padrões.

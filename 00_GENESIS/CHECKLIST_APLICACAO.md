@@ -73,31 +73,41 @@ Acesso: login por perfil
 
 ## Fase 29: tela
 
-- [ ] 29.1 `prova_sentido_obrigacao.js` falhando antes de `sentidoObrigacao.js` existir
+- [x] 29.1 `prova_sentido_obrigacao.js` falhando antes de `sentidoObrigacao.js` existir
       (TDD_RED_GREEN_REFACTOR)
-- [ ] 29.2 seletor tipo 1: wrapper `role="radiogroup"` com `aria-label`, opções em `<button type="button">` com `aria-checked`
+      EVIDÊNCIA: LOG 2026-09-18T19:08:53, `ERR_MODULE_NOT_FOUND` rc=1 antes de `sentidoObrigacao.js` existir; GREEN `PROVA OK: 9 checagens verdes`
+- [x] 29.2 seletor tipo 1: wrapper `role="radiogroup"` com `aria-label`, opções em `<button type="button">` com `aria-checked`
       PROIBIDO: `type="radio"` com `name="sentido"`; visual de aba (sublinhado); sólido invertido (é do tipo 2)
       PROVA: `grep -n 'name="sentido"' frontend/src/pages/Obrigacoes.jsx` vazio e `grep -n 'role="radiogroup"'` acha 1
       (Padrao_Toggle_Tipos: "Sempre `<button type="button">`" e "Wrapper com `role="radiogroup"` + `aria-label`")
-- [ ] 29.2 escolhido com borda, fundo suave e texto escuro do token: `border-primary-600 bg-primary-50 text-primary-800`
+      EVIDÊNCIA: `grep name="sentido"` rc=1; `role="radiogroup"` em `Obrigacoes.jsx:935` (o grep acha 2: o outro é o da fase 33, `:1036`, que não existia quando este item foi escrito); quatro `<button type="button" role="radio" aria-checked>`
+- [x] 29.2 escolhido com borda, fundo suave e texto escuro do token: `border-primary-600 bg-primary-50 text-primary-800`
       (Padrao_Toggle_Tipos, tipo 1: "borda `var(--cor-primaria)` + fundo `var(--cor-primaria-suave)` + texto `var(--cor-primaria-escura)`", traduzido para o token `primary` do Tailwind)
-- [ ] 29.2 explicação de cada opção no `title`, sem parágrafo fixo embaixo
+      EVIDÊNCIA: classe condicional no botão do seletor, `Obrigacoes.jsx:935` em diante, mesma string do seletor da fase 33
+- [x] 29.2 explicação de cada opção no `title`, sem parágrafo fixo embaixo
       (Tela_Nao_Tem_Manual: "O rótulo do campo, o título da coluna e o `title` do botão carregam a informação.")
-- [ ] 29.2 `bg-[#faf7f0]` removido do bloco
+      EVIDÊNCIA: `title={s.dica}` no botão; as três descrições fixas em `<span class="block text-xs">` saíram da tela e viraram a `dica` de `SENTIDOS` (`sentidoObrigacao.js`); item 2 da prova exige dica em todas
+- [x] 29.2 `bg-[#faf7f0]` removido do bloco
       PROVA: `grep -nE "#[0-9a-fA-F]{6}" frontend/src/pages/Obrigacoes.jsx frontend/src/pages/sentidoObrigacao.js` vazio
       (Sistema_de_Estilos: "o hex nunca aparece na tela")
-- [ ] 29.3 identificadores visíveis por `mostraIdentificadores(form)`, e "Exige documento" por `exigeDocumentoMarcado(form)`
+      EVIDÊNCIA: grep nos dois arquivos rc=1 (LOG 19:11)
+- [x] 29.3 identificadores visíveis por `mostraIdentificadores(form)`, e "Exige documento" por `exigeDocumentoMarcado(form)`
       PROVA: itens (b) e (c) da prova Node
-- [ ] 29.4 quatro checkboxes do bloco com `check-app`
+      EVIDÊNCIA: `Obrigacoes.jsx:501` `mostraIdentificadores(form)`; checkbox Exige documento com `exigeDocumentoMarcado(form)`; itens 5 a 9 da prova, o 8 com as 24 combinações contra oráculo à mão
+- [x] 29.4 quatro checkboxes do bloco com `check-app`
       PROIBIDO: `className="h-4 w-4"` nos checkboxes de Passível de multa, Exige robô, Alerta guia não-lida e Ativa
       PROVA: `grep -n "Passível de multa\|Exige robô\|Alerta guia não-lida\|/> Ativa" -B1 frontend/src/pages/Obrigacoes.jsx` mostra `check-app` nos quatro
       (Verificacoes_Mecanicas_de_Tela: checkbox cru é "o Windows 98")
-- [ ] 29.5 aba "Comprovantes e recibos" e subtítulo coerente
+      EVIDÊNCIA: grep dos quatro rótulos: `Obrigacoes.jsx:923, :950, :964, :967`, todos `className="check-app"`; `h-4 w-4` nas linhas `+`: 0
+- [x] 29.5 aba "Comprovantes e recibos" e subtítulo coerente
       PROVA: `grep -n "Recebidos do cliente" frontend/src` vazio
-- [ ] 29.6 prova Node e as 19 provas do frontend em exit 0; `npm run build` compilando
-- [ ] 29.6 língua: acento completo no texto novo, zero travessão e en-dash
+      EVIDÊNCIA: grep rc=1; aba em `Documentos.jsx:175` "Comprovantes e recibos"; subtítulo cita comprovantes do cliente e recibos do órgão
+- [x] 29.6 prova Node e as 19 provas do frontend em exit 0; `npm run build` compilando
+      EVIDÊNCIA: `provas_front=21 falharam=0` (20 + a nova); `✓ built in 1.16s`
+- [x] 29.6 língua: acento completo no texto novo, zero travessão e en-dash
       PROVA: `grep -n "—\|–"` vazio nos arquivos tocados; leitura do diff frase a frase
       (Portugues_BR_Acentuacao; Revisao_Professor_Pasquale, sem executor nesta vault)
+      EVIDÊNCIA: travessão e en-dash rc=1 nos 4 arquivos, depois de trocar o travessão LITERAL que eu tinha deixado no regex da prova (LOG 19:10:07); leitura frase a frase das strings novas: 4 rótulos, 4 dicas, subtítulo e aba de Documentos; `pasquale.py` ausente, declarado
 - [ ] 29.7 conferência visual local registrada no LOG com data e tela
       (Protocolo_Revisao_de_Tela)
 
@@ -191,4 +201,72 @@ Acesso: login por perfil
       EVIDÊNCIA: `/assets/index-BCa-EY5M.js` com `grep -c "Por regime tribut"` = 1 e o texto `Nenhuma empresa ativa nos regimes marcados`; `GET` e `POST` com arquivo em `/api/publico/tarefa/token-inventado-x` devolvem `404 {"detail":"Link inválido ou expirado."}` (POST sem arquivo dá 422 antes de olhar o token, validação do corpo); `POST /api/obrigacoes/gerar` sem login dá 401
 - [x] 34.5 conferência do usuário em produção colada no LOG
       EVIDÊNCIA: usuário respondeu "está ok" em 2026-09-18, depois de abrir o modal em gestordetarefas.zoaria.com.br (LOG da fase 34)
+      (Fechar_Tarefa_Rodar_Verifica)
+
+---
+
+# "Não se aplica" e Desvincular pela regra (fases 35 a 37, aberto em 2026-09-18)
+
+## Fase 35: "Não se aplica a esta empresa" no menu
+
+- [ ] 35.1 `prova_nao_se_aplica_lote.py` escrita ANTES e saindo com exit 1, saída no LOG
+      PROIBIDO: prova que passa de primeira
+      (TDD_RED_GREEN_REFACTOR)
+- [ ] 35.1 não-regressão verde JÁ no RED: avulsa 422, fora do escopo 404, motivo curto 422
+- [ ] 35.2 rota com `require_flag("alocar_obrigacao")`; sem a flag, 403 e nada muda
+      PROIBIDO: checar a flag só na tela
+      (decisão 3a do usuário; Padrao_Validacao_de_Input: "Validação acontece no servidor")
+- [ ] 35.2 uma função `aplicar_excecao`, usada pela rota; as abertas (pendente, em andamento, atrasada) da mesma obrigação e empresa vão para cancelada com o motivo
+      PROIBIDO: `DELETE FROM tarefas`, `db.delete(tarefa)` no caminho novo; concluída mudando de status
+      PROVA: `grep -n "delete" <função nova>` vazio; itens (c) e (d) da prova
+      (decisão 2a; Nunca_DELETE_Fisico: "Regra inegociável em qualquer sistema, qualquer modo, qualquer tabela.")
+- [ ] 35.2 exceção e cancelamentos num commit só
+      (Escada_Preguica_de_Codigo, guardrail "Perda de dados: transacao, rollback")
+- [ ] 35.2 log `EDICAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, `acao="nao_se_aplica"`, com a contagem; sem razão social
+      (Padrao_Logging_Estruturado)
+- [ ] 35.3 item "Não se aplica a esta empresa" com ícone `Ban`, entre Editar e Cancelar tarefa, só com `ativa && tarefa.obrigacao_id && user?.permissoes_efetivas?.alocar_obrigacao`
+      PROVA: `grep -n "Não se aplica a esta empresa" -B3 frontend/src/pages/Tarefas.jsx` mostra a condição
+- [ ] 35.4 janela: texto fala das outras abertas; botão primário `btn-danger`, texto de ação e à direita; trifeedback ao enviar (desabilita, texto no gerúndio, spinner); erro dentro da janela
+      PROIBIDO: `alert(` e `confirm(` nas linhas `+`; botão "Confirmar" ou "OK"
+      (Padrao_Modal: "texto de botão genérico 'OK'/'Sim'" proibido; Sempre_Mostrar_Loading: "Os três juntos. Não basta um."; Acao_Primaria_a_Direita; Sem_Popup_Nativo)
+- [ ] 35.5 prova em exit 0; suítes do backend e do frontend em exit 0; build ok
+- [ ] 35.5 `grep -n "—\|–"` vazio nos arquivos tocados; hex e popup nas linhas `+`: 0
+      (Sem_Travessao, Sistema_de_Estilos, Sem_Popup_Nativo)
+- [ ] 35.6 conferência visual local registrada no LOG
+
+## Fase 36: Desvincular pela regra
+
+- [ ] 36.1 `prova_desvincular_regra.py` escrita ANTES e saindo com exit 1
+      (TDD_RED_GREEN_REFACTOR)
+- [ ] 36.1 `alcance-empresa` devolve só obrigações ativas que alcançam a empresa, com `via` e `abertas`, e sem as que já têm exceção
+- [ ] 36.2 body do desvincular com `extra="forbid"`, `obrigacao_ids: List[int]` não vazio, `motivo` 3 a 500; lista vazia, texto e campo a mais dão 422
+      (Padrao_Mass_Assignment: "Backend define a whitelist de campos editaveis."; Padrao_Validacao_de_Input)
+- [ ] 36.2 obrigação que não alcança a empresa, ou inexistente, dá 422 e nada muda (tudo ou nada)
+      PROIBIDO: aplicar parte do lote e falhar no meio
+      (Mapa_de_Conceitos_de_Seguranca, A01: "Validar a CADA requisição se o usuário tem direito ao recurso")
+- [ ] 36.2 vínculo à mão removido quando existe; exceção criada quando entra pela regra; abertas canceladas por `aplicar_excecao`
+      PROVA: itens (b) e (c) da prova; geração seguinte não recria
+- [ ] 36.2 403 sem `alocar_obrigacao` nas duas rotas; uma linha de log por chamada, só contagem
+- [ ] 36.3 `SelectBusca.jsx` em `src/components/`, busca e escolha única, sem `<select>`
+      PROIBIDO: `<select` no modal do Desvincular
+      PROVA: `grep -n "<select" ` no bloco do modal vazio
+      (Sem_Select_Nativo: "Nunca usar `<select>` nativo."; Componente_SelectBusca)
+- [ ] 36.4 lista com `check-app`, etiqueta de origem e "N em aberto"; "Marcar todas" e "Limpar"; motivo obrigatório
+      PROIBIDO: `h-4 w-4` nos checkboxes novos
+      (Padrao_Selecao_em_Lote; precedente `check-app`)
+- [ ] 36.4 estado vazio quando a empresa não recebe nenhuma obrigação, e nada escolhido ainda é outro texto
+      (Padrao_Estado_Vazio: "Três estados distintos com textos diferentes")
+- [ ] 36.4 botão `btn-danger` "Desvincular N obrigação(ões)" à direita, trifeedback, resultado e erro dentro do modal; o parágrafo de manual do topo sai
+      PROIBIDO: `confirm(` e `alert(` no fluxo novo; parágrafo explicando a tela no topo
+      (Sem_Popup_Nativo; Tela_Nao_Tem_Manual; Acao_Primaria_a_Direita)
+- [ ] 36.4 botão "Desvincular empresa" da tela só com `alocar_obrigacao`
+- [ ] 36.5 prova, suítes e build verdes; greps de travessão, hex e popup
+- [ ] 36.6 conferência visual local registrada no LOG
+
+## Fase 37: publicar
+
+- [ ] 37.1 suítes e build verdes; `COPY . .` conferido
+- [ ] 37.2 `git ls-remote` e carimbo igual ao HEAD
+- [ ] 37.3 bundle com `Não se aplica a esta empresa` e `pela regra`; 401 sem login nas duas rotas
+- [ ] 37.4 conferência do usuário em produção colada no LOG
       (Fechar_Tarefa_Rodar_Verifica)
