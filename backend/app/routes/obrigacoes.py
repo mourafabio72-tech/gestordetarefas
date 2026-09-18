@@ -227,7 +227,15 @@ def gerar_competencia(
     """Gera as tarefas do mês de entrega informado (empresas da regra ∪ vínculo)."""
     if not (1 <= body.mes <= 12):
         raise HTTPException(status_code=400, detail="Mês inválido (1-12)")
-    return gerar_tarefas(db, body.mes, body.ano, body.obrigacao_ids, body.empresa_ids)
+    r = gerar_tarefas(db, body.mes, body.ano, body.obrigacao_ids, body.empresa_ids)
+    # Uma linha por clique, e não uma por tarefa: mil linhas por geração afogariam
+    # a aba Logs sem dizer nada que a contagem não diga. Só contagem, nunca razão
+    # social nem CNPJ. Sai também com zero criadas, porque é a tentativa que se audita.
+    log_event("CRIACAO_REGISTRO_CRITICO", tabela="tarefa", lote=True, origem="gerar_mes",
+              mes_entrega=r["mes_entrega"], criadas=r["criadas"], puladas=r["puladas"],
+              obrigacoes_no_recorte=len(set(body.obrigacao_ids)) if body.obrigacao_ids else None,
+              empresas_no_recorte=r["empresas_no_recorte"])
+    return r
 
 
 @router.post("/copiar-empresa")

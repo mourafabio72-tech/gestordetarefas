@@ -4,6 +4,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
 import { formatarRazaoSocial } from './razaoSocial';
+import { REGIMES_GERACAO, empresasDosRegimes, idsDoRecorte, podeGerar, nomesDosRegimes } from './recorteGeracao';
 import { estadoDoAlvo, reduzirAlvo, aplicaTodas as calcAplicaTodas, aviso as avisoAlvo } from './alvoObrigacao';
 
 const AJUDA_IDENTIFICADORES =
@@ -131,12 +132,14 @@ export default function Obrigacoes() {
   const [showGerar, setShowGerar] = useState(false);
   const [gerMes, setGerMes] = useState(_hj.getMonth() + 1);
   const [gerAno, setGerAno] = useState(_hj.getFullYear());
-  // Recorte por empresa. `gerTodasEmp` é o interruptor explícito, e não a
-  // ausência de seleção: "não marquei nada" e "quero todas" são intenções
-  // diferentes, e tratá-las como a mesma coisa é o jeito de gerar o escritório
-  // inteiro sem querer.
-  const [gerTodasEmp, setGerTodasEmp] = useState(true);
+  // Recorte por empresa. `gerModo` é a escolha explícita ('todas',
+  // 'escolhidas' ou 'regime'), e não a ausência de seleção: "não marquei nada"
+  // e "quero todas" são intenções diferentes, e tratá-las como a mesma coisa é
+  // o jeito de gerar o escritório inteiro sem querer. A conversão em ids e a
+  // trava do recorte vazio moram em recorteGeracao.js, provadas em Node.
+  const [gerModo, setGerModo] = useState('todas');
   const [gerEmpresas, setGerEmpresas] = useState([]);
+  const [gerRegimes, setGerRegimes] = useState([]);
   const [buscaGerEmp, setBuscaGerEmp] = useState('');
   const MESES_NOME = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   const gerarTarefas = async () => {
@@ -145,7 +148,7 @@ export default function Obrigacoes() {
       // selecionadas quando há seleção; todas as ativas quando não há
       const { data } = await obrigacoesAPI.gerar(gerMes, gerAno,
         selecionados.length ? selecionados : null,
-        gerTodasEmp ? null : gerEmpresas);
+        idsDoRecorte(gerModo, gerEmpresas, gerRegimes, empresas));
       setShowGerar(false);
       const recorte = data.empresas_no_recorte
         ? ` (recorte de ${data.empresas_no_recorte} empresa(s))` : '';
@@ -1004,7 +1007,7 @@ export default function Obrigacoes() {
 
       {showGerar && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
+          <div className="bg-white rounded-xl w-full max-w-xl">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">
                 {selecionados.length ? `Gerar ${selecionados.length} obrigação(ões)` : 'Gerar tarefas do mês'}
@@ -1049,18 +1052,46 @@ export default function Obrigacoes() {
                 return (
                   <div className="border border-gray-200 rounded-lg p-3 space-y-1.5">
                     <p className="text-sm font-medium text-gray-700">Para quais empresas?</p>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="radio" name="ger_alvo_emp" className="h-4 w-4"
-                        checked={gerTodasEmp} onChange={() => setGerTodasEmp(true)} />
-                      <span className="font-medium text-gray-700">Todas as empresas</span>
-                      <span className="text-gray-400 text-xs">cada obrigação vai para quem ela alcança</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="radio" name="ger_alvo_emp" className="h-4 w-4"
-                        checked={!gerTodasEmp} onChange={() => setGerTodasEmp(false)} />
-                      <span className="font-medium text-gray-700">Somente as escolhidas</span>
-                    </label>
-                    {!gerTodasEmp && (
+                    {/* Seletor tipo 1 da Padrao_Toggle_Tipos (multi opções), escolhido
+                        pelo usuário em 2026-09-18: a opção marcada ganha borda, fundo
+                        suave e texto escuro do token primary. A explicação de cada uma
+                        vai no `title`, e não em texto fixo embaixo. */}
+                    <div role="radiogroup" aria-label="Para quais empresas?"
+                      className="inline-flex flex-wrap items-center gap-1 p-[3px] border border-gray-200 rounded-lg bg-white">
+                      {[
+                        ['todas', 'Todas as empresas', 'Cada obrigação vai para as empresas que ela alcança.'],
+                        ['escolhidas', 'Somente as escolhidas', 'Você marca as empresas uma a uma.'],
+                        ['regime', 'Por regime tributário', 'Todas as empresas ativas dos regimes marcados.'],
+                      ].map(([valor, rotulo, dica]) => (
+                        <button key={valor} type="button" role="radio" aria-checked={gerModo === valor}
+                          title={dica} onClick={() => setGerModo(valor)}
+                          className={`h-8 px-2.5 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${gerModo === valor
+                            ? 'border-primary-600 bg-primary-50 text-primary-800'
+                            : 'border-transparent bg-white text-gray-500 hover:text-primary-600'}`}>
+                          {rotulo}
+                        </button>
+                      ))}
+                    </div>
+                    {gerModo === 'regime' && (
+                      <div className="pt-1">
+                        <div className="border border-gray-200 rounded-lg p-3 grid grid-cols-2 gap-x-3 gap-y-1">
+                          {REGIMES_GERACAO.map((r) => (
+                            <label key={r.valor} className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input type="checkbox" className="check-app"
+                                checked={gerRegimes.includes(r.valor)}
+                                onChange={() => setGerRegimes(gerRegimes.includes(r.valor)
+                                  ? gerRegimes.filter((x) => x !== r.valor)
+                                  : [...gerRegimes, r.valor])} />
+                              {r.rotulo} ({empresasDosRegimes(empresas, [r.valor]).length})
+                            </label>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1.5">
+                          {empresasDosRegimes(empresas, gerRegimes).length} empresa(s) no recorte
+                        </p>
+                      </div>
+                    )}
+                    {gerModo === 'escolhidas' && (
                       <div className="pt-1">
                         <div className="flex items-center gap-2 mb-2">
                           <p className="text-xs text-gray-400 flex-1">{gerEmpresas.length} selecionada(s)</p>
@@ -1080,7 +1111,7 @@ export default function Obrigacoes() {
                             <p className="text-xs text-gray-400">Nenhuma empresa encontrada.</p>
                           ) : filtradas.map((e) => (
                             <label key={e.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                              <input type="checkbox" className="h-4 w-4"
+                              <input type="checkbox" className="check-app"
                                 checked={gerEmpresas.includes(e.id)}
                                 onChange={() => setGerEmpresas(gerEmpresas.includes(e.id)
                                   ? gerEmpresas.filter((x) => x !== e.id)
@@ -1090,12 +1121,16 @@ export default function Obrigacoes() {
                             </label>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1.5">
-                          A empresa escolhida só recebe as obrigações que <strong>já a alcançam</strong>.
-                          Escolher aqui não inscreve ninguém numa obrigação: isso é cadastro, e se
-                          faz na obrigação.
-                        </p>
                       </div>
+                    )}
+                    {/* Vale para os dois recortes: escolher empresa ou regime aqui
+                        não inscreve ninguém em obrigação (interseção, gerador.py). */}
+                    {gerModo !== 'todas' && (
+                      <p className="text-xs rounded px-3 py-2 border border-primary-200 bg-primary-100 text-primary-900">
+                        A empresa escolhida só recebe as obrigações que <strong>já a alcançam</strong>.
+                        Escolher aqui não inscreve ninguém numa obrigação: isso é cadastro, e se
+                        faz na obrigação.
+                      </p>
                     )}
                   </div>
                 );
@@ -1107,9 +1142,12 @@ export default function Obrigacoes() {
                   : <>Nenhuma obrigação selecionada: vai gerar <strong>todas as ativas</strong> do
                      sistema. Para gerar só algumas, feche isto e marque-as na lista.</>}
                 {' '}
-                {gerTodasEmp
+                {gerModo === 'todas'
                   ? <>Para <strong>todas as empresas</strong> que cada uma alcança.</>
-                  : <>Para <strong>{gerEmpresas.length} empresa(s)</strong>.</>}
+                  : gerModo === 'regime'
+                    ? <>Para <strong>{empresasDosRegimes(empresas, gerRegimes).length} empresa(s)</strong>
+                        {gerRegimes.length ? <> de {nomesDosRegimes(gerRegimes)}</> : null}.</>
+                    : <>Para <strong>{gerEmpresas.length} empresa(s)</strong>.</>}
               </div>
               <p className="text-xs text-gray-500">
                 Mês de <strong>entrega</strong>, não de competência. Cada obrigação calcula a
@@ -1119,13 +1157,18 @@ export default function Obrigacoes() {
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <button onClick={() => setShowGerar(false)} className="btn-secondary">Cancelar</button>
-              {/* Sem esta trava, "somente as escolhidas" com a lista vazia
-                  mandaria [] ao backend, que trata vazio como "todas" -- e o
-                  botão geraria o escritório inteiro dizendo o contrário. */}
+              {/* Sem esta trava, um recorte vazio (nenhuma escolhida, nenhum
+                  regime marcado, ou regime sem empresa) mandaria [] ao backend,
+                  que trata vazio como "todas" -- e o botão geraria o escritório
+                  inteiro dizendo o contrário. A regra é `podeGerar`. */}
               <button onClick={gerarTarefas}
-                disabled={gerando || (!gerTodasEmp && gerEmpresas.length === 0)}
-                title={!gerTodasEmp && gerEmpresas.length === 0
-                  ? 'Escolha ao menos uma empresa, ou volte para "Todas as empresas".' : ''}
+                disabled={gerando || !podeGerar(gerModo, gerEmpresas, gerRegimes, empresas)}
+                title={podeGerar(gerModo, gerEmpresas, gerRegimes, empresas) ? ''
+                  : gerModo === 'escolhidas'
+                    ? 'Escolha ao menos uma empresa, ou volte para "Todas as empresas".'
+                    : gerRegimes.length
+                      ? 'Nenhuma empresa ativa nos regimes marcados.'
+                      : 'Marque ao menos um regime, ou volte para "Todas as empresas".'}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                 {gerando ? 'Gerando…' : `Gerar ${String(gerMes).padStart(2, '0')}/${gerAno}`}
               </button>

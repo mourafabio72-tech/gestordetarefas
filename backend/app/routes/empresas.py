@@ -299,6 +299,7 @@ def create_empresa(
 
     # Vínculo automático: gera já as tarefas do mês para as obrigações cuja
     # regra (regime/segmento) casa com esta empresa. Falha aqui não quebra o cadastro.
+    res = None
     try:
         from ..services import gerador
         res = gerador.gerar_empresa_mes_atual(db, db_empresa)
@@ -309,6 +310,14 @@ def create_empresa(
     log_event("CRIACAO_REGISTRO_CRITICO", tabela="empresa",
               alvo_id=db_empresa.id, razao_social=db_empresa.razao_social,
               cnpj=db_empresa.cnpj)
+    # Irmã da geração do mês (`routes/obrigacoes.py`, `gerar_competencia`): o
+    # cadastro também cria tarefas em lote, e a linha acima não conta isso. Vem
+    # depois dela, na ordem em que as coisas acontecem. Geração que falhou foi
+    # desfeita pelo rollback, e não deixa linha de tarefa criada.
+    if res is not None:
+        log_event("CRIACAO_REGISTRO_CRITICO", tabela="tarefa", lote=True,
+                  origem="cadastro_empresa", criadas=res.get("criadas", 0),
+                  puladas=res.get("puladas", 0), empresas_no_recorte=1)
     return db_empresa
 
 @router.put("/{empresa_id}", response_model=EmpresaResponse)
