@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_, func, case
-from sqlalchemy.exc import IntegrityError
 from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel, ConfigDict, Field
@@ -805,7 +804,7 @@ def marcar_nao_se_aplica(
     body: NaoSeAplicaRequest,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
+    current_user: Usuario = Depends(require_flag("alocar_obrigacao"))
 ):
     """A obrigação não se aplica a esta empresa: marca a tarefa e cria a exceção.
 
@@ -817,7 +816,6 @@ def marcar_nao_se_aplica(
     A tarefa NÃO é apagada: vai para CANCELADA com motivo, autor e data, e fica
     no histórico. Quem decidiu tem nome, e a decisão tem volta pela lista de
     exceções no cadastro da obrigação."""
-    from ..models import ObrigacaoExcecao
     db_tarefa = db.query(Tarefa).filter(Tarefa.id == tarefa_id).first()
     if not db_tarefa:
         _nao_encontrada(db, tarefa_id, existe=False)
@@ -830,25 +828,23 @@ def marcar_nao_se_aplica(
                             detail="Esta tarefa não veio de uma obrigação, então não há "
                                    "regra para ajustar. Use a lixeira.")
 
+    # A clicada é marcada mesmo que não esteja em aberto, como sempre foi; as
+    # irmãs em aberto (outras competências da mesma obrigação e empresa) saem
+    # por `aplicar_excecao`, a mesma que o Desvincular vai usar. Decisão do
+    # usuário em 2026-09-18: a exceção vale para a obrigação inteira, e deixar
+    # os outros meses pendurados era o "não acata" do print da Trops.
+    from ..services.gerador import aplicar_excecao
+    motivo = body.motivo.strip()
+    clicada_mudou = db_tarefa.status != StatusTarefa.CANCELADA
     db_tarefa.status = StatusTarefa.CANCELADA
     db_tarefa.nao_se_aplica = True
-    db_tarefa.nao_se_aplica_motivo = body.motivo.strip()
+    db_tarefa.nao_se_aplica_motivo = motivo
     db_tarefa.nao_se_aplica_por_id = current_user.id
     db_tarefa.nao_se_aplica_em = datetime.utcnow()
-
-    # A exceção entra num ponto de salvamento próprio, e quem decide o vencedor
-    # é a UNIQUE do banco. Olhar antes e inserir depois é uma corrida: duas
-    # tarefas da MESMA obrigação e empresa (competências diferentes) marcadas ao
-    # mesmo tempo passavam as duas pela checagem e a segunda derrubava o commit
-    # com 500. Aqui, quem perde a corrida já tem o que queria: a exceção existe.
-    try:
-        with db.begin_nested():
-            db.add(ObrigacaoExcecao(obrigacao_id=db_tarefa.obrigacao_id,
-                                    empresa_id=db_tarefa.empresa_id,
-                                    motivo=body.motivo.strip(),
-                                    decidido_por_id=current_user.id))
-    except IntegrityError:
-        pass                      # já existia: a decisão é a mesma
+    db.flush()
+    criada, irmas = aplicar_excecao(db, db_tarefa.obrigacao_id, db_tarefa.empresa_id,
+                                    motivo, current_user.id)
+    canceladas = int(clicada_mudou) + irmas
     db.commit()
     db.refresh(db_tarefa)
     # Aqui NASCE uma exceção, então o evento é o de criação. Saía como
@@ -856,7 +852,14 @@ def marcar_nao_se_aplica(
     # nenhum: quebra o filtro, que é a única razão de o nome ser padronizado.
     # Quem procurasse exclusão achava esta criação, e a exclusão de verdade
     # (em `routes/obrigacoes.py`) não aparecia em busca nenhuma.
-    log_event("CRIACAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="criada",
+    # Só quando nasceu de fato: repetir a ação não cria exceção nenhuma.
+    if criada:
+        log_event("CRIACAO_REGISTRO_CRITICO", tabela="obrigacao_excecao", acao="criada",
+                  obrigacao_id=db_tarefa.obrigacao_id, empresa_id=db_tarefa.empresa_id,
+                  tarefa_id=db_tarefa.id, user_id=current_user.id, ip=ip_cliente(request))
+    # E as tarefas mudaram de status em lote: uma linha, com a contagem.
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="tarefa", lote=True,
+              acao="nao_se_aplica", canceladas=canceladas,
               obrigacao_id=db_tarefa.obrigacao_id, empresa_id=db_tarefa.empresa_id,
               tarefa_id=db_tarefa.id, user_id=current_user.id, ip=ip_cliente(request))
     return db_tarefa

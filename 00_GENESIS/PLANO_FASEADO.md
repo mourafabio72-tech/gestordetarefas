@@ -221,7 +221,7 @@ Itens:
 
 ## Fase 35: "Não se aplica a esta empresa" no menu da tarefa
 
-- **Status:** pending
+- **Status:** done (2026-09-18; prova com 19 itens, conferida pelo usuário; botão virou "Marcar como não se aplica" pelo verificador; irmão "Cancelar tarefa" escondido sem a flag)
 - **Duração estimada:** 45 min
 - **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo, Padrao_IDOR, Padrao_Logging_Estruturado, Nunca_DELETE_Fisico, Padrao_Validacao_de_Input, Padrao_Modal, Sempre_Mostrar_Loading, Padrao_Loading_Estado, Acao_Primaria_a_Direita, Sem_Popup_Nativo, Portugues_BR_Acentuacao, Sem_Travessao
 - **Dependências:** nenhuma

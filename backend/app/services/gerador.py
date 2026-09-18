@@ -202,6 +202,55 @@ def excecoes_da(db: Session, o: Obrigacao) -> set:
             .filter(ObrigacaoExcecao.obrigacao_id == o.id).all()}
 
 
+# Situações em que a tarefa ainda é trabalho a fazer. Concluída fica como está
+# (o trabalho foi feito e é histórico), cancelada também (alguém já decidiu).
+ABERTAS = (StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO, StatusTarefa.ATRASADA)
+
+
+def aplicar_excecao(db: Session, obrigacao_id: int, empresa_id: int,
+                    motivo: str, usuario_id: int) -> tuple:
+    """A obrigação não se aplica a esta empresa: cria a exceção e cancela as abertas.
+
+    Feita para dois chamadores: o "Não se aplica" do menu da tarefa (hoje) e
+    o Desvincular da tela de obrigações (fase 36, ainda não ligado). Com uma
+    função só, os dois não podem discordar do que é "em aberto".
+
+    NÃO faz commit: quem chama decide a transação, e o Desvincular aplica
+    várias obrigações num commit só (tudo ou nada). Cancelar é UPDATE de
+    status, nunca DELETE: a tarefa fica no histórico com motivo, autor e data.
+
+    Devolve (criada, canceladas): se a exceção nasceu agora, e quantas
+    tarefas mudaram. O log de quem chama depende dos dois: registrar a
+    criação de uma exceção que já existia é log afirmando o que o banco
+    não gravou."""
+    from datetime import datetime
+    from sqlalchemy.exc import IntegrityError
+    from ..models import ObrigacaoExcecao
+
+    # A UNIQUE do banco decide o vencedor, num ponto de salvamento próprio:
+    # olhar antes e inserir depois é corrida, e quem perde já tem o que queria.
+    criada = True
+    try:
+        with db.begin_nested():
+            db.add(ObrigacaoExcecao(obrigacao_id=obrigacao_id, empresa_id=empresa_id,
+                                    motivo=motivo, decidido_por_id=usuario_id))
+    except IntegrityError:
+        criada = False            # já existia: a decisão é a mesma
+
+    agora = datetime.utcnow()
+    abertas = (db.query(Tarefa)
+               .filter(Tarefa.obrigacao_id == obrigacao_id,
+                       Tarefa.empresa_id == empresa_id,
+                       Tarefa.status.in_(ABERTAS)).all())
+    for t in abertas:
+        t.status = StatusTarefa.CANCELADA
+        t.nao_se_aplica = True
+        t.nao_se_aplica_motivo = motivo
+        t.nao_se_aplica_por_id = usuario_id
+        t.nao_se_aplica_em = agora
+    return criada, len(abertas)
+
+
 def empresas_alvo(db: Session, o: Obrigacao):
     """Empresas que esta obrigação alcança.
 

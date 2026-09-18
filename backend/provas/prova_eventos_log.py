@@ -98,12 +98,13 @@ def semear():
         alvo = Usuario(nome="Alvo do Papel", email="alvo@bps4.com.br",
                        grupo="analista",
                        senha_hash=get_password_hash(SENHA), ativo=True)
-        # Analista com a flag de dispensar ligada por override, e so ela: o
+        # Analista com as flags de dispensar e de alocar ligadas por override: o
         # escopo continua `proprias`. E o unico jeito de as rotas de DELETE e
         # de nao-se-aplica chegarem ao ponto de IDOR em vez de pararem antes,
         # no 403 da guarda.
         curioso = Usuario(nome="Curioso", email=EMAIL_CURIOSO, grupo="analista",
-                          permissoes=json.dumps({"dispensar_demanda": True}),
+                          permissoes=json.dumps({"dispensar_demanda": True,
+                                                  "alocar_obrigacao": True}),
                           senha_hash=get_password_hash(SENHA), ativo=True)
         db.add(curioso)
         empresa = Empresa(razao_social="Cliente Teste", cnpj="00000000000191")
@@ -326,9 +327,9 @@ checa(23, f"nenhuma linha nova carrega campo da lista proibida (achados: {achado
 # existe. Este bloco varre as quatro, e a lista e explicita para nao depender
 # de nenhuma delas continuar existindo em silencio.
 #
-# O `DELETE` e o `nao-se-aplica` exigem a flag `dispensar_demanda`, que o
-# analista nao tem: com ele as duas param no 403 da guarda e nunca chegam ao
-# ponto de IDOR. Por isso as quatro rodam com um usuario que TEM a flag e
+# O `DELETE` exige a flag `dispensar_demanda` e o `nao-se-aplica` a
+# `alocar_obrigacao` (desde a fase 35), e o analista nao tem nenhuma das duas:
+# sem elas as duas param no 403 da guarda e nunca chegam ao ponto de IDOR. Por isso as quatro rodam com um usuario que TEM a flag e
 # continua com escopo `proprias`. Sem esse cuidado, dois itens passariam sem
 # medir nada, que e o pior tipo de verde.
 IRMAS = [

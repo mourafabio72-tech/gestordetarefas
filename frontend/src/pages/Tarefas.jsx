@@ -6,7 +6,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Edit2, Trash2, ListTodo, AlertTriangle, Clock, CheckCircle, ArrowRightLeft, Copy, Link2, Flag, ChevronDown, MoreHorizontal, Paperclip, Download,
-         Send, Upload, X, MessageCircle, Mail, Ban } from 'lucide-react';
+         Send, Upload, X, MessageCircle, Mail, Ban, Loader2 } from 'lucide-react';
 import { filtrarTarefas, competenciasDe, presetsVencimento, filtrosVazios,
          temFiltroAtivo, filtrosDaUrl, rotuloDoRecorte, SEM_COMPETENCIA } from './filtroTarefas';
 import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
@@ -146,6 +146,15 @@ export default function Tarefas() {
   const [showTransfer, setShowTransfer] = useState(null); // tarefa sendo transferida
   const [showNaoSeAplica, setShowNaoSeAplica] = useState(null); // tarefa que não cabe nesta empresa
   const [motivoNaoSeAplica, setMotivoNaoSeAplica] = useState('');
+  const [aplicandoNaoSeAplica, setAplicandoNaoSeAplica] = useState(false);
+  const [erroNaoSeAplica, setErroNaoSeAplica] = useState('');
+  // Quem decide que uma obrigação não se aplica ao cliente muda a geração dos
+  // meses seguintes, e por isso é a mesma flag do Desvincular. O servidor
+  // recusa sem ela; aqui só não se oferece o que vai ser recusado.
+  const podeDesvincular = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
+  // Cancelar e excluir exigem `dispensar_demanda` no servidor (só admin e
+  // gestor por padrão). Sem a flag o item aparecia e o clique dava 403.
+  const podeCancelar = Boolean(user?.permissoes_efetivas?.dispensar_demanda);
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
@@ -357,15 +366,26 @@ export default function Tarefas() {
     }
   };
 
+  const abrirNaoSeAplica = (tarefa) => {
+    setMotivoNaoSeAplica('');
+    setErroNaoSeAplica('');
+    setShowNaoSeAplica(tarefa);
+  };
+
   const handleNaoSeAplica = async () => {
-    if (!showNaoSeAplica || motivoNaoSeAplica.trim().length < 3) return;
+    if (!showNaoSeAplica || motivoNaoSeAplica.trim().length < 3 || aplicandoNaoSeAplica) return;
+    setAplicandoNaoSeAplica(true);
+    setErroNaoSeAplica('');
     try {
       await tarefasAPI.naoSeAplica(showNaoSeAplica.id, motivoNaoSeAplica.trim());
       setShowNaoSeAplica(null);
       setMotivoNaoSeAplica('');
       loadTarefas();
     } catch (error) {
-      alert(mensagemDeErro(error, 'Erro ao marcar que a obrigação não se aplica.'));
+      // O erro fica dentro da janela, que continua aberta com o motivo digitado.
+      setErroNaoSeAplica(mensagemDeErro(error, 'Não foi possível marcar que a obrigação não se aplica.'));
+    } finally {
+      setAplicandoNaoSeAplica(false);
     }
   };
 
@@ -719,9 +739,16 @@ export default function Tarefas() {
                 <ItemMenu icone={Edit2} onClick={() => { setMenuAberto(null); handleEdit(tarefa); }}>
                   Editar
                 </ItemMenu>
-                <ItemMenu icone={Trash2} perigo onClick={() => { setMenuAberto(null); handleDelete(tarefa); }}>
-                  {tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar tarefa'}
-                </ItemMenu>
+                {ativa && tarefa.obrigacao_id && podeDesvincular && (
+                  <ItemMenu icone={Ban} perigo onClick={() => { setMenuAberto(null); abrirNaoSeAplica(tarefa); }}>
+                    Não se aplica a esta empresa
+                  </ItemMenu>
+                )}
+                {podeCancelar && (
+                  <ItemMenu icone={Trash2} perigo onClick={() => { setMenuAberto(null); handleDelete(tarefa); }}>
+                    {tarefa.status === 'cancelada' ? 'Excluir definitivamente' : 'Cancelar tarefa'}
+                  </ItemMenu>
+                )}
               </div>
             )}
           </div>
@@ -1215,47 +1242,68 @@ export default function Tarefas() {
         </div>
       )}
 
-      {/* Não se aplica a esta empresa: cancela a tarefa de hoje E ajusta a regra
-          da obrigação, para o mesmo trabalho não voltar no mês que vem. O motivo
+      {/* Não se aplica a esta empresa: cancela esta tarefa e as outras em aberto da
+          mesma obrigação e empresa, E ajusta a regra da obrigação, para o mesmo
+          trabalho não voltar no mês que vem. O motivo
           é obrigatório porque quem vier depois precisa saber por quê, e porque a
           decisão fica no histórico com nome e data. */}
       {showNaoSeAplica && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Não se aplica a esta empresa</h2>
+          <div role="dialog" aria-modal="true" aria-labelledby="tituloNaoSeAplica"
+            className="bg-white rounded-xl w-full max-w-md">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 id="tituloNaoSeAplica" className="text-xl font-semibold">Não se aplica a esta empresa</h2>
+              <button type="button" aria-label="Fechar" title="Fechar"
+                disabled={aplicandoNaoSeAplica}
+                onClick={() => setShowNaoSeAplica(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
             </div>
             <div className="p-4 space-y-3">
               <p className="text-sm text-gray-600">
                 <strong>{showNaoSeAplica.titulo}</strong> deixa de valer para esta empresa.
-                A tarefa sai das pendências e fica no histórico, e a obrigação para de
-                gerá-la para este cliente nos próximos meses.
+                Esta tarefa e as outras em aberto da mesma obrigação, de outras
+                competências, são canceladas e ficam no histórico. A obrigação para
+                de gerá-la para este cliente nos próximos meses.
               </p>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Por quê?</label>
+                <label htmlFor="motivoNaoSeAplica" className="block text-sm font-medium text-gray-700 mb-1">Por quê?</label>
                 <textarea
+                  id="motivoNaoSeAplica"
                   value={motivoNaoSeAplica}
                   onChange={(e) => setMotivoNaoSeAplica(e.target.value)}
+                  disabled={aplicandoNaoSeAplica}
                   rows={3}
+                  maxLength={500}
                   placeholder="Ex.: a empresa não é contribuinte de IPI."
+                  title="Fica registrado com o seu nome e a data. Dá para desfazer na lista de exceções, no cadastro da obrigação."
                   className="input-field"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Fica registrado com o seu nome e a data. Dá para desfazer na lista de
-                  exceções, no cadastro da obrigação.
-                </p>
               </div>
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowNaoSeAplica(null)} className="btn-secondary flex-1">
+              {aplicandoNaoSeAplica && (
+                <div role="status" className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-800">
+                  <Loader2 size={16} className="animate-spin shrink-0" />
+                  Cancelando as tarefas em aberto desta obrigação...
+                </div>
+              )}
+              {erroNaoSeAplica && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {erroNaoSeAplica}
+                </p>
+              )}
+              <div className="flex justify-end gap-3 pt-1">
+                <button type="button" disabled={aplicandoNaoSeAplica}
+                  onClick={() => setShowNaoSeAplica(null)} className="btn-secondary">
                   Cancelar
                 </button>
                 <button
                   type="button"
-                  disabled={motivoNaoSeAplica.trim().length < 3}
+                  disabled={motivoNaoSeAplica.trim().length < 3 || aplicandoNaoSeAplica}
+                  title={motivoNaoSeAplica.trim().length < 3 ? 'Escreva o motivo, com pelo menos 3 letras.' : undefined}
                   onClick={handleNaoSeAplica}
-                  className="btn-primary flex-1 disabled:opacity-50"
+                  className="btn-danger disabled:opacity-50"
                 >
-                  Confirmar
+                  {aplicandoNaoSeAplica ? 'Marcando...' : 'Marcar como não se aplica'}
                 </button>
               </div>
             </div>

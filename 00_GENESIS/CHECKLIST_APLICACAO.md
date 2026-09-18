@@ -209,30 +209,41 @@ Acesso: login por perfil
 
 ## Fase 35: "Não se aplica a esta empresa" no menu
 
-- [ ] 35.1 `prova_nao_se_aplica_lote.py` escrita ANTES e saindo com exit 1, saída no LOG
+- [x] 35.1 `prova_nao_se_aplica_lote.py` escrita ANTES e saindo com exit 1, saída no LOG
       PROIBIDO: prova que passa de primeira
       (TDD_RED_GREEN_REFACTOR)
-- [ ] 35.1 não-regressão verde JÁ no RED: avulsa 422, fora do escopo 404, motivo curto 422
-- [ ] 35.2 rota com `require_flag("alocar_obrigacao")`; sem a flag, 403 e nada muda
+      EVIDÊNCIA: LOG da fase 35 (prova_RED), `PROVA FALHOU nos itens: [2, 4, 5, 11, 12, 13]`, rc=1; GREEN `PROVA OK: 17 checagens verdes`; itens 18 e 19 do verificador funcional com RED próprio `[18, 19]`, GREEN `PROVA OK: 19 checagens verdes`
+- [x] 35.1 não-regressão verde JÁ no RED: avulsa 422, fora do escopo 404, motivo curto 422
+      EVIDÊNCIA: itens 15, 16 e 17 verdes na saída do RED; o 16 usa gestor COM a flag e escopo reduzido
+- [x] 35.2 rota com `require_flag("alocar_obrigacao")`; sem a flag, 403 e nada muda
       PROIBIDO: checar a flag só na tela
       (decisão 3a do usuário; Padrao_Validacao_de_Input: "Validação acontece no servidor")
-- [ ] 35.2 uma função `aplicar_excecao`, usada pela rota; as abertas (pendente, em andamento, atrasada) da mesma obrigação e empresa vão para cancelada com o motivo
+      EVIDÊNCIA: `routes/tarefas.py:807` `require_flag("alocar_obrigacao")`; item 2 (analista com `tarefas: editar` recebe 403, estado e exceções intactos), vermelho no RED com 200 e uma exceção criada
+- [x] 35.2 uma função `aplicar_excecao`, usada pela rota; as abertas (pendente, em andamento, atrasada) da mesma obrigação e empresa vão para cancelada com o motivo
       PROIBIDO: `DELETE FROM tarefas`, `db.delete(tarefa)` no caminho novo; concluída mudando de status
       PROVA: `grep -n "delete" <função nova>` vazio; itens (c) e (d) da prova
       (decisão 2a; Nunca_DELETE_Fisico: "Regra inegociável em qualquer sistema, qualquer modo, qualquer tabela.")
-- [ ] 35.2 exceção e cancelamentos num commit só
+      EVIDÊNCIA: `services/gerador.py:210`, chamada em `routes/tarefas.py:844`; grep de `delete` na função acha só a palavra no docstring ("nunca DELETE"), nenhuma chamada; itens 4 e 5 (em andamento e atrasada canceladas com motivo, autor e data), 6 (concluída intacta), 7 (cancelada à mão antes intacta), 8 (15 tarefas de outra empresa ou obrigação intactas)
+- [x] 35.2 exceção e cancelamentos num commit só
       (Escada_Preguica_de_Codigo, guardrail "Perda de dados: transacao, rollback")
-- [ ] 35.2 log `EDICAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, `acao="nao_se_aplica"`, com a contagem; sem razão social
+      EVIDÊNCIA: `aplicar_excecao` não chama `commit` (lida inteira, `gerador.py:210-250`); a rota faz um único `db.commit()` em `routes/tarefas.py:846`, depois da função
+- [x] 35.2 log `EDICAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, `acao="nao_se_aplica"`, com a contagem; sem razão social
       (Padrao_Logging_Estruturado)
-- [ ] 35.3 item "Não se aplica a esta empresa" com ícone `Ban`, entre Editar e Cancelar tarefa, só com `ativa && tarefa.obrigacao_id && user?.permissoes_efetivas?.alocar_obrigacao`
+      EVIDÊNCIA: `routes/tarefas.py:857`; itens 11 (uma linha), 12 (`canceladas: 3`, obrigação, empresa, usuário), 13 (sem razão social nem CNPJ), 14 (linha de criação da exceção continua), os três primeiros vermelhos no RED
+- [x] 35.3 item "Não se aplica a esta empresa" com ícone `Ban`, entre Editar e Cancelar tarefa, só com `ativa && tarefa.obrigacao_id && user?.permissoes_efetivas?.alocar_obrigacao`
       PROVA: `grep -n "Não se aplica a esta empresa" -B3 frontend/src/pages/Tarefas.jsx` mostra a condição
-- [ ] 35.4 janela: texto fala das outras abertas; botão primário `btn-danger`, texto de ação e à direita; trifeedback ao enviar (desabilita, texto no gerúndio, spinner); erro dentro da janela
+      EVIDÊNCIA: `Tarefas.jsx:739` `{ativa && tarefa.obrigacao_id && podeDesvincular && (`, `:740` `icone={Ban}`; `podeDesvincular` em `:154` = `Boolean(user?.permissoes_efetivas?.alocar_obrigacao)`; o item vem depois de Editar e antes de Cancelar tarefa
+- [x] 35.4 janela: texto fala das outras abertas; botão primário `btn-danger`, texto de ação e à direita; trifeedback ao enviar (desabilita, texto no gerúndio, spinner); erro dentro da janela
       PROIBIDO: `alert(` e `confirm(` nas linhas `+`; botão "Confirmar" ou "OK"
       (Padrao_Modal: "texto de botão genérico 'OK'/'Sim'" proibido; Sempre_Mostrar_Loading: "Os três juntos. Não basta um."; Acao_Primaria_a_Direita; Sem_Popup_Nativo)
-- [ ] 35.5 prova em exit 0; suítes do backend e do frontend em exit 0; build ok
-- [ ] 35.5 `grep -n "—\|–"` vazio nos arquivos tocados; hex e popup nas linhas `+`: 0
+      EVIDÊNCIA: texto da janela cita as outras em aberto; rodapé `justify-end` (`:1289`), `btn-danger` "Marcar como não se aplica" à direita (`:1299-1301`; o texto do plano, "Não se aplica", foi trocado pelo verificador de conformidade, Padrao_Modal regra 4), "Confirmar" saiu; trifeedback: `disabled` com `aplicandoNaoSeAplica`, "Aplicando...", e `Loader2 animate-spin` com texto na área da janela (`:1278-1282`); erro em `role="alert"` (`:1285`); popup nas linhas `+`: 0. Conflito Sempre_Mostrar_Loading x Padrao_Loading_Estado resolvido no LOG (tela). Falta a conferência visual (35.6)
+- [x] 35.5 prova em exit 0; suítes do backend e do frontend em exit 0; build ok
+      EVIDÊNCIA: `PROVA OK: 19 checagens verdes`; `provas=34 falharam=0` (depois de ajustar o override do usuário 'curioso' em `prova_eventos_log.py`, LOG codigo_GREEN); `provas_front=21 falharam=0`; `✓ built in 1.23s`
+- [x] 35.5 `grep -n "—\|–"` vazio nos arquivos tocados; hex e popup nas linhas `+`: 0
       (Sem_Travessao, Sistema_de_Estilos, Sem_Popup_Nativo)
-- [ ] 35.6 conferência visual local registrada no LOG
+      EVIDÊNCIA: travessão rc=1 em `gerador.py`, `tarefas.py`, a prova nova e `Tarefas.jsx`; nas linhas `+` do `Tarefas.jsx`: hex 0, `alert(`/`confirm(`/`prompt(` 0
+- [x] 35.6 conferência visual local registrada no LOG
+      EVIDÊNCIA: conferido em 2026-09-18 pelo usuário ("conferi"), tela Tarefas, menu e janela na conferência local; regra dele registrada: só admin e gestor cancelam. Irmão "Cancelar tarefa" escondido sem `dispensar_demanda` (LOG irmao_menu)
 
 ## Fase 36: Desvincular pela regra
 
