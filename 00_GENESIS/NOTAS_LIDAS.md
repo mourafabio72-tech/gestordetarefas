@@ -55,3 +55,28 @@ por causa desta conferência, e a resposta foi o tipo 1.
   provada no projeto (CONFORMIDADE, fase 8). Não reaberta.
 - `Padrao_IDOR.md`: a rota `link-envio` já passa por `_tarefa_no_escopo` (fase 26),
   e este trabalho só acrescenta uma recusa depois dela.
+
+## Acréscimo de 2026-09-18 (fases 32 a 34)
+
+Descoberta: `CLAUDE.md` do projeto, LASTRO, fim do LOG, mapa Graphify atualizado
+(`graphify update .`, 18/09 18:04), e três batedores `sonnet` em paralelo: UI
+(estrutura e dados juntos, porque a mudança não toca menu, topbar nem abas),
+segurança com auth, e estilo com linguagem.
+
+| Nota | Por quem | Trecho chave | Fase |
+|---|---|---|---|
+| `08_Processo_Dev/Brainstorming_Socratico_por_Tarefa.md` | principal, integral | "2 a 4 perguntas curtas ... mesmo que o pedido pareça claro" | abertura |
+| `02_Seguranca/Padrao_IDOR.md` | batedor, conferida pelo principal | "Não é só na URL. Body também" | 33 |
+| `02_Seguranca/Padrao_Logging_Estruturado.md` | batedor | "mutação de dado crítico SEMPRE entram" | 32 |
+| `02_Seguranca/Padrao_Mass_Assignment.md` | batedor | "Backend define a whitelist de campos editaveis." | 33 |
+| `02_Seguranca/Mapa_de_Conceitos_de_Seguranca.md` | batedor | "Operações custosas ... 1 por vez por usuário" | fora de escopo, declarado |
+| `01_Padroes_Gerais/Padrao_Toggle_Tipos.md` | batedor | "NUNCA escolher o estilo sozinho"; checkbox "fora desta taxonomia" | 33 |
+| `01_Padroes_Gerais/Padrao_Toggle_OnOff.md` | batedor | "Toggle é para ESTADO; checkbox é para MULTI SELEÇÃO" | 33 |
+| `01_Padroes_Gerais/Tela_Nao_Tem_Manual.md` | batedor | "PROIBIDO usar o parágrafo para compensar rótulo ruim" | 33 |
+| `07_Regras_de_Ouro/Verificacoes_Mecanicas_de_Tela.md` | batedor | checkbox cru "-> zero" | 33 |
+
+Descartadas, com motivo: `Padrao_Modal_Popup_Centrado` (não há SelectBusca no modal),
+`Padrao_Marca_IA` (não há IA), `Icones_Phosphor` (desvio lucide-react já declarado),
+`Forca_Bruta_Login`, `Timeout_de_Sessao`, `Vazamento_de_Chaves`, `Controle_de_IP`,
+`Admin_Inicial_Padrao`, `Auto_Liberacao_por_Grupo`, `Painel_Desenvolvedor` (nenhuma toca
+esta mudança). `Padrao_Texto_e_Linguagem` e `70_ESTILO/` não existem nesta vault.

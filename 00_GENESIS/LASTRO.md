@@ -114,3 +114,56 @@ olhar o sentido.
 - A vault é Flask e CSS central; o projeto é React e Tailwind. Onde a nota dá
   classe CSS (`.xx-presets`), a tradução é por classe utilitária com o token
   `primary`, e isso fica escrito no checklist.
+
+---
+
+# Acréscimo de 2026-09-18: recorte por regime na geração (fases 32 a 34)
+
+## O pedido
+
+No modal "Gerar tarefas do mês", em "Para quais empresas?", gerar também por
+regime tributário.
+
+## Medido no código em 2026-09-18
+
+- O regime já existe: `Empresa.regime_tributario` (`models.py:101`), com os valores
+  `indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor|imune|isento`.
+  A listagem de empresas que a tela recebe traz o campo e só as ativas (`empresas.py:267`).
+- O recorte por empresa já existe e é INTERSEÇÃO com `empresas_alvo` (`gerador.py:368-384`).
+  O regime entra como outro jeito de montar a mesma lista de ids.
+- **Armadilha:** lista de ids vazia no body é lida pelo backend como "todas"
+  (`GerarRequest`, `routes/obrigacoes.py:142`). A tela já bloqueia isso em "somente as
+  escolhidas" (`Obrigacoes.jsx:1123-1125`), e o modo regime precisa do mesmo bloqueio.
+- **Lacuna antiga:** `POST /obrigacoes/gerar` não chama `log_event` (fase 32).
+
+## Decisões do usuário (2026-09-18)
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| 1 | Onde o regime aparece | **Terceira opção**, "Por regime tributário" |
+| 2 | Quais regimes | **Os 6 citados mais MEI**, sem "sem regime cadastrado" |
+| 3 | Mais de um regime por vez | **Sim** |
+| 4 | Trabalho aberto | **Commitar 27 e 28 antes** (feito: `45ac41a`, `4d1a669`, sem push); esta demanda antes da 29 |
+| 5 | Estilo do seletor "Para quais empresas?" (Padrao_Toggle_Tipos) | **Tipo 1, multi opções**, igual ao da fase 29 |
+
+## Regras locais novas
+
+1. **Só frontend no recorte.** A tela converte regimes em `empresa_ids`. Nenhum campo novo
+   no body, e `gerador.py` não muda. A autorização continua sendo a flag
+   `alocar_obrigacao` mais a interseção com `empresas_alvo`.
+2. **Recorte vazio nunca sai da tela.** Modo diferente de `todas` com zero ids bloqueia o botão.
+3. **A regra do recorte mora num módulo sem JSX** (`src/pages/recorteGeracao.js`), provado por Node.
+   É o mesmo molde de `payloadObrigacao.js`.
+4. **Checkbox de multisseleção usa `check-app`**, o precedente da fase 8.
+
+## Notas que regem este acréscimo
+
+Lidas pelos batedores em 2026-09-18, com as fichas conferidas pelo principal:
+`Padrao_Toggle_Tipos`, `Padrao_Toggle_OnOff`, `Padrao_Modal`, `Padrao_Formulario`,
+`Padrao_Loading_Estado`, `Sempre_Mostrar_Loading`, `Sem_Popup_Nativo`,
+`Protocolo_Revisao_de_Tela`, `Verificacoes_Mecanicas_de_Tela`, `Sistema_de_Estilos`,
+`Tela_Nao_Tem_Manual`, `Portugues_BR_Acentuacao`, `Sem_Travessao`, `Padrao_IDOR`,
+`Padrao_Mass_Assignment`, `Padrao_Validacao_de_Input`, `Padrao_Logging_Estruturado`,
+`Mapa_de_Conceitos_de_Seguranca`, `Perfis_e_Modulos`, `Matriz_VER_EDITAR`.
+Lida pelo principal: `08_Processo_Dev/Brainstorming_Socratico_por_Tarefa.md` (126 linhas),
+e `02_Seguranca/Padrao_IDOR.md` conferida nos trechos citados (`:22`, `:26`, `:122`).

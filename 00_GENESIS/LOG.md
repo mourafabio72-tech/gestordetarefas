@@ -340,3 +340,7 @@ usuario, e nao vira marcador `escada:` porque nao e simplificacao feita aqui.
 Fase 28: done. Proxima: fase 29.
 PAUSA: o usuario perguntou por que a geracao nao criou tarefas de empresas
 selecionadas. Diagnostico fora do plano, sem mudanca de codigo."
+
+[2026-09-18T18:20:00] fase=32 acao=trabalho_aberto resultado=ok obs="Recorte por regime tributario no modal Gerar tarefas do mes. Decisoes 1a, 2b, 3a, 4a. Fases 27 e 28 commitadas antes, local, sem push (45ac41a codigo, 4d1a669 GENESIS; provas 22 e 17 verdes na hora do commit). Graphify atualizado. Tres batedores sonnet em paralelo. Achado da ficha de seguranca, confirmado no codigo: POST /obrigacoes/gerar sem log_event, vira fase 32. Fases 32 a 34 planejadas, ordem de execucao 32, 33, 34, 29, 30, 31. Pendente: estilo do seletor (Padrao_Toggle_Tipos) e aprovacao do plano."
+
+[2026-09-18T18:35:00] fase=0 acao=plano_aprovado resultado=ok obs="Fases 32 a 34 aprovadas sem ajustes. Estilo do seletor Para quais empresas: tipo 1, multi opcoes. Proxima: fase 32."

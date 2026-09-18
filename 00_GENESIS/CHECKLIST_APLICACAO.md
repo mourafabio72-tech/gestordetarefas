@@ -118,3 +118,54 @@ Acesso: login por perfil
       PROIBIDO: `UPDATE obrigacoes` no console
       (Padrao_Logging_Estruturado: mutação de dado crítico sempre entra)
 - [ ] 31.4 segundo `SELECT` bate com a lista aprovada
+
+---
+
+# Recorte por regime na geração (fases 32 a 34, aberto em 2026-09-18)
+
+## Fase 32: log da geração em lote
+
+- [ ] 32.1 `prova_gerar_log.py` escrita ANTES e saindo com exit 1, saída colada no LOG
+      PROIBIDO: prova que passa de primeira
+      (TDD_RED_GREEN_REFACTOR)
+- [ ] 32.1 a linha é UMA por chamada, `CRIACAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, com usuário, `mes_entrega`, `criadas`, `puladas`, nº de obrigações e nº de empresas do recorte
+      PROIBIDO: uma linha por tarefa; razão social ou CNPJ na linha
+      (Padrao_Logging_Estruturado: "Senha, token e PII NUNCA entram em log", "mutação de dado crítico SEMPRE entram")
+- [ ] 32.1 geração com zero criadas também registra
+- [ ] 32.2 `log_event` só em `gerar_competencia` (`routes/obrigacoes.py`); `services/gerador.py` sem diff
+- [ ] 32.3 suíte do backend em exit 0
+
+## Fase 33: tela
+
+- [ ] 33.1 `prova_recorte_regime.js` escrita ANTES e saindo com erro, saída no LOG
+      (TDD_RED_GREEN_REFACTOR)
+- [ ] 33.1 `REGIMES_GERACAO` com 7 valores de `models.py:101`: `simples_nacional`, `lucro_real`, `lucro_presumido`, `mei`, `isento`, `imune`, `terceiro_setor`
+      PROIBIDO: `indefinido` na lista; rótulo inventado fora dos que a tela de Empresas já usa
+      (decisão 2b do usuário)
+- [ ] 33.1 `podeGerar` falso quando o modo não é `todas` e os ids saem vazios (regime sem empresa, nenhum regime marcado, nenhuma empresa escolhida)
+      PROIBIDO: `empresa_ids: []` saindo da tela, que o backend lê como "todas"
+      (armadilha medida em `Obrigacoes.jsx:1123-1125`)
+- [ ] 33.2 `gerTodasEmp` substituído por `gerModo` + `gerRegimes`; `grep -n "gerTodasEmp" frontend/src/pages/Obrigacoes.jsx` vazio
+- [ ] 33.3 seletor "Para quais empresas?" no tipo 1, multi opções (decisão 5 do usuário, 2026-09-18): `role="radiogroup"` + `aria-label="Para quais empresas?"`, `<button type="button">` com `aria-checked`, `title` com a dica, escolhido em `border-primary-600 bg-primary-50 text-primary-800`
+      PROIBIDO: `name="ger_alvo_emp"` (os radios crus); estilo escolhido sem pergunta
+      PROVA: `grep -n 'name="ger_alvo_emp"' frontend/src/pages/Obrigacoes.jsx` vazio
+      (Padrao_Toggle_Tipos: "NUNCA escolher o estilo sozinho")
+- [ ] 33.4 checkboxes de regime com `className="check-app"`, rótulo com contagem, "N empresa(s) no recorte" abaixo
+      PROIBIDO: `h-4 w-4` nos checkboxes novos; switch `cv-sw` (não é liga/desliga)
+      (Padrao_Toggle_OnOff: "checkbox é para MULTI SELEÇÃO"; precedente `check-app`, fase 8)
+- [ ] 33.4 nenhum parágrafo novo de explicação fixa; a dica vai no `title`, e a frase de consequência que já existe é reaproveitada
+      (Tela_Nao_Tem_Manual)
+- [ ] 33.5 faixa de resumo com o ramo de regime; botão bloqueado com `title` quando `podeGerar` é falso
+- [ ] 33.6 prova Node em exit 0, provas do frontend em exit 0, `npm run build` ok
+- [ ] 33.6 `grep -n "—\|–"` e `grep -nE "#[0-9a-fA-F]{6}"` vazios nos arquivos tocados; linhas `+` do diff sem `alert(`, `confirm(`, `prompt(`
+      (Sem_Travessao, Sistema_de_Estilos, Sem_Popup_Nativo)
+- [ ] 33.7 conferência visual local registrada no LOG
+
+## Fase 34: publicar
+
+- [ ] 34.1 suíte completa e build verdes
+- [ ] 34.2 `COPY . .` nos dois Dockerfile, conferido
+- [ ] 34.3 `git ls-remote` com o ref; carimbo de `/api/health` igual ao HEAD
+- [ ] 34.4 bundle servido contém `Por regime tributário`; token público inventado devolve 404
+- [ ] 34.5 conferência do usuário em produção colada no LOG
+      (Fechar_Tarefa_Rodar_Verifica)

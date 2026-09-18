@@ -1,4 +1,8 @@
-# PLANO FASEADO: obrigação acessória transmitida ao órgão (fases 27 a 31)
+# PLANO FASEADO: obrigação acessória transmitida ao órgão (fases 27 a 31) e recorte por regime na geração (fases 32 a 34)
+
+> **Ordem de execução, decidida pelo usuário em 2026-09-18 (resposta 4a):**
+> 32, 33, 34, e só depois 29, 30, 31. As fases 27 e 28 foram commitadas
+> localmente antes (`45ac41a`), sem push.
 
 > **modo=autonomo** (escolhido em 2026-09-15)
 
@@ -8,7 +12,7 @@
 
 ## Fase 0: aprovação
 
-- **Status:** done (aprovado sem ajustes em 2026-09-15)
+- **Status:** done (aprovado sem ajustes em 2026-09-15; fases 32 a 34 aprovadas em 2026-09-18, estilo tipo 1)
 - **Critério de aceite:** o usuário aprova este plano por escrito no chat.
 
 ---
@@ -128,6 +132,91 @@ Itens:
 
 ---
 
+## Fase 32: a geração em lote passa a deixar rastro
+
+- **Status:** pending
+- **Duração estimada:** 25 min
+- **Notas:** Padrao_Logging_Estruturado, TDD_RED_GREEN_REFACTOR
+- **Dependências:** nenhuma
+- **Output esperado:** `backend/provas/prova_gerar_log.py` novo; `routes/obrigacoes.py` alterado.
+
+Achado da descoberta de 2026-09-18: `POST /obrigacoes/gerar` (`routes/obrigacoes.py:221-230`)
+cria tarefas em lote e não chama `log_event`. As rotas vizinhas do mesmo arquivo chamam
+(`:257`, `:290`, `:308`). Não é defeito introduzido agora, mas o recorte por regime mexe
+exatamente nessa ação, e ela fica sem autor registrado.
+
+Itens:
+
+1. **32.1 RED.** `prova_gerar_log.py`, no molde da `capturar()` de `prova_registro_critico.py:102`:
+   (a) uma chamada a `/obrigacoes/gerar` emite UMA linha `CRIACAO_REGISTRO_CRITICO`, com `tabela="tarefa"` e `lote=True`;
+   (b) a linha leva o usuário, `mes_entrega`, `criadas`, `puladas`, a quantidade de obrigações e a quantidade de empresas do recorte (`None` quando não houver recorte);
+   (c) a linha não leva razão social nem CNPJ, só contagem;
+   (d) geração que cria zero tarefas também registra, porque a tentativa é o que se audita;
+   (e) não-regressão: a resposta da rota continua igual, campo por campo.
+   Verifica: exit 1 antes do código, saída colada no LOG.
+2. **32.2 GREEN.** Uma chamada a `log_event` em `gerar_competencia`, depois de `gerar_tarefas` e com os números da resposta dele. O serviço `gerador.py` não muda.
+3. **32.3** Suíte do backend em exit 0.
+
+**Critério de aceite:** prova em exit 1 no RED e 0 no GREEN, as duas saídas no LOG; suíte verde.
+
+---
+
+## Fase 33: recorte por regime tributário no modal "Gerar tarefas do mês"
+
+- **Status:** pending (estilo do seletor decidido: tipo 1, multi opções, em 2026-09-18)
+- **Duração estimada:** 50 min
+- **Notas:** Padrao_Toggle_Tipos, Padrao_Selecao_em_Lote (precedente `check-app`), Tela_Nao_Tem_Manual, Sistema_de_Estilos, Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela, Padrao_IDOR, Padrao_Mass_Assignment, Portugues_BR_Acentuacao, Sem_Travessao, Sem_Popup_Nativo
+- **Dependências:** nenhuma (a 32 é independente)
+- **Output esperado:** `frontend/src/pages/recorteGeracao.js` e `frontend/provas/prova_recorte_regime.js` novos; `Obrigacoes.jsx` alterado.
+
+Decisões do usuário (2026-09-18): terceira opção "Por regime tributário" (1a); lista com
+7 regimes, os 6 citados mais MEI (2b); vários regimes ao mesmo tempo (3a).
+Decisão de arquitetura: **só frontend.** A tela converte os regimes marcados em
+`empresa_ids` e chama a rota que já existe. O backend continua decidindo tudo:
+flag `alocar_obrigacao` e interseção com `empresas_alvo` (`gerador.py:205`).
+
+Itens:
+
+1. **33.1 RED.** Prova Node de um módulo sem JSX, no molde de `payloadObrigacao.js`:
+   (a) `REGIMES_GERACAO` tem 7 entradas, na ordem Simples Nacional, Lucro Real, Lucro Presumido, MEI, Isento, Imune, Terceiro Setor, com os valores de `models.py:101`, e **sem** `indefinido`;
+   (b) `empresasDosRegimes(empresas, regimes)` devolve os ids cujo `regime_tributario` está no conjunto; dois regimes somam; empresa `indefinido` ou sem regime nunca entra;
+   (c) `idsDoRecorte(modo, escolhidas, regimes, empresas)` devolve `null` em `todas`, a lista em `escolhidas` e os ids do regime em `regime`;
+   (d) **a armadilha:** `podeGerar(...)` é falso quando o modo não é `todas` e a lista sai vazia. Isso vale para regime sem empresa e para nenhum regime marcado. Sem essa trava, a tela mandaria `[]`, e o backend lê vazio como "todas";
+   (e) não-regressão: `escolhidas` com lista vazia continua bloqueado, como é hoje.
+   Verifica: `node provas/prova_recorte_regime.js` sai com erro antes de o módulo existir.
+2. **33.2** Estado do modal: `gerTodasEmp` (booleano) vira `gerModo` (`todas`, `escolhidas`, `regime`) mais `gerRegimes`. `gerarTarefas` e o botão passam a usar `idsDoRecorte` e `podeGerar`. O comentário de `Obrigacoes.jsx:134` continua valendo e é atualizado.
+3. **33.3** "Para quais empresas?" com 3 opções exclusivas, no tipo 1 (decisão 5 do usuário): wrapper `role="radiogroup"` com `aria-label="Para quais empresas?"`, três `<button type="button">` com `aria-checked`, `title` com a dica, escolhido em `border-primary-600 bg-primary-50 text-primary-800`. Os dois `type="radio"` de `:1053` e `:1059` saem.
+4. **33.4** Modo regime: 7 checkboxes com `check-app` (`index.css:36`), cada rótulo com a contagem de empresas ativas daquele regime, por exemplo "Lucro Real (8)". Abaixo, "N empresa(s) no recorte". A frase de consequência que já existe ("A empresa escolhida só recebe as obrigações que já a alcançam") vale também para este modo.
+5. **33.5** Faixa de resumo (`:1103-1113`): terceiro ramo, "Para N empresa(s) de Lucro Real e Lucro Presumido". Botão bloqueado com `title` explicando quando `podeGerar` for falso.
+6. **33.6 GREEN, build e gate.** Prova Node em exit 0, as provas do frontend em exit 0, `npm run build` compilando. `grep -n "—\|–"` e `grep -nE "#[0-9a-fA-F]{6}"` vazios nos arquivos tocados. Linhas `+` do diff sem `alert(`, `confirm(` ou `prompt(`.
+7. **33.7 Conferência visual local.** Abrir o modal, escolher "Por regime tributário", marcar dois regimes e ver a contagem e o resumo mudarem. Marcar um regime sem empresa: o botão bloqueia.
+
+**Critério de aceite:** prova em exit 1 e depois em 0; build verde; greps vazios; conferência visual no LOG com data e tela.
+
+---
+
+## Fase 34: publicar as fases 27, 28, 32 e 33
+
+- **Status:** pending
+- **Duração estimada:** 20 min
+- **Notas:** Fechar_Tarefa_Rodar_Verifica
+- **Dependências:** fases 32 e 33
+- **Output esperado:** push publicado e conferido.
+
+O push leva junto as fases 27 e 28, que já estão commitadas e provadas. Com isso, a fase 30 passa a publicar só a 29.
+
+Itens:
+
+1. **34.1** Suíte inteira do backend e do frontend em exit 0, e `npm run build`.
+2. **34.2** Arquivo novo entra na imagem: `COPY . .` nos dois `Dockerfile`, conferido no diff antes do push.
+3. **34.3** Push, `git ls-remote` confirmando o ref, e carimbo de `/api/health` antes e depois, igual ao HEAD.
+4. **34.4** Prova de fora, sem login: o bundle servido contém `Por regime tributário` (`curl` do `/assets/index-*.js` com `grep -c`). O `POST /api/publico/tarefa/<token inventado>` devolve 404, prova da fase 28.
+5. **34.5 Conferência do usuário em produção.** Abrir o modal e escolher regimes, conferindo contagem e resumo. Se ele quiser gerar de verdade, a linha `CRIACAO_REGISTRO_CRITICO` aparece na aba Logs.
+
+**Critério de aceite:** carimbo igual ao HEAD; os dois curls; conferência do usuário colada no LOG.
+
+---
+
 ## Fora de escopo (cortado pela escada ou por decisão)
 
 - **`alert()` e `prompt()` nativos já existentes em `Tarefas.jsx`** (`:305`, `:498`, `:500`, `:503` e outros): violam `Sem_Popup_Nativo`, mas são anteriores e espalhados pela tela. Código novo deste trabalho não usa nenhum. Volta como trabalho próprio de tela.
@@ -138,6 +227,13 @@ Itens:
 - **Invalidar tokens de upload já emitidos para tarefas fora de "receber":** a recusa no `_tarefa_por_token` já os torna inúteis, e apagar a coluna seria destrutivo sem ganho.
 - **Checkboxes crus fora do bloco "lado do documento"** (regimes, segmentos, seleção da listagem, `sabado_util`): ajuste pontual não reescreve a tela. Volta num trabalho de revisão da tela de Obrigações.
 
+- **Filtro por regime no backend (`regimes` no body de `/gerar`):** o recorte por ids já existe e resolve. Um campo novo seria mais uma entrada para validar, sem ganho. Volta se a geração passar a rodar sem tela, por API ou por agendamento com recorte.
+- **Opção "Sem regime cadastrado":** decisão 2b do usuário. Empresa `indefinido` não entra por regime. A contagem por regime mostra quem entra, e isso deixa a ausência visível. Volta se aparecer empresa esquecida na geração.
+- **`alert()` do resultado e "Gerando…" dentro do botão, em `gerarTarefas` (`Obrigacoes.jsx:152-154`, `:1130`):** anteriores a este trabalho e fora do padrão (`Sem_Popup_Nativo`, `Padrao_Loading_Estado`). Código novo não usa nenhum dos dois. Volta num trabalho de revisão da tela de Obrigações.
+- **Log da geração automática do dia 1 (`scheduler.py:37`):** já sai em `logger.info` com as contagens e não tem usuário para atribuir. Volta se a auditoria pedir o evento estruturado também para o agendamento.
+- **Limite de uma geração por vez por usuário (Mapa_de_Conceitos_de_Seguranca, família 7):** o botão já bloqueia durante a chamada, e a geração não duplica tarefa. Volta se aparecer geração concorrente em produção.
+
 ## Histórico deste plano
 
 - **2026-09-15:** aberto com as fases 27 a 31. Sete decisões do usuário antes da primeira linha, em duas rodadas; a segunda nasceu da `Padrao_Toggle_Tipos`, conferida pelo principal depois de o batedor ter lido errado.
+- **2026-09-18:** acrescentadas as fases 32 a 34 (recorte por regime na geração e log da geração em lote). Quatro decisões do usuário numa rodada (1a, 2b, 3a, 4a). A fase 32 nasceu da ficha de segurança, confirmada no código pelo principal.
