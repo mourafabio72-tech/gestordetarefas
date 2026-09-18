@@ -735,12 +735,16 @@ async def check_and_send_alerts(db: Session, faixa: str = "vence_hoje", ensaio: 
         if faixa_da_tarefa(dias, dias_antes) != faixa:
             continue
 
+        # Link de envio de comprovante só para "receber": ele abre upload sem
+        # senha, e gerá-lo também CRIA o token. Mesma trava da rota `link-envio`
+        # e do `_tarefa_por_token` público, que são os irmãos deste ponto.
         link = None
-        try:
-            from .upload import link_publico
-            link = link_publico(cfg, tarefa, db)
-        except Exception:
-            pass
+        if tarefa.sentido == "receber":
+            try:
+                from .upload import link_publico
+                link = link_publico(cfg, tarefa, db)
+            except Exception:
+                pass
 
         empresa_nome = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else None
         item = {"titulo": tarefa.titulo, "empresa": empresa_nome, "dias": dias,

@@ -335,7 +335,7 @@ class Tarefa(Base):
 
     @property
     def sentido(self) -> str:
-        """"receber" (comprovante do cliente) ou "entregar" (guia ao cliente).
+        """"receber", "entregar", "transmitir" ou "interna" (ver `Obrigacao.sentido`).
 
         Sai da obrigação. Tarefa avulsa, sem obrigação, é "receber": é o
         comportamento que o sistema sempre teve, e mudar o padrão faria toda
@@ -374,22 +374,32 @@ class Tarefa(Base):
         o = self.obrigacao
         if o is None:
             return False
-        # A flag EXPLÍCITA vence o sentido, inclusive em obrigação interna.
-        #
-        # Isto era o contrário até 2026-09-09, e o motivo escrito aqui era que
-        # "interna não troca documento com ninguém, exigir um travaria a baixa
-        # por algo que nunca vai existir". A premissa estava incompleta: interna
-        # tem documento sim, só que quem anexa é o próprio analista, e não o
-        # cliente. Reversão a pedido do usuário.
-        #
-        # `NULL` continua derivando de `identificadores`, e interna sem flag
-        # continua sem documento -- é o que garante que nenhuma obrigação
-        # interna de hoje muda de comportamento sozinha.
-        if o.exige_documento is None:
-            if (o.sentido or "receber") == "interna":
-                return False
-            return bool((o.identificadores or "").strip())
-        return bool(o.exige_documento)
+        return perfil_documento(o.sentido, o.exige_documento, o.identificadores)
+
+
+def perfil_documento(sentido, exige_documento, identificadores) -> bool:
+    """Baixa só pelo e-validador? A regra, num lugar só.
+
+    Chamada pela `Tarefa.exige_documento` e pelo painel, que lê colunas soltas
+    e não carrega o objeto. Até 2026-09-15 o painel tinha a própria cópia, e
+    foi a cópia que ficou para trás na reversão de 09/09.
+
+    A flag EXPLÍCITA vence o sentido, inclusive em obrigação interna. Isto era
+    o contrário até 2026-09-09, com o motivo de que "interna não troca documento
+    com ninguém". A premissa estava incompleta: interna tem documento sim, só
+    que quem anexa é o próprio analista, e não o cliente. Reversão a pedido do
+    usuário.
+
+    `NULL` deriva de `identificadores`, e interna sem flag continua sem
+    documento: é o que garante que nenhuma obrigação interna de hoje muda de
+    comportamento sozinha. `transmitir` segue a regra de `receber`: o recibo do
+    órgão é o documento.
+    """
+    if exige_documento is None:
+        if (sentido or "receber") == "interna":
+            return False
+        return bool((identificadores or "").strip())
+    return bool(exige_documento)
 
 
 class Obrigacao(Base):
@@ -434,13 +444,15 @@ class Obrigacao(Base):
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
-    # Para que lado o documento anda, e há três respostas, não duas:
-    #   receber:  o cliente manda o comprovante e a tarefa baixa pelo e-validador
-    #   entregar: o escritório anexa a guia e envia; o envio conclui a tarefa
-    #   interna:  não troca documento com ninguém (conciliar banco, lançar
-    #             notas, fechar balancete). É trabalho do escritório, e pedir
-    #             documento nessas seria travar a baixa por algo que não existe.
-    sentido = Column(String(10), default="receber")   # receber | entregar | interna
+    # Para que lado o documento anda, e há quatro respostas:
+    #   receber:    o cliente manda o comprovante e a tarefa baixa pelo e-validador
+    #   entregar:   o escritório anexa a guia e envia; o envio conclui a tarefa
+    #   transmitir: o escritório transmite ao órgão (SPED, DCTFWeb, EFD) e o
+    #               recibo dá a baixa pelo e-validador, sem passar pelo cliente
+    #   interna:    não troca documento com ninguém (conciliar banco, lançar
+    #               notas, fechar balancete), a não ser que a flag peça.
+    # `transmitir` tem 10 letras, o limite exato da coluna.
+    sentido = Column(String(10), default="receber")   # receber | entregar | transmitir | interna
     passivel_multa = Column(Boolean, default=False)
     alerta_guia_nao_lida = Column(Boolean, default=False)
     ativa = Column(Boolean, default=True)

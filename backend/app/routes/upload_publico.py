@@ -15,7 +15,10 @@ router = APIRouter(prefix="/publico", tags=["publico"])
 
 def _tarefa_por_token(db: Session, token: str) -> Tarefa:
     t = db.query(Tarefa).filter(Tarefa.upload_token == token).first()
-    if not t:
+    # Token de tarefa que não é "receber" (emitido antes de 2026-09-15) recebe
+    # a MESMA resposta de token inexistente: dizer outra coisa contaria a quem
+    # tem o link que a tarefa existe. O download da guia não passa por aqui.
+    if not t or t.sentido != "receber":
         raise HTTPException(status_code=404, detail="Link inválido ou expirado.")
     if t.empresa and t.empresa.bloqueado:
         raise HTTPException(status_code=403, detail="Envio indisponível.")

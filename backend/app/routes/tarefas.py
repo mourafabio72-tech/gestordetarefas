@@ -221,6 +221,10 @@ def link_envio(
     atende.
     """
     t = _tarefa_no_escopo(db, current_user, tarefa_id)
+    # Só "receber" tem comprovante para o cliente mandar. A recusa vem ANTES do
+    # `link_publico`, senão o token nasceria mesmo com a resposta sendo 404.
+    if t.sentido != "receber":
+        raise HTTPException(status_code=404, detail="Esta tarefa não recebe comprovante do cliente.")
     from ..services import upload as up, config as cfgmod
     return {"link": up.link_publico(cfgmod.carregar(db), t, db)}
 

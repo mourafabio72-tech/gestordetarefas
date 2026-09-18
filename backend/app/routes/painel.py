@@ -31,7 +31,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import (Tarefa, Usuario, Setor, Empresa, Obrigacao, TarefaEnvio,
+from ..models import (Tarefa, Usuario, Setor, Empresa, Obrigacao, TarefaEnvio, perfil_documento,
                       StatusTarefa, PrioridadeTarefa, tarefa_responsaveis)
 from ..auth import get_current_user
 from .tarefas import _aplicar_escopo
@@ -84,18 +84,14 @@ def _somar(alvo: dict, situacao: str, multa: bool):
 
 
 def _perfil_obrigacao(o) -> tuple:
-    """(sentido, exige_documento) da obrigação, mesma regra do model.
+    """(sentido, exige_documento) da obrigação.
 
-    Repetida aqui porque a consulta do painel não carrega o objeto Tarefa, e
-    instanciar centenas de ORM só para ler duas propriedades desfaz a economia
-    de trazer colunas soltas.
+    A consulta do painel não carrega o objeto Tarefa, e instanciar centenas de
+    ORM só para ler duas propriedades desfaz a economia de trazer colunas
+    soltas. Por isso chama a função pura, e não repete a regra: a cópia que
+    morava aqui ficou para trás na reversão de 2026-09-09.
     """
-    sentido = (o.sentido or "receber")
-    if sentido == "interna":
-        return sentido, False
-    if o.exige_documento is None:
-        return sentido, bool((o.identificadores or "").strip())
-    return sentido, bool(o.exige_documento)
+    return (o.sentido or "receber"), perfil_documento(o.sentido, o.exige_documento, o.identificadores)
 
 
 @router.get("")

@@ -264,6 +264,7 @@ def identificar_obrigacao(db: Session, texto: str):
     deixando o trabalho travado, que é pior do que era antes.
 
     Interna com a flag em `NULL` continua de fora, como sempre esteve.
+    `transmitir` entra como `receber`: o recibo do órgão é o documento que casa.
     """
     alvo = _norm(texto)
     candidatas = []

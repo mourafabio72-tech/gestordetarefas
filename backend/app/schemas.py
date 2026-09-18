@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime, date
 from enum import Enum
 import json
@@ -208,7 +208,7 @@ class TarefaResponse(BaseModel):
     saida_nome: Optional[str] = None
     saida_downloads: Optional[int] = 0          # quantas vezes o cliente abriu o link
     saida_baixada_em: Optional[datetime] = None
-    sentido: Optional[str] = "receber"          # vem da obrigação: receber | entregar
+    sentido: Optional[str] = "receber"          # vem da obrigação: receber | entregar | transmitir | interna
     exige_documento: bool = False   # baixa só pelo e-validador (deriva da obrigação)
     # "Não se aplica a esta empresa". A tarefa fica CANCELADA, e é este campo
     # que diz à tela para mostrar o rótulo certo: cancelar é desistir, e isto
@@ -221,10 +221,28 @@ class TarefaResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# Para que lado o documento anda (ver `Obrigacao.sentido` em models.py). Lista
+# fechada na ENTRADA: até 2026-09-15 era texto livre, e qualquer palavra gravava.
+Sentido = Literal["receber", "entregar", "interna", "transmitir"]
+
+
+def _sentido_em_branco(v):
+    """Sentido vazio é "não informado", e não valor inválido.
+
+    Obrigação antiga pode ter `""` gravado. A tela abre a obrigação, mostra
+    Receber marcado e manda o `""` de volta ao salvar, mesmo que só o nome
+    tenha mudado. Recusar o vazio travaria a edição de qualquer campo dela.
+    `None` se comporta como `receber` em todo o sistema.
+    """
+    if isinstance(v, str) and not v.strip():
+        return None
+    return v
+
 # Obrigação (modelo recorrente)
 class ObrigacaoBase(BaseModel):
     nome: str
-    sentido: Optional[str] = "receber"   # receber (comprovante do cliente) | entregar (guia ao cliente)
+    sentido: Optional[Sentido] = "receber"
+    _sentido_vazio = field_validator("sentido", mode="before")(_sentido_em_branco)
     mininome: Optional[str] = None
     identificadores: Optional[str] = None
     setor_id: Optional[int] = None
@@ -273,6 +291,10 @@ class ObrigacaoCreate(ObrigacaoBase):
 
 class ObrigacaoUpdate(BaseModel):
     nome: Optional[str] = None
+    # Faltava até 2026-09-15: o Pydantic descarta campo não declarado sem erro,
+    # então trocar o lado do documento pela tela devolvia 200 e não gravava.
+    sentido: Optional[Sentido] = None
+    _sentido_vazio = field_validator("sentido", mode="before")(_sentido_em_branco)
     mininome: Optional[str] = None
     identificadores: Optional[str] = None
     setor_id: Optional[int] = None
@@ -302,6 +324,9 @@ class ObrigacaoUpdate(BaseModel):
     empresa_ids: Optional[List[int]] = None
 
 class ObrigacaoResponse(ObrigacaoBase):
+    # A SAÍDA não aplica a lista fechada: obrigação antiga pode ter sentido nulo
+    # ou vazio no banco, e validar aqui derrubaria a listagem inteira com 500.
+    sentido: Optional[str] = "receber"
     id: int
     empresa_ids: List[int] = []
     created_at: datetime

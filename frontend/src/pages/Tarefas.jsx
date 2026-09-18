@@ -706,7 +706,7 @@ export default function Tarefas() {
                     Enviar documento ao cliente
                   </ItemMenu>
                 )}
-                {ativa && (
+                {ativa && tarefa.sentido === 'receber' && (
                   <ItemMenu icone={Link2} onClick={() => { setMenuAberto(null); handleCopiarLink(tarefa); }}>
                     Copiar link de envio
                   </ItemMenu>
