@@ -134,7 +134,7 @@ Itens:
 
 ## Fase 32: a geração em lote passa a deixar rastro
 
-- **Status:** pending
+- **Status:** done (2026-09-18; prova com 16 itens, o irmão `create_empresa` entrou pelo verificador)
 - **Duração estimada:** 25 min
 - **Notas:** Padrao_Logging_Estruturado, TDD_RED_GREEN_REFACTOR
 - **Dependências:** nenhuma
@@ -163,7 +163,7 @@ Itens:
 
 ## Fase 33: recorte por regime tributário no modal "Gerar tarefas do mês"
 
-- **Status:** pending (estilo do seletor decidido: tipo 1, multi opções, em 2026-09-18)
+- **Status:** done (2026-09-18; prova com 17 itens, conferência visual do usuário, modal em `max-w-xl` e ressalva em verde a pedido dele)
 - **Duração estimada:** 50 min
 - **Notas:** Padrao_Toggle_Tipos, Padrao_Selecao_em_Lote (precedente `check-app`), Tela_Nao_Tem_Manual, Sistema_de_Estilos, Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela, Padrao_IDOR, Padrao_Mass_Assignment, Portugues_BR_Acentuacao, Sem_Travessao, Sem_Popup_Nativo
 - **Dependências:** nenhuma (a 32 é independente)
@@ -197,7 +197,7 @@ Itens:
 
 ## Fase 34: publicar as fases 27, 28, 32 e 33
 
-- **Status:** pending
+- **Status:** done (2026-09-18; `b612b2d` no ar, carimbo `20260918-1847`, conferido pelo usuário)
 - **Duração estimada:** 20 min
 - **Notas:** Fechar_Tarefa_Rodar_Verifica
 - **Dependências:** fases 32 e 33
@@ -237,3 +237,4 @@ Itens:
 
 - **2026-09-15:** aberto com as fases 27 a 31. Sete decisões do usuário antes da primeira linha, em duas rodadas; a segunda nasceu da `Padrao_Toggle_Tipos`, conferida pelo principal depois de o batedor ter lido errado.
 - **2026-09-18:** acrescentadas as fases 32 a 34 (recorte por regime na geração e log da geração em lote). Quatro decisões do usuário numa rodada (1a, 2b, 3a, 4a). A fase 32 nasceu da ficha de segurança, confirmada no código pelo principal.
+- **2026-09-18, fase 32:** o verificador de segurança achou o irmão da geração do mês, `POST /empresas`, que gera as tarefas da empresa nova em lote sem linha de tarefa. Entrou na própria fase, com RED próprio, sem pergunta ao usuário: é achado de verificador sobre o mesmo critério de aceite, e o precedente é a fase 23 (sete rotas irmãs). O item 32.2 dizia `log_event` só em `gerar_competencia`; a trava que ele protegia, `gerador.py` sem diff, continua de pé.

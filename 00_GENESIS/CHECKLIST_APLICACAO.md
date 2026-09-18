@@ -125,47 +125,70 @@ Acesso: login por perfil
 
 ## Fase 32: log da geração em lote
 
-- [ ] 32.1 `prova_gerar_log.py` escrita ANTES e saindo com exit 1, saída colada no LOG
+- [x] 32.1 `prova_gerar_log.py` escrita ANTES e saindo com exit 1, saída colada no LOG
       PROIBIDO: prova que passa de primeira
       (TDD_RED_GREEN_REFACTOR)
-- [ ] 32.1 a linha é UMA por chamada, `CRIACAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, com usuário, `mes_entrega`, `criadas`, `puladas`, nº de obrigações e nº de empresas do recorte
+      EVIDÊNCIA: LOG 2026-09-18T18:50, `PROVA FALHOU nos itens: [2, 3, 4, 5, 6, 7, 8, 9, 10]`, rc=1; verdes no RED só o cenário (1) e a não-regressão (11 a 13)
+- [x] 32.1 a linha é UMA por chamada, `CRIACAO_REGISTRO_CRITICO`, `tabela="tarefa"`, `lote=True`, com usuário, `mes_entrega`, `criadas`, `puladas`, nº de obrigações e nº de empresas do recorte
       PROIBIDO: uma linha por tarefa; razão social ou CNPJ na linha
       (Padrao_Logging_Estruturado: "Senha, token e PII NUNCA entram em log", "mutação de dado crítico SEMPRE entram")
-- [ ] 32.1 geração com zero criadas também registra
-- [ ] 32.2 `log_event` só em `gerar_competencia` (`routes/obrigacoes.py`); `services/gerador.py` sem diff
-- [ ] 32.3 suíte do backend em exit 0
+      EVIDÊNCIA: itens 2 a 8 e 10 verdes no GREEN; linha única em `routes/obrigacoes.py:234`; campos `obrigacoes_no_recorte` e `empresas_no_recorte` (None sem recorte, item 10); item 7 procura as 3 razões sociais e os 3 CNPJs na linha serializada; item 8 recusa lista na linha
+- [x] 32.1 geração com zero criadas também registra
+      EVIDÊNCIA: item 9, segunda chamada igual com `criadas=0`, `puladas=4` e uma linha
+- [x] 32.2 `log_event` só em `gerar_competencia` (`routes/obrigacoes.py`); `services/gerador.py` sem diff
+      EVIDÊNCIA: `routes/obrigacoes.py:234-237`; `git diff --stat -- backend/app/services/gerador.py` vazio; `git diff --stat` mostra só `obrigacoes.py | 10`
+      AMPLIADO pelo verificador de segurança (LOG 19:20): o irmão `create_empresa` também gera em lote e ganhou a mesma linha com `origem="cadastro_empresa"`, `routes/empresas.py:318`. O texto "só em `gerar_competencia`" deste item ficou superado; o que ele protegia, `gerador.py` sem diff, segue valendo
+- [x] 32.3 suíte do backend em exit 0
+      EVIDÊNCIA: `PROVA OK: 13 checagens verdes`; `provas=33 falharam=0` (32 + a nova); travessão rc=1 nos 2 arquivos; `escada:` rc=1
+      REFEITO depois do irmão: `PROVA OK: 16 checagens verdes`; `provas=33 falharam=0`, com `prova_registro_critico.py` dentro; travessão rc=1 nos 3 arquivos
 
 ## Fase 33: tela
 
-- [ ] 33.1 `prova_recorte_regime.js` escrita ANTES e saindo com erro, saída no LOG
+- [x] 33.1 `prova_recorte_regime.js` escrita ANTES e saindo com erro, saída no LOG
       (TDD_RED_GREEN_REFACTOR)
-- [ ] 33.1 `REGIMES_GERACAO` com 7 valores de `models.py:101`: `simples_nacional`, `lucro_real`, `lucro_presumido`, `mei`, `isento`, `imune`, `terceiro_setor`
+      EVIDÊNCIA: LOG 19:40, `ERR_MODULE_NOT_FOUND` rc=1 antes de `recorteGeracao.js` existir; segundo RED para `nomesDosRegimes` (`does not provide an export`), LOG 19:50
+- [x] 33.1 `REGIMES_GERACAO` com 7 valores de `models.py:101`: `simples_nacional`, `lucro_real`, `lucro_presumido`, `mei`, `isento`, `imune`, `terceiro_setor`
       PROIBIDO: `indefinido` na lista; rótulo inventado fora dos que a tela de Empresas já usa
       (decisão 2b do usuário)
-- [ ] 33.1 `podeGerar` falso quando o modo não é `todas` e os ids saem vazios (regime sem empresa, nenhum regime marcado, nenhuma empresa escolhida)
+      EVIDÊNCIA: itens 1 a 3 da prova (valores, rótulos iguais a `Empresas.jsx:27-36`, `indefinido` fora); `recorteGeracao.js:12-20`
+- [x] 33.1 `podeGerar` falso quando o modo não é `todas` e os ids saem vazios (regime sem empresa, nenhum regime marcado, nenhuma empresa escolhida)
       PROIBIDO: `empresa_ids: []` saindo da tela, que o backend lê como "todas"
       (armadilha medida em `Obrigacoes.jsx:1123-1125`)
-- [ ] 33.2 `gerTodasEmp` substituído por `gerModo` + `gerRegimes`; `grep -n "gerTodasEmp" frontend/src/pages/Obrigacoes.jsx` vazio
-- [ ] 33.3 seletor "Para quais empresas?" no tipo 1, multi opções (decisão 5 do usuário, 2026-09-18): `role="radiogroup"` + `aria-label="Para quais empresas?"`, `<button type="button">` com `aria-checked`, `title` com a dica, escolhido em `border-primary-600 bg-primary-50 text-primary-800`
+      EVIDÊNCIA: itens 11, 12, 14, 15 e 16 da prova bloqueiam (15 é a não-regressão de "escolhidas" vazia, 16 é empresa bloqueada, LOG 20:25); o 13 é o lado que libera; modo desconhecido falha fechado (item 14); botão em `Obrigacoes.jsx:1165` usa `podeGerar`
+- [x] 33.2 `gerTodasEmp` substituído por `gerModo` + `gerRegimes`; `grep -n "gerTodasEmp" frontend/src/pages/Obrigacoes.jsx` vazio
+      EVIDÊNCIA: grep rc=1 vazio; `Obrigacoes.jsx:140` (`gerModo`), `:151` (`idsDoRecorte` na chamada)
+- [x] 33.3 seletor "Para quais empresas?" no tipo 1, multi opções (decisão 5 do usuário, 2026-09-18): `role="radiogroup"` + `aria-label="Para quais empresas?"`, `<button type="button">` com `aria-checked`, `title` com a dica, escolhido em `border-primary-600 bg-primary-50 text-primary-800`
       PROIBIDO: `name="ger_alvo_emp"` (os radios crus); estilo escolhido sem pergunta
       PROVA: `grep -n 'name="ger_alvo_emp"' frontend/src/pages/Obrigacoes.jsx` vazio
       (Padrao_Toggle_Tipos: "NUNCA escolher o estilo sozinho")
-- [ ] 33.4 checkboxes de regime com `className="check-app"`, rótulo com contagem, "N empresa(s) no recorte" abaixo
+      EVIDÊNCIA: `grep 'name="ger_alvo_emp"'` rc=1; wrapper em `Obrigacoes.jsx:1059`; três `<button type="button" role="radio" aria-checked>` com `title`; estilo decidido pelo usuário no LOG 18:35
+- [x] 33.4 checkboxes de regime com `className="check-app"`, rótulo com contagem, "N empresa(s) no recorte" abaixo
       PROIBIDO: `h-4 w-4` nos checkboxes novos; switch `cv-sw` (não é liga/desliga)
       (Padrao_Toggle_OnOff: "checkbox é para MULTI SELEÇÃO"; precedente `check-app`, fase 8)
-- [ ] 33.4 nenhum parágrafo novo de explicação fixa; a dica vai no `title`, e a frase de consequência que já existe é reaproveitada
+      EVIDÊNCIA: `Obrigacoes.jsx:1080` `check-app`; linhas `+` do diff sem `h-4 w-4` nem `cv-sw` (rc=1). A lista de "Somente as escolhidas", no mesmo bloco, também trocou `h-4 w-4` por `check-app` (LOG 20:00): no modal inteiro, `h-4 w-4` e `type="radio"` voltam vazios
+- [x] 33.4 nenhum parágrafo novo de explicação fixa; a dica vai no `title`, e a frase de consequência que já existe é reaproveitada
       (Tela_Nao_Tem_Manual)
-- [ ] 33.5 faixa de resumo com o ramo de regime; botão bloqueado com `title` quando `podeGerar` é falso
-- [ ] 33.6 prova Node em exit 0, provas do frontend em exit 0, `npm run build` ok
-- [ ] 33.6 `grep -n "—\|–"` e `grep -nE "#[0-9a-fA-F]{6}"` vazios nos arquivos tocados; linhas `+` do diff sem `alert(`, `confirm(`, `prompt(`
+      EVIDÊNCIA: dicas nos três `title`; a dica fixa "cada obrigação vai para quem ela alcança" saiu do rótulo e foi para o `title`; a frase de consequência que já existia passou a valer para os dois recortes, sem texto novo; o único `<p>` novo é a contagem "N empresa(s) no recorte"
+- [x] 33.5 faixa de resumo com o ramo de regime; botão bloqueado com `title` quando `podeGerar` é falso
+      EVIDÊNCIA: `Obrigacoes.jsx:1147-1149` ("Para N empresa(s) de Lucro Real e Lucro Presumido", via `nomesDosRegimes`, item 17 da prova); `:1165-1171`, três textos de bloqueio conforme a causa
+- [x] 33.6 prova Node em exit 0, provas do frontend em exit 0, `npm run build` ok
+      EVIDÊNCIA: `PROVA OK: 17 checagens verdes`; `provas_front=20 falharam=0`; `✓ built in 1.17s` (remedido depois do conserto da bloqueada, LOG 20:25)
+- [x] 33.6 `grep -n "—\|–"` e `grep -nE "#[0-9a-fA-F]{6}"` vazios nos arquivos tocados; linhas `+` do diff sem `alert(`, `confirm(`, `prompt(`
       (Sem_Travessao, Sistema_de_Estilos, Sem_Popup_Nativo)
-- [ ] 33.7 conferência visual local registrada no LOG
+      EVIDÊNCIA: travessão rc=1 nos 3 arquivos; hex em `recorteGeracao.js` rc=1 e nas linhas `+` do diff de `Obrigacoes.jsx` rc=1; popup nas linhas `+`: 0. NO ARQUIVO INTEIRO o hex NÃO volta vazio: `Obrigacoes.jsx:928` tem `bg-[#faf7f0]`, anterior a este trabalho e fora do modal, e é o item 29.2 que o remove. Correção de registro apontada pelo verificador de evidência, LOG 20:25
+- [x] 33.7 conferência visual local registrada no LOG
+      EVIDÊNCIA: conferido em 2026-09-18 pelo usuário ("ficou bom", print do modal no modo regime) e medido no navegador pelo principal, LOG 20:55 e 21:05: faixa numa linha só, dois regimes mudam contagem e resumo, regime sem empresa trava o botão com o `title` certo, ressalva em verde a pedido dele
 
 ## Fase 34: publicar
 
-- [ ] 34.1 suíte completa e build verdes
-- [ ] 34.2 `COPY . .` nos dois Dockerfile, conferido
-- [ ] 34.3 `git ls-remote` com o ref; carimbo de `/api/health` igual ao HEAD
-- [ ] 34.4 bundle servido contém `Por regime tributário`; token público inventado devolve 404
-- [ ] 34.5 conferência do usuário em produção colada no LOG
+- [x] 34.1 suíte completa e build verdes
+      EVIDÊNCIA: `provas=33 falharam=0`; `provas_front=20 falharam=0`; `✓ built in 1.16s`, antes do commit `b612b2d`
+- [x] 34.2 `COPY . .` nos dois Dockerfile, conferido
+      EVIDÊNCIA: `backend/Dockerfile:17` e `frontend/Dockerfile:8` com `COPY . .`; `.dockerignore` dos dois sem `provas` nem `src`; e o bundle servido contém o texto do módulo novo (34.4)
+- [x] 34.3 `git ls-remote` com o ref; carimbo de `/api/health` igual ao HEAD
+      EVIDÊNCIA: `git ls-remote` devolve `b612b2d96ae4...` em `refs/heads/main`; carimbo antes `20260910-1144`, depois `20260918-1847`, igual ao `git log -1` do HEAD (`b612b2d 20260918-1847`)
+- [x] 34.4 bundle servido contém `Por regime tributário`; token público inventado devolve 404
+      EVIDÊNCIA: `/assets/index-BCa-EY5M.js` com `grep -c "Por regime tribut"` = 1 e o texto `Nenhuma empresa ativa nos regimes marcados`; `GET` e `POST` com arquivo em `/api/publico/tarefa/token-inventado-x` devolvem `404 {"detail":"Link inválido ou expirado."}` (POST sem arquivo dá 422 antes de olhar o token, validação do corpo); `POST /api/obrigacoes/gerar` sem login dá 401
+- [x] 34.5 conferência do usuário em produção colada no LOG
+      EVIDÊNCIA: usuário respondeu "está ok" em 2026-09-18, depois de abrir o modal em gestordetarefas.zoaria.com.br (LOG da fase 34)
       (Fechar_Tarefa_Rodar_Verifica)
