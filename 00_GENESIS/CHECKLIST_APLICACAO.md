@@ -108,8 +108,16 @@ Acesso: login por perfil
       PROVA: `grep -n "—\|–"` vazio nos arquivos tocados; leitura do diff frase a frase
       (Portugues_BR_Acentuacao; Revisao_Professor_Pasquale, sem executor nesta vault)
       EVIDÊNCIA: travessão e en-dash rc=1 nos 4 arquivos, depois de trocar o travessão LITERAL que eu tinha deixado no regex da prova (LOG 19:10:07); leitura frase a frase das strings novas: 4 rótulos, 4 dicas, subtítulo e aba de Documentos; `pasquale.py` ausente, declarado
-- [ ] 29.7 conferência visual local registrada no LOG com data e tela
+- [x] 29.8 entregar segue a regra geral: com identificadores e flag nula, exige a guia anexada (reescrito em 2026-09-19; a regra de 18/09 caiu)
+      PROIBIDO: consertar só a tela; a trava da baixa manual lê o servidor
+      (TDD_RED_GREEN_REFACTOR; Escada_Preguica_de_Codigo, causa raiz)
+      EVIDÊNCIA: LOG 2026-09-19 prova_RED da decisão nova, `PROVA FALHOU nos itens: [15, 20, 23, 24]` rc=1, o 24 com (200); front AssertionError no 7b; GREEN `PROVA OK: 25 checagens verdes` e `PROVA OK: 10 checagens verdes`; `perfil_documento` sem ramo de entregar (`models.py`); `provas=35 falharam=0`, `provas_front=22 falharam=0`
+- [x] 29.10 entregar mostra identificadores e "Exige documento"
+      PROVA: item 7b da prova Node; `grep -n "!== 'entregar'" frontend/src/pages/Obrigacoes.jsx` vazio
+      EVIDÊNCIA: 7b verde (flag nula, true e false); `mostraIdentificadores` sem ramo de entregar (`sentidoObrigacao.js:47-51`)
+- [x] 29.7 conferência visual local registrada no LOG com data e tela
       (Protocolo_Revisao_de_Tela)
+      EVIDÊNCIA: LOG 2026-09-19 conferencia_visual, tela Obrigações > editar obrigação na cópia local; itens 1, 2 e 4 conferidos pelo usuário; 3, 5 e 6 declarados como provados só pelo mecânico
 
 ## Fase 30: produção
 

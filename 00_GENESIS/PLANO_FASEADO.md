@@ -71,7 +71,7 @@ Itens:
 
 ## Fase 29: a tela
 
-- **Status:** pending
+- **Status:** done (2026-09-19; regra de entrega decidida pelo usuário com o dado de produção, conferência visual feita)
 - **Duração estimada:** 50 min
 - **Notas:** Padrao_Toggle_Tipos, Tela_Nao_Tem_Manual, Sistema_de_Estilos, Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela, Portugues_BR_Acentuacao, Sem_Travessao, Sem_Popup_Nativo
 - **Dependências:** fase 27
@@ -90,6 +90,9 @@ Itens:
 5. **29.5** Documentos: aba `Recebidos do cliente` vira `Comprovantes e recibos`, e o subtítulo da aba (`Documentos.jsx:161`) passa a falar de comprovantes e recibos.
 6. **29.6 GREEN, build e gate de língua.** Prova Node em exit 0, as 19 provas do frontend em exit 0, `npm run build` compilando, `grep -rn "—\|–"` e `grep -nE "#[0-9a-fA-F]{6}"` vazios nos arquivos tocados.
 7. **29.7 Conferência visual local**, modal de Obrigação: as 4 opções lado a lado, a escolhida na cor da marca, dica ao passar o mouse, identificadores aparecendo ao escolher Transmitir.
+8. **29.8 Entregar segue a regra geral do documento** (reescrito em 2026-09-19). A regra de 18/09, "entregar nunca exige", caiu depois de a produção mostrar 9 guias de imposto com o código da guia nos identificadores. RED no backend (`prova_transmitir_orgao.py`, itens 15, 20, 23 a 25) e no espelho da tela (`prova_sentido_obrigacao.js`, itens 7b e 8).
+9. **29.9 Entregar fora do e-validador:** CANCELADO em 2026-09-19. O usuário quer o contrário: a guia sobe no e-validador.
+10. **29.10 A entrega mostra os identificadores e o "Exige documento"**, como Receber. A tela de produção já os escondia antes da fase 29, e as 9 guias ficavam com o código invisível.
 
 **Critério de aceite:** provas e build verdes; greps vazios; conferência visual registrada no LOG com data e tela.
 
@@ -318,6 +321,12 @@ Itens:
 - **2026-09-18, fases 35 a 37:** abertas a pedido do usuário depois de ver 37 tarefas da Trops que não se aplicavam. Diagnóstico medido no código: o Desvincular só tirava vínculo à mão, e a regra de regime em branco alcança todas as empresas; o "Não se aplica" existia sem item de menu desde `3500ca8`. Quatro decisões numa rodada (1a, 2a, 3a, 4a). Executam antes das 29 a 31.
 
 - **2026-09-18, fase 36:** entrou o irmão achado na execução, com autorização do usuário ("pode seguir com cadastramento"): `gerar_para_empresa`, o caminho do cadastro de empresa, ignorava o modo 'vinculadas' e gerava para toda empresa nova as obrigações "só dos vinculados". Conserto de uma linha com RED próprio na `prova_alvo_vinculadas.py`. Também entrou, por achado de verificador e com RED próprio, o motivo só com espaços nos dois schemas (Desvincular e Não se aplica).
+
+- **2026-09-19, fase 29:** entrou o item 29.8, a regra decidida pelo usuário em 18/09 (LOG 21:32:49): entregar nunca exige documento. Duas provas antigas afirmavam a regra revogada e foram atualizadas, com o motivo no LOG.
+
+- **2026-09-19, fase 29:** entrou o item 29.9, a pedido do usuário depois de o verificador funcional provar que o e-validador concluía tarefa de ENTREGA por identificador herdado, sem nada entregue. A ordem (listar, o usuário confirmar, só então mudar) foi dele.
+
+- **2026-09-19, fase 29 (2):** o SELECT em produção achou 9 guias `entregar` com o código nos identificadores. O usuário decidiu: a guia sobe no e-validador e continua exigindo anexo. O 29.8 foi reescrito (a regra de 18/09 caiu), o 29.9 cancelado, o 29.10 entrou. Pedido novo, fora desta fase: o e-validador enviar a guia ao cliente automaticamente, que vira trabalho próprio.
 
 ## Fora de escopo das fases 35 a 37
 
