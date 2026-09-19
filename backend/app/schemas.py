@@ -286,8 +286,67 @@ class ObrigacaoBase(BaseModel):
     aplica_regimes: Optional[str] = None
     aplica_segmentos: Optional[str] = None
 
+_COMP_APELIDOS = {"mes_anterior", "mesmo_mes", "mes_seguinte", "ano_anterior"}
+
+
+def _meses_validos(v):
+    """`meses_ativos` é CSV de 1 a 12, e nada mais.
+
+    Até 2026-09-19 era texto livre: "a" gravava e a obrigação parava de gerar
+    sem aviso nenhum. Repetido e fora de ordem não são erro, só se arrumam
+    ("3,1,3" vira "1,3"). Vazio é erro: obrigação sem mês nunca gera, e quem
+    quer isso desativa a obrigação. Por isso o vazio chega à rota, que sabe
+    se a obrigação já era vazia no banco (legada, que a tela reenvia como leu)
+    ou se alguém está esvaziando agora.
+    """
+    if v is None:
+        return v
+    if not str(v).strip():
+        return ""        # a rota decide: criar sem mês é erro, legada vazia segue
+    partes = [p.strip() for p in str(v).split(",")]
+    if not all(p.isdigit() and 1 <= int(p) <= 12 for p in partes):
+        raise ValueError("Marque ao menos um mês, de 1 a 12.")
+    return ",".join(str(m) for m in sorted({int(p) for p in partes}))
+
+
+def _competencia_valida(v):
+    """Um dos quatro apelidos, ou o deslocamento em meses de -24 a 1.
+
+    A anual usa número (-14 para entrega em março: janeiro do ano anterior,
+    que é o que o recibo traz). Vazio é "não informado" e vira o padrão
+    histórico, porque obrigação antiga pode ter "" gravado e a tela reenvia o
+    que leu (a mesma armadilha do sentido vazio, fase 27).
+    """
+    texto = "" if v is None else str(v).strip()
+    if not texto:
+        # null também: gravado como NULL, derrubava a LISTAGEM inteira com
+        # 500, porque a resposta exige texto (achado de 2026-09-19).
+        return "mes_anterior"
+    if texto in _COMP_APELIDOS:
+        return texto
+    try:
+        n = int(texto)
+    except ValueError:
+        raise ValueError("Competência inválida.")
+    if not -24 <= n <= 1:
+        raise ValueError("Competência fora do intervalo de 24 meses antes a 1 depois.")
+    return str(n)
+
+
+# Os validadores moram na ENTRADA (Create e Update), e não no ObrigacaoBase:
+# a resposta herda do Base, e dado antigo fora do formato derrubaria a
+# listagem inteira com 500.
 class ObrigacaoCreate(ObrigacaoBase):
     empresa_ids: Optional[List[int]] = []
+    _meses = field_validator("meses_ativos", mode="before")(_meses_validos)
+
+    @field_validator("meses_ativos")
+    @classmethod
+    def _criar_com_mes(cls, v):
+        if not v:
+            raise ValueError("Marque ao menos um mês, de 1 a 12.")
+        return v
+    _comp = field_validator("competencia_ref", mode="before")(_competencia_valida)
 
 class ObrigacaoUpdate(BaseModel):
     nome: Optional[str] = None
@@ -322,6 +381,8 @@ class ObrigacaoUpdate(BaseModel):
     aplica_regimes: Optional[str] = None
     aplica_segmentos: Optional[str] = None
     empresa_ids: Optional[List[int]] = None
+    _meses = field_validator("meses_ativos", mode="before")(_meses_validos)
+    _comp = field_validator("competencia_ref", mode="before")(_competencia_valida)
 
 class ObrigacaoResponse(ObrigacaoBase):
     # A SAÍDA não aplica a lista fechada: obrigação antiga pode ter sentido nulo

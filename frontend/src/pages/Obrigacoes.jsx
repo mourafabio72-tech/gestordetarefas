@@ -3,6 +3,7 @@ import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services
 import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { SENTIDOS, sentidoDoForm, mostraIdentificadores, exigeDocumentoMarcado } from './sentidoObrigacao';
+import { PERIODICIDADES, periodicidadeDe, aplicarPeriodicidade, rotuloCompetenciaCalculada, competenciaDiverge, mesesDoCsv, clicarMesNaSerie } from './periodicidade';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap, X, Loader2, Building2, ListChecks } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SelectBusca from '../components/SelectBusca';
@@ -72,6 +73,10 @@ export default function Obrigacoes() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  // Não é coluna: se deduz dos meses ao abrir, e escolher só preenche meses e
+  // competência (periodicidade.js). Guardada à parte para a Personalizada
+  // poder ter os 12 meses marcados sem virar Mensal no mesmo clique.
+  const [periodicidade, setPeriodicidade] = useState('mensal');
   const [buscaEmp, setBuscaEmp] = useState('');
   const [secoes, setSecoes] = useState({ recorrencia: true, publico: false, empresas: false, detalhes: false });
   const removerExcecao = async (x) => {
@@ -214,9 +219,24 @@ export default function Obrigacoes() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const abrirNovo = () => { setEditing(null); setForm(emptyForm); setAlvo(estadoDoAlvo(emptyForm)); setModelo(null); setDetalhes([]); setExcecoes([]); setShowModal(true); };
+  const escolherPeriodicidade = (nova) => {
+    setForm((f) => ({ ...f, ...aplicarPeriodicidade(f, periodicidade, nova) }));
+    setPeriodicidade(nova);
+  };
+  // Na Anual e na Trimestral o botão do mês escolhe o mês de entrega; na
+  // Mensal e na Personalizada ele liga e desliga aquele mês, como sempre.
+  const clicarMes = (num) => {
+    if (periodicidade === 'anual' || periodicidade === 'trimestral') {
+      setForm((f) => ({ ...f, ...(clicarMesNaSerie(f, periodicidade, Number(num)) || {}) }));
+      return;
+    }
+    setForm((f) => ({ ...f, meses_ativos: toggleCsv(f.meses_ativos, num) }));
+    if (periodicidade === 'mensal') setPeriodicidade('personalizada');
+  };
+  const abrirNovo = () => { setPeriodicidade('mensal'); setEditing(null); setForm(emptyForm); setAlvo(estadoDoAlvo(emptyForm)); setModelo(null); setDetalhes([]); setExcecoes([]); setShowModal(true); };
   const abrirEdicao = (o) => {
     setEditing(o);
+    setPeriodicidade(periodicidadeDe(o.meses_ativos));
     setForm({
       ...emptyForm, ...o,
       setor_id: o.setor_id || '',
@@ -234,6 +254,7 @@ export default function Obrigacoes() {
   };
   const duplicar = (o) => {
     setEditing(null);   // cria uma NOVA (POST), não edita a original
+    setPeriodicidade(periodicidadeDe(o.meses_ativos));
     setForm({
       ...emptyForm, ...o,
       nome: `${o.nome} (cópia)`,
@@ -823,6 +844,25 @@ export default function Obrigacoes() {
                   )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
+                    {rotuloCompetenciaCalculada(periodicidade) ? (
+                      <>
+                        {/* Anual e trimestral: a competência é o início do
+                            período, que é o que o recibo traz. Não se escolhe. */}
+                        <div className="input-field flex items-center bg-gray-50 text-gray-700">
+                          {rotuloCompetenciaCalculada(periodicidade)}
+                        </div>
+                        {competenciaDiverge(form, periodicidade) && (
+                          <p className="text-xs text-amber-700 mt-1">
+                            A competência gravada é outra.{' '}
+                            <button type="button" className="underline font-semibold"
+                              onClick={() => escolherPeriodicidade(periodicidade)}>
+                              Usar {rotuloCompetenciaCalculada(periodicidade).toLowerCase()}
+                            </button>
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                    <>
                     <select value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
                       <option value="mesmo_mes">Mesmo mês</option>
                       <option value="mes_anterior">Mês anterior</option>
@@ -837,23 +877,51 @@ export default function Obrigacoes() {
                       SPED e EFD-Contribuições são <strong>2 meses antes</strong>: entrega em
                       setembro, competência de julho.
                     </p>
+                    </>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Meses ativos</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Periodicidade</label>
+                  <div role="radiogroup" aria-label="Periodicidade"
+                    className="inline-flex flex-wrap items-center gap-1 p-[3px] border border-gray-200 rounded-lg bg-white">
+                    {PERIODICIDADES.map((p) => (
+                      <button key={p.valor} type="button" role="radio"
+                        aria-checked={periodicidade === p.valor}
+                        title={p.dica} onClick={() => escolherPeriodicidade(p.valor)}
+                        className={`h-8 px-2.5 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${periodicidade === p.valor
+                          ? 'border-primary-600 bg-primary-50 text-primary-800'
+                          : 'border-transparent bg-white text-gray-500 hover:text-primary-600'}`}>
+                        {p.rotulo}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">
+                    {periodicidade === 'anual' ? 'Mês de entrega'
+                      : periodicidade === 'trimestral' ? 'Meses de entrega' : 'Meses ativos'}
+                  </label>
+                  {/* Na Anual o mês é escolha exclusiva (rádio); nas outras,
+                      cada mês liga e desliga ou marca a série (botão alternável). */}
+                  <div className="flex flex-wrap gap-2"
+                    role={periodicidade === 'anual' ? 'radiogroup' : 'group'}
+                    aria-label={periodicidade === 'anual' ? 'Mês de entrega' : 'Meses de entrega'}>
                     {MESES.map((m, i) => {
                       const num = String(i + 1);
-                      const on = csvToSet(form.meses_ativos).has(num);
+                      const on = mesesDoCsv(form.meses_ativos).includes(i + 1);
+                      const aria = periodicidade === 'anual'
+                        ? { role: 'radio', 'aria-checked': on } : { 'aria-pressed': on };
                       return (
-                        <button type="button" key={num}
-                          onClick={() => set('meses_ativos', toggleCsv(form.meses_ativos, num))}
-                          className={`px-2 py-1 rounded text-xs border ${on ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-300'}`}>
+                        <button type="button" key={num} {...aria}
+                          onClick={() => clicarMes(num)}
+                          className={`px-2 py-1 rounded text-xs border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${on ? 'border-primary-600 bg-primary-50 text-primary-800 font-semibold' : 'bg-white text-gray-600 border-gray-300 hover:text-primary-600'}`}>
                           {m}
                         </button>
                       );
                     })}
                   </div>
+                  {periodicidade === 'trimestral' && (
+                    <p className="text-xs text-gray-500 mt-1">Clique no primeiro mês de entrega: os outros saem de 3 em 3.</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-4 gap-4 mt-3">
                   <div>

@@ -9,7 +9,7 @@ from typing import Optional
 from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
 from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
 from ..auth import get_current_user, require_perm, require_flag
-from ..services.gerador import gerar_tarefas
+from ..services.gerador import gerar_tarefas, deslocamento_competencia
 from ..seguranca import log_event, ip_cliente
 
 router = APIRouter(prefix="/obrigacoes", tags=["obrigacoes"])
@@ -102,8 +102,21 @@ def set_detalhes_empresa(obrigacao_id: int, body: DetalhesBody, db: Session = De
               obrigacao_id=obrigacao_id, quantidade=gravados)
     return {"ok": True}
 
-_COMP = {"mes_anterior": "Mês anterior", "mesmo_mes": "Mesmo mês",
-         "mes_seguinte": "Mês seguinte", "ano_anterior": "Ano anterior"}
+def _comp_label(ref) -> str:
+    """Rótulo da competência no Excel, a mesma regra de `rotuloCompetencia`
+    (`RelacaoObrigacoes.jsx`). Só os quatro apelidos tinham nome; o
+    deslocamento numérico da anual (-14) saía cru na planilha."""
+    if ref is None or str(ref).strip() == "":
+        return ""
+    n = deslocamento_competencia(ref)
+    if n == 0:
+        return "Mesmo mês"
+    if n == -12:
+        return "Ano anterior"
+    if n < 0:
+        return "Mês anterior" if n == -1 else f"{-n} meses antes"
+    return "Mês seguinte" if n == 1 else f"{n} meses depois"
+
 _MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 
@@ -180,7 +193,7 @@ def relatorio_obrigacoes(
         empresas = ", ".join(sorted(e.razao_social for e in o.empresas))
         ws.append([
             o.nome, o.mininome or "", o.setor.nome if o.setor else "",
-            empresas, _prazo_label(o), _COMP.get(o.competencia_ref, o.competencia_ref or ""),
+            empresas, _prazo_label(o), _comp_label(o.competencia_ref),
             _meses_label(o.meses_ativos), "Sim" if o.passivel_multa else "Não",
             "Ativa" if o.ativa else "Inativa",
         ])
@@ -390,6 +403,13 @@ def update_obrigacao(
 
     dados = obrigacao.model_dump(exclude_unset=True)
     empresa_ids = dados.pop("empresa_ids", None)
+    # Meses vazio (ou null): obrigação antiga que já era vazia no banco segue
+    # como está, porque a tela reenvia o que leu e recusar travaria até o
+    # renomear. Esvaziar uma que TEM meses é erro: ela pararia de gerar calada.
+    if "meses_ativos" in dados and not dados["meses_ativos"]:
+        if (o.meses_ativos or "").strip():
+            raise HTTPException(status_code=422, detail="Marque ao menos um mês, de 1 a 12.")
+        dados.pop("meses_ativos")
     for k, v in dados.items():
         setattr(o, k, v)
     _set_empresas(db, o, empresa_ids)
