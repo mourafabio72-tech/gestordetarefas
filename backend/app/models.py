@@ -394,6 +394,11 @@ def perfil_documento(sentido, exige_documento, identificadores) -> bool:
     documento: é o que garante que nenhuma obrigação interna de hoje muda de
     comportamento sozinha. `transmitir` segue a regra de `receber`: o recibo do
     órgão é o documento.
+
+    `entregar` segue a mesma regra. A guia de imposto (DARF, DAE, ISS) tem o
+    código dela nos identificadores, sobe no e-validador e só conclui com a guia
+    anexada. Em 2026-09-18 chegou a valer "entregar nunca exige"; a produção
+    mostrou 9 guias configuradas assim e o usuário voltou atrás em 2026-09-19.
     """
     if exige_documento is None:
         if (sentido or "receber") == "interna":

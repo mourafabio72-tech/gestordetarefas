@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
+import { SENTIDOS, sentidoDoForm, mostraIdentificadores, exigeDocumentoMarcado } from './sentidoObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap, X, Loader2, Building2, ListChecks } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SelectBusca from '../components/SelectBusca';
@@ -60,10 +61,10 @@ const toggleCsv = (csv, val) => {
 };
 
 export default function Obrigacoes() {
-  const [obrigacoes, setObrigacoes] = useState([]);
   const { user } = useAuth();
   // Mesma flag que o servidor exige nas duas rotas do Desvincular.
   const podeAlocar = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
+  const [obrigacoes, setObrigacoes] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -181,10 +182,10 @@ export default function Obrigacoes() {
   const [desvincMarcadas, setDesvincMarcadas] = useState([]);
   const [desvincMotivo, setDesvincMotivo] = useState('');
   const [desvinculando, setDesvinculando] = useState(false);
-  const [modelo, setModelo] = useState(null);       // resultado da análise do comprovante
   const [desvincErro, setDesvincErro] = useState('');
   const [desvincResultado, setDesvincResultado] = useState('');
   const pedidoAlcance = useRef(0);   // descarta resposta de empresa que já foi trocada
+  const [modelo, setModelo] = useState(null);       // resultado da análise do comprovante
   const [analisando, setAnalisando] = useState(false);
 
   const analisarModelo = async (file) => {
@@ -292,7 +293,6 @@ export default function Obrigacoes() {
     }
   };
 
-  const desvincularEmpresa = async () => {
   const buscarAlcance = async (eid) => {
     const pedido = ++pedidoAlcance.current;
     setDesvincBuscando(true);
@@ -325,10 +325,11 @@ export default function Obrigacoes() {
     setDesvincMarcadas([]); setDesvincMotivo(''); setDesvincErro(''); setDesvincResultado('');
   };
 
+  const desvincularEmpresa = async () => {
     if (!desvincEmpresa || !podeEnviarDesvinculo(desvincMarcadas, desvincMotivo)) return;
     setDesvinculando(true);
-    try {
     setDesvincErro(''); setDesvincResultado('');
+    try {
       const r = await obrigacoesAPI.desvincularEmpresa(desvincEmpresa, desvincMarcadas, desvincMotivo.trim());
       setDesvincResultado(resumoDoResultado(r.data));
       setDesvincMarcadas([]);
@@ -656,10 +657,10 @@ export default function Obrigacoes() {
                   <input value={form.mininome} onChange={(e) => set('mininome', e.target.value)} className="input-field" placeholder="DARF 0220" />
                 </div>
               </div>
-              {/* O e-validador só existe para documento que CHEGA. Numa
-                  obrigação interna ou de entrega, este bloco inteiro é ruído:
-                  e pior, convida a cadastrar identificador que nunca vai casar. */}
-              <div className={form.sentido === 'interna' || form.sentido === 'entregar' ? 'hidden' : ''}>
+              {/* O e-validador procura estes identificadores no documento.
+                  Interna só tem documento quando marca "Exige documento": sem
+                  isso o bloco é ruído. Entregar mostra: a guia casa pelo código. */}
+              <div className={mostraIdentificadores(form) ? '' : 'hidden'}>
                 <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                   Identificadores (e-validador)
                   <span title={AJUDA_IDENTIFICADORES} className="text-gray-400 cursor-help">
@@ -1081,75 +1082,51 @@ export default function Obrigacoes() {
 
               <div className="border-t border-gray-100 pt-4 flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={form.passivel_multa} onChange={(e) => set('passivel_multa', e.target.checked)} className="h-4 w-4" /> Passível de multa
+                  <input type="checkbox" checked={form.passivel_multa} onChange={(e) => set('passivel_multa', e.target.checked)} className="check-app" /> Passível de multa
                 </label>
                 {/* Para que lado o documento anda. Antes do resto porque
-                    muda o significado dos campos abaixo: numa obrigação de
-                    entregar, "exige documento" e os identificadores do
-                    e-validador não têm o que fazer. */}
-                <div className="col-span-2 border border-gray-200 rounded-lg p-2.5 bg-[#faf7f0]">
+                    muda o significado dos campos abaixo: numa obrigação
+                    interna, os identificadores só aparecem com "exige
+                    documento" marcado. */}
+                {/* Seletor tipo 1 da Padrao_Toggle_Tipos (decisão do usuário,
+                    2026-09-15). A explicação de cada opção vai no `title`.
+                    Interna não troca documento com ninguém de fora, mas PODE
+                    ter documento: quem anexa é o próprio analista. */}
+                <div className="w-full">
                   <p className="text-sm font-medium text-gray-700 mb-1.5">O documento vai para que lado?</p>
-                  <div className="flex flex-wrap gap-4">
-                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="radio" name="sentido" className="mt-0.5"
-                        checked={(form.sentido || 'receber') === 'receber'}
-                        onChange={() => set('sentido', 'receber')} />
-                      <span>
-                        <strong>Receber</strong> do cliente
-                        <span className="block text-xs text-gray-500">
-                          O cliente envia o comprovante e a tarefa baixa pelo e-validador.
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="radio" name="sentido" className="mt-0.5"
-                        checked={form.sentido === 'entregar'}
-                        onChange={() => set('sentido', 'entregar')} />
-                      <span>
-                        <strong>Entregar</strong> ao cliente
-                        <span className="block text-xs text-gray-500">
-                          Guia, boleto ou relatório. Anexar e enviar conclui a tarefa.
-                        </span>
-                      </span>
-                    </label>
-                    {/* Nem toda obrigação troca documento com alguém de fora.
-                        Interna não recebe do cliente nem entrega a ele, mas
-                        PODE ter documento: quem anexa é o próprio analista.
-                        Por isso ela também mostra o "exige documento" abaixo. */}
-                    <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="radio" name="sentido" className="mt-0.5"
-                        checked={form.sentido === 'interna'}
-                        onChange={() => set('sentido', 'interna')} />
-                      <span>
-                        <strong>Nenhum</strong>, tarefa interna
-                        <span className="block text-xs text-gray-500">
-                          Conciliar banco, lançar notas, fechar balancete. Baixa na mão,
-                          ou pelo e-validador se você marcar "exige documento".
-                        </span>
-                      </span>
-                    </label>
+                  <div role="radiogroup" aria-label="O documento vai para que lado?"
+                    className="inline-flex flex-wrap items-center gap-1 p-[3px] border border-gray-200 rounded-lg bg-white">
+                    {SENTIDOS.map((s) => (
+                      <button key={s.valor} type="button" role="radio"
+                        aria-checked={sentidoDoForm(form) === s.valor}
+                        title={s.dica} onClick={() => set('sentido', s.valor)}
+                        className={`h-8 px-2.5 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${sentidoDoForm(form) === s.valor
+                          ? 'border-primary-600 bg-primary-50 text-primary-800'
+                          : 'border-transparent bg-white text-gray-500 hover:text-primary-600'}`}>
+                        {s.rotulo}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="h-4 w-4" /> Exige robô
+                  <input type="checkbox" checked={form.exige_robo} onChange={(e) => set('exige_robo', e.target.checked)} className="check-app" /> Exige robô
                 </label>
-                {/* Interna PASSA a mostrar este campo (2026-09-09): ela tem
-                    documento sim, só que quem anexa é o analista, não o cliente.
-                    Quem não marcar continua baixando na mão, como sempre. */}
-                {form.sentido !== 'entregar' && (
+                {/* Aparece nos quatro sentidos. Interna desde 2026-09-09 (quem
+                    anexa é o analista); entregar desde 2026-09-19 (a guia de
+                    imposto sobe no e-validador). Desmarcado: baixa na mão. */}
+                {(
                   <label className="flex items-center gap-2 text-sm text-gray-700"
                     title="Ligado: a baixa só acontece pelo e-validador (documento). Desligado: pode baixar manual.">
                     <input type="checkbox" className="check-app"
-                      checked={form.exige_documento ?? (form.sentido !== 'interna'
-                        && !!(form.identificadores || '').trim())}
+                      checked={exigeDocumentoMarcado(form)}
                       onChange={(e) => set('exige_documento', e.target.checked)} /> Exige documento (baixa só pelo e-validador)
                   </label>
                 )}
                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={form.alerta_guia_nao_lida} onChange={(e) => set('alerta_guia_nao_lida', e.target.checked)} className="h-4 w-4" /> Alerta guia não-lida
+                  <input type="checkbox" checked={form.alerta_guia_nao_lida} onChange={(e) => set('alerta_guia_nao_lida', e.target.checked)} className="check-app" /> Alerta guia não-lida
                 </label>
                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={form.ativa} onChange={(e) => set('ativa', e.target.checked)} className="h-4 w-4" /> Ativa
+                  <input type="checkbox" checked={form.ativa} onChange={(e) => set('ativa', e.target.checked)} className="check-app" /> Ativa
                 </label>
               </div>
 

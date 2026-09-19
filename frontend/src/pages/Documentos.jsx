@@ -158,7 +158,7 @@ export default function Documentos() {
           <p className="text-xs text-gray-500 mt-0.5">
             {filtros.tipo === 'entregues'
               ? 'As guias e documentos que o escritório entregou. Mostra se o cliente abriu o link.'
-              : 'Os comprovantes que baixaram tarefas. Aqui se procura pelo documento, sem saber de qual tarefa veio.'}
+              : 'Os comprovantes do cliente e os recibos do órgão que baixaram tarefas. Aqui se procura pelo documento, sem saber de qual tarefa veio.'}
           </p>
         </div>
         <button onClick={exportar} disabled={!docs.length}
@@ -172,7 +172,7 @@ export default function Documentos() {
           significaria coisas distintas em linhas vizinhas se fossem uma lista só. */}
       <div className="flex gap-1 mb-3">
         {[
-          { valor: 'recebidos', rotulo: 'Recebidos do cliente', icone: Inbox },
+          { valor: 'recebidos', rotulo: 'Comprovantes e recibos', icone: Inbox },
           { valor: 'entregues', rotulo: 'Entregues ao cliente', icone: Send },
         ].map((t) => (
           <button key={t.valor} type="button"
@@ -186,7 +186,7 @@ export default function Documentos() {
         ))}
       </div>
 
-      <div className="mb-5 rounded-xl border border-gray-200 p-3" style={{ background: '#faf7f0' }}>
+      <div className="mb-5 rounded-xl border border-gray-200 p-3 bg-gray-50">
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
           <Campo rotulo="Buscar" dica="Nome da tarefa, protocolo ou nome do arquivo" largura="flex-[2] min-w-[160px]">
             <input type="search" value={filtros.texto} onChange={(e) => set('texto', e.target.value)}

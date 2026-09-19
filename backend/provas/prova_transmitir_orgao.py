@@ -12,6 +12,12 @@ documento, o recibo, que dá a baixa pelo e-validador. Surgiu o quarto sentido,
   3. a regra de "exige documento" estava escrita duas vezes, no model e no
      painel, e o painel ficou para trás na reversão de 2026-09-09.
 
+E as guias de imposto (itens 23 a 25). Em 2026-09-18 o usuário decidiu que
+entregar nunca exigiria documento; em 2026-09-19 a consulta à produção mostrou
+9 guias (DARF 2172, 8109, DAE, ISS...) com o CÓDIGO da guia nos identificadores,
+de propósito, e o usuário voltou atrás: a guia sobe no e-validador e a baixa
+manual sem guia continua recusada. Entregar segue a regra geral.
+
 Os itens de não-regressão (15 a 18) passam JÁ no RED, de propósito: são eles
 que acusariam uma correção que quebrasse o que funciona.
 
@@ -41,7 +47,7 @@ from app.services.validador import identificar_obrigacao       # noqa: E402
 
 Base.metadata.create_all(bind=engine)
 client = TestClient(app)
-TOTAL = 22
+TOTAL = 25
 falhou = []
 
 
@@ -206,6 +212,31 @@ db.close()
 p = client.get("/api/painel", headers=cab).json()
 checa(18, "transmitir sem recibo NÃO entra em aguardando cliente: a bola está aqui",
       p["resumo"]["aguardando_cliente"] == 0)
+
+print("\n(h) A guia de imposto exige a guia (decisão do usuário, 2026-09-19)")
+checa(23, "entregar com o código da guia e flag nula exige; com a flag desligada, não",
+      exige("entregar", None, "2172") is True and exige("entregar", False, "2172") is False)
+
+db = SessionLocal()
+id_emp = db.query(Empresa.id).filter(Empresa.cnpj == "1").scalar()
+id_setor = db.query(Setor.id).filter(Setor.nome == "Fiscal").scalar()
+ent = Obrigacao(nome="darf_cofins_cumulativo_2172", sentido="entregar",
+                identificadores="2172", ativa=True)
+db.add(ent)
+db.commit()
+t_ent = Tarefa(titulo="das sem anexo", empresa_id=id_emp, setor_id=id_setor,
+               obrigacao_id=ent.id, status=StatusTarefa.PENDENTE, competencia="08/2026")
+db.add(t_ent)
+db.commit()
+id_ent = t_ent.id
+db.close()
+r = client.put(f"/api/tarefas/{id_ent}", json={"status": "concluida"}, headers=cab)
+checa(24, f"a guia sem anexo NÃO conclui na mão ({r.status_code})", r.status_code == 403)
+db = SessionLocal()
+achadas = [o.nome for o in identificar_obrigacao(db, "DARF codigo da receita 2172 COFINS")]
+db.close()
+checa(25, f"o e-validador acha a guia pelo código (achadas: {achadas})",
+      "darf_cofins_cumulativo_2172" in achadas)
 
 print("\n(g) A regra mora num lugar só")
 try:
