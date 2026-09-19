@@ -291,7 +291,10 @@ Acesso: login por perfil
 
 - [x] 37.1 suítes e build verdes; `COPY . .` conferido
       EVIDÊNCIA: recorte só da 35 e 36 numa worktree limpa: build ok, `provas=35 falharam=0`, `provas_front=21 falharam=0`; `COPY . .` em `backend/Dockerfile:17` e `frontend/Dockerfile:8`; commit `7045b5d` (LOG recorte_e_commit)
-- [ ] 37.2 `git ls-remote` e carimbo igual ao HEAD
-- [ ] 37.3 bundle com `Não se aplica a esta empresa` e `pela regra`; 401 sem login nas duas rotas
-- [ ] 37.4 conferência do usuário em produção colada no LOG
+- [x] 37.2 `git ls-remote` e carimbo igual ao HEAD
+      EVIDÊNCIA: `166d59462f5f96d9fdce8edf6e9d042df6bc7798 refs/heads/main`; carimbo `20260918-1847` antes e `20260918-2132` depois, igual ao HEAD
+- [x] 37.3 bundle com `Não se aplica a esta empresa` e `pela regra`; 401 sem login nas duas rotas
+      EVIDÊNCIA: `index-Dz50vD9F.js` com as duas (3 e 3) e 'Transmitir ao órgão' 0 (a 29 não subiu); alcance e desvincular sem login: 401 e 401
+- [x] 37.4 conferência do usuário em produção colada no LOG
+      EVIDÊNCIA: teste do usuário na Trops em produção, conferido por leitura da API: tarefas 29965 e 29963 canceladas como não se aplica, exceção da empresa 6 nas obrigações 160 e 161, alcance sem as duas, tela com "Sem canceladas" e "25 tarefas" (LOG conferencia_producao)
       (Fechar_Tarefa_Rodar_Verifica)

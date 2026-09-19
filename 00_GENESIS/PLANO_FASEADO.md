@@ -278,7 +278,7 @@ Itens:
 
 ## Fase 37: publicar as fases 35 e 36
 
-- **Status:** pending
+- **Status:** done (2026-09-18; só 35 e 36 subiram, a 29 ficou na árvore; canceladas fora da visão padrão a pedido na conferência)
 - **Duração estimada:** 20 min
 - **Notas:** Fechar_Tarefa_Rodar_Verifica
 - **Dependências:** fases 35 e 36
