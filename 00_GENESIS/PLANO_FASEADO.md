@@ -83,7 +83,7 @@ fase 40.
 
 ## Fase 41: publicar e corrigir as anuais em produção
 
-- **Status:** pending
+- **Status:** done (2026-09-19; `46b622e` no ar, carimbo `20260919-1707`; 3 anuais corrigidas)
 - **Duração estimada:** 30 min, e depende da lista
 - **Notas:** Fechar_Tarefa_Rodar_Verifica, Padrao_Logging_Estruturado, Nunca_DELETE_Fisico
 - **Dependências:** fase 40
@@ -100,7 +100,7 @@ fase 40.
 
 ## Fase 42: conferência do usuário em produção
 
-- **Status:** pending
+- **Status:** done (2026-09-19; DEFIS conferida em produção, tarefa 29944 cancelada a pedido)
 - **Dependências:** fase 41
 
 1. **42.1** O usuário abre a DEFIS, vê "Anual" com março e "Janeiro do ano anterior", e cadastra ou edita uma trimestral.

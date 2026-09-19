@@ -37,13 +37,13 @@ ou saída de comando colada no LOG).
 
 ## Fase 41: publicar e corrigir
 
-- [ ] 41.1 suítes e build verdes; `COPY . .` em `backend/Dockerfile` e `frontend/Dockerfile`
-- [ ] 41.2 `git ls-remote` com o ref; carimbo de `/api/health` igual ao HEAD; bundle com `Periodicidade` (curl + grep -c)
-- [ ] 41.3 SELECT só de leitura das anuais e trimestrais e das tarefas abertas delas, colado no LOG
-- [ ] 41.4 lista aprovada pelo usuário; correção pela tela ou PUT (sai `EDICAO_REGISTRO_CRITICO`), nunca UPDATE no console nem DELETE (Padrao_Logging_Estruturado, Nunca_DELETE_Fisico)
-- [ ] 41.5 segundo SELECT bate com a lista aprovada
+- [x] 41.1 suítes e build verdes; `COPY . .` em `backend/Dockerfile` e `frontend/Dockerfile`. EVIDÊNCIA: provas=36 e 23 sem falha; backend/Dockerfile:17, frontend/Dockerfile:8 (LOG publicado)
+- [x] 41.2 `git ls-remote` com o ref; carimbo de `/api/health` igual ao HEAD; bundle com `Periodicidade` (curl + grep -c). EVIDÊNCIA: ref 9d6be0d, carimbo 20260919-1707, bundle index-CsP7Oo8-.js com os 4 textos
+- [x] 41.3 SELECT só de leitura das anuais e trimestrais e das tarefas abertas delas, colado no LOG. EVIDÊNCIA: feito pela API (só leitura): 3 anuais, 0 trimestrais, 1 tarefa aberta (LOG lista_producao)
+- [x] 41.4 lista aprovada pelo usuário; correção pela tela ou PUT (sai `EDICAO_REGISTRO_CRITICO`), nunca UPDATE no console nem DELETE (Padrao_Logging_Estruturado, Nunca_DELETE_Fisico). EVIDÊNCIA: 'pode corrigir'; 3 PUT com 200
+- [x] 41.5 segundo SELECT bate com a lista aprovada. EVIDÊNCIA: releitura [141,'3','-14'], [185,'3','-14'], [181,'7','-18']
 
 ## Fase 42: conferência em produção
 
-- [ ] 42.1 conferência do usuário colada no LOG
-- [ ] 42.2 CONFORMIDADE sem linha pendente das fases 38 a 42
+- [x] 42.1 conferência do usuário colada no LOG. EVIDÊNCIA: LOG fase=42 conferencia_producao
+- [x] 42.2 CONFORMIDADE sem linha pendente das fases 38 a 42. EVIDÊNCIA: grep '| pendente |' volta 0
