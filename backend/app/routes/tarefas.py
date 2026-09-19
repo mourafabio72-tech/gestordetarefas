@@ -793,7 +793,9 @@ def copiar_tarefas(
 
 
 class NaoSeAplicaRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    # O strip vem ANTES do min_length: sem ele, três espaços passavam e a
+    # trilha ficava sem motivo (achado do verificador da fase 36).
 
     motivo: str = Field(min_length=3, max_length=500)
 

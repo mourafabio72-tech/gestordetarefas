@@ -260,8 +260,16 @@ checa(19, "e a linha de lote diz canceladas=0, porque nada estava em aberto",
       len(edicoes2) == 1 and edicoes2[0].get("canceladas") == 0,
       f"({[l.get('canceladas') for l in edicoes2]})")
 
+# ------------------------------------------------ (i) motivo só com espaços
+# Irmão do achado da fase 36: o mesmo `min_length` sobre a string crua.
+r = cliente.post(f"/api/tarefas/{fora.id}/nao-se-aplica", headers=adm_h,
+                 json={"motivo": "      "})
+checa(20, "motivo só com espaços: 422, e a tarefa não muda",
+      r.status_code == 422 and tarefa("ecf", "alfa", 9).status == StatusTarefa.PENDENTE,
+      f"({r.status_code})")
+
 print()
 if falhou:
     print(f"PROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("PROVA OK: 19 checagens verdes")
+print("PROVA OK: 20 checagens verdes")

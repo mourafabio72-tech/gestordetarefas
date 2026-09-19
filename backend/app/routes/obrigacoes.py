@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from ..database import get_db
 from typing import Optional
 from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
@@ -131,8 +131,15 @@ class CopiarModeloRequest(BaseModel):
 
 
 class DesvincularEmpresaRequest(BaseModel):
+    # Sem "todas": a lista é obrigatória e cada obrigação é escolhida na tela.
+    # O teto só impede corpo absurdo; o escritório tem dezenas de obrigações.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    # O strip vem ANTES do min_length: sem ele, três espaços passavam e a
+    # trilha ficava sem motivo (achado do verificador da fase 36).
+
     empresa_id: int
-    obrigacao_ids: Optional[List[int]] = None  # None/vazio = todas as obrigações
+    obrigacao_ids: List[int] = Field(min_length=1, max_length=500)
+    motivo: str = Field(min_length=3, max_length=500)
 
 
 class GerarRequest(BaseModel):
@@ -270,35 +277,87 @@ def copiar_modelo_empresa(
             "vinculadas": vinculadas, "total_origem": len(obrigacoes)}
 
 
+def _alcance(db: Session, emp: Empresa) -> dict:
+    """{obrigacao: via} das obrigações ativas que alcançam a empresa, sem as que já
+    têm exceção para ela. Uma resposta só para a lista da tela e para a
+    validação do desvincular: o que a tela oferece é o que a rota aceita."""
+    from ..models import ObrigacaoExcecao
+    from ..services.gerador import via_alcance
+    fora = {x.obrigacao_id for x in db.query(ObrigacaoExcecao.obrigacao_id)
+            .filter(ObrigacaoExcecao.empresa_id == emp.id).all()}
+    out = {}
+    for o in (db.query(Obrigacao).filter(Obrigacao.ativa == True)
+              .order_by(Obrigacao.nome).all()):
+        via = None if o.id in fora else via_alcance(o, emp)
+        if via:
+            out[o] = via
+    return out
+
+
+@router.get("/alcance-empresa/{empresa_id}")
+def alcance_empresa(empresa_id: int, db: Session = Depends(get_db),
+                    current_user: Usuario = Depends(require_flag("alocar_obrigacao"))):
+    """Obrigações que alcançam a empresa, por onde, e quantas tarefas em aberto ela tem."""
+    from sqlalchemy import func
+    from ..models import Tarefa
+    from ..services.gerador import ABERTAS
+    emp = db.query(Empresa).filter(Empresa.id == empresa_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Empresa não encontrada")
+    abertas = dict(db.query(Tarefa.obrigacao_id, func.count(Tarefa.id))
+                   .filter(Tarefa.empresa_id == empresa_id, Tarefa.status.in_(ABERTAS))
+                   .group_by(Tarefa.obrigacao_id).all())
+    return [{"id": o.id, "nome": o.nome, "via": via, "abertas": abertas.get(o.id, 0)}
+            for o, via in _alcance(db, emp).items()]
+
+
 @router.post("/desvincular-empresa")
 def desvincular_empresa(
     body: DesvincularEmpresaRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+    current_user: Usuario = Depends(require_flag("alocar_obrigacao")),
 ):
-    """Remove o vínculo de uma empresa nas obrigações. Sem `obrigacao_ids`,
-    tira a empresa de TODAS as obrigações onde está vinculada (inverso do
-    'Copiar de outra empresa'). Não apaga a obrigação nem a empresa,
-    só o vínculo. Tarefas já geradas não são afetadas."""
+    """A empresa deixa de receber as obrigações escolhidas.
+
+    Tirar só o vínculo não bastava: a obrigação alcança pela regra de regime e
+    segmento OU pelo vínculo, e regra vazia quer dizer todas. Por isso, para
+    cada obrigação: sai o vínculo à mão, se existe; nasce a exceção, se entra
+    pela regra; e as tarefas em aberto dela para a empresa são canceladas como
+    "não se aplica". Concluída não muda. Tudo ou nada: uma obrigação fora do
+    alcance recusa o pedido inteiro antes de mudar qualquer coisa."""
+    from ..services.gerador import aplicar_excecao, cancelar_abertas
     emp = db.query(Empresa).filter(Empresa.id == body.empresa_id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
-    q = db.query(Obrigacao).filter(Obrigacao.empresas.any(Empresa.id == body.empresa_id))
-    if body.obrigacao_ids:
-        q = q.filter(Obrigacao.id.in_(body.obrigacao_ids))
-    n = 0
-    for o in q.all():
-        if emp in o.empresas:
+    alcance = {o.id: (o, via) for o, via in _alcance(db, emp).items()}
+    pedidas = list(dict.fromkeys(body.obrigacao_ids))
+    fora = [i for i in pedidas if i not in alcance]
+    if fora:
+        raise HTTPException(status_code=422,
+                            detail="Estas obrigações não alcançam a empresa: "
+                                   + ", ".join(str(i) for i in fora))
+    motivo = body.motivo.strip()
+    excecoes = vinculos = canceladas = 0
+    for i in pedidas:
+        o, via = alcance[i]
+        if via in ("vinculo", "ambos"):
             o.empresas.remove(emp)
-            n += 1
+            vinculos += 1
+        if via in ("regra", "ambos"):
+            criada, n = aplicar_excecao(db, o.id, emp.id, motivo, current_user.id)
+            excecoes += int(criada)
+        else:
+            n = cancelar_abertas(db, o.id, emp.id, motivo, current_user.id)
+        canceladas += n
     db.commit()
-    # Tirar a empresa de N obrigações é o inverso do copiar, e sai igual: uma
-    # linha, com a contagem. Muda o que o escritório deve entregar por aquele
-    # cliente, então não pode ficar sem rastro.
+    # Uma linha por clique, com a contagem: muda o que o escritório entrega por
+    # aquele cliente, e registrar cada obrigação viraria dezenas de linhas.
     log_event("EDICAO_REGISTRO_CRITICO", tabela="obrigacao", lote=True,
-              acao="desvincular_empresa", quantidade=n,
-              empresa_id=body.empresa_id)
-    return {"desvinculadas": n, "empresa": emp.razao_social}
+              acao="desvincular_empresa", empresa_id=emp.id, obrigacoes=len(pedidas),
+              excecoes_criadas=excecoes, vinculos_removidos=vinculos,
+              tarefas_canceladas=canceladas)
+    return {"desvinculadas": len(pedidas), "excecoes_criadas": excecoes,
+            "vinculos_removidos": vinculos, "tarefas_canceladas": canceladas}
 
 
 @router.post("", response_model=ObrigacaoResponse, status_code=201)

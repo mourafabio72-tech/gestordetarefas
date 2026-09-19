@@ -436,9 +436,12 @@ _, l_copiar = registra(
 checa(29, "copiar obrigacoes de uma empresa para outra emite UMA linha de EDICAO",
       len(eventos(l_copiar, EDICAO)) == 1)
 
+# Desde a fase 36 o desvincular exige a lista e o motivo (sem "todas"). A GIA
+# tem regra vazia, então alcança a emp2: o item continua medindo a linha.
 _, l_desvincula = registra(
     lambda: cliente.post("/api/obrigacoes/desvincular-empresa",
-                         json={"empresa_id": ids["emp2"]}, headers=admin))
+                         json={"empresa_id": ids["emp2"], "obrigacao_ids": [ids["obr2"]],
+                               "motivo": "não entrega GIA"}, headers=admin))
 checa(30, "desvincular empresa das obrigacoes emite UMA linha de EDICAO",
       len(eventos(l_desvincula, EDICAO)) == 1)
 

@@ -121,6 +121,33 @@ db.execute(tarefa_responsaveis.delete()); db.query(Tarefa).delete(); db.commit()
 r3 = gerar_tarefas(db, 9, 2026, [])      # lista vazia = sem recorte, não "nenhuma"
 check("lista vazia se comporta como 'todas'", r3["criadas"] == 15, f"({r3['criadas']})")
 
+print("\n=== 8. cadastrar empresa nova respeita o modo vinculadas ===")
+# Achado de 2026-09-18 (fase 36): `gerar_para_empresa`, o caminho do cadastro
+# de empresa, filtrava por `_no_alvo`, que não olha o modo. Obrigação "só dos
+# vinculados" com regra vazia gerava tarefa para TODA empresa cadastrada.
+from app.services.gerador import gerar_para_empresa                      # noqa: E402
+
+db.execute(tarefa_responsaveis.delete()); db.query(Tarefa).delete()
+db.query(Obrigacao).delete(); db.commit()
+so_do_1 = Obrigacao(nome="Só do cliente 1", ativa=True, meses_ativos=meses, alvo_modo="vinculadas",
+                    regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+geral = Obrigacao(nome="Geral", ativa=True, meses_ativos=meses,
+                  regra_prazo_tipo="ultimo_dia_util", competencia_ref="mes_anterior")
+db.add_all([so_do_1, geral]); db.commit()
+so_do_1.empresas = [real_1]
+nova = Empresa(razao_social="CLIENTE NOVO", regime_tributario="lucro_real", segmento="servico", ativo=True)
+db.add(nova); db.commit()
+
+r8 = gerar_para_empresa(db, nova, 9, 2026)
+obrig_nova = {t.obrigacao_id for t in db.query(Tarefa).filter(Tarefa.empresa_id == nova.id).all()}
+check("a empresa nova não ganha a obrigação só dos vinculados",
+      so_do_1.id not in obrig_nova, f"({r8})")
+check("e ganha a geral, que alcança pela regra vazia",
+      obrig_nova == {geral.id} and r8["criadas"] == 1, f"({r8})")
+r8b = gerar_para_empresa(db, real_1, 9, 2026)
+check("não-regressão: a vinculada continua ganhando as duas",
+      r8b["criadas"] == 2, f"({r8b})")
+
 db.close()
 print("\n" + ("TODAS AS PROVAS PASSARAM" if ok else "HOUVE FALHA"))
 sys.exit(0 if ok else 1)

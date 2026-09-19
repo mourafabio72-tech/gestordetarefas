@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
-import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap, X, Loader2, Building2, ListChecks } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import SelectBusca from '../components/SelectBusca';
+import { alternar } from './seletorResponsaveis';
+import {
+  ETIQUETAS_VIA, podeDesvincular as podeEnviarDesvinculo, motivoDoBloqueio, textoDoBotao,
+  abertasMarcadas, resumoDoResultado,
+} from './desvincularEmpresa';
 import { formatarRazaoSocial } from './razaoSocial';
 import { REGIMES_GERACAO, empresasDosRegimes, idsDoRecorte, podeGerar, nomesDosRegimes } from './recorteGeracao';
 import { estadoDoAlvo, reduzirAlvo, aplicaTodas as calcAplicaTodas, aviso as avisoAlvo } from './alvoObrigacao';
@@ -54,6 +61,9 @@ const toggleCsv = (csv, val) => {
 
 export default function Obrigacoes() {
   const [obrigacoes, setObrigacoes] = useState([]);
+  const { user } = useAuth();
+  // Mesma flag que o servidor exige nas duas rotas do Desvincular.
+  const podeAlocar = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -165,9 +175,16 @@ export default function Obrigacoes() {
   const [copyOrigem, setCopyOrigem] = useState('');
   const [copyDestino, setCopyDestino] = useState('');
   const [showDesvincular, setShowDesvincular] = useState(false);
-  const [desvincEmpresa, setDesvincEmpresa] = useState('');
+  const [desvincEmpresa, setDesvincEmpresa] = useState(null);
+  const [desvincAlcance, setDesvincAlcance] = useState(null);   // null = ainda não buscou
+  const [desvincBuscando, setDesvincBuscando] = useState(false);
+  const [desvincMarcadas, setDesvincMarcadas] = useState([]);
+  const [desvincMotivo, setDesvincMotivo] = useState('');
   const [desvinculando, setDesvinculando] = useState(false);
   const [modelo, setModelo] = useState(null);       // resultado da análise do comprovante
+  const [desvincErro, setDesvincErro] = useState('');
+  const [desvincResultado, setDesvincResultado] = useState('');
+  const pedidoAlcance = useRef(0);   // descarta resposta de empresa que já foi trocada
   const [analisando, setAnalisando] = useState(false);
 
   const analisarModelo = async (file) => {
@@ -276,19 +293,49 @@ export default function Obrigacoes() {
   };
 
   const desvincularEmpresa = async () => {
-    if (!desvincEmpresa) return;
-    const eid = parseInt(desvincEmpresa);
-    const nome = formatarRazaoSocial(empresas.find((e) => e.id === eid)?.razao_social) || `#${eid}`;
-    const qtd = obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length;
-    if (!qtd) return alert(`"${nome}" não está vinculada a nenhuma obrigação.`);
-    if (!confirm(`Desvincular "${nome}" de ${qtd} obrigação(ões)?\n\nRemove só o vínculo: não apaga a obrigação nem a empresa, e não mexe nas tarefas já geradas.`)) return;
+  const buscarAlcance = async (eid) => {
+    const pedido = ++pedidoAlcance.current;
+    setDesvincBuscando(true);
+    try {
+      const r = await obrigacoesAPI.alcanceEmpresa(eid);
+      if (pedido === pedidoAlcance.current) setDesvincAlcance(r.data || []);
+    } catch (err) {
+      if (pedido === pedidoAlcance.current) {
+        setDesvincAlcance(null);
+        setDesvincErro(mensagemDeErro(err, 'Não foi possível buscar as obrigações desta empresa.'));
+      }
+    } finally {
+      if (pedido === pedidoAlcance.current) setDesvincBuscando(false);
+    }
+  };
+
+  const escolherEmpresaDesvinc = (eid) => {
+    setDesvincEmpresa(eid);
+    setDesvincMarcadas([]);
+    setDesvincAlcance(null);
+    setDesvincErro('');
+    setDesvincResultado('');
+    buscarAlcance(eid);
+  };
+
+  const fecharDesvincular = () => {
+    pedidoAlcance.current += 1;
+    setShowDesvincular(false);
+    setDesvincEmpresa(null); setDesvincAlcance(null); setDesvincBuscando(false);
+    setDesvincMarcadas([]); setDesvincMotivo(''); setDesvincErro(''); setDesvincResultado('');
+  };
+
+    if (!desvincEmpresa || !podeEnviarDesvinculo(desvincMarcadas, desvincMotivo)) return;
     setDesvinculando(true);
     try {
-      const r = await obrigacoesAPI.desvincularEmpresa(eid);
-      alert(r.data?.desvinculadas != null ? `${r.data.desvinculadas} obrigação(ões) desvinculada(s) de "${nome}".` : 'Desvinculado.');
-      setShowDesvincular(false); setDesvincEmpresa(''); loadData();
+    setDesvincErro(''); setDesvincResultado('');
+      const r = await obrigacoesAPI.desvincularEmpresa(desvincEmpresa, desvincMarcadas, desvincMotivo.trim());
+      setDesvincResultado(resumoDoResultado(r.data));
+      setDesvincMarcadas([]);
+      await buscarAlcance(desvincEmpresa);   // as que saíram somem da lista
+      loadData();
     } catch (err) {
-      alert(mensagemDeErro(err, 'Erro ao desvincular'));
+      setDesvincErro(mensagemDeErro(err, 'Não foi possível desvincular.'));
     } finally { setDesvinculando(false); }
   };
 
@@ -312,10 +359,12 @@ export default function Obrigacoes() {
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
           </button>
-          <button onClick={() => setShowDesvincular(true)} className="btn-secondary flex items-center gap-2 text-red-600"
-            title="Remove o vínculo de uma empresa das obrigações (não apaga nada além do vínculo)">
-            <Unlink size={18} /> Desvincular empresa
-          </button>
+          {podeAlocar && (
+            <button onClick={() => setShowDesvincular(true)} className="btn-secondary flex items-center gap-2 text-red-600"
+              title="Escolhe a empresa e as obrigações que não se aplicam a ela. As tarefas em aberto delas são canceladas.">
+              <Unlink size={18} /> Desvincular empresa
+            </button>
+          )}
           <button onClick={() => setShowGerar(true)} disabled={gerando} className="btn-secondary flex items-center gap-2"
             title="Cria as tarefas de um mês a partir das obrigações ativas, para todas as empresas ou só as escolhidas">
             <Zap size={18} /> {gerando ? 'Gerando…' : 'Gerar tarefas do mês'}
@@ -407,33 +456,146 @@ export default function Obrigacoes() {
       </div>
 
       {showDesvincular && (() => {
-        const eid = parseInt(desvincEmpresa) || 0;
-        const qtd = eid ? obrigacoes.filter((o) => (o.empresa_ids || []).includes(eid)).length : 0;
+        const lista = desvincAlcance || [];
+        const aptas = podeEnviarDesvinculo(desvincMarcadas, desvincMotivo);
+        const saem = abertasMarcadas(lista, desvincMarcadas);
+        const opcoesEmpresa = empresas.map((e) => ({ valor: e.id, rotulo: formatarRazaoSocial(e.razao_social) }));
         return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Desvincular empresa das obrigações</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Remove o vínculo da empresa em <strong>todas</strong> as obrigações. Não apaga a
-                obrigação nem a empresa, e não mexe nas tarefas já geradas.
-              </p>
+        <div className="fixed inset-0 bg-black/50 flex justify-center z-50 p-4 overflow-y-auto">
+          {/* Sem overflow na caixa: o painel do SelectBusca passa por cima da
+              borda. Em tela baixa quem rola é o fundo, e o `my-auto` centraliza
+              sem esconder o topo (o `items-center` cortaria o cabeçalho). */}
+          <div role="dialog" aria-modal="true" aria-labelledby="tituloDesvincular"
+            className="bg-white rounded-xl w-full max-w-xl my-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 id="tituloDesvincular" className="text-xl font-semibold">Desvincular empresa das obrigações</h2>
+              <button type="button" aria-label="Fechar" title="Fechar" disabled={desvinculando}
+                onClick={fecharDesvincular} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
-                <select value={desvincEmpresa} onChange={(e) => setDesvincEmpresa(e.target.value)} className="input-field">
-                  <option value="">Selecione</option>
-                  {empresas.map((e) => <option key={e.id} value={e.id}>{formatarRazaoSocial(e.razao_social)}</option>)}
-                </select>
-                {eid > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">Vinculada a <strong>{qtd}</strong> obrigação(ões).</p>
-                )}
+                <label htmlFor="empresaDesvincular" className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                <SelectBusca
+                  id="empresaDesvincular"
+                  opcoes={opcoesEmpresa}
+                  valor={desvincEmpresa}
+                  onChange={escolherEmpresaDesvinc}
+                  placeholder="Escolha a empresa"
+                  desabilitado={desvinculando}
+                  vazio="Nenhuma empresa com esse nome."
+                />
               </div>
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => { setShowDesvincular(false); setDesvincEmpresa(''); }} className="btn-secondary flex-1">Cancelar</button>
-                <button onClick={desvincularEmpresa} disabled={!desvincEmpresa || !qtd || desvinculando} className="btn-danger flex-1">
-                  {desvinculando ? 'Desvinculando…' : 'Desvincular'}
+
+              {!desvincEmpresa && (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <Building2 size={30} className="text-gray-300 mb-2" />
+                  <p className="text-sm font-semibold text-gray-700">Nenhuma Empresa Escolhida</p>
+                  <p className="text-xs text-gray-500 mt-1">Escolha a empresa para ver as obrigações que ela recebe.</p>
+                </div>
+              )}
+
+              {desvincEmpresa && desvincBuscando && (
+                <div role="status" className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-800">
+                  <Loader2 size={16} className="animate-spin shrink-0" />
+                  Buscando as obrigações que esta empresa recebe...
+                </div>
+              )}
+
+              {desvincEmpresa && !desvincBuscando && desvincAlcance && lista.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <ListChecks size={30} className="text-gray-300 mb-2" />
+                  <p className="text-sm font-semibold text-gray-700">Nenhuma Obrigação para Esta Empresa</p>
+                  <p className="text-xs text-gray-500 mt-1">Nenhuma obrigação ativa alcança esta empresa agora.</p>
+                </div>
+              )}
+
+              {desvincEmpresa && !desvincBuscando && lista.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Obrigações que ela recebe <span className="text-gray-400">({desvincMarcadas.length} de {lista.length} marcadas)</span>
+                    </span>
+                    <span className="flex gap-3">
+                      <button type="button" disabled={desvinculando}
+                        onClick={() => setDesvincMarcadas(lista.map((o) => o.id))}
+                        className="text-primary-700 hover:underline">Marcar todas</button>
+                      <button type="button" disabled={desvinculando || !desvincMarcadas.length}
+                        onClick={() => setDesvincMarcadas([])}
+                        className="text-primary-700 hover:underline disabled:opacity-40 disabled:no-underline">Limpar</button>
+                    </span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    {lista.map((o) => {
+                      const etiqueta = ETIQUETAS_VIA[o.via] || ETIQUETAS_VIA.regra;
+                      return (
+                        <label key={o.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+                          <input type="checkbox" className="check-app" disabled={desvinculando}
+                            checked={desvincMarcadas.includes(o.id)}
+                            onChange={() => setDesvincMarcadas((ids) => alternar(ids, o.id))} />
+                          <span className="truncate text-gray-800">{o.nome}</span>
+                          <span title={etiqueta.dica}
+                            className="shrink-0 rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-[11px] text-primary-800">
+                            {etiqueta.rotulo}
+                          </span>
+                          <span className="ml-auto shrink-0 text-xs text-gray-500" title="Tarefas pendentes, em andamento ou atrasadas desta obrigação para esta empresa">
+                            {o.abertas} em aberto
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div>
+                    <label htmlFor="motivoDesvincular" className="block text-sm font-medium text-gray-700 mb-1">Por quê?</label>
+                    <textarea
+                      id="motivoDesvincular"
+                      value={desvincMotivo}
+                      onChange={(e) => setDesvincMotivo(e.target.value)}
+                      disabled={desvinculando}
+                      rows={2}
+                      maxLength={500}
+                      placeholder="Ex.: a empresa é do comércio e não faz estas entregas."
+                      title="Vale para todas as marcadas e fica registrado com o seu nome e a data em cada tarefa cancelada."
+                      className="input-field"
+                    />
+                  </div>
+                  {desvincMarcadas.length > 0 && (
+                    <p className="text-xs text-gray-600">
+                      {saem
+                        ? `${saem} ${saem === 1 ? 'tarefa em aberto será cancelada' : 'tarefas em aberto serão canceladas'} e ${saem === 1 ? 'fica' : 'ficam'} no histórico. Concluídas não mudam.`
+                        : 'Nenhuma tarefa em aberto nas marcadas. Elas só deixam de ser geradas para esta empresa.'}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {desvinculando && (
+                <div role="status" className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm text-primary-800">
+                  <Loader2 size={16} className="animate-spin shrink-0" />
+                  Desvinculando as obrigações e cancelando as tarefas em aberto...
+                </div>
+              )}
+              {desvincResultado && !desvinculando && (
+                <p role="status" className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-100 px-3 py-2 text-sm text-primary-900">
+                  <CheckCircle2 size={16} className="shrink-0" /> {desvincResultado}
+                </p>
+              )}
+              {desvincErro && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {desvincErro}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-1">
+                <button type="button" disabled={desvinculando} onClick={fecharDesvincular} className="btn-secondary">
+                  {desvincResultado ? 'Fechar' : 'Cancelar'}
+                </button>
+                <button type="button" onClick={desvincularEmpresa}
+                  disabled={!aptas || desvinculando}
+                  title={motivoDoBloqueio(desvincMarcadas, desvincMotivo)}
+                  className="btn-danger disabled:opacity-50">
+                  {desvinculando ? 'Desvinculando...' : textoDoBotao(desvincMarcadas.length)}
                 </button>
               </div>
             </div>

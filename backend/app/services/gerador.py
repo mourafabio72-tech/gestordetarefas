@@ -183,16 +183,35 @@ def calc_prazo_interno(vencimento: date, dias_antes, tipo_dias: str, sabado_util
     return _dia_util_anterior(vencimento - timedelta(days=n), sabado_util)
 
 
-def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
-    """A empresa `e` é alvo da obrigação `o`? Casa a regra (regime/segmento)
-    OU está vinculada explicitamente. (Não checa ativo/bloqueado: quem chama filtra.)"""
+def _casa_regra(o: Obrigacao, e: Empresa) -> bool:
+    """A empresa casa a regra de regime e segmento? Campo vazio quer dizer todos."""
     regimes = _csv_set(o.aplica_regimes)
     segmentos = _csv_set(o.aplica_segmentos)
     ok_reg = (not regimes) or (e.regime_tributario in regimes)
     ok_seg = (not segmentos) or (e.segmento in segmentos)
-    if ok_reg and ok_seg:
+    return ok_reg and ok_seg
+
+
+def _no_alvo(o: Obrigacao, e: Empresa) -> bool:
+    """A empresa `e` é alvo da obrigação `o`? Casa a regra (regime/segmento)
+    OU está vinculada explicitamente. (Não checa ativo/bloqueado: quem chama filtra.)"""
+    if _casa_regra(o, e):
         return True
     return any(x.id == e.id for x in o.empresas)  # inclusão explícita
+
+
+def via_alcance(o: Obrigacao, e: Empresa):
+    """Por onde a obrigação alcança a empresa: 'regra', 'vinculo', 'ambos' ou None.
+
+    Segue o `alvo_modo` como `empresas_alvo`: no modo 'vinculadas' a regra não
+    conta. É a resposta que o Desvincular precisa, porque tirar o vínculo só
+    resolve quando a empresa entra pelo vínculo; pela regra, só a exceção tira.
+    (Não olha exceção nem ativo/bloqueado: quem chama filtra.)"""
+    vinculada = any(x.id == e.id for x in o.empresas)
+    regra = (o.alvo_modo or "regra") != "vinculadas" and _casa_regra(o, e)
+    if regra and vinculada:
+        return "ambos"
+    return "regra" if regra else ("vinculo" if vinculada else None)
 
 
 def excecoes_da(db: Session, o: Obrigacao) -> set:
@@ -211,9 +230,9 @@ def aplicar_excecao(db: Session, obrigacao_id: int, empresa_id: int,
                     motivo: str, usuario_id: int) -> tuple:
     """A obrigação não se aplica a esta empresa: cria a exceção e cancela as abertas.
 
-    Feita para dois chamadores: o "Não se aplica" do menu da tarefa (hoje) e
-    o Desvincular da tela de obrigações (fase 36, ainda não ligado). Com uma
-    função só, os dois não podem discordar do que é "em aberto".
+    Feita para dois chamadores: o "Não se aplica" do menu da tarefa e o
+    Desvincular da tela de obrigações. Com uma função só, os dois não podem
+    discordar do que é "em aberto".
 
     NÃO faz commit: quem chama decide a transação, e o Desvincular aplica
     várias obrigações num commit só (tudo ou nada). Cancelar é UPDATE de
@@ -223,7 +242,6 @@ def aplicar_excecao(db: Session, obrigacao_id: int, empresa_id: int,
     tarefas mudaram. O log de quem chama depende dos dois: registrar a
     criação de uma exceção que já existia é log afirmando o que o banco
     não gravou."""
-    from datetime import datetime
     from sqlalchemy.exc import IntegrityError
     from ..models import ObrigacaoExcecao
 
@@ -237,6 +255,18 @@ def aplicar_excecao(db: Session, obrigacao_id: int, empresa_id: int,
     except IntegrityError:
         criada = False            # já existia: a decisão é a mesma
 
+    return criada, cancelar_abertas(db, obrigacao_id, empresa_id, motivo, usuario_id)
+
+
+def cancelar_abertas(db: Session, obrigacao_id: int, empresa_id: int,
+                     motivo: str, usuario_id: int) -> int:
+    """Cancela, como "não se aplica", as tarefas em aberto da obrigação para a empresa.
+
+    Separada de `aplicar_excecao` para o Desvincular de empresa que entra SÓ
+    pelo vínculo: tirar o vínculo já basta para a geração, e uma exceção ali
+    prenderia a empresa fora mesmo se alguém a vinculasse de novo. Sem commit,
+    UPDATE de status e nunca DELETE. Devolve quantas mudaram."""
+    from datetime import datetime
     agora = datetime.utcnow()
     abertas = (db.query(Tarefa)
                .filter(Tarefa.obrigacao_id == obrigacao_id,
@@ -248,7 +278,7 @@ def aplicar_excecao(db: Session, obrigacao_id: int, empresa_id: int,
         t.nao_se_aplica_motivo = motivo
         t.nao_se_aplica_por_id = usuario_id
         t.nao_se_aplica_em = agora
-    return criada, len(abertas)
+    return len(abertas)
 
 
 def empresas_alvo(db: Session, o: Obrigacao):
@@ -477,7 +507,10 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
     for o in db.query(Obrigacao).filter(Obrigacao.ativa == True).all():
         if str(mes_entrega) not in _csv_set(o.meses_ativos):
             continue
-        if not _no_alvo(o, empresa):
+        # `via_alcance`, e não `_no_alvo`: ele respeita o modo 'vinculadas', e
+        # sem isso toda empresa cadastrada ganhava as obrigações "só dos
+        # vinculados" de regra vazia (achado de 2026-09-18).
+        if via_alcance(o, empresa) is None:
             continue
         # A exceção vale aqui também. Hoje é raro (empresa recém-cadastrada não
         # tem exceção), mas esta função é o caminho de "regerar o mês de UMA
