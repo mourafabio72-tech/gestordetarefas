@@ -193,3 +193,21 @@ Linhas novas, todas pendentes.
 | Sem_Travessao / Portugues_BR_Acentuacao | zero travessão; acentuação completa | travessão ou texto sem acento | fases 35 e 36 | grep vazio; leitura do diff | `grep -n "—\|–"` rc=1 nos arquivos tocados das duas fases (`gerador.py`, `routes/obrigacoes.py`, `routes/tarefas.py`, as três provas, `Tarefas.jsx`, `Obrigacoes.jsx`, `SelectBusca.jsx`, `desvincularEmpresa.js`, `api.js`); strings novas lidas frase a frase pelo principal e pelos verificadores de conformidade das duas fases: acento e concordância ok ("Nenhuma Obrigação para Esta Empresa", "serão canceladas e ficam no histórico"); `pasquale.py` ausente, declarado | ok |
 | Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | fase 37 | carimbo, curls, conferência do usuário | carimbo `20260918-2132` = HEAD `166d594` (backend); bundle `index-w6-KSNUi.js` com 'Não se aplica a esta empresa', 'pela regra' e 'Sem canceladas'; alcance e desvincular 401 sem login; teste do usuário na Trops conferido pela API de produção: tarefas canceladas, exceções criadas, alcance sem elas | ok |
 
+
+## Fases 38 a 42: periodicidade da obrigação (2026-09-19)
+
+Linhas novas, todas pendentes.
+
+| Nota | Regra literal | Proibido | Onde aplica | Prova | Evidência | Status |
+|---|---|---|---|---|---|---|
+| Anti_Puxa_Saco | não construir sobre suposição | codar a regra da anual sem medir o recibo | fase 38 | competência do recibo real colada no LOG | GET /api/modelos: DEFIS 01/2024, 01/2025; ECF 01/2025 (LOG fase=38) | ok |
+| Padrao_Validacao_de_Input | "Toda string crua passa por validação tipada antes de tocar regra de negócio." | `competencia_ref: str` e `meses_ativos: str` livres na entrada | fase 39 | itens (a), (c), (f) de `prova_periodicidade_servidor.py` | itens 2, 3, 6, 7, 12 a 18 verdes: 'PROVA OK: 18 checagens verdes'; mutações do verificador pegas | ok |
+| TDD_RED_GREEN_REFACTOR | prova antes do código, RED e GREEN | código sem prova que falhou antes | fases 39 e 40 | as duas provas com exit 1 e depois 0 no LOG | fase 39: rc=1 [2,3,4,5,6,7,10], [16], [18] e 'PROVA OK: 18'; fase 40: ERR_MODULE_NOT_FOUND e item 13, 'PROVA OK: 13' (ordem invertida no módulo declarada no LOG) | ok |
+| Padrao_Toggle_Tipos | tipo 1: `role="radiogroup"` + `aria-label`, `<button type="button">`, borda + fundo suave | sólido, `type="radio"`, estilo escolhido sozinho | fase 40 | `grep -n 'aria-label="Periodicidade"'` e CONFERENCIA_VISUAL | grep acha 1; conferência visual feita em 2026-09-19, tela Obrigações > editar | ok |
+| Componente_SelectBusca | nunca `<select>` nativo novo | `<select` nas linhas `+` | fase 40 | `git diff -U0 \| grep '^+' \| grep -c "<select"` dá 0 | select: 0 | ok |
+| Sistema_de_Estilos | cor só via token | hex no JSX | fase 40 | hex nas linhas `+` dá 0 | hex: 0 | ok |
+| Sem_Popup_Nativo | nenhum alert/confirm/prompt | popup nativo novo | fase 40 | `alert(\|confirm(\|prompt(` nas linhas `+` dá 0 | popup: 0 | ok |
+| Sem_Travessao / Portugues_BR_Acentuacao | zero travessão; acento completo | travessão ou texto sem acento | fases 39 e 40 | `grep -n "—\|–"` rc=1 nos arquivos tocados; leitura do diff | rc=1 nos seis arquivos; acentuação conferida pelo verificador de conformidade | ok |
+| Tela_Nao_Tem_Manual | "PROIBIDO usar o parágrafo para compensar rótulo ruim." | parágrafo explicando periodicidade no topo do modal | fase 40 | CONFERENCIA_VISUAL | conferência visual feita em 2026-09-19, tela Obrigações > editar; dicas no title e uma linha só na Trimestral | ok |
+| Padrao_Logging_Estruturado / Nunca_DELETE_Fisico | mutação crítica loga; correção é UPDATE pela rota | UPDATE no console, DELETE | fase 41 | linhas `EDICAO_REGISTRO_CRITICO` e segundo SELECT | | pendente |
+| Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | fases 41 e 42 | carimbo = HEAD, bundle, conferência do usuário | | pendente |
