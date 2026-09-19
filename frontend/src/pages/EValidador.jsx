@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { evalidadorAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock, Send, Ban } from 'lucide-react';
 
 const STATUS = {
   baixada: { label: 'Baixada', cls: 'bg-green-100 text-green-700', Icon: CheckCircle2 },
@@ -9,6 +9,13 @@ const STATUS = {
   sem_tarefa: { label: 'Sem tarefa', cls: 'bg-yellow-100 text-yellow-700', Icon: Clock },
   ambiguo: { label: 'Ambíguo', cls: 'bg-orange-100 text-orange-700', Icon: AlertTriangle },
   erro: { label: 'Erro', cls: 'bg-red-100 text-red-700', Icon: XCircle },
+  // Guia de "entregar" (2026-09-19): sai para o cliente quando é reconhecida.
+  enviada: { label: 'Enviada ao cliente', cls: 'bg-green-100 text-green-700', Icon: Send },
+  envio_falhou: { label: 'Envio falhou', cls: 'bg-red-100 text-red-700', Icon: XCircle },
+  aguardando_conferencia: { label: 'Aguardando conferência', cls: 'bg-yellow-100 text-yellow-700', Icon: Clock },
+  sem_destinatario: { label: 'Sem destinatário', cls: 'bg-orange-100 text-orange-700', Icon: AlertTriangle },
+  // Existia no servidor desde a fase 35 e caía em "Erro" aqui.
+  cancelada: { label: 'Cancelada', cls: 'bg-gray-100 text-gray-600', Icon: Ban },
 };
 
 const ACEITA = '.pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';

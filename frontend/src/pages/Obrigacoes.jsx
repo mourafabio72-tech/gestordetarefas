@@ -3,7 +3,7 @@ import { obrigacoesAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services
 import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { SENTIDOS, sentidoDoForm, mostraIdentificadores, exigeDocumentoMarcado } from './sentidoObrigacao';
-import { PERIODICIDADES, periodicidadeDe, aplicarPeriodicidade, rotuloCompetenciaCalculada, competenciaDiverge, mesesDoCsv, clicarMesNaSerie } from './periodicidade';
+import { PERIODICIDADES, periodicidadeDe, aplicarPeriodicidade, rotuloCompetenciaCalculada, competenciaDiverge, mesesDoCsv, clicarMesNaSerie, aoTrocarSentido } from './periodicidade';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap, X, Loader2, Building2, ListChecks } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SelectBusca from '../components/SelectBusca';
@@ -844,19 +844,19 @@ export default function Obrigacoes() {
                   )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
-                    {rotuloCompetenciaCalculada(periodicidade) ? (
+                    {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)) ? (
                       <>
                         {/* Anual e trimestral: a competência é o início do
                             período, que é o que o recibo traz. Não se escolhe. */}
                         <div className="input-field flex items-center bg-gray-50 text-gray-700">
-                          {rotuloCompetenciaCalculada(periodicidade)}
+                          {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form))}
                         </div>
                         {competenciaDiverge(form, periodicidade) && (
                           <p className="text-xs text-amber-700 mt-1">
                             A competência gravada é outra.{' '}
                             <button type="button" className="underline font-semibold"
                               onClick={() => escolherPeriodicidade(periodicidade)}>
-                              Usar {rotuloCompetenciaCalculada(periodicidade).toLowerCase()}
+                              Usar {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)).toLowerCase()}
                             </button>
                           </p>
                         )}
@@ -1167,7 +1167,7 @@ export default function Obrigacoes() {
                     {SENTIDOS.map((s) => (
                       <button key={s.valor} type="button" role="radio"
                         aria-checked={sentidoDoForm(form) === s.valor}
-                        title={s.dica} onClick={() => set('sentido', s.valor)}
+                        title={s.dica} onClick={() => setForm((f) => ({ ...f, ...aoTrocarSentido(f, periodicidade, s.valor) }))}
                         className={`h-8 px-2.5 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${sentidoDoForm(form) === s.valor
                           ? 'border-primary-600 bg-primary-50 text-primary-800'
                           : 'border-transparent bg-white text-gray-500 hover:text-primary-600'}`}>

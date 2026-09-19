@@ -13,6 +13,7 @@ import assert from 'node:assert';
 import {
   PERIODICIDADES, periodicidadeDe, mesesDe, competenciaRefDe,
   rotuloCompetenciaCalculada, aplicarPeriodicidade, competenciaDiverge, clicarMesNaSerie,
+  aoTrocarSentido,
 } from '../src/pages/periodicidade.js';
 
 let n = 0;
@@ -165,6 +166,57 @@ const competencia = (mes, ano, desloc) => {
   assert.deepStrictEqual(clicarMesNaSerie(ecf, 'anual', 3), { meses_ativos: '3', competencia_ref: '-14' });
   assert.deepStrictEqual(clicarMesNaSerie(tri, 'trimestral', 4), { meses_ativos: '1,4,7,10', competencia_ref: '-3' });
   ok('clicar no mês já escolhido não mexe em nada; outro mês aplica a regra');
+}
+// 14 a 18. Decisão (b) de 2026-09-19: a GUIA trimestral (DARF) diz o último
+// dia do período ("Período de apuração 31/03/2026"), e o recibo diz o início.
+// Trimestral de "entregar" usa o ÚLTIMO mês do trimestre anterior.
+{
+  assert.strictEqual(competenciaRefDe('trimestral', 4, 'entregar'), '-1');
+  assert.strictEqual(competenciaRefDe('trimestral', 5, 'entregar'), '-2');
+  assert.strictEqual(competenciaRefDe('trimestral', 1, 'entregar'), '-1');
+  assert.strictEqual(competenciaRefDe('trimestral', 4, 'transmitir'), '-3');
+  assert.strictEqual(competenciaRefDe('trimestral', 4, 'receber'), '-3');
+  assert.strictEqual(competenciaRefDe('trimestral', 4), '-3');
+  assert.strictEqual(competenciaRefDe('anual', 3, 'entregar'), '-14');
+  ok('trimestral de entregar usa o último mês; recibo e anual não mudam');
+}
+{
+  const erradas = [];
+  for (let mes = 1; mes <= 12; mes += 1) {
+    const ini = Math.floor((mes - 1) / 3) * 3 + 1;
+    let ult = ini - 1;                        // último mês do trimestre anterior
+    const ano = ult >= 1 ? 2026 : 2025;
+    if (ult < 1) ult += 12;
+    const esperado = `${String(ult).padStart(2, '0')}/${ano}`;
+    const got = competencia(mes, 2026, parseInt(competenciaRefDe('trimestral', mes, 'entregar'), 10));
+    if (got !== esperado) erradas.push([mes, got, esperado]);
+  }
+  assert.deepStrictEqual(erradas, []);
+  ok('oráculo da guia trimestral: abril dá 03, janeiro dá 12 do ano anterior, nos 12 meses');
+}
+{
+  assert.strictEqual(rotuloCompetenciaCalculada('trimestral', 'entregar'), 'Último mês do trimestre anterior');
+  assert.strictEqual(rotuloCompetenciaCalculada('trimestral', 'transmitir'), 'Primeiro mês do trimestre anterior');
+  assert.deepStrictEqual(
+    aplicarPeriodicidade({ meses_ativos: '1,2,3,4,5,6,7,8,9,10,11,12', competencia_ref: 'mes_anterior', sentido: 'entregar' },
+      'mensal', 'trimestral', 4),
+    { meses_ativos: '1,4,7,10', competencia_ref: '-1' });
+  ok('rótulo e aplicação da trimestral de guia');
+}
+{
+  // A DARF do Presumido com "mes_anterior" gravado: é -1, e não diverge.
+  assert.strictEqual(competenciaDiverge({ meses_ativos: '1,4,7,10', competencia_ref: 'mes_anterior', sentido: 'entregar' }, 'trimestral'), false);
+  assert.strictEqual(competenciaDiverge({ meses_ativos: '1,4,7,10', competencia_ref: '-3', sentido: 'entregar' }, 'trimestral'), true);
+  assert.strictEqual(competenciaDiverge({ meses_ativos: '7', competencia_ref: 'ano_anterior' }, 'anual'), true);
+  ok('divergência compara o deslocamento: mes_anterior é -1');
+}
+{
+  const tri = { meses_ativos: '1,4,7,10', competencia_ref: '-3', sentido: 'transmitir' };
+  assert.deepStrictEqual(aoTrocarSentido(tri, 'trimestral', 'entregar'), { sentido: 'entregar', competencia_ref: '-1' });
+  assert.deepStrictEqual(aoTrocarSentido(tri, 'mensal', 'entregar'), { sentido: 'entregar' });
+  const legado = { meses_ativos: '1,4,7,10', competencia_ref: '-6', sentido: 'transmitir' };
+  assert.deepStrictEqual(aoTrocarSentido(legado, 'trimestral', 'entregar'), { sentido: 'entregar' });
+  ok('trocar o sentido na trimestral recalcula a competência; gravada fora da regra fica como está');
 }
 
 console.log(`\nPROVA OK: ${n} checagens verdes`);

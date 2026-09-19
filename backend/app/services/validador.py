@@ -116,6 +116,14 @@ def extrair_dados(texto: str) -> dict:
     m = re.search(r"(\d{2})/(\d{2})/(\d{4})\s*a\s*\d{2}/\d{2}/\d{4}", texto)
     if m:
         d["competencia"] = f"{m.group(2)}/{m.group(3)}"
+    else:
+        # DARF: "Período de Apuração 31/03/2026", data única e ÚLTIMO dia do
+        # período -> 03/2026. Só quando não há período de/a (decisão de
+        # 2026-09-19): até aqui toda guia saía com a competência em branco.
+        m = re.search(r"per[ií]odo\s+de\s+apura[cç][aã]o\s*:?\s*\d{2}/(\d{2})/(\d{4})",
+                      texto, re.IGNORECASE)
+        if m:
+            d["competencia"] = f"{m.group(1)}/{m.group(2)}"
 
     # Protocolo/hash do arquivo
     m = re.search(r"(?:Identifica[cç][aã]o do arquivo|Hash do Arquivo|N[uú]mero do Recibo)\s*:?\s*([0-9A-Fa-f]{16,})", texto)
@@ -267,15 +275,27 @@ def identificar_obrigacao(db: Session, texto: str):
     `transmitir` entra como `receber`: o recibo do órgão é o documento que casa.
     """
     alvo = _norm(texto)
-    candidatas = []
+    casadas = []                       # (obrigação, chaves dela que casaram)
     for o in db.query(Obrigacao).filter(
             Obrigacao.ativa == True,
             (Obrigacao.sentido.is_(None)) | (Obrigacao.sentido != "interna")
             | (Obrigacao.exige_documento.is_(True))).all():
         chaves = [k.strip() for k in (o.identificadores or "").split(",") if k.strip()]
-        if any(_casa_chave(k, alvo) for k in chaves):
-            candidatas.append(o)
-    return candidatas
+        achadas = [_norm(k) for k in chaves if _casa_chave(k, alvo)]
+        if achadas:
+            casadas.append((o, achadas))
+
+    # Desempate pela chave mais específica (decisão de 2026-09-19): a chave do
+    # SPED Fiscal está DENTRO da do SPED Contribuições, e todo recibo de
+    # Contribuições casava com as duas. A candidata sai quando TODA chave dela
+    # que casou está contida numa chave MAIOR que casou em outra. Chaves
+    # independentes, ou iguais, continuam ambíguas: aí não há o que escolher.
+    def engolida(minhas, outra):
+        return all(any(len(k) < len(maior) and _casa_chave(k, maior) for maior in outra)
+                   for k in minhas)
+
+    return [o for o, minhas in casadas
+            if not any(engolida(minhas, outras) for p, outras in casadas if p is not o)]
 
 
 def casar_empresa_por_cnpj(db: Session, cnpj: str):
@@ -548,12 +568,41 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
                            f"Para dar baixa, reabra a tarefa antes.")
         return res
 
+    # O ARQUIVO fica guardado, e não só o nome. Até 2026-09-19 esta linha era
+    # `tarefa.anexo_nome = nome_arquivo`: o acervo listava o recibo e o
+    # download respondia 410, porque o conteúdo nunca foi salvo.
+    from . import upload as up
+
+    # Guia de "entregar": vai para a SAÍDA e NÃO conclui aqui. Quem conclui é a
+    # entrega ao cliente (services/entrega_cliente.py), chamada pela rota do
+    # e-validador, e só se alguém recebeu. Decisão 2a de 2026-09-19: sai
+    # sozinha só se o CNPJ e a competência LIDOS na guia batem com a tarefa;
+    # valor que veio da IA não conta, e a guia espera alguém conferir.
+    if tarefa.sentido == "entregar":
+        up.trocar_saida(db, tarefa, nome_arquivo, conteudo)
+        db.commit()
+        conf = conferir_saida(texto, empresa.cnpj, tarefa.competencia)
+        if conf["ok"] and conf["cnpj_lido"] and conf["competencia_lida"]:
+            res.update(status="pronta_para_envio",
+                       detalhe=f"Guia anexada à tarefa #{tarefa.id}.")
+        else:
+            falta = conf["alertas"] or [
+                "CNPJ e competência não foram lidos na própria guia"
+                + (" (vieram da IA)" if usou_ia else "") + "."]
+            res.update(status="aguardando_conferencia",
+                       detalhe=f"Guia anexada à tarefa #{tarefa.id}, sem envio: "
+                               + " ".join(falta)
+                               + " Confira e use \"Enviar ao cliente\" na tarefa.")
+        return res
+
     # Baixa
     tarefa.status = StatusTarefa.CONCLUIDA
     tarefa.data_conclusao = datetime.utcnow()
     tarefa.data_entrega = dados["data_entrega"] or datetime.utcnow()
     tarefa.protocolo_entrega = dados["protocolo"]
-    tarefa.anexo_nome = nome_arquivo
+    # "ev<id>" no lugar do token do link público: tarefa fora de "receber" não
+    # tem token (fase 28), e o prefixo só separa arquivos de mesmo nome.
+    tarefa.anexo_nome = up.salvar_arquivo(f"ev{tarefa.id}", nome_arquivo, conteudo)
     db.commit()
     res.update(status="baixada",
                detalhe=f"Tarefa #{tarefa.id} baixada ({obrigacao.mininome or obrigacao.nome} "

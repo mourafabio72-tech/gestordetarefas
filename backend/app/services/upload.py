@@ -176,6 +176,37 @@ def salvar_saida(tarefa_id: int, filename: str, conteudo: bytes) -> str:
     return nome
 
 
+def trocar_saida(db, tarefa, filename: str, conteudo: bytes) -> str:
+    """Grava o documento de SAÍDA da tarefa, trocando o anterior se houver.
+
+    Usada pela rota de anexar e pelo e-validador (2026-09-19): uma regra só
+    para "guia nova no lugar da velha".
+    """
+    # Trocar o documento apaga o anterior: guia retificada substitui a errada, e
+    # deixar as duas no volume só cria dúvida sobre qual é a boa.
+    trocou = bool(tarefa.saida_nome)
+    if tarefa.saida_nome:
+        remover_arquivo(tarefa.saida_nome)
+    tarefa.saida_nome = salvar_saida(tarefa.id, filename, conteudo)
+    if trocou:
+        # Token novo REVOGA o link já enviado. Sem isso, a guia retificada
+        # entraria no lugar da errada e o link antigo passaria a servir o
+        # arquivo novo sem ninguém saber que mudou -- ou pior, se o nome fosse
+        # outro, continuaria apontando para o que foi apagado.
+        # O contador zera junto: baixaram o documento ANTERIOR, e somar os dois
+        # faria a tela dizer que o cliente já pegou a guia certa.
+        tarefa.saida_token = None
+        tarefa.saida_downloads = 0
+        tarefa.saida_baixada_em = None
+        # Os links já enviados morrem junto. Sem isso, quem tem o link antigo
+        # continuaria baixando, e agora baixaria a guia NOVA sem saber que
+        # mudou, que é pior do que receber um link quebrado.
+        from ..models import TarefaEnvio
+        for e in db.query(TarefaEnvio).filter(TarefaEnvio.tarefa_id == tarefa.id).all():
+            e.token = None
+    return tarefa.saida_nome
+
+
 def ler_arquivo_salvo(nome: str) -> bytes:
     """Conteúdo de um arquivo do volume. Levanta se não existir."""
     caminho = caminho_do_anexo(nome)

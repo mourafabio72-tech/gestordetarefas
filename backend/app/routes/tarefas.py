@@ -529,28 +529,9 @@ async def anexar_saida(
         raise HTTPException(status_code=400,
                             detail=f"Arquivo acima de {MAX_SAIDA // (1024 * 1024)} MB.")
 
-    # Trocar o documento apaga o anterior: guia retificada substitui a errada, e
-    # deixar as duas no volume só cria dúvida sobre qual é a boa.
-    trocou = bool(tarefa.saida_nome)
-    if tarefa.saida_nome:
-        up.remover_arquivo(tarefa.saida_nome)
-    tarefa.saida_nome = up.salvar_saida(tarefa.id, nome, conteudo)
-    if trocou:
-        # Token novo REVOGA o link já enviado. Sem isso, a guia retificada
-        # entraria no lugar da errada e o link antigo passaria a servir o
-        # arquivo novo sem ninguém saber que mudou -- ou pior, se o nome fosse
-        # outro, continuaria apontando para o que foi apagado.
-        # O contador zera junto: baixaram o documento ANTERIOR, e somar os dois
-        # faria a tela dizer que o cliente já pegou a guia certa.
-        tarefa.saida_token = None
-        tarefa.saida_downloads = 0
-        tarefa.saida_baixada_em = None
-        # Os links já enviados morrem junto. Sem isso, quem tem o link antigo
-        # continuaria baixando, e agora baixaria a guia NOVA sem saber que
-        # mudou, que é pior do que receber um link quebrado.
-        from ..models import TarefaEnvio
-        for e in db.query(TarefaEnvio).filter(TarefaEnvio.tarefa_id == tarefa.id).all():
-            e.token = None
+    # A troca (apagar a guia velha e revogar os links enviados) mora em
+    # `up.trocar_saida`, que o e-validador também usa.
+    up.trocar_saida(db, tarefa, nome, conteudo)
     db.commit()
 
     # Confere o documento contra a tarefa. Best-effort: guia escaneada não tem
@@ -662,91 +643,21 @@ async def enviar_ao_cliente(
 
     `ensaio=true` mostra a lista de destinatários sem enviar nada.
     """
-    from ..models import TarefaEnvio
-    from ..services import upload as up, config as cfgmod
-    from ..services.whatsapp import (destinatarios_cliente, send_whatsapp_document,
-                                     carregar_zap)
-    from ..services.email import send_email
-    from datetime import datetime
+    from ..services import entrega_cliente as ec
 
     tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
-    if not tarefa.saida_nome:
-        raise HTTPException(status_code=400, detail="Anexe o documento antes de enviar.")
+    # A regra de entrega mora em services/entrega_cliente.py desde 2026-09-19:
+    # o e-validador envia a guia pelo mesmo caminho, e "só conclui se alguém
+    # recebeu" fica escrita uma vez.
     try:
-        conteudo = up.ler_arquivo_salvo(tarefa.saida_nome)
-    except FileNotFoundError:
-        raise HTTPException(status_code=410, detail="O arquivo não está mais no armazenamento.")
-
-    destinos = destinatarios_cliente(db, tarefa)
-    if not destinos:
-        raise HTTPException(
-            status_code=400,
-            detail="A empresa não tem e-mail nem telefone, e não há usuário do tipo "
-                   "cliente vinculado a ela. Sem isso não há para onde enviar.")
-    if ensaio:
-        return {"ensaio": True, "arquivo": up.nome_de_exibicao(tarefa.saida_nome),
-                "destinatarios": destinos}
-
-    cfg = cfgmod.carregar(db)
-    nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)
-    from ..services.razao_social import formatar as formatar_razao
-    empresa = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else ""
-    comp = f" ({tarefa.competencia})" if tarefa.competencia else ""
-    assunto = f"[BPS4] {tarefa.titulo}{comp}"
-    # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz
-    # que alguém abriu; a pergunta é quem: o sócio que paga ou o e-mail geral
-    # que ninguém lê. O token do envio responde isso.
-    base = (cfg.get("public_url") or "").rstrip("/")
-    # O documento do cliente não vai para atendente do escritório: quem recebe é
-    # o cliente, e o atendimento nasce na fila padrão da conexão.
-    zap = await carregar_zap(cfg)
-
-    import secrets
-    resultados = []
-    for d in destinos:
-        # O envio nasce ANTES da mensagem sair: é dele que vem o token do link,
-        # e o texto precisa carregar esse token.
-        envio = TarefaEnvio(tarefa_id=tarefa.id, arquivo=nome_arquivo, canal=d["canal"],
-                            endereco=d["endereco"], destinatario=d["nome"],
-                            token=secrets.token_urlsafe(24), sucesso=False,
-                            enviado_por=current_user.id)
-        db.add(envio)
-        db.flush()          # garante o id sem fechar a transação
-        link = f"{base}/api/publico/baixar/{envio.token}"
-        texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
-                 f"📎 {nome_arquivo}\n{link}\n\nQualquer dúvida, estamos à disposição.")
-
-        if d["canal"] == "whatsapp":
-            # Link, não arquivo: é o que se pode rastrear, e ainda dispensa o
-            # provedor aceitar o anexo.
-            from ..services.whatsapp import send_whatsapp_message
-            r = await send_whatsapp_message(d["endereco"], texto, cfg)
-        else:
-            r = send_email(d["endereco"], assunto, texto, cfg,
-                           anexos=[(nome_arquivo, conteudo)])
-        ok = bool(r.get("success"))
-        envio.sucesso = ok
-        envio.detalhe = None if ok else str(r.get("error") or r.get("response") or "")[:500]
-        resultados.append({**d, "enviado": ok, "detalhe": r})
-
-    entregou = any(r["enviado"] for r in resultados)
-    if entregou:
-        tarefa.status = StatusTarefa.CONCLUIDA
-        tarefa.data_conclusao = datetime.utcnow()
-        tarefa.data_entrega = tarefa.data_entrega or datetime.utcnow()
-    db.commit()
-
-    enviados = sum(1 for r in resultados if r["enviado"])
-    return {
-        "arquivo": nome_arquivo,
-        "enviados": enviados,
-        "falhas": len(resultados) - enviados,
-        "concluiu": entregou,
-        "message": (f"{enviados} de {len(resultados)} envio(s) concluído(s)."
-                    + (" Tarefa concluída." if entregou
-                       else " Nenhum envio funcionou: a tarefa segue aberta.")),
-        "resultados": resultados,
-    }
+        return await ec.entregar_saida(db, tarefa, enviado_por=current_user.id,
+                                       ensaio=ensaio, origem="tela")
+    except ec.SemDocumento as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ec.ArquivoSumiu as e:
+        raise HTTPException(status_code=410, detail=str(e))
+    except ec.SemDestinatario as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/copiar")
