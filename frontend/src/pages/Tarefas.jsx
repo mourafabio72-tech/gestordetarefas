@@ -208,6 +208,18 @@ export default function Tarefas() {
     }
   };
 
+  // Só a lista de tarefas, depois de uma ação que muda uma delas. Faltava:
+  // o "não se aplica" chamava esta função sem ela existir, o ReferenceError
+  // era engolido e o card cancelado ficava na tela até o F5 (2026-09-18).
+  const loadTarefas = async () => {
+    try {
+      const r = await tarefasAPI.list();
+      setTarefas(r.data);
+    } catch (error) {
+      console.error('Erro ao recarregar tarefas:', error);
+    }
+  };
+
   const competenciasDisponiveis = competenciasDe(tarefas);
   const filteredTarefas = filtrarTarefas(tarefas, filtros);
   const aplicarPreset = (p) => setFiltros({ ...filtros, venc_de: p.de, venc_ate: p.ate });
