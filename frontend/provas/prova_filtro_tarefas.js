@@ -221,4 +221,26 @@ const ids = (lista) => lista.map(t => t.id);
   ok('a URL do Painel vira filtro, e link inválido não derruba a tela');
 }
 
+{
+  // Cancelada sai da visão padrão (pedido do usuário, 2026-09-18): o "não se
+  // aplica" cancela várias tarefas de uma vez, e elas ficavam no quadro com
+  // cara de que não tinham saído. Continuam no banco e aparecem escolhendo a
+  // situação "Cancelada".
+  const T = [
+    { id: 1, titulo: 'a', status: 'pendente' },
+    { id: 2, titulo: 'b', status: 'cancelada', nao_se_aplica: true },
+    { id: 3, titulo: 'c', status: 'concluida' },
+    { id: 4, titulo: 'd', status: 'cancelada' },
+  ];
+  assert.deepStrictEqual(ids(filtrarTarefas(T, filtrosVazios())), [1, 3],
+    'sem situação escolhida, as canceladas não aparecem');
+  assert.deepStrictEqual(ids(filtrarTarefas(T, { ...filtrosVazios(), status: 'cancelada' })), [2, 4],
+    'escolhendo Cancelada, elas voltam');
+  assert.deepStrictEqual(ids(filtrarTarefas(T, { ...filtrosVazios(), status: 'concluida' })), [3],
+    'as outras situações não mudam');
+  assert.deepStrictEqual(ids(filtrarTarefas(T, { ...filtrosVazios(), texto: 'b' })), [],
+    'a busca por texto também não traz cancelada sem pedir');
+  ok('cancelada sai da visão padrão e volta escolhendo a situação');
+}
+
 console.log(`\nPROVA OK: ${n} casos`);

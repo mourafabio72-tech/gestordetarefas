@@ -823,7 +823,8 @@ export default function Tarefas() {
             { chave: 'usuario_id', rotulo: 'Colaborador', vazio: 'Todos', largura: 'flex-1 min-w-[130px]',
               dica: 'Responsável ou supervisor da tarefa',
               opcoes: usuarios.filter((u) => !u.bloqueado).map((u) => ({ v: u.id, t: u.nome })) },
-            { chave: 'status', rotulo: 'Situação', vazio: 'Todas', largura: 'flex-1 min-w-[110px]',
+            { chave: 'status', rotulo: 'Situação', vazio: 'Sem canceladas', largura: 'flex-1 min-w-[110px]',
+              dica: 'As canceladas, inclusive as que não se aplicam, aparecem escolhendo Cancelada.',
               opcoes: Object.entries(statusLabels).map(([v, t]) => ({ v, t })) },
           ].map((f) => (
             <Campo key={f.chave} rotulo={f.rotulo} dica={f.dica} largura={f.largura}>
@@ -896,7 +897,7 @@ export default function Tarefas() {
             <span className="text-[11px] text-gray-500 whitespace-nowrap tabular-nums">
               {temFiltro
                 ? <><strong className="text-gray-700">{filteredTarefas.length}</strong> de {tarefas.length}</>
-                : <>{tarefas.length} {tarefas.length === 1 ? 'tarefa' : 'tarefas'}</>}
+                : <>{filteredTarefas.length} {filteredTarefas.length === 1 ? 'tarefa' : 'tarefas'}</>}
             </span>
             {recorte && (
               /* Dizer QUAL recorte veio do Painel. Sem isto, a tela abre com

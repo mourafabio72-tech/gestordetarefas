@@ -76,6 +76,10 @@ export function filtrarTarefas(tarefas, filtros, hoje = new Date()) {
     }
     if (f.empresa_id && t.empresa_id !== parseInt(f.empresa_id)) return false;
     if (f.status && t.status !== f.status) return false;
+    // Sem situação escolhida, cancelada não aparece (pedido do usuário,
+    // 2026-09-18): o "não se aplica" cancela várias de uma vez, e elas ficavam
+    // no quadro parecendo que não tinham saído. Voltam escolhendo "Cancelada".
+    if (!f.status && t.status === 'cancelada') return false;
     if (f.setor_id && t.setor_id !== parseInt(f.setor_id)) return false;
     if (f.multa && !t.gera_multa) return false;
 
