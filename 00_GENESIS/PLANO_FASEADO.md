@@ -100,7 +100,7 @@ Itens:
 
 ## Fase 30: publicar e provar em produção
 
-- **Status:** pending
+- **Status:** done (2026-09-19; publicado em `af0b6dd`, conferência provada pelo banco)
 - **Duração estimada:** 20 min
 - **Notas:** Fechar_Tarefa_Rodar_Verifica
 - **Dependências:** fases 27, 28 e 29
@@ -120,7 +120,7 @@ Itens:
 
 ## Fase 31: reclassificar as obrigações acessórias já cadastradas
 
-- **Status:** pending
+- **Status:** done (2026-09-19; 10 em transmitir, e mais 13 correções de cadastro autorizadas pelo usuário)
 - **Duração estimada:** 20 min, e depende do tamanho da lista
 - **Notas:** Padrao_Logging_Estruturado, decisão 3 do usuário
 - **Dependências:** fase 30 (sem ela, trocar pela tela não grava)
