@@ -211,3 +211,13 @@ Linhas novas, todas pendentes.
 | Tela_Nao_Tem_Manual | "PROIBIDO usar o parágrafo para compensar rótulo ruim." | parágrafo explicando periodicidade no topo do modal | fase 40 | CONFERENCIA_VISUAL | conferência visual feita em 2026-09-19, tela Obrigações > editar; dicas no title e uma linha só na Trimestral | ok |
 | Padrao_Logging_Estruturado / Nunca_DELETE_Fisico | mutação crítica loga; correção é UPDATE pela rota | UPDATE no console, DELETE | fase 41 | linhas `EDICAO_REGISTRO_CRITICO` e segundo SELECT | correção só por PUT na rota que loga (3 PUT 200), releitura bate, nenhum DELETE nem UPDATE no console | ok |
 | Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | fases 41 e 42 | carimbo = HEAD, bundle, conferência do usuário | carimbo 20260919-1707 = 46b622e; bundle com os 4 textos; conferência em produção em 2026-09-19, entrega_defis | ok |
+
+## Fases 43 a 46: e-validador (2026-09-19)
+
+| Nota | Regra literal | Proibido | Onde aplica | Prova | Evidência | Status |
+|---|---|---|---|---|---|---|
+| TDD_RED_GREEN_REFACTOR | prova antes do código | código sem RED | 43, 44, 45 | as três provas 1 e depois 0 no LOG | chave [1,2]→6; guarda [1..6]→8; envia [1..7],[11..13]→13; darf [1,2,3]→6; periodicidade 14-18→18 | ok |
+| Escada_Preguica_de_Codigo | padrão irmão; reuso antes de construir | regra de envio duplicada | 43, 45 | um só lugar decide "conclui se alguém recebeu" (grep) | `entregou = any(` só em services/entrega_cliente.py; troca de guia só em upload.trocar_saida | ok |
+| Padrao_Logging_Estruturado | mutação crítica loga; PII nunca | telefone ou e-mail no log | 45 | item (f) da prova | item 4 de prova_evalidador_envia_guia: sem e-mail nem telefone no log | ok |
+| Sem_Travessao / Portugues_BR_Acentuacao / Sistema_de_Estilos | zero travessão, acento completo, cor por token | travessão, texto sem acento, hex | 45 | greps nas linhas `+` | hex 0, popup 0, select 0, travessão rc=1 | ok |
+| Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | 46 | carimbo, bundle, conferência | | pendente |

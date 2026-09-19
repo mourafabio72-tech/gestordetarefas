@@ -47,3 +47,28 @@ ou saída de comando colada no LOG).
 
 - [x] 42.1 conferência do usuário colada no LOG. EVIDÊNCIA: LOG fase=42 conferencia_producao
 - [x] 42.2 CONFORMIDADE sem linha pendente das fases 38 a 42. EVIDÊNCIA: grep '| pendente |' volta 0
+
+# e-validador (fases 43 a 46)
+
+## Fase 43: chave mais específica
+- [x] 43.1 RED: `python backend/provas/prova_chave_especifica.py` sai 1 com as chaves reais de 169 e 170 (TDD_RED_GREEN_REFACTOR). EVIDÊNCIA: [1, 2] rc=1 (LOG)
+- [x] 43.2 GREEN: desempate dentro de `identificar_obrigacao`, uma função, os dois chamadores herdam (Escada: padrão irmão). EVIDÊNCIA: 'PROVA OK: 6'; só 1 par afetado em produção
+- [x] 43.3 suíte do backend em 0. EVIDÊNCIA: provas=37 falharam=0
+
+## Fase 44: o e-validador guarda o arquivo
+- [x] 44.1 RED: recibo baixado pelo e-validador existe no volume e o download do acervo dá 200; guia de entregar vai para `saida_nome`. EVIDÊNCIA: [1, 2, 3, 4, 5, 6] rc=1, downloads 410
+- [x] 44.2 GREEN: `salvar_arquivo` para receber/transmitir/interna, `salvar_saida` para entregar; nenhum arquivo apagado (Nunca_DELETE_Fisico). EVIDÊNCIA: 'PROVA OK: 8'; `upload.trocar_saida` única
+- [x] 44.3 suíte em 0. EVIDÊNCIA: provas=38 falharam=0
+
+## Fase 45: envio da guia ao cliente
+- [x] 45.1 RED com dublês de WhatsApp e e-mail, itens (a) a (f) do plano; nada sai para a rede na prova. EVIDÊNCIA: [1..7] e [11,12,13] rc=1 (LOG)
+- [x] 45.2 GREEN: miolo do `enviar_ao_cliente` vira serviço, as duas rotas chamam; "só conclui se alguém recebeu" escrita uma vez. EVIDÊNCIA: services/entrega_cliente.py; 'PROVA OK: 13'
+- [x] 45.3 rótulos novos na tela do e-validador com acento completo e sem hex (Portugues_BR_Acentuacao, Sistema_de_Estilos)
+      PROVA: `grep -n "Enviada ao cliente" frontend/src/pages/EValidador.jsx` acha 1; hex nas linhas `+`: 0. EVIDÊNCIA: 5 rótulos (inclui cancelada); hex 0
+- [x] 45.4 suítes, build, travessão e popup nas linhas `+`: 0 (Sem_Travessao, Sem_Popup_Nativo). EVIDÊNCIA: provas=40, provas_front=23, build ok, popup 0, travessão rc=1
+- [x] 45.5 log do envio sem endereço nem telefone (Padrao_Logging_Estruturado). EVIDÊNCIA: item 4 da prova
+
+## Fase 46: publicar e conferir
+- [ ] 46.1 carimbo igual ao HEAD, bundle com `Enviada ao cliente`
+- [ ] 46.2 conferência do usuário com guia real
+- [ ] 46.3 recibo de SPED Contribuições baixa a 170 sem ambiguidade

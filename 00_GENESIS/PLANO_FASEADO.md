@@ -125,3 +125,85 @@ fase 40.
 - **2026-09-19, fase 39:** entraram, com RED próprio e sem pergunta ao usuário (achado de verificador sobre o mesmo critério de aceite, precedente da fase 32), o vazio de meses da obrigação legada e dois defeitos anteriores: `meses_ativos` null dava 500 e `competencia_ref` null derrubava a listagem inteira. A rota de edição ganhou a decisão sobre o vazio, que o plano punha só no schema.
 
 - **2026-09-19:** aberto com as fases 38 a 42. Quatro decisões do usuário numa rodada (1a, 2a, 3a lido de "3s", estilo 1). A fase 38 existe porque a decisão 2a foi tomada sobre achado provável e não medido.
+
+---
+
+# Trabalho novo: e-validador (fases 43 a 46), aberto em 2026-09-19
+
+> Pedido do usuário: "pode implantar os 3 itens que ficaram de fora: 1, 3 e 2". O item 1 (IRPJ e
+> CSLL do Presumido em trimestral) foi ajuste de cadastro, feito e registrado no LOG. Os itens 3 e 2
+> mexem no e-validador. Decisões numa rodada: 1a, 2a, 3a, 4a.
+
+## Fase 43: o e-validador escolhe a chave mais específica (item 3)
+
+- **Status:** done (2026-09-19; um único par afetado em produção, o do SPED)
+- **Duração estimada:** 25 min
+- **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo (padrão irmão)
+- **Output esperado:** `backend/provas/prova_chave_especifica.py`; `services/validador.py` alterado.
+
+1. **43.1 RED.** Com as chaves reais de produção: recibo de SPED Contribuições casa só com a 170, e não com a 169; recibo de SPED Fiscal continua casando com a 169; duas obrigações com chaves independentes que casam no mesmo texto continuam ambíguas (o desempate não inventa escolha); `identificar_obrigacao` e a sugestão de Modelos usam a mesma regra.
+2. **43.2 GREEN.** Em `identificar_obrigacao`: se a chave que casou numa candidata está contida na chave que casou em outra, a de chave menor sai. Uma função, os dois chamadores herdam.
+3. **43.3** Suíte do backend em exit 0.
+
+**Critério de aceite:** prova 1 antes e 0 depois; suíte verde.
+
+## Fase 44: o e-validador guarda o arquivo que baixa (achado de 2026-09-19)
+
+- **Status:** done (2026-09-19; troca de guia virou função única)
+- **Duração estimada:** 25 min
+- **Notas:** TDD_RED_GREEN_REFACTOR, Nunca_DELETE_Fisico
+- **Output esperado:** `backend/provas/prova_evalidador_guarda_arquivo.py`; `services/validador.py` alterado.
+
+Hoje `processar` grava só o nome (`validador.py:556`, `tarefa.anexo_nome = nome_arquivo`) e descarta o conteúdo: o acervo lista o recibo e o download não acha o arquivo.
+
+1. **44.1 RED.** Recibo de `transmitir` e comprovante de `receber` baixados pelo e-validador: o arquivo existe no volume (`caminho_do_anexo` não é None) e o download do acervo devolve 200. Guia de `entregar`: vai para `saida_nome` (`salvar_saida`), que é o que o "Enviar ao cliente" lê.
+2. **44.2 GREEN.** `receber`, `transmitir` e interna com documento: `salvar_arquivo` como já faz `registrar_baixa` (`upload.py:188`). `entregar`: `salvar_saida`.
+3. **44.3** Suíte em exit 0.
+
+**Critério de aceite:** prova 1 antes e 0 depois; suíte verde.
+
+## Fase 45: a guia reconhecida sai para o cliente (item 2)
+
+- **Status:** done (2026-09-19; prova com 13 itens, exceção de rede no meio do envio consertada pelo verificador)
+- **Duração estimada:** 60 min
+- **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo, Padrao_Logging_Estruturado, Portugues_BR_Acentuacao, Sem_Travessao, Sistema_de_Estilos
+- **Output esperado:** `backend/provas/prova_evalidador_envia_guia.py`; `routes/tarefas.py`, `routes/evalidador.py`, `services/validador.py`, `frontend/src/pages/EValidador.jsx` alterados.
+
+Decisões: envio automático só se CNPJ e competência lidos na guia baterem com a tarefa (2a); se nenhum contato receber, a tarefa fica aberta com a guia anexada (3a); mesmos canais e destinatários do "Enviar ao cliente" (4a).
+
+1. **45.1 RED**, com WhatsApp e e-mail substituídos por dublês (nada sai para a rede na prova):
+   (a) guia de `entregar` reconhecida e conferida: vai aos destinatários do "Enviar ao cliente", um `TarefaEnvio` por destinatário, e a tarefa conclui;
+   (b) nenhum envio funciona: tarefa aberta, guia anexada, status `envio_falhou` no resultado;
+   (c) CNPJ ou competência da guia divergem da tarefa (`conferir_saida`): nada é enviado, guia anexada, status `aguardando_conferencia` com o motivo;
+   (d) empresa sem contato: nada é enviado, guia anexada, status `sem_destinatario`;
+   (e) não-regressão: `receber` e `transmitir` continuam baixando como hoje, sem envio nenhum; `ja_baixada` e `cancelada` não enviam;
+   (f) uma linha de log por guia enviada, com a contagem de envios, sem endereço nem telefone.
+2. **45.2 GREEN.** O miolo de `enviar_ao_cliente` (`routes/tarefas.py:648`) vira função de serviço, chamada pela rota de hoje e pela do e-validador. `processar` continua síncrono e só marca a tarefa como pronta para envio; a rota `/evalidador/processar`, que já é assíncrona, chama o envio. Sem duplicar a regra de "só conclui se alguém recebeu".
+3. **45.3** Tela do e-validador: rótulos dos status novos (`Enviada ao cliente`, `Envio falhou`, `Aguardando conferência`, `Sem destinatário`), com os tokens de cor que a tela já usa.
+4. **45.4 GREEN, suítes, build, gates** (travessão, hex e popup nas linhas `+`).
+
+**Critério de aceite:** prova 1 antes e 0 depois; suítes verdes; build; gates vazios.
+
+## Fase 45b: a competência da guia (decisões a e b de 2026-09-19)
+
+- **Status:** in_progress (45b.1 e 45b.2 done; 45b.3 depois do push)
+- **Notas:** TDD_RED_GREEN_REFACTOR, Padrao_Toggle_Tipos, Portugues_BR_Acentuacao, Sem_Travessao
+
+1. **45b.1 (a)** `extrair_dados` lê "Período de apuração dd/mm/aaaa" quando o documento não traz período de/a; competência = mês/ano da data. RED antes. Não-regressão: recibo com de/a continua lendo o início.
+2. **45b.2 (b)** `periodicidade.js`: Trimestral de `entregar` usa o último mês do trimestre anterior, `-(((M-1)%3)+1)`; `transmitir` e `receber` continuam no primeiro. Texto calculado: "Último mês do trimestre anterior". Trocar o sentido com Trimestral escolhida recalcula a competência. A divergência compara o deslocamento, e não o texto (`mes_anterior` é -1). RED antes, no molde da prova da fase 40.
+3. **45b.3** Depois de publicar: 199 e 200 com competência -1 (março para entrega em abril), pelo PUT com o login do usuário.
+
+
+- **Status:** pending
+- **Notas:** Fechar_Tarefa_Rodar_Verifica
+
+1. **46.1** Suítes, build, `COPY . .`, push, `git ls-remote`, carimbo igual ao HEAD, bundle com `Enviada ao cliente`.
+2. **46.2** Conferência do usuário em produção, com uma guia REAL que já precisa ir ao cliente: subir no e-validador, ver `Enviada ao cliente`, e o cliente recebendo. Não se testa com guia inventada, porque o envio é de verdade.
+3. **46.3** Conferência do item 3: um recibo de SPED Contribuições no e-validador baixa a 170 sem ambiguidade.
+
+**Critério de aceite:** carimbo igual ao HEAD; as duas conferências no LOG.
+
+## Fora de escopo das fases 43 a 46
+
+- **Reenvio automático quando o envio falha:** a tarefa fica aberta e o "Enviar ao cliente" da tela reenvia. Volta se falha de envio virar rotina.
+- **Recuperar os arquivos que o e-validador descartou até hoje:** não existem mais; o conserto vale daqui para a frente. A lista das tarefas afetadas pode ser levantada se o usuário quiser reenviar algum.
