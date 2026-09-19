@@ -247,36 +247,50 @@ Acesso: login por perfil
 
 ## Fase 36: Desvincular pela regra
 
-- [ ] 36.1 `prova_desvincular_regra.py` escrita ANTES e saindo com exit 1
+- [x] 36.1 `prova_desvincular_regra.py` escrita ANTES e saindo com exit 1
       (TDD_RED_GREEN_REFACTOR)
-- [ ] 36.1 `alcance-empresa` devolve só obrigações ativas que alcançam a empresa, com `via` e `abertas`, e sem as que já têm exceção
-- [ ] 36.2 body do desvincular com `extra="forbid"`, `obrigacao_ids: List[int]` não vazio, `motivo` 3 a 500; lista vazia, texto e campo a mais dão 422
+      EVIDÊNCIA: RED `PROVA FALHOU nos itens: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 20, 21, 22, 24]`, rc=1; GREEN `PROVA OK: 27 checagens verdes` (LOG 20:53 e 20:56); depois dos verificadores, `PROVA OK: 30 checagens verdes` (item 28 motivo em branco; 29 e 30 separam a flag do módulo, e a troca de guarda passou a ser pega). Linhas remedidas depois dos consertos
+- [x] 36.1 `alcance-empresa` devolve só obrigações ativas que alcançam a empresa, com `via` e `abertas`, e sem as que já têm exceção
+      EVIDÊNCIA: `routes/obrigacoes.py:280` (`_alcance`) e `:298` (rota); `via_alcance` em `gerador.py:203`; itens 2 (inativa, outro regime, com exceção e modo vinculadas de fora não aparecem), 3 (regra, ambos, vinculo, vinculo), 4 (IPI 2 com a concluída fora, ECF 3), 22, 27
+- [x] 36.2 body do desvincular com `extra="forbid"`, `obrigacao_ids: List[int]` não vazio, `motivo` 3 a 500; lista vazia, texto e campo a mais dão 422
       (Padrao_Mass_Assignment: "Backend define a whitelist de campos editaveis."; Padrao_Validacao_de_Input)
-- [ ] 36.2 obrigação que não alcança a empresa, ou inexistente, dá 422 e nada muda (tudo ou nada)
+      EVIDÊNCIA: `routes/obrigacoes.py:133-142` (`extra="forbid"`, `Field(min_length=1, max_length=500)`, `motivo` 3 a 500); itens 6 a 10, todos 422 com o estado inteiro igual
+- [x] 36.2 obrigação que não alcança a empresa, ou inexistente, dá 422 e nada muda (tudo ou nada)
       PROIBIDO: aplicar parte do lote e falhar no meio
       (Mapa_de_Conceitos_de_Seguranca, A01: "Validar a CADA requisição se o usuário tem direito ao recurso")
-- [ ] 36.2 vínculo à mão removido quando existe; exceção criada quando entra pela regra; abertas canceladas por `aplicar_excecao`
+      EVIDÊNCIA: a lista inteira é conferida contra `_alcance` antes de qualquer mudança (`desvincular_empresa`, `routes/obrigacoes.py:315`), um `db.commit()` só (`:352`); itens 11 (fora do regime), 12 (inexistente) e 13 (já com exceção), cada um junto com uma válida, 422 e estado igual
+- [x] 36.2 vínculo à mão removido quando existe; exceção criada quando entra pela regra; abertas canceladas por `aplicar_excecao`
       PROVA: itens (b) e (c) da prova; geração seguinte não recria
-- [ ] 36.2 403 sem `alocar_obrigacao` nas duas rotas; uma linha de log por chamada, só contagem
-- [ ] 36.3 `SelectBusca.jsx` em `src/components/`, busca e escolha única, sem `<select>`
+      EVIDÊNCIA: itens 15 (exceção para IPI e ECF, não para a DIRB), 16 (vínculo sai da ECF e da DIRB, o do relatório fica), 17 (8 abertas canceladas com motivo, autor e data), 18 (concluída intacta), 19 (Alfa e relatório intactos), 20 e 21 (geração de 11/2026). DESVIO DECLARADO no LOG 20:56: obrigação só pelo vínculo cancela por `cancelar_abertas` (`gerador.py:261`), sem exceção; `aplicar_excecao` chama a mesma função (`:258`)
+- [x] 36.2 403 sem `alocar_obrigacao` nas duas rotas; uma linha de log por chamada, só contagem
+      EVIDÊNCIA: `require_flag("alocar_obrigacao")` em `routes/obrigacoes.py:299` e `:318`; item 5 (403 nas duas, estado igual); linha em `:355`, itens 23 (uma), 24 (3 obrigações, 2 exceções, 2 vínculos, 8 tarefas, empresa, usuário), 25 (sem razão social nem CNPJ). Suíte `provas=35 falharam=0`
+- [x] 36.3 `SelectBusca.jsx` em `src/components/`, busca e escolha única, sem `<select>`
       PROIBIDO: `<select` no modal do Desvincular
       PROVA: `grep -n "<select" ` no bloco do modal vazio
       (Sem_Select_Nativo: "Nunca usar `<select>` nativo."; Componente_SelectBusca)
-- [ ] 36.4 lista com `check-app`, etiqueta de origem e "N em aberto"; "Marcar todas" e "Limpar"; motivo obrigatório
+      EVIDÊNCIA: `frontend/src/components/SelectBusca.jsx` novo, usado em `Obrigacoes.jsx:481`; `<select` no bloco do modal rc=1; no navegador, `querySelectorAll('select')` no modal = 0; busca sem acento provada no item 7 de `prova_desvincular_empresa.js`; caixa do modal com `overflow: visible` medido (LOG 21:05:59)
+- [x] 36.4 lista com `check-app`, etiqueta de origem e "N em aberto"; "Marcar todas" e "Limpar"; motivo obrigatório
       PROIBIDO: `h-4 w-4` nos checkboxes novos
       (Padrao_Selecao_em_Lote; precedente `check-app`)
-- [ ] 36.4 estado vazio quando a empresa não recebe nenhuma obrigação, e nada escolhido ainda é outro texto
+      EVIDÊNCIA: `Obrigacoes.jsx:535` `check-app`; `:524` e `:527`; etiqueta por `ETIQUETAS_VIA` com `title`; `N em aberto`; botão travado sem motivo (`podeDesvincular`, item 2 da prova front); `h-4 w-4` nas linhas `+`: 0
+- [x] 36.4 estado vazio quando a empresa não recebe nenhuma obrigação, e nada escolhido ainda é outro texto
       (Padrao_Estado_Vazio: "Três estados distintos com textos diferentes")
-- [ ] 36.4 botão `btn-danger` "Desvincular N obrigação(ões)" à direita, trifeedback, resultado e erro dentro do modal; o parágrafo de manual do topo sai
+      EVIDÊNCIA: `Obrigacoes.jsx:495` 'Nenhuma Empresa Escolhida' e `:510` 'Nenhuma Obrigação para Esta Empresa', ícones e subtítulos diferentes; o do meio (`:503`) é o carregando. O primeiro visto no navegador (LOG 21:05:59); o segundo falta na conferência do usuário
+- [x] 36.4 botão `btn-danger` "Desvincular N obrigação(ões)" à direita, trifeedback, resultado e erro dentro do modal; o parágrafo de manual do topo sai
       PROIBIDO: `confirm(` e `alert(` no fluxo novo; parágrafo explicando a tela no topo
       (Sem_Popup_Nativo; Tela_Nao_Tem_Manual; Acao_Primaria_a_Direita)
-- [ ] 36.4 botão "Desvincular empresa" da tela só com `alocar_obrigacao`
-- [ ] 36.5 prova, suítes e build verdes; greps de travessão, hex e popup
-- [ ] 36.6 conferência visual local registrada no LOG
+      EVIDÊNCIA: rodapé `justify-end` `Obrigacoes.jsx:591`, `btn-danger` com `textoDoBotao` `:599` ('Desvincular 2 obrigações' visto no navegador); trifeedback: `disabled`, 'Desvinculando...' e spinner com texto na área (`:577`); resultado `role=status` e erro `role=alert` (`:586`); popup nas linhas `+`: 0; o parágrafo 'Remove o vínculo da empresa em todas...' saiu
+- [x] 36.4 botão "Desvincular empresa" da tela só com `alocar_obrigacao`
+      EVIDÊNCIA: `Obrigacoes.jsx:66` `podeAlocar` de `user?.permissoes_efetivas?.alocar_obrigacao`, envolvendo o botão em `:363`; o servidor recusa sozinho com 403 (item 5 da prova backend)
+- [x] 36.5 prova, suítes e build verdes; greps de travessão, hex e popup
+      EVIDÊNCIA: `PROVA OK: 30 checagens verdes` (backend) e `PROVA OK: 7 checagens verdes` (front); `provas=35 falharam=0`; `provas_front=22 falharam=0`; `✓ built in 1.20s`; travessão rc=1 nos arquivos tocados; hex, popup e `h-4 w-4` nas linhas `+`: 0
+- [x] 36.6 conferência visual local registrada no LOG
+      EVIDÊNCIA: conferido em 2026-09-18 pelo usuário ("conferi"), tela Obrigações > Desvincular empresa, na conferência local; medido antes por mim no navegador (LOG 21:05:59)
 
 ## Fase 37: publicar
 
-- [ ] 37.1 suítes e build verdes; `COPY . .` conferido
+- [x] 37.1 suítes e build verdes; `COPY . .` conferido
+      EVIDÊNCIA: recorte só da 35 e 36 numa worktree limpa: build ok, `provas=35 falharam=0`, `provas_front=21 falharam=0`; `COPY . .` em `backend/Dockerfile:17` e `frontend/Dockerfile:8`; commit `7045b5d` (LOG recorte_e_commit)
 - [ ] 37.2 `git ls-remote` e carimbo igual ao HEAD
 - [ ] 37.3 bundle com `Não se aplica a esta empresa` e `pela regra`; 401 sem login nas duas rotas
 - [ ] 37.4 conferência do usuário em produção colada no LOG

@@ -251,7 +251,7 @@ Itens:
 
 ## Fase 36: Desvincular escolhe as obrigações e respeita a regra
 
-- **Status:** pending
+- **Status:** done (2026-09-18; prova com 30 itens, conferida pelo usuário; irmão do cadastro de empresa consertado com autorização)
 - **Duração estimada:** 70 min
 - **Notas:** as da fase 35, mais Padrao_Mass_Assignment, Sem_Select_Nativo, Componente_SelectBusca, Padrao_Estado_Vazio, Padrao_Selecao_em_Lote (precedente `check-app`), Tela_Nao_Tem_Manual, Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela
 - **Dependências:** fase 35 (usa `aplicar_excecao`)
@@ -316,6 +316,8 @@ Itens:
 - **2026-09-18:** acrescentadas as fases 32 a 34 (recorte por regime na geração e log da geração em lote). Quatro decisões do usuário numa rodada (1a, 2b, 3a, 4a). A fase 32 nasceu da ficha de segurança, confirmada no código pelo principal.
 - **2026-09-18, fase 32:** o verificador de segurança achou o irmão da geração do mês, `POST /empresas`, que gera as tarefas da empresa nova em lote sem linha de tarefa. Entrou na própria fase, com RED próprio, sem pergunta ao usuário: é achado de verificador sobre o mesmo critério de aceite, e o precedente é a fase 23 (sete rotas irmãs). O item 32.2 dizia `log_event` só em `gerar_competencia`; a trava que ele protegia, `gerador.py` sem diff, continua de pé.
 - **2026-09-18, fases 35 a 37:** abertas a pedido do usuário depois de ver 37 tarefas da Trops que não se aplicavam. Diagnóstico medido no código: o Desvincular só tirava vínculo à mão, e a regra de regime em branco alcança todas as empresas; o "Não se aplica" existia sem item de menu desde `3500ca8`. Quatro decisões numa rodada (1a, 2a, 3a, 4a). Executam antes das 29 a 31.
+
+- **2026-09-18, fase 36:** entrou o irmão achado na execução, com autorização do usuário ("pode seguir com cadastramento"): `gerar_para_empresa`, o caminho do cadastro de empresa, ignorava o modo 'vinculadas' e gerava para toda empresa nova as obrigações "só dos vinculados". Conserto de uma linha com RED próprio na `prova_alvo_vinculadas.py`. Também entrou, por achado de verificador e com RED próprio, o motivo só com espaços nos dois schemas (Desvincular e Não se aplica).
 
 ## Fora de escopo das fases 35 a 37
 
