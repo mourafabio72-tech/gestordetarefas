@@ -220,4 +220,4 @@ Linhas novas, todas pendentes.
 | Escada_Preguica_de_Codigo | padrão irmão; reuso antes de construir | regra de envio duplicada | 43, 45 | um só lugar decide "conclui se alguém recebeu" (grep) | `entregou = any(` só em services/entrega_cliente.py; troca de guia só em upload.trocar_saida | ok |
 | Padrao_Logging_Estruturado | mutação crítica loga; PII nunca | telefone ou e-mail no log | 45 | item (f) da prova | item 4 de prova_evalidador_envia_guia: sem e-mail nem telefone no log | ok |
 | Sem_Travessao / Portugues_BR_Acentuacao / Sistema_de_Estilos | zero travessão, acento completo, cor por token | travessão, texto sem acento, hex | 45 | greps nas linhas `+` | hex 0, popup 0, select 0, travessão rc=1 | ok |
-| Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | 46 | carimbo, bundle, conferência | | pendente |
+| Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | 46 | carimbo, bundle, conferência | carimbo 20260921-1744 = 7f4eb2a; bundle com os rótulos; DAS real 'Enviada ao cliente' em 2026-09-21 | ok |

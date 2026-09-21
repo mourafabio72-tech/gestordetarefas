@@ -70,5 +70,5 @@ ou saída de comando colada no LOG).
 
 ## Fase 46: publicar e conferir
 - [x] 46.1 carimbo igual ao HEAD, bundle com `Enviada ao cliente`. EVIDÊNCIA: 20260919-1833 = 94a5a45; bundle index-Kq7RqE8R.js com os 3 textos
-- [ ] 46.2 conferência do usuário com guia real
-- [ ] 46.3 recibo de SPED Contribuições baixa a 170 sem ambiguidade
+- [x] 46.2 conferência do usuário com guia real. EVIDÊNCIA: DAS da Trops, 'Enviada ao cliente', '1 de 1 envio(s)', sem IA (LOG)
+- [x] 46.3 recibo de SPED Contribuições baixa a 170 sem ambiguidade. EVIDÊNCIA: SPED Fiscal real reconhecido sem ambíguo; Contribuições pela prova e pela medição das chaves de produção (declarado no LOG)
