@@ -139,6 +139,18 @@ def extrair_dados(texto: str) -> dict:
                     mes = _MES_POR_NOME.get(_norm(mes))
                 if mes and 1 <= int(mes) <= 12:
                     d["competencia"] = f"{int(mes):02d}/{m.group(2)}"
+            else:
+                # DAS do PGDAS-D: "Período de Apuração" é cabeçalho de tabela e o
+                # valor ("agosto/2026") vem linhas depois (PDF real, 2026-09-21).
+                # Depois do rótulo, vale o primeiro mês POR EXTENSO: datas
+                # dd/mm/aaaa no caminho (vencimento) não contam.
+                t = _norm(texto)
+                i = re.search(r"periodo\s+de\s+apuracao", t)
+                if i:
+                    m = re.search(r"(?<![a-z])(" + "|".join(_MES_POR_NOME) + r")\s*(?:/|de)\s*(\d{4})",
+                                  t[i.end():])
+                    if m:
+                        d["competencia"] = f"{_MES_POR_NOME[m.group(1)]:02d}/{m.group(2)}"
 
     # Protocolo/hash do arquivo
     m = re.search(r"(?:Identifica[cç][aã]o do arquivo|Hash do Arquivo|N[uú]mero do Recibo)\s*:?\s*([0-9A-Fa-f]{16,})", texto)
