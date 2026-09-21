@@ -105,6 +105,11 @@ def _formata_cnpj(d: str) -> str:
     return f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
 
 
+_MES_POR_NOME = {n: i for i, n in enumerate(
+    ["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto",
+     "setembro", "outubro", "novembro", "dezembro"], start=1)}
+
+
 def extrair_dados(texto: str) -> dict:
     d = {"cnpj": None, "competencia": None, "protocolo": None, "data_entrega": None}
 
@@ -124,6 +129,16 @@ def extrair_dados(texto: str) -> dict:
                       texto, re.IGNORECASE)
         if m:
             d["competencia"] = f"{m.group(1)}/{m.group(2)}"
+        else:
+            # DAS: só mês e ano, "Agosto/2026", "08/2026" ou "dezembro de 2025".
+            m = re.search(r"per[ií]odo\s+de\s+apura[cç][aã]o\s*:?\s*"
+                          r"(\d{2}|[a-zç]+)\s*(?:/|de)\s*(\d{4})", texto, re.IGNORECASE)
+            if m:
+                mes = m.group(1)
+                if not mes.isdigit():
+                    mes = _MES_POR_NOME.get(_norm(mes))
+                if mes and 1 <= int(mes) <= 12:
+                    d["competencia"] = f"{int(mes):02d}/{m.group(2)}"
 
     # Protocolo/hash do arquivo
     m = re.search(r"(?:Identifica[cç][aã]o do arquivo|Hash do Arquivo|N[uú]mero do Recibo)\s*:?\s*([0-9A-Fa-f]{16,})", texto)

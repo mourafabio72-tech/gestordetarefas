@@ -186,7 +186,7 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 
 ## Fase 45b: a competência da guia (decisões a e b de 2026-09-19)
 
-- **Status:** in_progress (45b.1 e 45b.2 done; 45b.3 depois do push)
+- **Status:** done (2026-09-19; DARFs 2089 e 2372 em -1 em produção)
 - **Notas:** TDD_RED_GREEN_REFACTOR, Padrao_Toggle_Tipos, Portugues_BR_Acentuacao, Sem_Travessao
 
 1. **45b.1 (a)** `extrair_dados` lê "Período de apuração dd/mm/aaaa" quando o documento não traz período de/a; competência = mês/ano da data. RED antes. Não-regressão: recibo com de/a continua lendo o início.

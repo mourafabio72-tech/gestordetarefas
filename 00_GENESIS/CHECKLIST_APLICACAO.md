@@ -69,6 +69,6 @@ ou saída de comando colada no LOG).
 - [x] 45.5 log do envio sem endereço nem telefone (Padrao_Logging_Estruturado). EVIDÊNCIA: item 4 da prova
 
 ## Fase 46: publicar e conferir
-- [ ] 46.1 carimbo igual ao HEAD, bundle com `Enviada ao cliente`
+- [x] 46.1 carimbo igual ao HEAD, bundle com `Enviada ao cliente`. EVIDÊNCIA: 20260919-1833 = 94a5a45; bundle index-Kq7RqE8R.js com os 3 textos
 - [ ] 46.2 conferência do usuário com guia real
 - [ ] 46.3 recibo de SPED Contribuições baixa a 170 sem ambiguidade
