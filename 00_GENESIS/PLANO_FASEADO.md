@@ -207,3 +207,39 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 
 - **Reenvio automático quando o envio falha:** a tarefa fica aberta e o "Enviar ao cliente" da tela reenvia. Volta se falha de envio virar rotina.
 - **Recuperar os arquivos que o e-validador descartou até hoje:** não existem mais; o conserto vale daqui para a frente. A lista das tarefas afetadas pode ser levantada se o usuário quiser reenviar algum.
+
+---
+
+# Trabalho novo: mensagem ao cliente (fases 47 a 49), aberto em 2026-09-21
+
+> Decisões: e-mail só com o link (controle de abertura); nome legível pelo Mininome (1a);
+> texto proposto aprovado (2a); WhatsApp com o mesmo texto, sem logo (3a).
+
+## Fase 47: a mensagem nova
+
+- **Status:** pending
+- **Notas:** TDD_RED_GREEN_REFACTOR, Portugues_BR_Acentuacao, Sem_Travessao, Padrao_Logging_Estruturado
+- **Output esperado:** `backend/provas/prova_mensagem_cliente.py`; `services/entrega_cliente.py`, `services/email.py` alterados; `backend/app/static/logo-bps4.png` novo.
+
+1. **47.1 RED**, com dublês: o e-mail sai SEM anexo; tem versão texto e HTML; o HTML leva o logo por CID e o botão com o link do destinatário; assunto "BPS4 | <nome>, <mês>/<ano>, <empresa>"; o nome é o Mininome quando preenchido e o nome da obrigação quando não; competência por extenso ("agosto/2026"); vencimento em dd/mm/aaaa quando a tarefa tem, e a linha some quando não tem; WhatsApp com o mesmo texto e o link; não-regressão: um TarefaEnvio por destinatário, link único por envio, e o texto do e-mail escapa HTML do nome da empresa.
+2. **47.2 GREEN.** `send_email` ganha `html` e `imagens` (inline por CID), sem mudar quem já chama só com texto. A mensagem é montada numa função só, usada pelos dois canais.
+3. **47.3** Suíte e travessão.
+
+## Fase 48: mininomes legíveis das obrigações de entregar
+
+- **Status:** pending
+1. **48.1** Leitura das obrigações de entregar em produção (nome, mininome, identificadores).
+2. **48.2** Proposta de mininome legível para cada uma, aprovada pelo usuário.
+3. **48.3** Gravação pelo PUT com o login dele (sai EDICAO_REGISTRO_CRITICO), releitura conferindo.
+
+## Fase 49: publicar e conferir
+
+- **Status:** pending
+1. **49.1** Suítes, build, `COPY . .` (o logo é arquivo novo), push, carimbo igual ao HEAD.
+2. **49.2** Conferência: reenviar a guia da tarefa 29967 pelo "Enviar ao cliente", e o usuário ver no Gmail o assunto, o logo, o botão, e nenhum anexo.
+
+## Fora de escopo das fases 47 a 49
+
+- **Logo por URL pública:** Outlook e parte do Gmail bloqueiam imagem externa por padrão; embutido por CID aparece sempre.
+- **Valor da guia no e-mail:** a tarefa não guarda o valor, e ler do PDF a cada envio é outro trabalho.
+

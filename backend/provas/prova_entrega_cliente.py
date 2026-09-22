@@ -60,8 +60,8 @@ async def zap_falso(phone, mensagem, cfg, user_id=None):
     enviados.append(("whatsapp", phone, mensagem, 0))
     return {"success": FALHA_ZAP["ok"], "error": None if FALHA_ZAP["ok"] else "zap fora do ar"}
 
-def mail_falso(to, subject, body, cfg, anexos=None):
-    enviados.append(("email", to, (anexos or [(None,)])[0][0], len(anexos or [])))
+def mail_falso(to, subject, body, cfg, anexos=None, html=None, imagens=None):
+    enviados.append(("email", to, (anexos or [(None,)])[0][0], len(anexos or []), body))
     return {"success": FALHA_MAIL["ok"], "error": None if FALHA_MAIL["ok"] else "smtp recusou"}
 
 import app.routes.tarefas as rota_tarefas                  # noqa: E402
@@ -142,13 +142,16 @@ checa("sem falhas", r["falhas"] == 0)
 checa("a tarefa conclui", r["concluiu"] is True)
 # O WhatsApp leva LINK, não arquivo: é o que dá rastreio e dispensa o provedor
 # aceitar o anexo. O e-mail leva os dois: o cliente arquiva a guia na caixa.
-zaps = [m for c, _, m, _t in enviados if c == "whatsapp"]
+zaps = [e[2] for e in enviados if e[0] == "whatsapp"]
 checa("o WhatsApp levou o link do documento",
       all("/api/publico/baixar/" in m for m in zaps), str(zaps)[:120])
-checa("e o nome do arquivo na mensagem",
-      all("DAS_07-2026.pdf" in m for m in zaps))
-checa("o e-mail foi com anexo",
-      any(c == "email" and n == "DAS_07-2026.pdf" for c, _, n, _q in enviados))
+# Mudou em 2026-09-21, por decisão do usuário: o e-mail vai SÓ com o link (o
+# anexo sai do Google e o Tareffas não sabe se o cliente pegou), e o texto novo
+# chama o botão de "Baixar a guia" em vez de citar o nome do arquivo.
+checa("e a mensagem convida a baixar a guia",
+      all("Baixar a guia" in m for m in zaps))
+checa("o e-mail foi SEM anexo, com o link",
+      any(e[0] == "email" and e[3] == 0 and "/api/publico/baixar/" in e[4] for e in enviados))
 db = SessionLocal()
 checa("a tarefa ficou concluída no banco",
       db.query(Tarefa).get(id_ok).status == StatusTarefa.CONCLUIDA)
@@ -170,7 +173,7 @@ checa("cada envio saiu com seu próprio token", len(tokens) == 4 and None not in
       f"({len(tokens)})")
 checa("e são todos diferentes entre si", len(tokens) == len(envios))
 # A mensagem de cada um leva o token dele: é isso que identifica quem abriu.
-for canal, _end, msg, _t in enviados:
+for canal, _end, msg, _t in (e[:4] for e in enviados):
     if canal == "whatsapp":
         checa("a mensagem carrega um token que existe",
               any(t in msg for t in tokens if t), msg[-60:])

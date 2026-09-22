@@ -5,12 +5,18 @@ import smtplib
 from email.message import EmailMessage
 
 
-def send_email(to: str, subject: str, body: str, cfg: dict, anexos: list = None) -> dict:
+def send_email(to: str, subject: str, body: str, cfg: dict, anexos: list = None,
+               html: str = None, imagens: list = None) -> dict:
     """Envia um e-mail. `anexos` é uma lista de (nome, bytes).
 
     O tipo de cada anexo é adivinhado pela extensão: sem isso tudo viraria
     octet-stream e o cliente de e-mail ofereceria "baixar arquivo desconhecido"
     no lugar de abrir o PDF da guia.
+
+    `html` vira a versão HTML ao lado do texto (o cliente de e-mail escolhe), e
+    `imagens` é uma lista de (cid, bytes PNG) embutidas nela, referidas no HTML
+    como `cid:<cid>`. Embutida, a imagem aparece mesmo onde a externa é
+    bloqueada por padrão (Outlook). Quem chama só com texto não muda.
     """
     if not to:
         return {"success": False, "error": "destinatário vazio"}
@@ -31,6 +37,11 @@ def send_email(to: str, subject: str, body: str, cfg: dict, anexos: list = None)
         msg["To"] = to
         msg["Subject"] = subject
         msg.set_content(body)
+        if html:
+            msg.add_alternative(html, subtype="html")
+            parte_html = msg.get_payload()[-1]
+            for cid, dados in (imagens or []):
+                parte_html.add_related(dados, maintype="image", subtype="png", cid=f"<{cid}>")
         for nome, conteudo in (anexos or []):
             tipo, _ = mimetypes.guess_type(nome)
             maior, menor = (tipo or "application/octet-stream").split("/", 1)

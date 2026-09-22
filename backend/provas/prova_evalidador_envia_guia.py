@@ -62,7 +62,7 @@ async def zap_falso(phone, message, cfg, user_id=None):
     return {"success": REDE_OK["valor"]}
 
 
-def email_falso(to, subject, body, cfg, anexos=None):
+def email_falso(to, subject, body, cfg, anexos=None, html=None, imagens=None):
     SAIU.append(("email", to))
     return {"success": REDE_OK["valor"]}
 

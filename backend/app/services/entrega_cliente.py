@@ -5,11 +5,77 @@ e-validador passou a enviar a guia que reconhece. As duas portas chamam esta
 função, e a regra que importa fica escrita uma vez: a tarefa só conclui se
 ALGUÉM recebeu.
 """
+import html as html_mod
+import os
 import secrets
 from datetime import datetime
 
 from ..models import StatusTarefa, TarefaEnvio
 from ..seguranca import log_event
+
+
+_MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+          "agosto", "setembro", "outubro", "novembro", "dezembro"]
+_LOGO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo-bps4-email.png")
+_COR = "#2da3a1"   # verde-água do logo; e-mail não lê os tokens do app
+
+
+def _logo() -> bytes:
+    try:
+        with open(_LOGO, "rb") as f:
+            return f.read()
+    except OSError:
+        return b""
+
+
+def _competencia_por_extenso(comp: str) -> str:
+    """"08/2026" vira "agosto/2026"; o que não se reconhece passa como veio."""
+    try:
+        mes, ano = (comp or "").split("/")
+        return f"{_MESES[int(mes) - 1]}/{ano}"
+    except (ValueError, IndexError):
+        return comp or ""
+
+
+def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
+    """Assunto, texto e HTML da guia para o cliente (texto aprovado em 2026-09-21).
+
+    O nome da guia é o Mininome da obrigação, quando preenchido: o nome técnico
+    ("das_simples") é para a equipe, e o cliente lia exatamente ele. O texto
+    serve ao e-mail e ao WhatsApp; o HTML só ao e-mail, com o logo embutido.
+    """
+    obr = tarefa.obrigacao
+    nome = ((obr.mininome or "").strip() or obr.nome) if obr else tarefa.titulo
+    comp = _competencia_por_extenso(tarefa.competencia)
+    venc = tarefa.data_vencimento.strftime("%d/%m/%Y") if tarefa.data_vencimento else None
+
+    assunto = f"BPS4 | {nome}, {comp}, {empresa}" if comp else f"BPS4 | {nome}, {empresa}"
+    linhas = [f"Olá, {empresa}.", "",
+              f"Sua guia {nome}" + (f" da competência {comp}" if comp else "") + " está disponível."]
+    if venc:
+        linhas.append(f"Vencimento: {venc}.")
+    linhas += ["", f"Baixar a guia: {link}", "",
+               "O link é exclusivo desta mensagem. Qualquer dúvida, é só responder.", "",
+               "BPS4 Contabilidade"]
+    texto = "\n".join(linhas)
+
+    e = html_mod.escape
+    venc_html = f'<p style="margin:0 0 20px">Vencimento: <strong>{e(venc)}</strong>.</p>' if venc else ""
+    comp_html = f" da competência <strong>{e(comp)}</strong>" if comp else ""
+    html = f"""<!doctype html><html><body style="margin:0;background:#f6f3ec">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f3ec;padding:24px 0">
+<tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:10px;font-family:Arial,Helvetica,sans-serif;color:#2f3a2f">
+<tr><td style="padding:28px 32px 8px"><img src="cid:logo-bps4" width="120" alt="BPS4" style="display:block;border:0"></td></tr>
+<tr><td style="padding:8px 32px 28px;font-size:15px;line-height:1.55">
+<p style="margin:0 0 16px">Olá, {e(empresa)}.</p>
+<p style="margin:0 0 8px">Sua guia <strong>{e(nome)}</strong>{comp_html} está disponível.</p>
+{venc_html}
+<p style="margin:0 0 24px"><a href="{e(link)}" style="display:inline-block;background:{_COR};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px">Baixar a guia</a></p>
+<p style="margin:0 0 4px;font-size:13px;color:#6b7266">O link é exclusivo desta mensagem. Qualquer dúvida, é só responder.</p>
+<p style="margin:16px 0 0;font-size:13px;color:#6b7266">BPS4 Contabilidade</p>
+</td></tr></table></td></tr></table></body></html>"""
+    return {"assunto": assunto, "texto": texto, "html": html}
 
 
 class SemDocumento(Exception):
@@ -60,8 +126,7 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
     cfg = cfgmod.carregar(db)
     nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)
     empresa = formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else ""
-    comp = f" ({tarefa.competencia})" if tarefa.competencia else ""
-    assunto = f"[BPS4] {tarefa.titulo}{comp}"
+    logo = _logo()
     # Um link POR DESTINATÁRIO, não um por tarefa. Com link único, o acesso diz
     # que alguém abriu; a pergunta é quem: o sócio que paga ou o e-mail geral
     # que ninguém lê. O token do envio responde isso.
@@ -81,8 +146,7 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
         db.add(envio)
         db.flush()          # garante o id sem fechar a transação
         link = f"{base}/api/publico/baixar/{envio.token}"
-        texto = (f"Olá,\n\nSegue {tarefa.titulo}{comp} referente a {empresa}.\n\n"
-                 f"📎 {nome_arquivo}\n{link}\n\nQualquer dúvida, estamos à disposição.")
+        msg = montar_mensagem(tarefa, empresa, link)
 
         # Exceção de rede de UM destinatário não derruba os outros nem apaga o
         # que já saiu (achado de 2026-09-19): antes, o WhatsApp levantando
@@ -92,10 +156,13 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
             if d["canal"] == "whatsapp":
                 # Link, não arquivo: é o que se pode rastrear, e ainda dispensa o
                 # provedor aceitar o anexo.
-                r = await send_whatsapp_message(d["endereco"], texto, cfg)
+                r = await send_whatsapp_message(d["endereco"], msg["texto"], cfg)
             else:
-                r = send_email(d["endereco"], assunto, texto, cfg,
-                               anexos=[(nome_arquivo, conteudo)])
+                # SÓ o link, sem anexo (decisão de 2026-09-21): o anexo sai do
+                # servidor do e-mail e o Tareffas nunca sabe se o cliente pegou.
+                r = send_email(d["endereco"], msg["assunto"], msg["texto"], cfg,
+                               html=msg["html"],
+                               imagens=[("logo-bps4", logo)] if logo else None)
         except Exception as e:
             r = {"success": False, "error": f"{type(e).__name__}: {e}"}
         ok = bool(r.get("success"))
