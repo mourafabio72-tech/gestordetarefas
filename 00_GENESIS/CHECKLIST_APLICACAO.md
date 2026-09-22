@@ -72,3 +72,12 @@ ou saída de comando colada no LOG).
 - [x] 46.1 carimbo igual ao HEAD, bundle com `Enviada ao cliente`. EVIDÊNCIA: 20260919-1833 = 94a5a45; bundle index-Kq7RqE8R.js com os 3 textos
 - [x] 46.2 conferência do usuário com guia real. EVIDÊNCIA: DAS da Trops, 'Enviada ao cliente', '1 de 1 envio(s)', sem IA (LOG)
 - [x] 46.3 recibo de SPED Contribuições baixa a 170 sem ambiguidade. EVIDÊNCIA: SPED Fiscal real reconhecido sem ambíguo; Contribuições pela prova e pela medição das chaves de produção (declarado no LOG)
+
+# Mensagem ao cliente (fases 47 a 49), escrito ao fechar (ver LOG)
+
+- [x] 47.1 RED de `prova_mensagem_cliente.py`. EVIDÊNCIA: itens 1 a 8 e 10 falhando, rc=1 (LOG fase=47)
+- [x] 47.2 GREEN: e-mail sem anexo, HTML com logo por CID, assunto e texto aprovados, WhatsApp com o mesmo texto. EVIDÊNCIA: 'PROVA OK: 10'
+- [x] 47.3 suíte e travessão. EVIDÊNCIA: provas=42 falharam=0; travessão rc=1; duas provas antigas ajustadas com o motivo
+- [x] 48 mininomes legíveis das 20 obrigações de entregar. EVIDÊNCIA: 20 PUT 200, releitura_ok (LOG fase=48)
+- [x] 49.1 publicado. EVIDÊNCIA: 5b42fd8, carimbo 20260922-0910
+- [x] 49.2 conferência no Gmail. EVIDÊNCIA: "chegou certo" (LOG fase=49)

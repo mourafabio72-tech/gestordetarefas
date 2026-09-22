@@ -217,7 +217,7 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 
 ## Fase 47: a mensagem nova
 
-- **Status:** pending
+- **Status:** done (2026-09-21)
 - **Notas:** TDD_RED_GREEN_REFACTOR, Portugues_BR_Acentuacao, Sem_Travessao, Padrao_Logging_Estruturado
 - **Output esperado:** `backend/provas/prova_mensagem_cliente.py`; `services/entrega_cliente.py`, `services/email.py` alterados; `backend/app/static/logo-bps4.png` novo.
 
@@ -227,14 +227,14 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 
 ## Fase 48: mininomes legíveis das obrigações de entregar
 
-- **Status:** pending
+- **Status:** done (2026-09-22)
 1. **48.1** Leitura das obrigações de entregar em produção (nome, mininome, identificadores).
 2. **48.2** Proposta de mininome legível para cada uma, aprovada pelo usuário.
 3. **48.3** Gravação pelo PUT com o login dele (sai EDICAO_REGISTRO_CRITICO), releitura conferindo.
 
 ## Fase 49: publicar e conferir
 
-- **Status:** pending
+- **Status:** done (2026-09-22; conferido no Gmail)
 1. **49.1** Suítes, build, `COPY . .` (o logo é arquivo novo), push, carimbo igual ao HEAD.
 2. **49.2** Conferência: reenviar a guia da tarefa 29967 pelo "Enviar ao cliente", e o usuário ver no Gmail o assunto, o logo, o botão, e nenhum anexo.
 

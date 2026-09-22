@@ -167,3 +167,5 @@ vezes, sem linha pendente.
 ## Fase 49, aberta em 2026-09-22
 
 [2026-09-22T10:27:36] fase=49 acao=publicado_e_reenviado resultado=ok obs="49.1. provas=42 falharam=0, build ok; logo novo em backend/app/assets entra pela COPY . . (backend/Dockerfile:17; .dockerignore nao exclui png). Commit 5b42fd8, ls-remote confere, carimbo 20260922-0910 igual ao HEAD, publicado pelo webhook. 49.2: ensaio da tarefa 29967 com um destino so (e-mail do usuario na ficha da Trops); com o ok dele ('pode reenviar'), POST /api/tarefas/29967/enviar-cliente: 200, '1 de 1 envio(s) concluido(s)'. Aguardando o usuario conferir no Gmail assunto, logo, botao e ausencia de anexo. Pergunta aberta: 'guia' vs 'documento' para a CT3 (relatorio gerencial)."
+
+[2026-09-22T11:26:12] fase=49 acao=fase_fechada resultado=ok obs="Usuario: 'chegou certo' (assunto novo, logo, botao, sem anexo). Fases 47, 48 e 49 done. REGISTRO DE PROCESSO: o CHECKLIST das fases 47 a 49 foi escrito AO FECHAR, e nao na abertura, como devia; os itens abaixo citam a evidencia ja registrada neste LOG. Pendentes com o usuario: 'guia' vs 'documento' para a CT3; tirar o e-mail dele da ficha da Trops."
