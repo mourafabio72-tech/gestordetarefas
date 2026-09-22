@@ -173,3 +173,5 @@ vezes, sem linha pendente.
 [2026-09-22T11:26:30] fase=pos acao=correcao_registro resultado=ok obs="O cabecalho '## Fase 46' do PLANO_FASEADO foi consumido pelo replace que inseriu a 45b (19/09), e por isso o status da 46 ficou 'pending' mesmo com a fase fechada no LOG de 21/09. Cabecalho restaurado e status done. Nenhuma fase pendente no plano."
 
 [2026-09-22T12:43:50] fase=pos acao=ct3_interna resultado=ok obs="Pedido do usuario: 'melhor mudar a ct3 para entrega interna, depois vou pensar melhor'. PUT /api/obrigacoes/213 so com sentido: 200. ANTES: entregar, exige_documento null, sem identificadores. DEPOIS: interna, exige_documento null. Efeito: a CT3 nao entra mais no e-validador nem no envio ao cliente; baixa manual. Decisao definitiva sobre a CT3 fica com o usuario."
+
+[2026-09-22T12:44:19] fase=pos acao=trops_sem_email resultado=ok obs="Usuario tirou o e-mail dele da ficha da Trops. Conferido por ensaio (nada enviado): POST /api/tarefas/29967/enviar-cliente?ensaio=true -> 400 'A empresa nao tem e-mail nem telefone...', 0 destinos. Nenhuma pendencia aberta deste trabalho."
