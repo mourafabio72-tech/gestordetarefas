@@ -193,8 +193,9 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 2. **45b.2 (b)** `periodicidade.js`: Trimestral de `entregar` usa o último mês do trimestre anterior, `-(((M-1)%3)+1)`; `transmitir` e `receber` continuam no primeiro. Texto calculado: "Último mês do trimestre anterior". Trocar o sentido com Trimestral escolhida recalcula a competência. A divergência compara o deslocamento, e não o texto (`mes_anterior` é -1). RED antes, no molde da prova da fase 40.
 3. **45b.3** Depois de publicar: 199 e 200 com competência -1 (março para entrega em abril), pelo PUT com o login do usuário.
 
+## Fase 46: publicar e conferir
 
-- **Status:** pending
+- **Status:** done (2026-09-21; DAS real enviado em produção)
 - **Notas:** Fechar_Tarefa_Rodar_Verifica
 
 1. **46.1** Suítes, build, `COPY . .`, push, `git ls-remote`, carimbo igual ao HEAD, bundle com `Enviada ao cliente`.
