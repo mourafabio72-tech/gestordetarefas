@@ -81,3 +81,12 @@ ou saída de comando colada no LOG).
 - [x] 48 mininomes legíveis das 20 obrigações de entregar. EVIDÊNCIA: 20 PUT 200, releitura_ok (LOG fase=48)
 - [x] 49.1 publicado. EVIDÊNCIA: 5b42fd8, carimbo 20260922-0910
 - [x] 49.2 conferência no Gmail. EVIDÊNCIA: "chegou certo" (LOG fase=49)
+
+# Furos de permissão (fases 50 e 51)
+
+- [x] 50.1 RED de `prova_permissao_envio_criacao.py` (TDD_RED_GREEN_REFACTOR). EVIDÊNCIA: 24 itens falhando, rc=1 (LOG fase=50)
+- [x] 50.2 GREEN: anexar e enviar exigem editar em tarefas; criar confere o alcance; cliente preso à empresa; register e alerta travados. EVIDÊNCIA: 'PROVA OK: 32'
+- [x] 50.3 tela esconde anexar e enviar de quem não edita tarefas. EVIDÊNCIA: `podeEditarTarefa` em Tarefas.jsx; build ok
+- [x] 50.4 suítes, build, travessão. EVIDÊNCIA: provas=43 e 23 sem falha; travessão, hex, popup 0 nas linhas +
+- [ ] 51.1 carimbo igual ao HEAD
+- [ ] 51.2 grupos e overrides de produção conferidos

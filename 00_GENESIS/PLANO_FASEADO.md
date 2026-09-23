@@ -244,3 +244,27 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 - **Logo por URL pública:** Outlook e parte do Gmail bloqueiam imagem externa por padrão; embutido por CID aparece sempre.
 - **Valor da guia no e-mail:** a tarefa não guarda o valor, e ler do PDF a cada envio é outro trabalho.
 
+
+---
+
+# Trabalho novo: furos de permissão (fases 50 e 51), aberto em 2026-09-23
+
+> Decisões: anexar e enviar guia exigem editar em tarefas; criar tarefa com escopo
+> reduzido só para responsável no alcance, e sem responsável fica com quem criou.
+
+## Fase 50: as três rotas exigem permissão
+
+- **Status:** done (2026-09-23; prova com 32 itens, dois verificadores LIMPO)
+- **Notas:** TDD_RED_GREEN_REFACTOR, Padrao_IDOR, Escada_Preguica_de_Codigo
+- **Output esperado:** `backend/provas/prova_permissao_envio_criacao.py`; `routes/tarefas.py` alterado; botões da tela escondidos para quem não edita.
+
+1. **50.1 RED.** Consulta recebe 403 em anexar guia e em enviar (ensaio e real), e a guia não muda; analista cria tarefa para outro responsável e recebe 403; analista sem responsável fica como responsável; não-regressão: analista anexa e envia na própria, admin cria para qualquer um.
+2. **50.2 GREEN.** `require_perm("tarefas", "editar")` nas duas rotas; conferência do alcance em `create_tarefa`.
+3. **50.3** Tela: anexar e enviar só aparecem para quem edita tarefas.
+4. **50.4** Suítes, build, travessão.
+
+## Fase 51: publicar e conferir
+
+- **Status:** pending
+1. **51.1** Push, carimbo igual ao HEAD, prova de fora (sem login 401).
+2. **51.2** Conferência dos grupos e overrides em produção, com o login do usuário.
