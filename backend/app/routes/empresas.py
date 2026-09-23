@@ -8,6 +8,7 @@ from ..models import (Empresa, Usuario, Setor, EmpresaSetorResponsavel,
                       empresa_setor_resp_usuarios)
 from ..schemas import EmpresaCreate, EmpresaResponse
 from ..auth import get_current_user, require_perm
+from ..permissoes import eh_cliente
 from ..seguranca import log_event, ip_cliente
 from ..services import importador_empresas as imp
 from ..services import resp_setor
@@ -263,6 +264,9 @@ def list_empresas(
     """Por padrão só as ativas (dropdowns pelo app). `todas=true` inclui inativas
     (usado no cadastro de Empresas, que filtra por situação)."""
     q = db.query(Empresa)
+    if eh_cliente(current_user):
+        # Cliente conhece só a própria empresa (e nenhuma, se não tiver).
+        q = q.filter(Empresa.id == current_user.empresa_id)
     if not todas:
         q = q.filter(Empresa.ativo == True)
     return q.all()
@@ -274,7 +278,9 @@ def get_empresa(
     current_user: Usuario = Depends(get_current_user)
 ):
     empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
-    if not empresa:
+    # Empresa alheia sai pelo mesmo 404 da inexistente: um 403 confirmaria
+    # ao cliente que aquele id existe.
+    if not empresa or (eh_cliente(current_user) and empresa.id != current_user.empresa_id):
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
     return empresa
 

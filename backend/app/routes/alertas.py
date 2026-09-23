@@ -42,7 +42,8 @@ async def verificar_tarefas(
 async def enviar_alerta_usuario(
     usuario_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    # Mesma trava do irmão /verificar: disparar WhatsApp é coisa de admin.
+    current_user: Usuario = Depends(require_admin)
 ):
     from ..models import Tarefa, StatusTarefa
     from ..services.whatsapp import send_whatsapp_message, format_task_message, _base_date

@@ -9,7 +9,7 @@ from ..models import Usuario, Tarefa, StatusTarefa
 from ..schemas import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from ..auth import (get_password_hash, get_current_user, require_gestor_ou_admin,
                     permissao_efetiva)
-from ..permissoes import pode
+from ..permissoes import pode, eh_cliente
 from ..seguranca import log_event
 from ..services.substituicao import aplicar_definitiva
 from ..services import config as cfgmod, convite as convite_mod
@@ -118,7 +118,11 @@ def list_usuarios(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    return db.query(Usuario).filter(Usuario.ativo == True).order_by(func.lower(Usuario.nome)).all()
+    q = db.query(Usuario).filter(Usuario.ativo == True)
+    if eh_cliente(current_user):
+        # Cliente não vê a equipe nem os outros clientes: só a si mesmo.
+        q = q.filter(Usuario.id == current_user.id)
+    return q.order_by(func.lower(Usuario.nome)).all()
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def get_usuario(
@@ -127,7 +131,7 @@ def get_usuario(
     current_user: Usuario = Depends(get_current_user)
 ):
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
-    if not usuario:
+    if not usuario or (eh_cliente(current_user) and usuario.id != current_user.id):
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return usuario
 

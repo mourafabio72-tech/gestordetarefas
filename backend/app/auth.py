@@ -59,7 +59,9 @@ async def get_current_user(
 def require_grupos(*grupos):
     """Dependência: exige que o usuário logado pertença a um dos grupos."""
     def _dep(current_user: Usuario = Depends(get_current_user)) -> Usuario:
-        if current_user.grupo not in grupos:
+        # Cliente nunca passa por trava de grupo, mesmo gravado como admin:
+        # quem decide o acesso dele é o tipo (permissoes.PERM_CLIENTE).
+        if current_user.grupo not in grupos or permissoes.eh_cliente(current_user):
             # Toda negativa vertical do app passa por esta função e pelas duas
             # abaixo. A `Padrao_Logging_Estruturado` pede `ACESSO_NEGADO_403`, e
             # o lugar de escrevê-lo é aqui: as quatorze rotas que devolvem 403
@@ -78,7 +80,10 @@ require_gestor_ou_admin = require_grupos("admin", "gestor")
 
 
 def permissao_efetiva(user: Usuario) -> dict:
-    """Resolve a permissão do usuário: preset do papel + overrides do JSON."""
+    """Resolve a permissão do usuário: preset do papel + overrides do JSON.
+    Cliente ignora grupo e overrides: é sempre PERM_CLIENTE."""
+    if permissoes.eh_cliente(user):
+        return dict(permissoes.PERM_CLIENTE)
     return permissoes.resolver(user.grupo, getattr(user, "permissoes", None))
 
 

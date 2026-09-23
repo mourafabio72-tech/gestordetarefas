@@ -70,7 +70,7 @@ def remover_excecao(obrigacao_id: int, excecao_id: int, request: Request,
 
 @router.get("/{obrigacao_id}/detalhes-empresa")
 def get_detalhes_empresa(obrigacao_id: int, db: Session = Depends(get_db),
-                         current_user: Usuario = Depends(get_current_user)):
+                         current_user: Usuario = Depends(require_perm("obrigacoes", "ver"))):
     """Detalhes fixos por empresa nesta obrigação (ex.: 'Empréstimo do Banco X')."""
     out = []
     for d in db.query(EmpresaObrigacaoDetalhe).filter(EmpresaObrigacaoDetalhe.obrigacao_id == obrigacao_id).all():

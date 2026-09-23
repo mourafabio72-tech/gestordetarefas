@@ -75,6 +75,22 @@ PRESETS["usuario"] = {
 
 PAPEIS = tuple(PRESETS.keys())
 
+# Usuário do TIPO cliente (sócio da empresa atendida). Não é papel de grupo, e
+# por isso não entra em PRESETS nem na tela de Grupos: vale qualquer que seja o
+# grupo gravado nele. Antes o cliente nascia no grupo Consulta, de escopo
+# `todas`, e enxergava as tarefas e os documentos de TODOS os clientes. Agora
+# só lê tarefas, e o escopo `empresa` o prende à empresa dele (tarefas.py).
+PERM_CLIENTE = {
+    "empresas": "nenhum", "setores": "nenhum", "tarefas": "ver",
+    "obrigacoes": "nenhum", "usuarios": "nenhum", "relatorios": "nenhum",
+    "evalidador": "nenhum", "escopo_tarefas": "empresa",
+    **{flag: False for flag in FLAGS},
+}
+
+
+def eh_cliente(user) -> bool:
+    return getattr(user, "tipo", None) == "cliente"
+
 # Rótulos/descrições dos papéis nativos (para semear a tabela `grupos`).
 LABELS_NATIVOS = {
     "admin": ("Admin", "Acesso total, incluindo papéis e permissões."),

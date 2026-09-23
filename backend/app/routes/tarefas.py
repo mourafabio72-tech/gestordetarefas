@@ -12,6 +12,7 @@ from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
                     require_admin, permissao_efetiva)
+from ..permissoes import eh_cliente
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
@@ -40,6 +41,10 @@ def _aplicar_escopo(query, db: Session, user: Usuario):
     # o trabalho desaparecer da tela de quem continuava tocando ele.
     query = query.filter(~Tarefa.empresa.has(Empresa.bloqueado == True))
     query = query.filter(responsavel_visivel())
+    # Cliente vê a empresa dele, e não responsáveis: sem empresa, não vê nada.
+    if eh_cliente(user):
+        return query.filter(Tarefa.empresa_id == user.empresa_id) if user.empresa_id \
+            else query.filter(Tarefa.id.is_(None))
     ids = _escopo_ids(db, user)
     if ids is not None:
         query = query.filter(or_(
@@ -82,6 +87,8 @@ def _nao_encontrada(db, tarefa_id: int, detalhe: str = "Tarefa não encontrada",
 
 
 def _no_escopo(tarefa: Tarefa, db: Session, user: Usuario) -> bool:
+    if eh_cliente(user):
+        return bool(user.empresa_id) and tarefa.empresa_id == user.empresa_id
     ids = _escopo_ids(db, user)
     if ids is None:
         return True
@@ -293,9 +300,23 @@ def create_tarefa(
         if not setor:
             raise HTTPException(status_code=404, detail="Setor não encontrado")
 
+    # Escopo reduzido cria só para quem ele alcança, senão cria trabalho que
+    # nem ele enxerga depois. Sem responsável, a tarefa fica com quem criou.
+    responsavel_ids = tarefa.responsavel_ids
+    alcance = _escopo_ids(db, current_user)
+    if alcance is not None:
+        if not responsavel_ids:
+            responsavel_ids = [current_user.id]
+        elif set(responsavel_ids) - alcance:
+            log_event("ACESSO_NEGADO_403", level="WARN", recurso="tarefas",
+                      motivo="responsavel_fora_do_escopo")
+            raise HTTPException(
+                status_code=403,
+                detail="Você só pode criar tarefa para quem está no seu alcance.")
+
     dados = tarefa.model_dump(exclude={"responsavel_ids"})
     db_tarefa = Tarefa(**dados)
-    _aplicar_responsaveis(db, db_tarefa, tarefa.responsavel_ids)
+    _aplicar_responsaveis(db, db_tarefa, responsavel_ids)
     db.add(db_tarefa)
     db.commit()
     db.refresh(db_tarefa)
@@ -504,7 +525,7 @@ async def anexar_saida(
     tarefa_id: int,
     arquivo: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_perm("tarefas", "editar")),
 ):
     """Anexa à tarefa o documento que será entregue ao cliente.
 
@@ -630,7 +651,7 @@ async def enviar_ao_cliente(
     tarefa_id: int,
     ensaio: bool = False,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(require_perm("tarefas", "editar")),
 ):
     """Entrega o documento anexado ao cliente e conclui a tarefa.
 

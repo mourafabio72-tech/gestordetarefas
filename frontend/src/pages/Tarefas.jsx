@@ -155,6 +155,9 @@ export default function Tarefas() {
   // Cancelar e excluir exigem `dispensar_demanda` no servidor (só admin e
   // gestor por padrão). Sem a flag o item aparecia e o clique dava 403.
   const podeCancelar = Boolean(user?.permissoes_efetivas?.dispensar_demanda);
+  // Anexar a guia, enviar ao cliente e mudar a situação exigem editar em
+  // tarefas no servidor. Consulta e cliente só leem.
+  const podeEditarTarefa = user?.permissoes_efetivas?.tarefas === 'editar';
   const [transferResp, setTransferResp] = useState('');
   const [showCopy, setShowCopy] = useState(false);
   const [copyOrigem, setCopyOrigem] = useState('');
@@ -694,7 +697,7 @@ export default function Tarefas() {
             lado no card estreito; viraram um menu, e o select coube num tamanho
             que não disputa mais espaço com eles. */}
         <div className="mt-auto flex items-center gap-1">
-          {ativa && entregaCliente ? (
+          {ativa && entregaCliente && podeEditarTarefa ? (
             // Na tarefa de entrega, enviar É a ação principal: deixá-la no
             // menu de três pontos esconderia justamente o que se faz ali.
             <button type="button" onClick={() => abrirEntrega(tarefa)}
@@ -703,7 +706,7 @@ export default function Tarefas() {
               style={{ borderColor: '#5f7057', color: '#3f4a3c', background: '#e6eee1' }}>
               <Send size={11} /> Enviar ao cliente
             </button>
-          ) : ativa && (
+          ) : ativa && podeEditarTarefa && (
             <select value={tarefa.status} onChange={(e) => handleStatusChange(tarefa, e.target.value)}
               className="w-[6.6rem] text-[10px] border rounded px-1 py-0.5 bg-white"
               style={{ borderColor: SAGE.border, color: '#55614e' }}>
@@ -733,7 +736,7 @@ export default function Tarefas() {
                     Baixar comprovante
                   </ItemMenu>
                 )}
-                {ativa && (
+                {ativa && podeEditarTarefa && (
                   <ItemMenu icone={Send} onClick={() => { setMenuAberto(null); abrirEntrega(tarefa); }}>
                     Enviar documento ao cliente
                   </ItemMenu>

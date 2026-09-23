@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models import Usuario, SSOBilheteUsado
 from ..schemas import LoginRequest, Token, UsuarioCreate, UsuarioResponse, MeResponse
 from ..auth import (verify_password, create_access_token, get_password_hash,
-                    get_current_user, permissao_efetiva)
+                    get_current_user, permissao_efetiva, require_perm)
 from .. import sso as sso_bilhete
 from ..seguranca import (ip_cliente, log_event, registrar_tentativa,
                          registrar_usuario, falhas_recentes,
@@ -73,7 +73,9 @@ def login(dados: LoginRequest, request: Request, db: Session = Depends(get_db)):
 def register(
     usuario: UsuarioCreate,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
+    # Criar conta é o mesmo poder de POST /usuarios. Antes bastava estar logado,
+    # e a conta nascia no grupo legado, que vê tudo: o cliente abria uma porta.
+    current_user: Usuario = Depends(require_perm("usuarios", "editar")),
 ):
     existing = db.query(Usuario).filter(Usuario.email == usuario.email).first()
     if existing:
