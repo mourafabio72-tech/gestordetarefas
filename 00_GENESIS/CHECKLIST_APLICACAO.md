@@ -88,5 +88,5 @@ ou saída de comando colada no LOG).
 - [x] 50.2 GREEN: anexar e enviar exigem editar em tarefas; criar confere o alcance; cliente preso à empresa; register e alerta travados. EVIDÊNCIA: 'PROVA OK: 32'
 - [x] 50.3 tela esconde anexar e enviar de quem não edita tarefas. EVIDÊNCIA: `podeEditarTarefa` em Tarefas.jsx; build ok
 - [x] 50.4 suítes, build, travessão. EVIDÊNCIA: provas=43 e 23 sem falha; travessão, hex, popup 0 nas linhas +
-- [ ] 51.1 carimbo igual ao HEAD
+- [x] 51.1 carimbo igual ao HEAD. EVIDÊNCIA: 20260923-1311 = 7944b95
 - [ ] 51.2 grupos e overrides de produção conferidos
