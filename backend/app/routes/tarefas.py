@@ -215,7 +215,9 @@ def get_dashboard_stats_por_setor(
 def link_envio(
     tarefa_id: int,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
+    # Gerar o link abre a porta sem senha por onde o comprovante chega e dá
+    # baixa: mesma regra de anexar e enviar a guia (editar em tarefas).
+    current_user: Usuario = Depends(require_perm("tarefas", "editar")),
 ):
     """Link público (com token) para o cliente enviar o comprovante desta tarefa.
 

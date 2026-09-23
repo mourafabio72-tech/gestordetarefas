@@ -298,8 +298,24 @@ r = client.post(f"/api/alertas/enviar/{ids['outro']}", headers=cab("analista@x.c
 checa(32, "analista NAO dispara alerta de WhatsApp para outro (403)",
       r.status_code == 403 and not enviados, r.status_code)
 
+# ============================================================ (e) link de envio
+# GET que MUTA: o link publico cria o token de upload na primeira chamada, e
+# por esse endereco o cliente manda o comprovante SEM LOGIN e da baixa na
+# tarefa. Decisao do usuario (2026-09-23): a mesma regra de anexar e enviar.
+print("\n(e) copiar link de envio")
+r = client.get(f"/api/tarefas/{ids['b']}/link-envio", headers=cab("consulta@x.com"))
+checa(33, "Consulta NAO gera link de envio (403) e o token nao nasce",
+      r.status_code == 403 and tarefa(ids["b"]).upload_token is None, r.status_code)
+
+r = client.get(f"/api/tarefas/{ids['a']}/link-envio", headers=cab("socio@a.com"))
+checa(34, "cliente tambem nao, nem da propria empresa (403)", r.status_code == 403, r.status_code)
+
+r = client.get(f"/api/tarefas/{ids['a']}/link-envio", headers=cab("analista@x.com"))
+checa(35, "NAO-REGRESSAO: analista gera o link da propria tarefa",
+      r.status_code == 200 and "/enviar/" in (r.json().get("link") or ""), r.text[:120])
+
 print()
 if falhou:
     print(f"PROVA FALHOU nos itens: {sorted(set(falhou))}")
     sys.exit(1)
-print("PROVA OK: 32 checagens verdes")
+print("PROVA OK: 35 checagens verdes")
