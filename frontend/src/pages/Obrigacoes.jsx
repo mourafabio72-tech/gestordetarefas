@@ -65,6 +65,8 @@ export default function Obrigacoes() {
   const { user } = useAuth();
   // Mesma flag que o servidor exige nas duas rotas do Desvincular.
   const podeAlocar = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
+  // Excluir (uma, em lote ou todas) é só de admin e gestor no servidor.
+  const podeExcluir = ['admin', 'gestor'].includes(user?.grupo);
   const [obrigacoes, setObrigacoes] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
@@ -370,14 +372,16 @@ export default function Obrigacoes() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Obrigações</h1>
         <div className="flex gap-2">
-          {selecionados.length > 0 && (
+          {podeExcluir && selecionados.length > 0 && (
             <button onClick={excluirSelecionadas} className="btn-danger flex items-center gap-2">
               <Trash2 size={18} /> Excluir {selecionados.length}
             </button>
           )}
-          <button onClick={limparTudo} className="text-sm text-red-600 hover:underline self-center px-2" title="Excluir todas as obrigações">
-            Limpar todas
-          </button>
+          {podeExcluir && (
+            <button onClick={limparTudo} className="text-sm text-red-600 hover:underline self-center px-2" title="Excluir todas as obrigações">
+              Limpar todas
+            </button>
+          )}
           <button onClick={() => setShowCopy(true)} className="btn-secondary flex items-center gap-2">
             <Copy size={18} /> Copiar de outra empresa
           </button>
@@ -464,9 +468,11 @@ export default function Obrigacoes() {
                           className={`p-1.5 rounded-lg ${o.ativa ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}>
                           {o.ativa ? <Ban size={15} /> : <CheckCircle2 size={15} />}
                         </button>
-                        <button onClick={() => excluir(o)} title="Excluir definitivamente" className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 size={15} />
-                        </button>
+                        {podeExcluir && (
+                          <button onClick={() => excluir(o)} title="Excluir definitivamente" className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg">
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

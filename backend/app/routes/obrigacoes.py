@@ -8,7 +8,7 @@ from ..database import get_db
 from typing import Optional
 from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
 from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
-from ..auth import get_current_user, require_perm, require_flag
+from ..auth import get_current_user, require_perm, require_flag, require_gestor_ou_admin
 from ..services.gerador import gerar_tarefas, deslocamento_competencia
 from ..seguranca import log_event, ip_cliente
 
@@ -435,7 +435,10 @@ def delete_obrigacao(
     obrigacao_id: int,
     definitivo: bool = False,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+    # Excluir é de admin e gestor (decisão de 2026-09-23): o grupo Analista
+    # edita obrigações em produção, e o definitivo leva junto as tarefas.
+    # Inativar sem apagar continua em POST /{id}/status.
+    current_user: Usuario = Depends(require_gestor_ou_admin),
 ):
     """Sem flag: inativa (mantém histórico). Com `?definitivo=true`: exclui de vez
     (apaga a obrigação e as tarefas já geradas)."""
@@ -466,7 +469,8 @@ class LoteBody(BaseModel):
 def excluir_lote(
     body: LoteBody,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_perm("obrigacoes", "editar")),
+    # Mesma trava da exclusão de uma: é daqui que sai o "Limpar todas".
+    current_user: Usuario = Depends(require_gestor_ou_admin),
 ):
     """Exclui (apaga obrigação + tarefas geradas) ou inativa várias de uma vez."""
     n = 0
