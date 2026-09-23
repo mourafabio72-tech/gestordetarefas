@@ -89,4 +89,4 @@ ou saída de comando colada no LOG).
 - [x] 50.3 tela esconde anexar e enviar de quem não edita tarefas. EVIDÊNCIA: `podeEditarTarefa` em Tarefas.jsx; build ok
 - [x] 50.4 suítes, build, travessão. EVIDÊNCIA: provas=43 e 23 sem falha; travessão, hex, popup 0 nas linhas +
 - [x] 51.1 carimbo igual ao HEAD. EVIDÊNCIA: 20260923-1311 = 7944b95
-- [ ] 51.2 grupos e overrides de produção conferidos
+- [x] 51.2 grupos e overrides de produção conferidos. EVIDÊNCIA: LOG fase=51 producao_lida
