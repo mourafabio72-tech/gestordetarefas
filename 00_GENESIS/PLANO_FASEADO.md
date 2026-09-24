@@ -265,6 +265,20 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 
 ## Fase 51: publicar e conferir
 
-- **Status:** pending
+- **Status:** done (2026-09-23; carimbo `20260923-1311`, produção lida: 0 clientes, 0 overrides)
 1. **51.1** Push, carimbo igual ao HEAD, prova de fora (sem login 401).
 2. **51.2** Conferência dos grupos e overrides em produção, com o login do usuário.
+
+## Fase 52: excluir obrigação só admin e gestor (decisão de 2026-09-23)
+
+- **Status:** done (2026-09-23; carimbo `20260923-1938`)
+1. **52.1** RED em `prova_excluir_obrigacao_gestor.py`; `DELETE /obrigacoes/{id}` e `POST /obrigacoes/excluir-lote` com `require_gestor_ou_admin`; tela esconde a exclusão de quem não é admin ou gestor.
+
+## Fase 53: link de envio exige editar em tarefas
+
+- **Status:** done (2026-09-23; carimbo `20260923-2029`)
+1. **53.1** RED nos itens 33 a 35; `GET /tarefas/{id}/link-envio` com `require_perm("tarefas", "editar")`; tela esconde "Copiar link de envio".
+
+## Histórico deste trabalho
+
+- **2026-09-23:** fases 52 e 53 entraram por decisão do usuário no chat e foram registradas no LOG, mas não neste plano; escritas aqui em retroativo na retomada de 23/09, junto do status da 51.
