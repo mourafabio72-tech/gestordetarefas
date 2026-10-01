@@ -1,0 +1,985 @@
+{
+  "meta": {
+    "app": "Tareffas",
+    "publico": "equipe",
+    "versao": 1,
+    "atualizado_em": "2026-09-30",
+    "base_url": "http://127.0.0.1:3000",
+    "dispositivo": "desktop",
+    "cor": "#6e7f63",
+    "anotacoes": true
+  },
+  "capa": {
+    "titulo": "Manual de uso",
+    "subtitulo": "Tareffas",
+    "chamada": "Tarefas, obrigações e comprovantes da equipe BPS4, do primeiro acesso ao dia a dia, com a tela de verdade.",
+    "marca": "BPS4",
+    "autor": "BPS4 Contabilidade",
+    "contato": "Dúvida? **Fale com o Fábio.**"
+  },
+  "login": {
+    "url": "/login",
+    "campo_usuario": "input[type=email]",
+    "campo_senha": "input[type=password]",
+    "botao": "button[type=submit]",
+    "usuario": "carla.mendes@exemplo.com.br",
+    "senha": "env:MANUAL_SENHA"
+  },
+  "prints": [
+    {
+      "id": "painel",
+      "rota": "/",
+      "marcar": [
+        {
+          "seletor": "select >> nth=0",
+          "n": 1,
+          "contorno": true
+        },
+        {
+          "seletor": "text=a vencer em 7 dias",
+          "n": 2
+        },
+        {
+          "seletor": "button:text-is('Colaborador')",
+          "n": 3
+        },
+        {
+          "seletor": "text=Próximas do vencimento",
+          "n": 4
+        }
+      ]
+    },
+    {
+      "id": "tarefas",
+      "rota": "/tarefas",
+      "marcar": [
+        {
+          "seletor": "input[placeholder='parte do nome']",
+          "n": 1,
+          "contorno": true
+        },
+        {
+          "seletor": "button:text-is('Vencidas')",
+          "n": 2
+        },
+        {
+          "seletor": "button:has-text('Clínica Sorriso Feliz Ltda')",
+          "n": 3
+        },
+        {
+          "seletor": "button:has-text('Nova Tarefa')",
+          "n": 4
+        }
+      ]
+    },
+    {
+      "id": "tarefa-cartao",
+      "rota": "/tarefas",
+      "acoes": [
+        {
+          "selecionar": [
+            "main select >> nth=0",
+            "Oficina Bom Motor Ltda"
+          ]
+        },
+        {
+          "pausa": 600
+        }
+      ],
+      "recorte": "div.rounded-lg.border.p-2:has(h3[title='DAS do Simples Nacional']):has-text('Comp. 08/2026')",
+      "marcar": []
+    },
+    {
+      "id": "tarefa-situacao",
+      "rota": "/tarefas",
+      "acoes": [
+        {
+          "selecionar": [
+            "main select >> nth=0",
+            "Padaria Estrela Ltda"
+          ]
+        },
+        {
+          "pausa": 600
+        }
+      ],
+      "recorte": "div.rounded-lg.border.p-2:has(h3[title='Folha de pagamento']):has-text('Comp. 09/2026')",
+      "marcar": [
+        {
+          "seletor": "div.rounded-lg.border.p-2:has(h3[title='Folha de pagamento']):has-text('Comp. 09/2026') select",
+          "n": 1
+        },
+        {
+          "seletor": "div.rounded-lg.border.p-2:has(h3[title='Folha de pagamento']):has-text('Comp. 09/2026') button[title='Ações']",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "tarefa-comprovante",
+      "rota": "/tarefas",
+      "acoes": [
+        {
+          "selecionar": [
+            "main select >> nth=0",
+            "Padaria Estrela Ltda"
+          ]
+        },
+        {
+          "pausa": 600
+        },
+        {
+          "clicar": "div.rounded-lg.border.p-2:has(h3[title='DAS do Simples Nacional']):has-text('Comp. 08/2026') button[title='Ações']"
+        },
+        {
+          "pausa": 400
+        }
+      ],
+      "marcar": [
+        {
+          "seletor": "text=Ver comprovante",
+          "n": 1
+        },
+        {
+          "seletor": "text=Baixar comprovante",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "evalidador",
+      "rota": "/evalidador",
+      "marcar": [
+        {
+          "seletor": "text=Arraste os arquivos",
+          "n": 1
+        },
+        {
+          "seletor": "button:has-text('Processar')",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "documentos",
+      "rota": "/documentos",
+      "marcar": [
+        {
+          "seletor": "button:has-text('Comprovantes e recibos')",
+          "n": 1
+        },
+        {
+          "seletor": "input[placeholder='tarefa, protocolo ou arquivo']",
+          "n": 2,
+          "contorno": true
+        },
+        {
+          "seletor": "tr:has-text('DAS_Padaria') >> text=DAS_Padaria_Estrela_08-2026.pdf",
+          "n": 3
+        },
+        {
+          "seletor": "button:has-text('Exportar CSV')",
+          "n": 4
+        }
+      ]
+    },
+    {
+      "id": "substituicoes",
+      "rota": "/substituicoes",
+      "marcar": [
+        {
+          "seletor": "button:has-text('Nova Substituição')",
+          "n": 1
+        },
+        {
+          "seletor": "text=Rafael Souza >> nth=0",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "substituicao-form",
+      "rota": "/substituicoes",
+      "acoes": [
+        {
+          "clicar": "button:has-text('Nova Substituição')"
+        },
+        {
+          "pausa": 500
+        }
+      ],
+      "recorte": "div.fixed.inset-0 > div"
+    },
+    {
+      "id": "obrigacoes",
+      "rota": "/obrigacoes",
+      "marcar": [
+        {
+          "seletor": "button:has-text('Nova Obrigação')",
+          "n": 1
+        },
+        {
+          "seletor": "button:has-text('Gerar tarefas do mês')",
+          "n": 2
+        },
+        {
+          "seletor": "tr:has-text('DAS do Simples') button[title='Editar']",
+          "n": 3
+        }
+      ]
+    },
+    {
+      "id": "obrigacao-form",
+      "rota": "/obrigacoes",
+      "acoes": [
+        {
+          "clicar": "tr:has-text('DAS do Simples') button[title='Editar']"
+        },
+        {
+          "pausa": 700
+        }
+      ],
+      "recorte": "div.fixed.inset-0 > div",
+      "marcar": [
+        {
+          "seletor": "text=Identificadores (e-validador)",
+          "n": 1
+        },
+        {
+          "seletor": "text=Regra de prazo",
+          "n": 2
+        },
+        {
+          "seletor": "text=Competência referente a",
+          "n": 3
+        },
+        {
+          "seletor": "text=Meses ativos",
+          "n": 4
+        }
+      ]
+    },
+    {
+      "id": "modelos",
+      "rota": "/modelos",
+      "marcar": [
+        {
+          "seletor": "text=Arraste os arquivos",
+          "n": 1
+        }
+      ]
+    },
+    {
+      "id": "empresas",
+      "rota": "/empresas",
+      "marcar": [
+        {
+          "seletor": "button:has-text('Nova Empresa')",
+          "n": 1
+        },
+        {
+          "seletor": "tr:has-text('Oficina Bom Motor') button[title='Bloquear']",
+          "n": 2
+        },
+        {
+          "seletor": "tr:has-text('Oficina Bom Motor') button >> nth=1",
+          "n": 3
+        }
+      ]
+    },
+    {
+      "id": "empresa-setores",
+      "rota": "/empresas",
+      "acoes": [
+        {
+          "clicar": "tr:has-text('Oficina Bom Motor') button >> nth=1"
+        },
+        {
+          "pausa": 700
+        }
+      ],
+      "recorte": "div.divide-y:has(label[title='A empresa contratou este serviço?'])",
+      "marcar": [
+        {
+          "seletor": "div.divide-y:has(label[title='A empresa contratou este serviço?']) >> text=Rafael Souza",
+          "n": 1
+        },
+        {
+          "seletor": "div.divide-y:has(label[title='A empresa contratou este serviço?']) >> text=não atende",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "relacao",
+      "rota": "/relatorios/obrigacoes",
+      "marcar": [
+        {
+          "seletor": "input[placeholder='Obrigação (nome/mininome)']",
+          "n": 1,
+          "contorno": true
+        },
+        {
+          "seletor": "button:has-text('Exportar Excel')",
+          "n": 2
+        }
+      ]
+    },
+    {
+      "id": "login",
+      "rota": "/",
+      "acoes": [
+        {
+          "clicar": "text=Sair"
+        },
+        {
+          "esperar": "input[type=email]"
+        },
+        {
+          "pausa": 400
+        }
+      ],
+      "marcar": [
+        {
+          "seletor": "input[type=email]",
+          "n": 1,
+          "contorno": true
+        },
+        {
+          "seletor": "input[type=password]",
+          "n": 2,
+          "contorno": true
+        },
+        {
+          "seletor": "button[type=submit]",
+          "n": 3
+        }
+      ]
+    }
+  ],
+  "capitulos": [
+    {
+      "id": "acesso",
+      "tipo": "acesso",
+      "titulo": "Entrar no Tareffas",
+      "para_que_serve": "O Tareffas é onde a equipe da BPS4 acompanha as obrigações de cada cliente, mês a mês: o que vence, de quem é, o que já foi entregue e com qual comprovante. Você não instala nada: ele abre no navegador.",
+      "cobre": [
+        "/login",
+        "/ativar/<id>"
+      ],
+      "blocos": [
+        {
+          "tipo": "subtitulo",
+          "texto": "Pelo portal Zoaria"
+        },
+        {
+          "tipo": "passos",
+          "itens": [
+            "Abra o navegador e entre em `https://zoaria.com.br`. Salve nos favoritos.",
+            "Entre com o seu e-mail e a sua senha do portal.",
+            "Na tela inicial, clique no card **Tareffas**. Ele abre já com você conectado, sem pedir senha de novo."
+          ]
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "O card não aparece?",
+          "texto": "Você ainda não tem o Tareffas liberado no seu perfil do portal. Peça ao Fábio para liberar."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Direto pelo endereço do Tareffas"
+        },
+        {
+          "tipo": "texto",
+          "texto": "O Tareffas também tem entrada própria, para quando você quiser ir direto: `https://gestordetarefas.zoaria.com.br`."
+        },
+        {
+          "tipo": "tela",
+          "print": "login",
+          "legenda": "A tela de entrada do Tareffas.",
+          "itens": [
+            "O seu e-mail da BPS4.",
+            "A sua senha do Tareffas.",
+            "O botão para entrar."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Primeiro acesso: o convite"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Quando o seu usuário é criado, você recebe por e-mail um **convite** com um link. Clique nele e crie a sua senha. Ninguém mais vê essa senha, nem quem cadastrou você."
+        },
+        {
+          "tipo": "dica",
+          "titulo": "Esqueceu a senha?",
+          "texto": "O Tareffas não tem a opção \"esqueci a senha\". Peça ao seu gestor ou ao Fábio um convite novo: com ele você cria outra senha."
+        },
+        {
+          "tipo": "conferir",
+          "texto": "O **Painel** abriu e o seu nome aparece no canto de baixo do menu, à esquerda."
+        }
+      ]
+    },
+    {
+      "id": "painel",
+      "tipo": "uso",
+      "titulo": "Ver o dia no Painel",
+      "para_que_serve": "O Painel é o quadro da parede do escritório: mostra de uma vez quanto está em aberto, o que atrasou e o que vence nos próximos dias, por setor, por colaborador e por cliente. É a primeira tela que abre quando você entra.",
+      "cobre": [
+        "/"
+      ],
+      "blocos": [
+        {
+          "tipo": "tela",
+          "print": "painel",
+          "legenda": "O Painel com os números do mês.",
+          "itens": [
+            "Os filtros: **Empresa**, **Setor**, **Colaborador**, **Competência** e **Só as que geram multa**. Os números de baixo mudam conforme o que você escolhe.",
+            "Os totais: em aberto, atrasadas, a vencer em 7 dias, que geram multa, que esperam documento e o quanto foi entregue no prazo.",
+            "As abas **Setor**, **Colaborador** e **Empresa** trocam o jeito de ver os gráficos.",
+            "**Próximas do vencimento**: a lista das tarefas em aberto, da mais urgente para a menos urgente."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Como ler os números"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Os números de cima são só a contagem: clicar neles não abre nada. Para ver as tarefas, desça até **Próximas do vencimento**, ou vá ao menu **Tarefas**."
+        },
+        {
+          "tipo": "texto",
+          "texto": "Na lista, a coluna **Prazo** é o limite da equipe, alguns dias antes do **Vencimento**, que é a data da lei. Data de prazo em vermelho quer dizer que ele já passou. O triângulo ao lado do nome indica tarefa que gera multa se atrasar."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "A segunda-feira da Carla",
+          "texto": "A Carla Mendes, coordenadora fiscal, abre o Painel e escolhe **Setor** `Fiscal`. Vê 5 atrasadas e 2 que geram multa. Desce até **Próximas do vencimento** e encontra a EFD-Contribuições da Clínica Sorriso Feliz com prazo de 09/09 em vermelho. É por ela que a conversa com o Rafael começa."
+        }
+      ]
+    },
+    {
+      "id": "tarefas",
+      "tipo": "uso",
+      "titulo": "Encontrar as suas tarefas",
+      "para_que_serve": "A tela de Tarefas é a pasta de cada cliente aberta na mesa: cada cartão é uma obrigação daquele mês, com o setor, quem cuida, a competência e o prazo. Você filtra para ver só o que é seu, só o que venceu ou só um cliente.",
+      "cobre": [
+        "/tarefas"
+      ],
+      "blocos": [
+        {
+          "tipo": "tela",
+          "print": "tarefas",
+          "legenda": "A lista de tarefas, agrupada por empresa.",
+          "itens": [
+            "**Tarefa**: digite parte do nome, como `DAS` ou `Folha`.",
+            "Os atalhos **Vencidas**, **7 dias** e **Mês** filtram com um clique.",
+            "Cada empresa abre o seu grupo de cartões. O número ao lado é quantas tarefas ela tem.",
+            "**Nova Tarefa** cria uma tarefa avulsa, fora das obrigações do mês."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Ver só o que é seu e está atrasado",
+          "itens": [
+            "No menu, clique em **Tarefas**.",
+            "Em **Colaborador**, escolha o seu nome.",
+            "Clique em **Vencidas**.",
+            "Para voltar a ver tudo, troque **Colaborador** para **Todos** e clique de novo em **Vencidas**."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "O que cada cartão mostra"
+        },
+        {
+          "tipo": "tela",
+          "print": "tarefa-cartao",
+          "legenda": "Um cartão de tarefa atrasada: o DAS de agosto da Oficina Bom Motor.",
+          "itens": []
+        },
+        {
+          "tipo": "texto",
+          "texto": "De cima para baixo: o nome da obrigação; o setor que cuida dela, a situação e a prioridade; quem é o responsável e a competência, que é o mês a que a obrigação se refere; o prazo interno, e há quantos dias ele passou; e, embaixo, a caixa para trocar a situação."
+        },
+        {
+          "tipo": "texto",
+          "texto": "A cor do cartão acompanha a urgência: verde para concluída ou folgada, amarelo para o que vence logo, vermelho para o que atrasou. **Agrupar por** troca a arrumação da tela: por empresa, por setor, ou tudo numa lista só, em **Não agrupar**."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "O Rafael procura o DAS da Oficina",
+          "texto": "O Rafael Souza digita `DAS` em **Tarefa** e escolhe **Empresa** `Oficina Bom Motor Ltda`. Aparecem dois cartões: o de agosto, vermelho, atrasado há 19 dias, e o de setembro, que vence em 15 dias. Ele começa pelo vermelho."
+        }
+      ]
+    },
+    {
+      "id": "concluir",
+      "tipo": "uso",
+      "titulo": "Andar com uma tarefa e concluir",
+      "para_que_serve": "Cada tarefa tem uma situação: Pendente, Em Andamento ou Concluída. Trocar a situação é avisar a equipe de onde aquilo está, como mover o papel de uma bandeja para a outra na mesa.",
+      "cobre": [
+        "/tarefas"
+      ],
+      "blocos": [
+        {
+          "tipo": "tela",
+          "print": "tarefa-situacao",
+          "legenda": "A situação e o menu de ações de uma tarefa.",
+          "itens": [
+            "A situação. Escolha **Em Andamento** quando começar e **Concluída** quando terminar.",
+            "O botão de **Ações**, com os três pontinhos."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Concluir uma tarefa sem comprovante",
+          "itens": [
+            "Encontre o cartão da tarefa.",
+            "Na caixa da situação, escolha **Concluída**.",
+            "Pronto: o cartão fica verde e a tarefa sai da contagem de abertas no Painel."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Quando **Concluída** não deixa escolher"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Algumas obrigações exigem o comprovante da entrega, como o DAS e a EFD-Contribuições. Nelas, a opção **Concluída** aparece apagada e não dá para marcar à mão. A baixa acontece pelo **e-validador**, quando você sobe o recibo (capítulo seguinte)."
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "Por que assim",
+          "texto": "Tarefa com comprovante só fecha com o documento junto. Assim, toda entrega fica provada, e qualquer pessoa da equipe acha o recibo depois, mesmo sem saber quem fez."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "O menu de ações"
+        },
+        {
+          "tipo": "tela",
+          "print": "tarefa-comprovante",
+          "legenda": "O menu de ações do DAS de agosto da Padaria Estrela, já baixado pelo comprovante.",
+          "itens": [
+            "**Ver comprovante** abre o recibo que baixou a tarefa.",
+            "**Baixar comprovante** salva o recibo no seu computador."
+          ]
+        },
+        {
+          "tipo": "texto",
+          "texto": "O menu muda conforme a tarefa e o seu perfil. Além do comprovante, ele pode trazer **Transferir**, que passa a tarefa para outra pessoa, **Editar**, **Cancelar tarefa** e **Não se aplica a esta empresa**, para a obrigação que aquele cliente não tem."
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "Datas",
+          "texto": "O vencimento e o prazo interno de uma tarefa só o administrador muda. Precisa mudar uma data? Fale com o Fábio."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "A folha da Padaria",
+          "texto": "A Juliana Prado, do DP, começa a folha de setembro da Padaria Estrela e troca a situação para **Em Andamento**. No dia seguinte, com a folha fechada, escolhe **Concluída**. A folha não exige comprovante, então a baixa é na mão mesmo."
+        }
+      ]
+    },
+    {
+      "id": "evalidador",
+      "tipo": "uso",
+      "titulo": "Dar baixa pelo e-validador",
+      "para_que_serve": "O e-validador é o conferente que lê o recibo por você. Você sobe o comprovante e ele descobre sozinho de qual cliente é (pelo CNPJ), de qual mês (pela competência) e de qual obrigação, e dá baixa na tarefa certa, com o documento anexado.",
+      "cobre": [
+        "/evalidador"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **e-validador** aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "evalidador",
+          "legenda": "A tela do e-validador.",
+          "itens": [
+            "Arraste os comprovantes para cá, ou clique para escolher. Aceita PDF e planilha do Excel, vários de uma vez.",
+            "**Processar** lê os arquivos e dá as baixas."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Subir os recibos do dia",
+          "itens": [
+            "No menu, clique em **e-validador**.",
+            "Arraste os recibos para a área tracejada.",
+            "Clique em **Processar**.",
+            "Leia o resultado de cada arquivo, na lista que aparece embaixo."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "O que cada resultado quer dizer"
+        },
+        {
+          "tipo": "texto",
+          "texto": "**Baixada**: deu certo, a tarefa foi concluída com o recibo. **Já baixada**: esse recibo já tinha baixado a tarefa antes. **Sem tarefa**: o e-validador entendeu o documento, mas não existe tarefa daquela obrigação, daquele cliente e daquele mês. **Ambíguo**: mais de uma tarefa serve, e ele não escolhe por você. **Erro**: não conseguiu ler o arquivo."
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "Documento escaneado não serve",
+          "texto": "O e-validador lê o texto do arquivo. Foto ou PDF escaneado de papel não tem texto, e volta como **Erro**. Use sempre o recibo baixado do site do órgão."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "O DAS da Padaria",
+          "texto": "O Rafael baixa do portal do Simples a guia paga de agosto da Padaria Estrela, CNPJ `11.222.333/0001-81`, e sobe no e-validador. O resultado sai **Baixada**: \"DAS · Padaria Estrela Ltda · 08/2026\". O cartão da tarefa fica verde, e o recibo já está em **Documentos**."
+        }
+      ]
+    },
+    {
+      "id": "documentos",
+      "tipo": "uso",
+      "titulo": "Achar um comprovante em Documentos",
+      "para_que_serve": "Documentos é o arquivo de aço do escritório, só que com busca: guarda todos os comprovantes e recibos que baixaram tarefas. Você acha o documento pelo cliente, pela obrigação ou pelo mês, sem precisar saber de qual tarefa ele veio.",
+      "cobre": [
+        "/documentos"
+      ],
+      "blocos": [
+        {
+          "tipo": "tela",
+          "print": "documentos",
+          "legenda": "Os comprovantes guardados.",
+          "itens": [
+            "**Comprovantes e recibos** mostra o que baixou tarefa. **Entregues ao cliente** mostra o que foi enviado a ele.",
+            "**Buscar**: digite parte do nome da tarefa, do protocolo ou do arquivo.",
+            "O arquivo. Os ícones ao lado abrem e baixam o documento.",
+            "**Exportar CSV** leva a lista para uma planilha."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Achar um recibo",
+          "itens": [
+            "No menu, clique em **Documentos**.",
+            "Escolha a **Empresa** e, se souber, a **Obrigação** e a **Competência**.",
+            "Clique em **Buscar**.",
+            "Na linha do documento, clique no ícone para ver ou baixar."
+          ]
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "O cliente pediu a guia",
+          "texto": "A Padaria Estrela liga pedindo a guia do DAS de agosto. A Carla abre **Documentos**, escolhe **Empresa** `Padaria Estrela Ltda` e **Competência** `08/2026`, e baixa o `DAS_Padaria_Estrela_08-2026.pdf` para mandar ao cliente."
+        }
+      ]
+    },
+    {
+      "id": "substituicoes",
+      "tipo": "uso",
+      "titulo": "Cobrir férias e ausências",
+      "para_que_serve": "Substituições é o bilhete de \"enquanto eu estiver fora, fale com fulano\". Quando alguém sai de férias ou fica doente, outra pessoa assume as tarefas e os avisos dela no período, e tudo volta sozinho no fim.",
+      "cobre": [
+        "/substituicoes"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **Substituições** fica em **Configuração** e aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "substituicoes",
+          "legenda": "As substituições cadastradas.",
+          "itens": [
+            "**Nova Substituição** cadastra uma ausência.",
+            "Cada linha mostra quem sai, quem cobre e por quanto tempo."
+          ]
+        },
+        {
+          "tipo": "tela",
+          "print": "substituicao-form",
+          "legenda": "O cadastro de uma substituição.",
+          "itens": []
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Cadastrar férias",
+          "itens": [
+            "Clique em **Nova Substituição**.",
+            "Em **Pessoa ausente**, escolha quem vai sair.",
+            "Em **Substituto**, escolha quem vai cobrir.",
+            "Em **Tipo**, escolha **Temporária**.",
+            "Preencha **Início** e **Fim**, e o **Motivo**.",
+            "Clique em **Salvar**."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Temporária ou definitiva"
+        },
+        {
+          "tipo": "texto",
+          "texto": "**Temporária** vale entre o início e o fim: o substituto assume as tarefas e recebe os avisos, e o gestor de quem saiu continua recebendo cópia. No fim, tudo volta para a pessoa sozinho. **Definitiva** é para quem mudou de função ou saiu da empresa: passa na hora todas as tarefas em aberto para o substituto, e não volta."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "As férias do Rafael",
+          "texto": "O Rafael Souza sai de férias de 05/10 a 16/10. A Carla cadastra uma substituição **Temporária** com o Bruno Lima como substituto e o motivo `Férias`. Nesses dias, os DAS e as EFDs do Rafael aparecem para o Bruno, e no dia 17 voltam para o Rafael sem ninguém mexer."
+        }
+      ]
+    },
+    {
+      "id": "obrigacoes",
+      "tipo": "uso",
+      "titulo": "Cadastrar uma obrigação",
+      "para_que_serve": "A obrigação é a receita que se repete todo mês: diz o que tem de ser feito, para quais clientes, com qual prazo e de qual mês. Todo dia 1, às 6h, o Tareffas lê as obrigações e cria sozinho as tarefas do mês de cada cliente.",
+      "cobre": [
+        "/obrigacoes"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **Obrigações** fica em **Cadastro** e aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "obrigacoes",
+          "legenda": "A lista de obrigações.",
+          "itens": [
+            "**Nova Obrigação** cadastra uma obrigação.",
+            "**Gerar tarefas do mês** cria as tarefas na hora, sem esperar o dia 1. Útil para uma obrigação recém-cadastrada.",
+            "O lápis abre a obrigação para editar."
+          ]
+        },
+        {
+          "tipo": "tela",
+          "print": "obrigacao-form",
+          "legenda": "O cadastro de uma obrigação.",
+          "itens": [
+            "**Identificadores**: um trecho que só aparece no recibo desta obrigação. É por ele que o e-validador reconhece o documento.",
+            "**Regra de prazo**: último dia útil, primeiro dia útil, dia fixo ou o N-ésimo dia útil do mês.",
+            "**Competência referente a**: de qual mês é a tarefa, contando a partir do mês da entrega.",
+            "**Meses ativos**: em quais meses a obrigação gera tarefa."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "O que preencher"
+        },
+        {
+          "tipo": "passos",
+          "itens": [
+            "Clique em **Nova Obrigação**.",
+            "Preencha **Nome da obrigação** e escolha o **Setor**.",
+            "Em **Recorrência e prazo**, escolha a **Regra de prazo** e a **Competência referente a**.",
+            "Marque os **Meses ativos**. Para obrigação mensal, deixe todos marcados.",
+            "Em **Empresas vinculadas**, escolha os clientes que têm essa obrigação.",
+            "Se a entrega tem recibo, marque **Exige documento** e preencha os **Identificadores**.",
+            "Clique em **Salvar**."
+          ]
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "Dia fixo não é dia útil",
+          "texto": "**Dia fixo** 10 e **N-ésimo dia útil** 10 dão datas diferentes. Em setembro de 2026, o dia fixo 10 cai em 10/09 e o 10º dia útil cai em 14/09. Confira na lei qual dos dois vale."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "A EFD-Contribuições",
+          "texto": "A EFD-Contribuições é entregue no 10º dia útil e se refere a dois meses antes: a entrega de setembro é a competência de julho. A Carla escolhe **Regra de prazo** `N-ésimo dia útil`, dia `10`, e **Competência referente a** `2 meses antes`. Vincula a Clínica Sorriso Feliz e o Mercadinho Boa Vista, os dois do Lucro Presumido."
+        }
+      ]
+    },
+    {
+      "id": "modelos",
+      "tipo": "uso",
+      "titulo": "Ensinar o e-validador com Modelos",
+      "para_que_serve": "Modelos é a pasta de exemplos do e-validador. Você sobe um recibo de verdade de uma obrigação, e o Tareffas sugere o trecho que identifica aquele documento. Depois disso, o e-validador passa a reconhecer os próximos recibos iguais.",
+      "cobre": [
+        "/modelos"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **Modelos** fica em **Cadastro** e aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "modelos",
+          "legenda": "A tela de Modelos.",
+          "itens": [
+            "Arraste aqui um recibo de exemplo."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Ensinar uma obrigação nova",
+          "itens": [
+            "No menu, clique em **Modelos**.",
+            "Arraste um recibo daquela obrigação para a área tracejada.",
+            "Confira a empresa e a obrigação que o Tareffas sugeriu.",
+            "Escolha, entre os trechos sugeridos, um que só exista nesse tipo de recibo.",
+            "Clique em **Salvar modelo**."
+          ]
+        },
+        {
+          "tipo": "dica",
+          "titulo": "O trecho certo",
+          "texto": "Escolha um trecho que nenhum outro recibo tem, como o título do documento. Palavra comum, como `Recibo`, faz o e-validador confundir uma obrigação com outra."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "O recibo novo do FGTS",
+          "texto": "O FGTS Digital trocou o modelo do recibo e os comprovantes começaram a voltar como **Sem tarefa**. O Bruno sobe um recibo novo em **Modelos**, escolhe o trecho do título e salva. Os próximos recibos do FGTS voltam a dar **Baixada**."
+        }
+      ]
+    },
+    {
+      "id": "empresas",
+      "tipo": "uso",
+      "titulo": "Definir quem cuida de cada cliente",
+      "para_que_serve": "Na ficha da empresa você diz quais serviços o cliente contratou e quem da equipe cuida de cada setor dele. É daqui que o Tareffas tira o responsável de cada tarefa gerada no mês, como a planilha de carteira, só que ligada às tarefas.",
+      "cobre": [
+        "/empresas"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **Empresas** fica em **Cadastro** e aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "empresas",
+          "legenda": "A lista de empresas.",
+          "itens": [
+            "**Nova Empresa** cadastra um cliente.",
+            "O cadeado **bloqueia** a empresa.",
+            "O lápis abre a ficha da empresa."
+          ]
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Responsável por setor"
+        },
+        {
+          "tipo": "tela",
+          "print": "empresa-setores",
+          "legenda": "Os setores que a Oficina Bom Motor contratou.",
+          "itens": [
+            "Setor marcado: o cliente contratou o serviço, e aqui fica quem cuida dele.",
+            "Setor desmarcado: o cliente não contratou, e o campo mostra **não atende**."
+          ]
+        },
+        {
+          "tipo": "passos",
+          "titulo": "Trocar o responsável de um setor",
+          "itens": [
+            "Clique no lápis da empresa.",
+            "Em **Responsável por setor**, clique no nome ao lado do setor.",
+            "Escolha a pessoa da equipe.",
+            "Clique em **Salvar**."
+          ]
+        },
+        {
+          "tipo": "aviso",
+          "titulo": "Setor desmarcado não gera tarefa",
+          "texto": "Se o cliente não contratou um setor, deixe o setor desmarcado. As obrigações daquele setor não geram tarefa para ele, e a equipe não perde tempo com o que não foi contratado."
+        },
+        {
+          "tipo": "texto",
+          "texto": "**Bloquear** é para cliente parado ou em saída: as tarefas dele somem das listas e do Painel, e o mês seguinte não gera nada. Dá para desbloquear quando quiser, e nada é apagado."
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "A Oficina sem DP",
+          "texto": "A Oficina Bom Motor contratou só o fiscal e o contábil, porque a folha dela é feita por outro escritório. Na ficha, **Departamento Pessoal** fica desmarcado. Resultado: a Folha de pagamento gera tarefa para os outros três clientes, e não para a Oficina."
+        }
+      ]
+    },
+    {
+      "id": "relacao",
+      "tipo": "uso",
+      "titulo": "Tirar a relação de obrigações",
+      "para_que_serve": "A Relação de obrigações é o resumo de tudo o que está cadastrado: cada obrigação com o setor, as empresas, o prazo, a competência e se gera multa. Serve para conferir o cadastro ou mandar para alguém numa planilha.",
+      "cobre": [
+        "/relatorios/obrigacoes"
+      ],
+      "blocos": [
+        {
+          "tipo": "texto",
+          "texto": "O menu **Relação de obrigações** fica em **Relatórios** e aparece para gestores e administradores."
+        },
+        {
+          "tipo": "tela",
+          "print": "relacao",
+          "legenda": "A relação de obrigações.",
+          "itens": [
+            "Filtre pelo nome da obrigação.",
+            "**Exportar Excel** baixa a relação, já com o filtro aplicado."
+          ]
+        },
+        {
+          "tipo": "exemplo",
+          "titulo": "Conferir o fiscal antes da auditoria",
+          "texto": "Antes da reunião com o Fábio, a Carla filtra o setor `Fiscal` e clica em **Exportar Excel**. Leva a planilha com o DAS e a EFD-Contribuições, os prazos e as empresas de cada uma."
+        }
+      ]
+    },
+    {
+      "id": "duvidas",
+      "tipo": "apoio",
+      "titulo": "Perguntas frequentes",
+      "cobre": [],
+      "blocos": [
+        {
+          "tipo": "subtitulo",
+          "texto": "Não consigo marcar a tarefa como Concluída"
+        },
+        {
+          "tipo": "texto",
+          "texto": "A obrigação exige comprovante. Suba o recibo no **e-validador**: ele dá a baixa e guarda o documento. Veja o capítulo \"Dar baixa pelo e-validador\"."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Preciso mudar o vencimento de uma tarefa"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Só o administrador muda vencimento e prazo interno. Fale com o Fábio."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Uma tarefa sumiu da minha lista"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Confira os filtros (**Colaborador**, **Situação**, **Competência**). Se estiver tudo em **Todos**, a empresa pode ter sido bloqueada, ou a tarefa foi passada para outra pessoa por uma substituição."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "O e-validador devolveu Sem tarefa"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Não existe tarefa daquela obrigação, daquele cliente e daquele mês. Veja se a empresa está vinculada à obrigação e se o setor está marcado na ficha dela. Se o recibo mudou de modelo, ensine o novo em **Modelos**."
+        },
+        {
+          "tipo": "subtitulo",
+          "texto": "Não vejo os menus de Cadastro"
+        },
+        {
+          "tipo": "texto",
+          "texto": "Obrigações, Modelos, Empresas, Substituições e os relatórios aparecem só para gestores e administradores. Cadastro de usuários, setores, grupos de permissão e notificações fica com o administrador. Precisa de algum? Fale com o Fábio."
+        }
+      ]
+    }
+  ],
+  "historico": [
+    {
+      "versao": 1,
+      "data": "2026-09-30",
+      "mudou": "Manual criado."
+    }
+  ]
+}
