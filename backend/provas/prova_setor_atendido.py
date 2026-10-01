@@ -217,7 +217,24 @@ r = client.post("/api/cronograma/importar", headers=A,
                 json={"grupo": "g", "itens": [{"nome": "cron_com_setor", "setor": "Fiscal"}]})
 checa(24, "cronograma com setor importa", r.status_code == 200, r.text[:200])
 
+# ------------------------------------------------- (d) marcador X na planilha
+print("\n(d) X na planilha marca o setor sem responsavel, sem aviso")
+arq = planilha(["CNPJ", "Razão social", "Fiscal", "DP"], [["04111111000111", "Empresa D", "X", "sim"]])
+r = client.post("/api/empresas/importar-responsaveis", headers=A,
+                files={"arquivo": ("m.xlsx", arq,
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+avisos = [d for d in r.json().get("detalhes", []) if d.get("status") != "ok"] if r.status_code == 200 else None
+db = SessionLocal()
+marcados = sorted(v.setor_id for v in db.query(EmpresaSetorResponsavel)
+                  .filter(EmpresaSetorResponsavel.empresa_id == ids["D"]).all())
+sem_dono = all(v.responsavel_id is None for v in db.query(EmpresaSetorResponsavel)
+               .filter(EmpresaSetorResponsavel.empresa_id == ids["D"]).all())
+db.close()
+checa(25, "X e sim marcam Fiscal e DP, sem responsavel",
+      marcados == sorted([ids["fiscal"], ids["dp"]]) and sem_dono, marcados)
+checa(26, "nenhum aviso de nome nao encontrado", avisos == [], avisos)
+
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 24 checagens verdes")
+print("\nPROVA OK: 26 checagens verdes")

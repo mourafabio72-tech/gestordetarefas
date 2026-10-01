@@ -17,6 +17,9 @@ from . import resp_setor
 from . import gerador
 
 
+MARCA_SEM_DONO = {"x", "sim"}
+
+
 def _norm(s: str) -> str:
     s = unicodedata.normalize("NFKD", str(s or ""))
     s = "".join(c for c in s if not unicodedata.combining(c))
@@ -53,6 +56,7 @@ def gerar_modelo(db) -> bytes:
     ws.append(["A primeira da lista é a responsável principal, e é do gestor dela"
                " que sai o supervisor da tarefa."])
     ws.append(["Célula vazia quer dizer que a empresa não atende aquele setor."])
+    ws.append(["X marca que atende, ainda sem responsável."])
     ws.column_dimensions["A"].width = 22
     for i, _ in enumerate(setores):
         ws.column_dimensions[chr(ord("B") + i)].width = 26
@@ -109,6 +113,10 @@ def importar(db, nome_arquivo: str, conteudo: bytes, usuario_id=None) -> dict:
                 # Ponto e vírgula separa as pessoas, e a ordem da célula é a
                 # ordem da lista: a primeira é a principal.
                 nomes = [n.strip() for n in valor.split(";") if n.strip()]
+                # "X" ou "sim" = atende, ainda sem responsável. Sem isso, marcar
+                # o setor sem dono exigia um nome inventado e gerava um aviso
+                # por célula, que escondia os avisos de verdade.
+                nomes = [n for n in nomes if _norm(n) not in MARCA_SEM_DONO]
                 achados, faltando = [], []
                 for nome in nomes:
                     u = usuario_por_nome.get(_norm(nome))
