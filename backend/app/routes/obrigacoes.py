@@ -410,6 +410,11 @@ def update_obrigacao(
         if (o.meses_ativos or "").strip():
             raise HTTPException(status_code=422, detail="Marque ao menos um mês, de 1 a 12.")
         dados.pop("meses_ativos")
+    # Setor não sai: sem ele a obrigação gera para toda empresa, inclusive as
+    # que não atendem aquele serviço. Legada sem setor passa a escolher um
+    # quando é editada, de propósito. Mandar só outros campos segue livre.
+    if "setor_id" in dados and not dados["setor_id"]:
+        raise HTTPException(status_code=422, detail="Escolha o setor da obrigação.")
     for k, v in dados.items():
         setattr(o, k, v)
     _set_empresas(db, o, empresa_ids)

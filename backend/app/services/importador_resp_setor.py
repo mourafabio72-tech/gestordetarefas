@@ -14,6 +14,7 @@ import re
 import unicodedata
 from ..models import Empresa, Usuario, Setor, EmpresaSetorResponsavel
 from . import resp_setor
+from . import gerador
 
 
 def _norm(s: str) -> str:
@@ -60,7 +61,7 @@ def gerar_modelo(db) -> bytes:
     return buf.getvalue()
 
 
-def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
+def importar(db, nome_arquivo: str, conteudo: bytes, usuario_id=None) -> dict:
     grade = _linhas(nome_arquivo, conteudo)
     idx = next((i for i, r in enumerate(grade) if any(c not in (None, "") for c in r)), None)
     if idx is None:
@@ -88,6 +89,7 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
 
     empresas_ok = marcados = desmarcados = erros = 0
     detalhes = []
+    tocadas = []
     for linha in grade[idx + 1:]:
         if not any(c not in (None, "") for c in linha):
             continue
@@ -135,7 +137,16 @@ def importar(db, nome_arquivo: str, conteudo: bytes) -> dict:
                     db.delete(existente)
                     desmarcados += 1
         empresas_ok += 1
+        tocadas.append(emp.id)
 
+    # O mesmo efeito do PUT da tela: setor desmarcado fecha o que já nasceu
+    # dele. Só nas empresas da planilha, que são as que alguém mexeu agora.
+    db.flush()
+    canceladas = 0
+    for emp_id in dict.fromkeys(tocadas):
+        canceladas += gerador.cancelar_fora_dos_setores(
+            db, gerador.fora_dos_setores_atendidos(db, emp_id), usuario_id)
     db.commit()
-    return {"resumo": {"empresas": empresas_ok, "marcados": marcados, "desmarcados": desmarcados, "erros": erros},
+    return {"resumo": {"empresas": empresas_ok, "marcados": marcados, "desmarcados": desmarcados,
+                       "erros": erros, "tarefas_canceladas": canceladas},
             "detalhes": detalhes}

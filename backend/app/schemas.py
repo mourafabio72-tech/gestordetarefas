@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime, date
 from enum import Enum
@@ -347,6 +347,16 @@ class ObrigacaoCreate(ObrigacaoBase):
             raise ValueError("Marque ao menos um mês, de 1 a 12.")
         return v
     _comp = field_validator("competencia_ref", mode="before")(_competencia_valida)
+
+    @model_validator(mode="after")
+    def _criar_com_setor(self):
+        # Obrigação sem setor fura a matriz de setores da empresa: o gerador
+        # não tem como saber de quem ela é e gera para todas. Decisão de
+        # 2026-10-01. Model validator, e não de campo, porque campo ausente
+        # não passa pelo validador de campo.
+        if not self.setor_id:
+            raise ValueError("Escolha o setor da obrigação.")
+        return self
 
 class ObrigacaoUpdate(BaseModel):
     nome: Optional[str] = None

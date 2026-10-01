@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Usuario
+from ..models import Usuario, Obrigacao
 from ..auth import require_perm
 from ..services import importador_cronograma as cron
 
@@ -48,4 +48,15 @@ def importar(
 ):
     if not body.itens:
         raise HTTPException(status_code=422, detail="Nada para importar.")
+    # Obrigação NOVA sem setor fura a matriz da empresa e gera para todas.
+    # Recusa o lote inteiro antes de gravar, com os nomes, para a tela mostrar
+    # o que falta escolher. A que já existe só ganha vínculo, não setor.
+    novas_sem_setor = [
+        (it.get("nome") or "").strip() for it in body.itens
+        if (it.get("nome") or "").strip() and not (it.get("setor") or "").strip()
+        and not db.query(Obrigacao.id).filter(
+            Obrigacao.nome == (it.get("nome") or "").strip()).first()]
+    if novas_sem_setor:
+        raise HTTPException(status_code=422, detail="Escolha o setor de: "
+                            + ", ".join(novas_sem_setor))
     return cron.importar(db, body.grupo, body.itens, body.mapa, para_todas=body.para_todas)

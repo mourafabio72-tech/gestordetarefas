@@ -742,9 +742,12 @@ export default function Obrigacoes() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
-                  <select value={form.setor_id} onChange={(e) => set('setor_id', e.target.value)} className="input-field">
-                    <option value="">-</option>
+                  {/* Obrigatório desde 2026-10-01: sem setor a obrigação fura a
+                      matriz "Atende" da empresa e gera para todas. O servidor
+                      recusa também; o required só avisa antes. */}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Setor *</label>
+                  <select value={form.setor_id} onChange={(e) => set('setor_id', e.target.value)} className="input-field" required>
+                    <option value="">Escolha o setor</option>
                     {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                   </select>
                 </div>

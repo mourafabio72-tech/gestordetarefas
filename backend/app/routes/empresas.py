@@ -7,11 +7,12 @@ from ..database import get_db
 from ..models import (Empresa, Usuario, Setor, EmpresaSetorResponsavel,
                       empresa_setor_resp_usuarios)
 from ..schemas import EmpresaCreate, EmpresaResponse
-from ..auth import get_current_user, require_perm
+from ..auth import get_current_user, require_perm, require_admin
 from ..permissoes import eh_cliente
 from ..seguranca import log_event, ip_cliente
 from ..services import importador_empresas as imp
 from ..services import resp_setor
+from ..services import gerador
 from ..services.validacao import cnpj_valido
 
 
@@ -112,7 +113,7 @@ async def importar_responsaveis(
     from ..services import importador_resp_setor as impr
     conteudo = await arquivo.read()
     try:
-        saida = impr.importar(db, arquivo.filename, conteudo)
+        saida = impr.importar(db, arquivo.filename, conteudo, current_user.id)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Falha ao ler a planilha: {e}")
     # A planilha regrava a mesma matriz que o PUT, e em muitas empresas de uma
@@ -210,11 +211,49 @@ def set_responsaveis_setor(
         vinculo = EmpresaSetorResponsavel(empresa_id=empresa_id, setor_id=it.setor_id)
         db.add(vinculo)
         resp_setor.gravar(db, vinculo, ids)
+    # Desmarcar o setor também fecha o que já nasceu dele: o gerador só
+    # deixa de criar tarefa nova, e a aberta ficava cobrando quem não atende.
+    db.flush()
+    canceladas = gerador.cancelar_fora_dos_setores(
+        db, gerador.fora_dos_setores_atendidos(db, empresa_id), current_user.id)
     db.commit()
     log_event("EDICAO_REGISTRO_CRITICO", tabela="empresa_setor_responsavel",
               empresa_id=empresa_id, user_id=current_user.id,
-              ip=ip_cliente(request), setores=len(body.itens), responsaveis=total)
-    return {"ok": True}
+              ip=ip_cliente(request), setores=len(body.itens), responsaveis=total,
+              tarefas_canceladas=canceladas)
+    return {"ok": True, "tarefas_canceladas": canceladas}
+
+
+class AplicarSetoresBody(BaseModel):
+    ensaio: bool = True
+
+
+@router.post("/aplicar-setores-atendidos")
+def aplicar_setores_atendidos(
+    request: Request,
+    body: Optional[AplicarSetoresBody] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_admin),
+):
+    """Aplica a matriz ATUAL de todas as empresas ao que já foi gerado.
+
+    Para as tarefas que nasceram antes de o setor ser desmarcado. Sem corpo,
+    ou com `ensaio`, só lista: cancelar em lote se confere antes."""
+    ensaio = body is None or body.ensaio
+    tarefas = gerador.fora_dos_setores_atendidos(db)
+    nomes = dict(db.query(Setor.id, Setor.nome).all())
+    lista = [{"tarefa_id": t.id, "empresa": t.empresa.razao_social if t.empresa else None,
+              "setor": nomes.get(t.setor_id), "titulo": t.titulo,
+              "competencia": t.competencia, "status": t.status.value}
+             for t in tarefas]
+    if ensaio:
+        return {"ensaio": True, "tarefas_canceladas": 0, "tarefas": lista}
+    n = gerador.cancelar_fora_dos_setores(db, tarefas, current_user.id)
+    db.commit()
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="tarefa", lote=True,
+              acao="aplicar_setores_atendidos", user_id=current_user.id,
+              ip=ip_cliente(request), tarefas_canceladas=n)
+    return {"ensaio": False, "tarefas_canceladas": n, "tarefas": lista}
 
 
 @router.get("/modelo-importacao")

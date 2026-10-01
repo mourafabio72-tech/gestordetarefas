@@ -63,7 +63,11 @@ cab = {"Authorization": "Bearer " + create_access_token(data={"sub": "admin@x.co
 db = SessionLocal()
 db.add(Usuario(nome="Admin", email="admin@x.com", grupo="admin", ativo=True,
                senha_hash=get_password_hash("x")))
+# Desde a fase 54 (2026-10-01) obrigacao nasce com setor; a prova cria um.
+_setor = Setor(nome="Setor da prova", ativo=True)
+db.add(_setor)
 db.commit()
+SETOR = _setor.id
 db.close()
 
 
@@ -84,7 +88,7 @@ def conta_obrigacoes():
 
 
 print("\n(a) A edição grava o sentido")
-r = client.post("/api/obrigacoes", json={"nome": "SPED Contribuições", "sentido": "receber"},
+r = client.post("/api/obrigacoes", json={"setor_id": SETOR, "nome": "SPED Contribuições", "sentido": "receber"},
                 headers=cab)
 checa(1, "cenário: POST cria a obrigação", r.status_code == 201)
 oid = r.json().get("id")
@@ -101,7 +105,7 @@ checa(4, "trocar de novo, agora para interna, também grava",
 
 print("\n(b) Sentido fora da lista é recusado no servidor")
 antes = conta_obrigacoes()
-r = client.post("/api/obrigacoes", json={"nome": "Invalida", "sentido": "qualquer"}, headers=cab)
+r = client.post("/api/obrigacoes", json={"setor_id": SETOR, "nome": "Invalida", "sentido": "qualquer"}, headers=cab)
 checa(5, "POST com sentido inventado recebe 422", r.status_code == 422)
 checa(6, "e nenhuma obrigação nova nasce", conta_obrigacoes() == antes)
 
@@ -110,7 +114,7 @@ r = client.put(f"/api/obrigacoes/{oid}", json={"sentido": "qualquer"}, headers=c
 checa(7, "PUT com sentido inventado recebe 422", r.status_code == 422)
 checa(8, "e o sentido gravado não muda", sentido_no_banco(oid) == gravado)
 
-r = client.post("/api/obrigacoes", json={"nome": "DCTFWeb", "sentido": "transmitir"}, headers=cab)
+r = client.post("/api/obrigacoes", json={"setor_id": SETOR, "nome": "DCTFWeb", "sentido": "transmitir"}, headers=cab)
 checa(9, "POST com sentido=transmitir é aceito", r.status_code == 201)
 
 print("\n(c) Uma regra de documento: model e painel respondem igual nas 24 combinações")
@@ -193,7 +197,7 @@ r = client.put(f"/api/obrigacoes/{id_vazia}", json={"nome": "legada_renomeada", 
                headers=cab)
 checa(21, "editar a legada mandando sentido vazio salva o nome, e não devolve 422",
       r.status_code == 200 and r.json().get("nome") == "legada_renomeada")
-r = client.post("/api/obrigacoes", json={"nome": "legada (cópia)", "sentido": ""}, headers=cab)
+r = client.post("/api/obrigacoes", json={"setor_id": SETOR, "nome": "legada (cópia)", "sentido": ""}, headers=cab)
 checa(22, "duplicar a legada, com sentido vazio no corpo, cria a cópia", r.status_code == 201)
 
 checa(17, "a coluna comporta 'transmitir' no Postgres, que corta varchar",

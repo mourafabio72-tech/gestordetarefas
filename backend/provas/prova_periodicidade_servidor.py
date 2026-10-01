@@ -34,7 +34,7 @@ os.environ.setdefault("SECRET_KEY", "chave-de-prova")
 
 from fastapi.testclient import TestClient                      # noqa: E402
 from app.database import Base, engine, SessionLocal            # noqa: E402
-from app.models import Usuario, Obrigacao                      # noqa: E402
+from app.models import Usuario, Obrigacao, Setor               # noqa: E402
 from app.auth import get_password_hash, create_access_token    # noqa: E402
 from app.main import app                                       # noqa: E402
 from app.services.gerador import calc_competencia              # noqa: E402
@@ -57,7 +57,11 @@ cab = {"Authorization": "Bearer " + create_access_token(data={"sub": "admin@x.co
 db = SessionLocal()
 db.add(Usuario(nome="Admin", email="admin@x.com", grupo="admin", ativo=True,
                senha_hash=get_password_hash("x")))
+# Desde a fase 54 (2026-10-01) obrigacao nasce com setor; a prova cria um.
+_setor = Setor(nome="Setor da prova", ativo=True)
+db.add(_setor)
 db.commit()
+SETOR = _setor.id
 db.close()
 
 
@@ -71,7 +75,7 @@ def no_banco(oid):
 
 
 def cria(nome, **extra):
-    return client.post("/api/obrigacoes", json={"nome": nome, **extra}, headers=cab)
+    return client.post("/api/obrigacoes", json={"nome": nome, "setor_id": SETOR, **extra}, headers=cab)
 
 
 # 1. cenário

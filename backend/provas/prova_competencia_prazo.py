@@ -97,12 +97,13 @@ print("\n=== 7. campo numérico em branco não derruba o cadastro ===")
 # sem digitar o dia recusava o cadastro inteiro num 422 -- que a tela mostrava
 # como "[object Object]", sem dizer qual campo.
 from app.schemas import ObrigacaoCreate                                   # noqa: E402
-o = ObrigacaoCreate(nome="X", regra_prazo_tipo="dia_util", regra_prazo_dia="")
+# Desde a fase 54 (2026-10-01) obrigacao nasce com setor; setor_id=1 basta, o schema nao vai ao banco.
+o = ObrigacaoCreate(nome="X", setor_id=1, regra_prazo_tipo="dia_util", regra_prazo_dia="")
 check("dia em branco é aceito", o.regra_prazo_dia is None)
 check("dia preenchido chega como número",
-      ObrigacaoCreate(nome="X", regra_prazo_dia="10").regra_prazo_dia == 10)
+      ObrigacaoCreate(nome="X", setor_id=1, regra_prazo_dia="10").regra_prazo_dia == 10)
 check("vale para os outros numéricos",
-      ObrigacaoCreate(nome="X", ancora_dias_antes="", tempo_previsto_min="  ")
+      ObrigacaoCreate(nome="X", setor_id=1, ancora_dias_antes="", tempo_previsto_min="  ")
       .ancora_dias_antes is None)
 
 print("\n=== 8. sem o dia, o N-ésimo dia útil cai no primeiro ===")

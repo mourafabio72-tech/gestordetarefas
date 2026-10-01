@@ -9,7 +9,7 @@ sem duplicar (dedupe por obrigacao_id + empresa_id + competencia).
 import calendar
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
-from ..models import Obrigacao, Empresa, Tarefa, StatusTarefa
+from ..models import Obrigacao, Empresa, Tarefa, StatusTarefa, EmpresaSetorResponsavel, Setor
 
 
 def _csv_set(s):
@@ -279,6 +279,48 @@ def cancelar_abertas(db: Session, obrigacao_id: int, empresa_id: int,
         t.nao_se_aplica_por_id = usuario_id
         t.nao_se_aplica_em = agora
     return len(abertas)
+
+
+def fora_dos_setores_atendidos(db: Session, empresa_id=None) -> list:
+    """Tarefas EM ABERTO, geradas por obrigação, de setor que a empresa não atende.
+
+    É a mesma pergunta do `_empresa_atende`, feita para trás: o gerador não
+    cria tarefa nova de setor desmarcado, mas a que nasceu antes de desmarcar
+    ficava aberta. Empresa sem matriz atende todos e não entra. Avulsa (sem
+    obrigação) não entra: quem a criou à mão decidiu por ela. `empresa_id`
+    None varre todas as empresas com matriz."""
+    q = db.query(EmpresaSetorResponsavel.empresa_id, EmpresaSetorResponsavel.setor_id)
+    if empresa_id is not None:
+        q = q.filter(EmpresaSetorResponsavel.empresa_id == empresa_id)
+    atende = {}
+    for emp_id, setor_id in q.all():
+        atende.setdefault(emp_id, set()).add(setor_id)
+    if not atende:
+        return []
+    tarefas = (db.query(Tarefa)
+               .filter(Tarefa.empresa_id.in_(list(atende)),
+                       Tarefa.obrigacao_id.isnot(None),
+                       Tarefa.setor_id.isnot(None),
+                       Tarefa.status.in_(ABERTAS))
+               .order_by(Tarefa.id).all())
+    return [t for t in tarefas if t.setor_id not in atende[t.empresa_id]]
+
+
+def cancelar_fora_dos_setores(db: Session, tarefas: list, usuario_id) -> int:
+    """Cancela como "não se aplica" as tarefas de `fora_dos_setores_atendidos`.
+
+    Sem commit, UPDATE de status e nunca DELETE, como `cancelar_abertas`."""
+    from datetime import datetime
+    agora = datetime.utcnow()
+    nomes = dict(db.query(Setor.id, Setor.nome).all())
+    for t in tarefas:
+        t.status = StatusTarefa.CANCELADA
+        t.nao_se_aplica = True
+        t.nao_se_aplica_motivo = (f"Setor {nomes.get(t.setor_id, t.setor_id)} "
+                                  f"não atendido pela empresa.")
+        t.nao_se_aplica_por_id = usuario_id
+        t.nao_se_aplica_em = agora
+    return len(tarefas)
 
 
 def empresas_alvo(db: Session, o: Obrigacao):

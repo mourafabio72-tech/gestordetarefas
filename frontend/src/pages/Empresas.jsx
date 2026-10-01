@@ -110,6 +110,7 @@ export default function Empresas() {
       if (data.erro) { alert(data.erro); return; }
       const r = data.resumo || {};
       let msg = `${r.empresas} empresa(s): ${r.marcados} setor(es) marcado(s), ${r.desmarcados} desmarcado(s), ${r.erros} erro(s).`;
+      if (r.tarefas_canceladas) msg += ` ${r.tarefas_canceladas} tarefa(s) em aberto de setor desmarcado cancelada(s) como "não se aplica".`;
       const avisos = (data.detalhes || []).filter((d) => d.status !== 'ok');
       if (avisos.length) msg += `\n\n` + avisos.slice(0, 30).map((d) => `• ${d.linha}: ${d.detalhe}`).join('\n');
       alert(msg);
