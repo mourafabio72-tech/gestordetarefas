@@ -297,7 +297,7 @@ prazo interno da depreciação dia 05; ISS prestado com prazo interno no primeir
 
 ## Fase 0: aprovação do plano
 
-- **Status:** pending
+- **Status:** done (2026-10-02, 'aprovado, pode seguir')
 - **Critério de aceite:** usuário aprova no chat; LOG registra.
 
 ## Fase 56: regra própria do prazo interno no servidor

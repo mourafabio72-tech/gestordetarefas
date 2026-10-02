@@ -1,0 +1,259 @@
+{
+ "schema": 2,
+ "gerado_em": "2026-09-30T20:39:51",
+ "gerado_versao": "3.34.0",
+ "projeto": "_deploy_gestortarefas",
+ "log_tokens": 13336,
+ "acoes_total": 88,
+ "fase_atual": 53,
+ "ritmo": null,
+ "rigidez": null,
+ "ultima_acao": "[2026-09-23T20:45:00] fase=pos acao=correcao_registro resultado=ok obs=\"Retomada por genesis-continuar. PLANO_FASEADO marcava a fase 51 como pending e nao tinha as fases 52 e 53, fechadas no LOG. Status da 51 posto em done e 52/53 escritas em retroativo, com a nota no historico do plano. Conferido antes: carimbo de producao 20260923-2029 igual ao HEAD do codigo (e161fd0), main igual a origin/main, CONFORMIDADE com 0 linhas pendentes. Nenhuma fase aberta; aguardando trabalho novo do usuario.\"",
+ "resumo_por_fase": {
+  "0": {
+   "acoes": 16,
+   "ultimo_resultado": "ok"
+  },
+  "38": {
+   "acoes": 2,
+   "ultimo_resultado": "ok"
+  },
+  "39": {
+   "acoes": 7,
+   "ultimo_resultado": "ok"
+  },
+  "40": {
+   "acoes": 9,
+   "ultimo_resultado": "ok"
+  },
+  "41": {
+   "acoes": 4,
+   "ultimo_resultado": "ok"
+  },
+  "42": {
+   "acoes": 4,
+   "ultimo_resultado": "ok"
+  },
+  "43": {
+   "acoes": 3,
+   "ultimo_resultado": "ok"
+  },
+  "44": {
+   "acoes": 3,
+   "ultimo_resultado": "ok"
+  },
+  "45": {
+   "acoes": 9,
+   "ultimo_resultado": "ok"
+  },
+  "46": {
+   "acoes": 9,
+   "ultimo_resultado": "ok"
+  },
+  "47": {
+   "acoes": 2,
+   "ultimo_resultado": "ok"
+  },
+  "48": {
+   "acoes": 1,
+   "ultimo_resultado": "ok"
+  },
+  "49": {
+   "acoes": 5,
+   "ultimo_resultado": "ok"
+  },
+  "50": {
+   "acoes": 6,
+   "ultimo_resultado": "ok"
+  },
+  "51": {
+   "acoes": 2,
+   "ultimo_resultado": "ok"
+  },
+  "52": {
+   "acoes": 3,
+   "ultimo_resultado": "ok"
+  },
+  "53": {
+   "acoes": 3,
+   "ultimo_resultado": "ok"
+  }
+ },
+ "disjuntor": {
+  "falhas_seguidas": 0,
+  "erro": "",
+  "teto": 3,
+  "travado": false
+ },
+ "duraveis": {
+  "PENDENCIA": [
+   {
+    "data": "2026-09-19",
+    "trecho": "Batedores de volta, fichas conferidas; a de seguranca pelo principal em Padrao_Validacao_de_Input.md:16-17 (197 linhas). Achados que entraram no plano: competencia_ref e meses_ativos livres na entrada (schemas.py:274, 279, 310, 315) e engolidos em silencio (gerador.py:44-47); rotulo do Excel sem deslocamento numerico (routes/obrigacoes.py:105). Declarados fora de escopo: importador sem log_event n"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "ERRO MEU DE ORDEM: escrevi frontend/src/pages/periodicidade.js ANTES da prova. Corrigido pela ordem, nao pela prova: o modulo saiu do repo (movido para o scratchpad), a prova foi escrita sem ele, o RED rodou com ele ausente, e so entao voltou. Declarado para quem ler: a prova nao foi escrita olhando um modulo que falhava, e sim um que ja existia fora do lugar; o oraculo do item 6 foi escrito a mao"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "UM ACHADO REAL, aceito, reproduzido pelo verificador fora do repo: obrigacao legada com meses_ativos '' ficava impossivel de editar (PUT renomeando: 422 'Marque ao menos um mes'), porque abrirEdicao (Obrigacoes.jsx:220) espalha o registro sem fallback e o payload reenvia o vazio; duplicar tambem dava 422. A prova so cobria o vazio da COMPETENCIA (itens 12-13), nao o dos MESES. Demais pontos LIMPOS"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Um achado, aceito: os botoes de mes usavam aria-pressed em todos os modos, e na Anual a escolha e exclusiva; o proprio arquivo usa radiogroup/radio/aria-checked para escolha exclusiva. CONSERTO: wrapper dos meses com role radiogroup na Anual e group nas demais, aria-label 'Mes de entrega' ou 'Meses de entrega'; botao com role=radio + aria-checked na Anual e aria-pressed nas demais. Build 'built in"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Dois achados. (1) ACEITO: na anual e trimestral, clicar no mes ja escolhido (ou em outro da mesma serie) passava por aplicarPeriodicidade e reescrevia a competencia divergente (ECF ano_anterior virava -18) sem o usuario tocar no 'Usar ...'. RED item 13: 'does not provide an export named clicarMesNaSerie', rc=1. GREEN: clicarMesNaSerie devolve null quando a serie nao muda, e clicarMes usa ela. 'PRO"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "41.3, so leitura pela API com o login do usuario. Ativas anuais: 141 elaboracao_demonstracao financeira (3, ano_anterior -> -14), 185 entrega_defis (3, ano_anterior -> -14), 181 entrega_ecf (7, ano_anterior -> -18). Trimestrais: nenhuma (IRPJ e CSLL trimestrais estao cadastrados com 12 meses; nao mexido). Tarefas abertas dessas tres na listagem: so a 29944 (DEFIS, competencia 08/2026, pendente, se"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Pedido do usuario. Tarefa 29944 (DEFIS 08/2026, nascida quando a DEFIS gerava todo mes). O cancelar da tela e DELETE /api/tarefas/{id}, que cancela a aberta e EXCLUI DE VEZ a ja cancelada; por isso o script conferiu status pendente e obrigacao 185 antes de chamar. Antes: ['pendente', '08/2026', 185, nao_se_aplica false]. DELETE 200, 'Tarefa cancelada. Para excluir de vez, use a lixeira de novo.', "
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "ACHADO ao mapear o item 2: processar grava so o NOME do arquivo na tarefa (validador.py:556, tarefa.anexo_nome = nome_arquivo) e descarta o conteudo; registrar_baixa (upload.py:188), o caminho do link publico, salva. Todo recibo e guia baixados pelo e-validador aparecem no acervo (documentos.py:63, :109) sem arquivo no volume (caminho_do_anexo devolve None). Entra no plano como fase 44, pre-requis"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "45.2 a 45.5. O miolo de enviar_ao_cliente virou services/entrega_cliente.entregar_saida (diff do miolo contra o original: so enviado_por parametrizado e o log novo); a rota da tarefa virou casca que traduz SemDocumento/ArquivoSumiu/SemDestinatario em 400/410/400. processar: guia de entregar vai para a saida e NAO conclui; conferir_saida sobre o texto decide: CNPJ e competencia lidos e sem contradi"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "UM ACHADO REAL E GRAVE, aceito, provado pelo verificador fora do repo: send_whatsapp_message (whatsapp.py:76-78) levanta excecao crua em falha de rede; o loop de entrega so commitava no fim; um WhatsApp explodindo DEPOIS de o e-mail ter saido derrubava a transacao (500), o TarefaEnvio do e-mail real sumia, e o reenvio pela tela mandava o e-mail de novo ao cliente, sem rastro do primeiro. Pre-exist"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "46.1. Antes do commit: provas=40 falharam=0, provas_front=23 falharam=0, build ok; nada de .env/.db/cookie. Arquivo novo services/entrega_cliente.py entra pela COPY . . do backend/Dockerfile:17. Commits 94a5a45 (codigo) e 8ce8e9a (00_GENESIS); git ls-remote: 8ce8e9a9f7c599b9cb52bb73fc90908539778428 refs/heads/main. Carimbo 20260919-1833, igual ao HEAD do codigo, publicado sozinho pelo webhook. Bun"
+   },
+   {
+    "data": "2026-09-21",
+    "trecho": "Usuario excluiu todas as tarefas antes do teste (explica o 'Sem tarefa'), trocou das_simples para entregar pela tela, gerou a tarefa 29967 (Trops, DAS 08/2026) e subiu PGDASD-DAS-09113136202608001.pdf. Resultado em producao: 'Aguardando conferencia', 'Guia anexada a tarefa #29967, sem envio: CNPJ e competencia nao foram lidos na propria guia (vieram da IA)'. A TRAVA 2a FUNCIONOU (nada saiu). Causa"
+   },
+   {
+    "data": "2026-09-21",
+    "trecho": "RED itens 8 e 9 da prova_competencia_das.py (replica do layout com CNPJ e valores ficticios, porque dado de cliente nao entra no repo): None, rc=1. GREEN: quarto ramo, depois do rotulo vale o primeiro mes POR EXTENSO/aaaa (texto normalizado); datas dd/mm/aaaa no caminho nao contam. PDF real do DAS: 08/2026, conferir_saida ok com CNPJ e competencia lidos. VERIFICACAO COM DOCUMENTOS REAIS DA MAQUINA"
+   },
+   {
+    "data": "2026-09-21",
+    "trecho": "Usuario mostrou o e-mail recebido: assunto '[BPS4] das_simples (08/2026)', texto 'Segue das_simples (08/2026) referente a Trops Centro de Esp. e Lazer Ltda-ME', link /api/publico/baixar/<token do envio> e o PDF anexo. Entrega ponta a ponta confirmada. OBSERVACAO levada ao usuario, sem conserto: o texto usa tarefa.titulo, que vem do nome tecnico da obrigacao ('das_simples'); ja era assim no Enviar "
+   },
+   {
+    "data": "2026-09-22",
+    "trecho": "49.1. provas=42 falharam=0, build ok; logo novo em backend/app/assets entra pela COPY . . (backend/Dockerfile:17; .dockerignore nao exclui png). Commit 5b42fd8, ls-remote confere, carimbo 20260922-0910 igual ao HEAD, publicado pelo webhook. 49.2: ensaio da tarefa 29967 com um destino so (e-mail do usuario na ficha da Trops); com o ok dele ('pode reenviar'), POST /api/tarefas/29967/enviar-cliente: "
+   },
+   {
+    "data": "2026-09-22",
+    "trecho": "Usuario tirou o e-mail dele da ficha da Trops. Conferido por ensaio (nada enviado): POST /api/tarefas/29967/enviar-cliente?ensaio=true -> 400 'A empresa nao tem e-mail nem telefone...', 0 destinos. Nenhuma pendencia aberta deste trabalho."
+   },
+   {
+    "data": "2026-09-23",
+    "trecho": "routes/obrigacoes.py: delete_obrigacao e excluir_lote com require_gestor_ou_admin (que tambem recusa cliente). Obrigacoes.jsx: podeExcluir (grupo admin ou gestor) esconde 'Excluir N', 'Limpar todas' e a lixeira da linha; unico chamador das duas rotas. 'PROVA OK: 8 checagens verdes'; provas=44 falharam=0; provas_front=23 falharam=0; build ok; linhas +: travessao 0, hex 0, popup 0. Autoverificacao: "
+   },
+   {
+    "data": "2026-09-23",
+    "trecho": "Carimbo 20260923-2029 igual ao HEAD do codigo, pelo webhook; link sem login 401. Fase 53: done. Trabalho dos furos de permissao (50 a 53) fechado, sem pendencia aberta."
+   },
+   {
+    "data": "2026-09-23",
+    "trecho": "Retomada por genesis-continuar. PLANO_FASEADO marcava a fase 51 como pending e nao tinha as fases 52 e 53, fechadas no LOG. Status da 51 posto em done e 52/53 escritas em retroativo, com a nota no historico do plano. Conferido antes: carimbo de producao 20260923-2029 igual ao HEAD do codigo (e161fd0), main igual a origin/main, CONFORMIDADE com 0 linhas pendentes. Nenhuma fase aberta; aguardando tr"
+   }
+  ],
+  "DECISAO": [
+   {
+    "data": "2026-09-19",
+    "trecho": "40.2 a 40.4 em Obrigacoes.jsx. Estado periodicidade separado do form (:79), para a Personalizada poder ter 12 meses sem virar Mensal; aberto por periodicidadeDe em abrirEdicao e duplicar, 'mensal' em abrirNovo. Seletor tipo 1 em :886 no molde do 'O documento vai para que lado?': role=radiogroup + aria-label, 4 button type=button role=radio aria-checked, title com a dica, escolhido border-primary-6"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Dois achados. (1) ACEITO: na anual e trimestral, clicar no mes ja escolhido (ou em outro da mesma serie) passava por aplicarPeriodicidade e reescrevia a competencia divergente (ECF ano_anterior virava -18) sem o usuario tocar no 'Usar ...'. RED item 13: 'does not provide an export named clicarMesNaSerie', rc=1. GREEN: clicarMesNaSerie devolve null quando a serie nao muda, e clicarMes usa ela. 'PRO"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Conferido em 2026-09-19 pelo usuario, tela Obrigacoes > editar obrigacao, na conferencia local (:3002 contra o backend :8001 da copia de conferencia). Resposta: 'conferi, pode subir'. Roteiro entregue a ele: quatro opcoes lado a lado com a escolhida em verde-oliva claro; Anual em marco marca so marco e mostra 'Janeiro do ano anterior'; Trimestral em maio marca fev, mai, ago, nov e mostra 'Primeiro"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Criterio atendido: prova RED (ERR_MODULE_NOT_FOUND, e item 13 com RED proprio) e GREEN 'PROVA OK: 13 checagens verdes'; provas_front=23 falharam=0; build ok; greps das linhas + vazios (hex, select, popup, solido) e travessao rc=1; conferencia visual registrada. Verificadores: conformidade 1 achado (aria nos meses da Anual), funcional 2 (clique no mes reescrevia competencia, aceito; legada com lixo"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Criterio atendido: carimbo 20260919-1707 igual ao HEAD; bundle com os textos novos; o segundo GET bate com a lista aprovada (3 de 3) e nada fora dela mudou. Balanco de simplificacoes: escada: rc=1. Fase 41: done. Proxima: fase 42, conferencia do usuario em producao."
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Criterio atendido: conferencia do usuario em producao registrada; CONFORMIDADE das fases 38 a 42 sem linha pendente. Balanco de simplificacoes: escada: rc=1, nenhum marcador no projeto. Fase 42: done. TODAS as fases do plano (38 a 42) em done. Fora do plano, com o usuario: IRPJ e CSLL trimestrais (2089, 2372) cadastrados com 12 meses; envio automatico da guia pelo e-validador (trabalho proprio)."
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "45.2 a 45.5. O miolo de enviar_ao_cliente virou services/entrega_cliente.entregar_saida (diff do miolo contra o original: so enviado_por parametrizado e o log novo); a rota da tarefa virou casca que traduz SemDocumento/ArquivoSumiu/SemDestinatario em 400/410/400. processar: guia de entregar vai para a saida e NAO conclui; conferir_saida sobre o texto decide: CNPJ e competencia lidos e sem contradi"
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "Criterio atendido: RED (1-7, e 11-13) e GREEN 13 verdes; suites 40 e 23 verdes; build; gates vazios. Fases 43, 44, 45 e 45b.1-45b.2 done; 45b.3 (dado de producao) depois do push. escada: rc=1. Proxima: fase 46, publicar."
+   },
+   {
+    "data": "2026-09-21",
+    "trecho": "Criterio atendido: carimbo igual ao HEAD; conferencia do envio em producao; 46.3 com a ressalva acima. Balanco de simplificacoes: escada: rc=1. Fase 46: done. TODAS as fases 43 a 46 (e 45b) em done. Pendente com o usuario: tirar o e-mail dele da ficha da Trops."
+   },
+   {
+    "data": "2026-09-23",
+    "trecho": "Criterio atendido: RED 24 itens rc=1, GREEN 'PROVA OK: 32', provas=43 e provas_front=23 sem falha, build ok, gates vazios, dois verificadores LIMPO. Balanco de simplificacoes: escada: rc=1. Fora do escopo, declarado ao usuario: GET /tarefas/{id}/link-envio so pede login e cria token (Consulta gera link de qualquer tarefa); nao decidido. Fase 50: done. Proxima: 51."
+   },
+   {
+    "data": "2026-09-23",
+    "trecho": "Commit e9f1300 (codigo) e d8a4b1b (00_GENESIS), ls-remote confere. Carimbo 20260923-1938 igual ao HEAD do codigo, pelo webhook. Nenhum teste destrutivo em producao. Fase 52: done. escada: rc=1. Aberto com o usuario: link de envio (Consulta gera, hoje com 0 pessoas no grupo)."
+   }
+  ],
+  "ARMADILHA": [
+   {
+    "data": "2026-09-19",
+    "trecho": "Pedido do usuario. Tarefa 29944 (DEFIS 08/2026, nascida quando a DEFIS gerava todo mes). O cancelar da tela e DELETE /api/tarefas/{id}, que cancela a aberta e EXCLUI DE VEZ a ja cancelada; por isso o script conferiu status pendente e obrigacao 185 antes de chamar. Antes: ['pendente', '08/2026', 185, nao_se_aplica false]. DELETE 200, 'Tarefa cancelada. Para excluir de vez, use a lixeira de novo.', "
+   },
+   {
+    "data": "2026-09-19",
+    "trecho": "UM ACHADO REAL E GRAVE, aceito, provado pelo verificador fora do repo: send_whatsapp_message (whatsapp.py:76-78) levanta excecao crua em falha de rede; o loop de entrega so commitava no fim; um WhatsApp explodindo DEPOIS de o e-mail ter saido derrubava a transacao (500), o TarefaEnvio do e-mail real sumia, e o reenvio pela tela mandava o e-mail de novo ao cliente, sem rastro do primeiro. Pre-exist"
+   }
+  ],
+  "RISCO": [
+   {
+    "data": "2026-09-21",
+    "trecho": "Criterio atendido: carimbo igual ao HEAD; conferencia do envio em producao; 46.3 com a ressalva acima. Balanco de simplificacoes: escada: rc=1. Fase 46: done. TODAS as fases 43 a 46 (e 45b) em done. Pendente com o usuario: tirar o e-mail dele da ficha da Trops."
+   }
+  ]
+ },
+ "lastro_vivo_existe": false,
+ "duraveis_no_lastro": 0,
+ "cauda": [
+  "[2026-09-21T18:49:59] fase=47 acao=codigo_GREEN resultado=ok obs=\"47.2. backend/app/assets/logo-bps4-email.png (copia do logo do Hub reduzida para 280x156, 15 KB, sips). email.send_email ganha html e imagens (add_alternative + add_related por CID), sem mudar qu ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T09:09:35] fase=48 acao=mininomes_aplicados resultado=ok obs=\"48.1 a 48.3. Login do usuario no navegador embutido. Mininomes das 20 obrigacoes ativas de entregar eram tecnicos (darf_2172, das_simples, ct3...). Onde o mininome aparece, medido no codigo: mens ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T10:27:36] fase=49 acao=publicado_e_reenviado resultado=ok obs=\"49.1. provas=42 falharam=0, build ok; logo novo em backend/app/assets entra pela COPY . . (backend/Dockerfile:17; .dockerignore nao exclui png). Commit 5b42fd8, ls-remote confere, carimbo 2026092 ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T11:26:12] fase=49 acao=fase_fechada resultado=ok obs=\"Usuario: 'chegou certo' (assunto novo, logo, botao, sem anexo). Fases 47, 48 e 49 done. REGISTRO DE PROCESSO: o CHECKLIST das fases 47 a 49 foi escrito AO FECHAR, e nao na abertura, como devia; o ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T11:26:30] fase=pos acao=correcao_registro resultado=ok obs=\"O cabecalho '## Fase 46' do PLANO_FASEADO foi consumido pelo replace que inseriu a 45b (19/09), e por isso o status da 46 ficou 'pending' mesmo com a fase fechada no LOG de 21/09. Cabecalho resta ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T12:43:50] fase=pos acao=ct3_interna resultado=ok obs=\"Pedido do usuario: 'melhor mudar a ct3 para entrega interna, depois vou pensar melhor'. PUT /api/obrigacoes/213 so com sentido: 200. ANTES: entregar, exige_documento null, sem identificadores. DE ...[linha cortada, veja LOG.md]",
+  "[2026-09-22T12:44:19] fase=pos acao=trops_sem_email resultado=ok obs=\"Usuario tirou o e-mail dele da ficha da Trops. Conferido por ensaio (nada enviado): POST /api/tarefas/29967/enviar-cliente?ensaio=true -> 400 'A empresa nao tem e-mail nem telefone...', 0 destino ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:02:15] fase=0 acao=levantamento resultado=ok obs=\"Pedido: 'quem pode incluir, alterar ou excluir obrigacoes, tarefas e documentos'. Levantado no codigo (permissoes.py PRESETS; routes/obrigacoes.py, tarefas.py, documentos.py, evalidador.py, model ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:02:15] fase=0 acao=decisoes_usuario resultado=ok obs=\"Pedido 'confere e corrige os furos'. Rodada: anexar guia e enviar ao cliente exigem editar em tarefas (Admin, Gestor, Analista, Estagiario; Consulta perde), sem usar a flag disparar_emails; criar ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:08:44] fase=0 acao=escopo_ampliado resultado=ok obs=\"Achado ao mapear a fase 50, levado ao usuario antes de codar: usuario tipo cliente nasce no grupo Consulta (Usuarios.jsx:398, escopo todas), recebe convite (convite.py:39) e nada no backend o pre ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:08:44] fase=50 acao=prova_RED resultado=ok obs=\"50.1. backend/provas/prova_permissao_envio_criacao.py, 32 checagens. Dois defeitos DA PROVA corrigidos antes do codigo: item 21 esperava 'total' (o campo e total_tarefas, e a contagem agora vem d ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:08:44] fase=50 acao=codigo_GREEN resultado=ok obs=\"50.2. permissoes.PERM_CLIENTE + eh_cliente (vale pelo TIPO, qualquer grupo); auth.permissao_efetiva devolve PERM_CLIENTE para cliente; require_grupos recusa cliente mesmo gravado admin. tarefas.p ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:08:44] fase=50 acao=tela resultado=ok obs=\"50.3. Tarefas.jsx: podeEditarTarefa (permissoes_efetivas.tarefas === 'editar') esconde o botao Enviar ao cliente, o select de situacao e o item 'Enviar documento ao cliente' do menu. 50.4: npm ru ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:10:29] fase=50 acao=verificador_seguranca resultado=ok obs=\"LIMPO. Percorreu as 17 rotas; cliente gravado como admin continua em PERM_CLIENTE; documentos e painel herdam _aplicar_escopo; empresas e usuarios filtram; rotas publicas por token fora do criter ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:11:40] fase=50 acao=verificador_funcional resultado=ok obs=\"LIMPO. e-validador chama entrega_cliente direto, fora da rota travada; responsavel_ids [] e null iguais; escopo todas pula o bloco novo; substituicao entra no alcance; /auth/me leva permissoes_ef ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:11:40] fase=50 acao=fase_fechada resultado=ok obs=\"Criterio atendido: RED 24 itens rc=1, GREEN 'PROVA OK: 32', provas=43 e provas_front=23 sem falha, build ok, gates vazios, dois verificadores LIMPO. Balanco de simplificacoes: escada: rc=1. Fora  ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T13:12:48] fase=51 acao=publicado resultado=ok obs=\"51.1. COPY . . em backend/Dockerfile:17 e frontend/Dockerfile:8 (so arquivo novo e a prova). Commits 7944b95 (codigo) e 8af534a (00_GENESIS); ls-remote 8af534a486f53b5fea0f885f4209bec9fcc42b2d re ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T19:28:05] fase=51 acao=producao_lida resultado=ok obs=\"51.2. So leitura, login do usuario no navegador embutido: GET /api/grupos e /api/usuarios. 44 usuarios ativos, ZERO do tipo cliente (o vazamento do cliente nao ocorreu em producao), ZERO com over ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T19:38:31] fase=0 acao=decisao_usuario resultado=ok obs=\"Resposta a leitura da producao: 'exclusao so admin e gestor'. Fase 52 aberta: DELETE /obrigacoes/{id} (com e sem definitivo) e POST /obrigacoes/excluir-lote (de onde saem 'Excluir N' e 'Limpar to ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T19:38:31] fase=52 acao=prova_RED resultado=ok obs=\"backend/provas/prova_excluir_obrigacao_gestor.py, 8 checagens, analista com obrigacoes editar como em producao. RED: 'PROVA FALHOU nos itens: [1, 2, 3, 4, 5, 6, 7]', rc=1. O item 3 APAGOU as 5 ob ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T19:38:31] fase=52 acao=codigo_GREEN resultado=ok obs=\"routes/obrigacoes.py: delete_obrigacao e excluir_lote com require_gestor_ou_admin (que tambem recusa cliente). Obrigacoes.jsx: podeExcluir (grupo admin ou gestor) esconde 'Excluir N', 'Limpar tod ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T19:39:16] fase=52 acao=publicado resultado=ok obs=\"Commit e9f1300 (codigo) e d8a4b1b (00_GENESIS), ls-remote confere. Carimbo 20260923-1938 igual ao HEAD do codigo, pelo webhook. Nenhum teste destrutivo em producao. Fase 52: done. escada: rc=1. A ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T20:29:30] fase=53 acao=link_envio resultado=ok obs=\"Usuario: 'sim, fecha o link'. RED: itens 33-35 na prova_permissao_envio_criacao.py, 'PROVA FALHOU nos itens: [33, 34]', rc=1 (Consulta e cliente geravam o link e o token nascia); 35 verde no RED  ...[linha cortada, veja LOG.md]",
+  "[2026-09-23T20:30:07] fase=53 acao=publicado resultado=ok obs=\"Carimbo 20260923-2029 igual ao HEAD do codigo, pelo webhook; link sem login 401. Fase 53: done. Trabalho dos furos de permissao (50 a 53) fechado, sem pendencia aberta.\"",
+  "[2026-09-23T20:45:00] fase=pos acao=correcao_registro resultado=ok obs=\"Retomada por genesis-continuar. PLANO_FASEADO marcava a fase 51 como pending e nao tinha as fases 52 e 53, fechadas no LOG. Status da 51 posto em done e 52/53 escritas em retroativo, com a nota n ...[linha cortada, veja LOG.md]"
+ ]
+}
