@@ -253,7 +253,7 @@ class ObrigacaoBase(BaseModel):
     alvo_modo: Optional[str] = "regra"           # regra|vinculadas
 
     @field_validator("regra_prazo_dia", "ancora_dias_antes", "tempo_previsto_min",
-                     "lembrar_dias_antes", mode="before")
+                     "lembrar_dias_antes", "interno_regra_dia", mode="before")
     @classmethod
     def _numero_em_branco(cls, v):
         """Campo numérico vazio no formulário é "não informado", não erro.
@@ -276,6 +276,11 @@ class ObrigacaoBase(BaseModel):
     tipo_dias: str = "corridos"
     ajuste_nao_util: str = "antecipar"
     sabado_util: bool = False
+    # Texto livre AQUI de propósito: a resposta herda do Base, e as listas
+    # fechadas moram na entrada (Create, Update e a prévia).
+    interno_modo: Optional[str] = "antes_vencimento"
+    interno_regra_tipo: Optional[str] = None
+    interno_regra_dia: Optional[int] = None
     competencia_ref: str = "mes_anterior"
     exige_robo: bool = False
     exige_documento: Optional[bool] = None   # baixa só pelo e-validador; NULL deriva de identificadores
@@ -333,6 +338,55 @@ def _competencia_valida(v):
     return str(n)
 
 
+InternoModo = Literal["antes_vencimento", "antes_fechamento", "regra"]
+# Os mesmos tipos da regra de prazo, que o `calc_prazo` já sabe calcular.
+RegraDia = Literal["primeiro_dia_util", "ultimo_dia_util", "dia_fixo", "dia_util"]
+
+
+def _modo_interno(v):
+    """Vazio ou null é o modo de sempre, e não erro: a obrigação antiga não
+    tem o campo, e a tela reenvia o que leu (a armadilha do sentido vazio)."""
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return "antes_vencimento"
+    return v
+
+
+def _inteiro(v, minimo, maximo, msg):
+    """Inteiro na faixa, ou None quando vazio. Recusa o que o `int()` aceitaria
+    calado: `True` (vira 1), `5.5` (vira 5), e lista ou objeto, que levantam
+    TypeError e o Pydantic devolveria como 500 em vez de 422."""
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    if isinstance(v, bool) or (isinstance(v, float) and not v.is_integer()):
+        raise ValueError(msg)
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        raise ValueError(msg)
+    if not minimo <= n <= maximo:
+        raise ValueError(msg)
+    return n
+
+
+def _dia_do_mes(v):
+    """Dia de 1 a 31, ou vazio. O `calc_prazo` encosta o 31 no fim do mês."""
+    return _inteiro(v, 1, 31, "O dia vai de 1 a 31.")
+
+
+_PEDEM_DIA = ("dia_fixo", "dia_util")
+
+
+def _regra_com_tipo(modo, tipo, dia=None):
+    """Regra própria precisa do tipo, e dia fixo e N-ésimo dia útil, do dia:
+    sem ele o `calc_prazo` chutaria o fim do mês ou o primeiro dia útil."""
+    if modo != "regra":
+        return
+    if not tipo:
+        raise ValueError("Escolha a regra do prazo interno.")
+    if tipo in _PEDEM_DIA and dia is None:
+        raise ValueError("Informe o dia da regra do prazo interno.")
+
+
 # Os validadores moram na ENTRADA (Create e Update), e não no ObrigacaoBase:
 # a resposta herda do Base, e dado antigo fora do formato derrubaria a
 # listagem inteira com 500.
@@ -347,9 +401,15 @@ class ObrigacaoCreate(ObrigacaoBase):
             raise ValueError("Marque ao menos um mês, de 1 a 12.")
         return v
     _comp = field_validator("competencia_ref", mode="before")(_competencia_valida)
+    interno_modo: InternoModo = "antes_vencimento"
+    interno_regra_tipo: Optional[RegraDia] = None
+    _modo = field_validator("interno_modo", mode="before")(_modo_interno)
+    _regra = field_validator("interno_regra_tipo", mode="before")(_sentido_em_branco)
+    _dia = field_validator("interno_regra_dia", mode="before")(_dia_do_mes)
 
     @model_validator(mode="after")
     def _criar_com_setor(self):
+        _regra_com_tipo(self.interno_modo, self.interno_regra_tipo, self.interno_regra_dia)
         # Obrigação sem setor fura a matriz de setores da empresa: o gerador
         # não tem como saber de quem ela é e gera para todas. Decisão de
         # 2026-10-01. Model validator, e não de campo, porque campo ausente
@@ -391,8 +451,67 @@ class ObrigacaoUpdate(BaseModel):
     aplica_regimes: Optional[str] = None
     aplica_segmentos: Optional[str] = None
     empresa_ids: Optional[List[int]] = None
+    # "Regra sem tipo" no PUT depende do que já está no banco: a rota confere.
+    interno_modo: Optional[InternoModo] = None
+    interno_regra_tipo: Optional[RegraDia] = None
+    interno_regra_dia: Optional[int] = None
     _meses = field_validator("meses_ativos", mode="before")(_meses_validos)
     _comp = field_validator("competencia_ref", mode="before")(_competencia_valida)
+    _modo = field_validator("interno_modo", mode="before")(_modo_interno)
+    _regra = field_validator("interno_regra_tipo", mode="before")(_sentido_em_branco)
+    _dia = field_validator("interno_regra_dia", mode="before")(_dia_do_mes)
+
+
+class PreviaPrazo(BaseModel):
+    """O que a tela manda para ver as datas antes de salvar. Só calcula.
+
+    Os campos são os de prazo da obrigação, com as listas fechadas, mais o mês
+    e o ano (padrão: o mês que vem) e um fechamento de exemplo, porque
+    obrigação ancorada ou "antes do fechamento" depende do cliente.
+    """
+    regra_prazo_tipo: RegraDia = "ultimo_dia_util"
+    regra_prazo_dia: Optional[int] = None
+    ajuste_nao_util: Literal["antecipar", "postergar", "nenhum"] = "antecipar"
+    sabado_util: bool = False
+    lembrar_dias_antes: Optional[int] = None
+    tipo_dias: Literal["corridos", "uteis"] = "corridos"
+    ancora: Optional[Literal["fechamento"]] = None
+    ancora_dias_antes: Optional[int] = None
+    ancora_tipo_dias: Literal["corridos", "uteis"] = "uteis"
+    interno_modo: InternoModo = "antes_vencimento"
+    interno_regra_tipo: Optional[RegraDia] = None
+    interno_regra_dia: Optional[int] = None
+    meses_ativos: Optional[str] = None
+    mes: Optional[int] = None
+    ano: Optional[int] = None
+    fechamento_dia: Optional[int] = 15
+
+    _modo = field_validator("interno_modo", mode="before")(_modo_interno)
+    _vazios = field_validator("interno_regra_tipo", "ancora", mode="before")(_sentido_em_branco)
+    _dias = field_validator("regra_prazo_dia", "interno_regra_dia", "fechamento_dia",
+                            mode="before")(_dia_do_mes)
+    _meses = field_validator("meses_ativos", mode="before")(_meses_validos)
+
+    @field_validator("lembrar_dias_antes", "ancora_dias_antes", mode="before")
+    @classmethod
+    def _recuo(cls, v):
+        n = _inteiro(v, 0, 365, "Use de 0 a 365 dias.")
+        return 0 if n is None else n
+
+    @field_validator("mes", mode="before")
+    @classmethod
+    def _mes(cls, v):
+        return _inteiro(v, 1, 12, "Mês de 1 a 12.")
+
+    @field_validator("ano", mode="before")
+    @classmethod
+    def _ano(cls, v):
+        return _inteiro(v, 2000, 2100, "Ano fora da faixa.")
+
+    @model_validator(mode="after")
+    def _regra(self):
+        _regra_com_tipo(self.interno_modo, self.interno_regra_tipo, self.interno_regra_dia)
+        return self
 
 class ObrigacaoResponse(ObrigacaoBase):
     # A SAÍDA não aplica a lista fechada: obrigação antiga pode ter sentido nulo

@@ -95,11 +95,11 @@ ou saída de comando colada no LOG).
 
 Decisões: 3 modos de prazo interno; existentes mantêm o resultado de hoje; vencimento da etapa do fechamento = fechamento; seletor tipo 1.
 
-- [ ] 56.1 prova RED `backend/provas/prova_prazo_interno.py` com os itens (a) a (i), RED no LOG pelo motivo certo (TDD_RED_GREEN_REFACTOR)
-- [ ] 56.2 colunas `interno_modo`, `interno_regra_tipo`, `interno_regra_dia` com migração idempotente; N e tipo dos dias reusam as colunas atuais (Escada degrau 2)
-- [ ] 56.3 `calc_datas` única, chamada nas duas gerações; prova (g) verde
-- [ ] 56.4 prévia `POST /api/obrigacoes/previa-prazo`, schema com Literal nos modos e tipos e dia 1 a 31; 401 sem login, 403 sem `obrigacoes: ver` (Padrao_Validacao_de_Input)
-- [ ] 56.5 suíte do backend verde; `grep -rn "—"` nos arquivos tocados vazio
+- [x] 56.1 prova RED `backend/provas/prova_prazo_interno.py` com os itens (a) a (i), RED no LOG pelo motivo certo (TDD_RED_GREEN_REFACTOR) EVIDÊNCIA: [1..24] rc=1 (LOG fase=56 prova_RED), reproduzido pelo verificador em worktree limpa do HEAD
+- [x] 56.2 colunas `interno_modo`, `interno_regra_tipo`, `interno_regra_dia` com migração idempotente; N e tipo dos dias reusam as colunas atuais (Escada degrau 2) EVIDÊNCIA: models.py Obrigacao; init_db.MIGRACOES; item 25 da prova (banco antigo, 2 rodadas, linha em antes_vencimento)
+- [x] 56.3 `calc_datas` única, chamada nas duas gerações; prova (g) verde EVIDÊNCIA: itens 14 e 15 verdes; gerar_tarefas e gerar_para_empresa chamam calc_datas
+- [x] 56.4 prévia `POST /api/obrigacoes/previa-prazo`, schema com Literal nos modos e tipos e dia 1 a 31; 401 sem login, 403 sem `obrigacoes: ver` (Padrao_Validacao_de_Input) EVIDÊNCIA: itens 21 a 24, 27, 28, 31 verdes; PreviaPrazo em schemas.py
+- [x] 56.5 suíte do backend verde; `grep -rn "—"` nos arquivos tocados vazio EVIDÊNCIA: provas=46 falharam=0; travessão rc=1 nos 6 arquivos
 - [ ] 57.1 a 57.3 três blocos; seletor de modo `role="radiogroup"` + `aria-label`, `<button type="button" role="radio" aria-checked>`, escolhido `border-primary-600 bg-primary-50 text-primary-800`
       PROIBIDO: sólido no tipo 1, `<select` novo, "Lembrar" como rótulo do prazo interno
       PROVA: `grep -n "radiogroup" Obrigacoes.jsx` acha o novo; linhas + do diff sem `<select` (Padrao_Toggle_Tipos, Componente_SelectBusca)

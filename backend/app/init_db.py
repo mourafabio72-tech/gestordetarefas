@@ -62,6 +62,11 @@ MIGRACOES = [
     ("nao_se_aplica_motivo", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_motivo TEXT"),
     ("nao_se_aplica_por_id", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_por_id INTEGER REFERENCES usuarios(id)"),
     ("nao_se_aplica_em", "ALTER TABLE tarefas ADD COLUMN nao_se_aplica_em TIMESTAMP"),
+    # Prazo interno da equipe. O DEFAULT preenche as obrigações que já existem
+    # com o cálculo de sempre (decisão do usuário de 2026-10-02).
+    ("interno_modo", "ALTER TABLE obrigacoes ADD COLUMN interno_modo VARCHAR(20) DEFAULT 'antes_vencimento'"),
+    ("interno_regra_tipo", "ALTER TABLE obrigacoes ADD COLUMN interno_regra_tipo VARCHAR(20)"),
+    ("interno_regra_dia", "ALTER TABLE obrigacoes ADD COLUMN interno_regra_dia INTEGER"),
 ]
 
 _ADD = re.compile(r"ALTER TABLE (\w+) ADD COLUMN (\w+)", re.I)

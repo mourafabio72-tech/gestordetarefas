@@ -302,7 +302,7 @@ prazo interno da depreciação dia 05; ISS prestado com prazo interno no primeir
 
 ## Fase 56: regra própria do prazo interno no servidor
 
-- **Status:** pending | **Duração:** 2h
+- **Status:** done (2026-10-02; prova com 33 itens, 9 deles vindos dos dois verificadores) | **Duração:** 2h
 - **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo, Padrao_Validacao_de_Input, Padrao_Logging_Estruturado
 - **Dependências:** Fase 0
 - **Output esperado:** `backend/provas/prova_prazo_interno.py`; `models.py`, `init_db.py`, `schemas.py`, `services/gerador.py`, `routes/obrigacoes.py` alterados.

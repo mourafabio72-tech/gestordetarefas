@@ -94,7 +94,10 @@ def calc_prazo(mes: int, ano: int, tipo: str, dia_fixo, ajuste: str, sabado_util
     if tipo == "primeiro_dia_util":
         d = date(ano, mes, 1)
     elif tipo == "dia_fixo":
-        d = date(ano, mes, min(int(dia_fixo or ultimo), ultimo))
+        # Encosta nos dois lados: dia 31 vira o fim do mês, e dia zero ou
+        # negativo gravado direto no banco vira o dia 1 em vez de derrubar a
+        # geração inteira com ValueError.
+        d = date(ano, mes, max(min(int(dia_fixo or ultimo), ultimo), 1))
     else:  # ultimo_dia_util (default)
         d = date(ano, mes, ultimo)
 
@@ -181,6 +184,43 @@ def calc_prazo_interno(vencimento: date, dias_antes, tipo_dias: str, sabado_util
         return d
     # corridos: recua N dias corridos e cai no dia útil anterior
     return _dia_util_anterior(vencimento - timedelta(days=n), sabado_util)
+
+
+def calc_datas(o, empresa, mes: int, ano: int) -> tuple:
+    """(vencimento, prazo interno). Detalhe e regras em `calc_datas_detalhe`."""
+    return calc_datas_detalhe(o, empresa, mes, ano)[:2]
+
+
+def calc_datas_detalhe(o, empresa, mes: int, ano: int) -> tuple:
+    """(vencimento, prazo interno, limitado) da obrigação para a empresa no mês.
+
+    O vencimento não muda nada (`calc_vencimento`). O prazo interno tem três modos:
+
+      · antes_vencimento (padrão, e o de toda obrigação antiga): vencimento
+        menos `lembrar_dias_antes`, o cálculo de sempre;
+      · antes_fechamento: o fechamento DESTA empresa menos o mesmo N. Empresa
+        sem fechamento cadastrado cai no modo anterior, porque falta de
+        cadastro não pode impedir a tarefa de nascer;
+      · regra: data própria no mês (primeiro dia útil, dia 5...), sempre
+        antecipando dia não útil, porque prazo interno não posterga.
+
+    Nos três, o interno nunca passa do vencimento: prazo da equipe depois do
+    prazo legal é prazo perdido, e `limitado` diz quando o corte aconteceu, para
+    a prévia da tela avisar. `o` e `empresa` podem ser o modelo ou qualquer
+    objeto com os mesmos campos (a prévia da tela passa um de exemplo).
+    """
+    sab = bool(o.sabado_util)
+    vencimento = calc_vencimento(o, empresa, mes, ano)
+    modo = getattr(o, "interno_modo", None) or "antes_vencimento"
+    base = vencimento
+    if modo == "antes_fechamento":
+        base = calc_marco_fechamento(empresa, mes, ano, sab) or vencimento
+    if modo == "regra" and getattr(o, "interno_regra_tipo", None):
+        interno = calc_prazo(mes, ano, o.interno_regra_tipo, o.interno_regra_dia,
+                             "antecipar", sab)
+    else:
+        interno = calc_prazo_interno(base, o.lembrar_dias_antes, o.tipo_dias, sab)
+    return vencimento, min(interno, vencimento), interno > vencimento
 
 
 def _casa_regra(o: Obrigacao, e: Empresa) -> bool:
@@ -506,9 +546,7 @@ def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids
         for emp in alvo:
             # Vencimento POR EMPRESA: obrigação ancorada no fechamento tem data
             # diferente em cada cliente, então o cálculo entra no laço.
-            vencimento = calc_vencimento(o, emp, mes_entrega, ano_entrega)
-            prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
-                                               o.tipo_dias, bool(o.sabado_util))
+            vencimento, prazo_interno = calc_datas(o, emp, mes_entrega, ano_entrega)
             fechamento = calc_marco_fechamento(emp, mes_entrega, ano_entrega, bool(o.sabado_util))
             if _criar_tarefa_se_nova(db, o, emp, competencia, prazo_interno, vencimento,
                                      fechamento, sem_dono):
@@ -561,9 +599,7 @@ def gerar_para_empresa(db: Session, empresa: Empresa, mes_entrega: int, ano_entr
         if empresa.id in excecoes_da(db, o):
             continue
         competencia = calc_competencia(mes_entrega, ano_entrega, o.competencia_ref)
-        vencimento = calc_vencimento(o, empresa, mes_entrega, ano_entrega)
-        prazo_interno = calc_prazo_interno(vencimento, o.lembrar_dias_antes,
-                                           o.tipo_dias, bool(o.sabado_util))
+        vencimento, prazo_interno = calc_datas(o, empresa, mes_entrega, ano_entrega)
         fechamento = calc_marco_fechamento(empresa, mes_entrega, ano_entrega, bool(o.sabado_util))
         if _criar_tarefa_se_nova(db, o, empresa, competencia, prazo_interno, vencimento,
                                  fechamento):

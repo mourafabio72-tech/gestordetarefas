@@ -226,9 +226,9 @@ Linhas novas, todas pendentes.
 
 | Nota | Regra literal | Proibido | Onde aplica | Prova | Evidência | Status |
 |---|---|---|---|---|---|---|
-| TDD_RED_GREEN_REFACTOR | teste antes do código, RED pelo motivo certo | código antes da prova | fase 56 | RED e GREEN no LOG | | pendente |
-| Padrao_Validacao_de_Input | toda string crua passa por validação tipada | modo, tipo ou dia sem faixa | schemas da obrigação e da prévia | prova item (h) | | pendente |
-| Escada_Preguica_de_Codigo | reusa antes de escrever | coluna duplicada para N e tipo de dias; cálculo repetido | gerador | `grep -n "calc_prazo_interno(" services/gerador.py` só dentro de `calc_datas` | | pendente |
+| TDD_RED_GREEN_REFACTOR | teste antes do código, RED pelo motivo certo | código antes da prova | fase 56 | RED e GREEN no LOG | RED [1..24] rc=1 antes do código; itens 25-33 dos verificadores com RED próprio [28..33] rc=1; GREEN 'PROVA OK: 33 checagens verdes' | ok |
+| Padrao_Validacao_de_Input | toda string crua passa por validação tipada | modo, tipo ou dia sem faixa | schemas da obrigação e da prévia | prova item (h) | itens 16, 19, 24, 29-32: modo, tipo, dia 0/32, regra sem tipo, dia faltando, bool, 5.5, lista dão 422 (Literal + `_inteiro` em schemas.py) | ok |
+| Escada_Preguica_de_Codigo | reusa antes de escrever | coluna duplicada para N e tipo de dias; cálculo repetido | gerador | `grep -n "calc_prazo_interno(" services/gerador.py` só dentro de `calc_datas` | 3 linhas: def (:168), recuo da ancorada em calc_vencimento (:154, anterior e esperado) e calc_datas_detalhe (:222); as duas gerações chamam calc_datas; sem coluna nova para N e tipo | ok |
 | Padrao_Toggle_Tipos | tipo 1: radiogroup, button type=button, borda + fundo suave | sólido, hex, aba sublinhada | seletor de modo | `grep -n "radiogroup" Obrigacoes.jsx` | | pendente |
 | Componente_SelectBusca | nunca `<select>` nativo | `<select` em linha nova | regra própria do interno | linhas + do diff sem `<select` | | pendente |
 | Tela_Nao_Tem_Manual | rótulo carrega a informação | parágrafo explicando a seção | três blocos | CONFERENCIA_VISUAL | | pendente |

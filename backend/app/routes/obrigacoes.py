@@ -7,9 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..database import get_db
 from typing import Optional
 from ..models import Obrigacao, Empresa, Setor, Usuario, EmpresaObrigacaoDetalhe
-from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse
+from ..schemas import ObrigacaoCreate, ObrigacaoUpdate, ObrigacaoResponse, PreviaPrazo, _regra_com_tipo
 from ..auth import get_current_user, require_perm, require_flag, require_gestor_ou_admin
-from ..services.gerador import gerar_tarefas, deslocamento_competencia
+from ..services.gerador import gerar_tarefas, deslocamento_competencia, calc_datas_detalhe
 from ..seguranca import log_event, ip_cliente
 
 router = APIRouter(prefix="/obrigacoes", tags=["obrigacoes"])
@@ -238,6 +238,34 @@ async def analisar_modelo_endpoint(
         raise HTTPException(status_code=400, detail=f"Não consegui ler o arquivo: {e}")
 
 
+@router.post("/previa-prazo")
+def previa_prazo(
+    body: PreviaPrazo,
+    current_user: Usuario = Depends(require_perm("obrigacoes", "ver")),
+):
+    """As duas datas que a obrigação daria, sem gravar nada.
+
+    Mês de partida: o informado, ou o atual. Com `meses_ativos`, anda até o
+    próximo mês de entrega (anual de março aberta em outubro mostra março do
+    ano que vem). O fechamento é de exemplo: a data real depende do cliente.
+    """
+    from datetime import date
+    from types import SimpleNamespace
+    hoje = date.today()
+    mes, ano = body.mes or hoje.month, body.ano or hoje.year
+    meses = {int(m) for m in (body.meses_ativos or "").split(",") if m}
+    for _ in range(12):
+        if not meses or mes in meses:
+            break
+        mes, ano = (1, ano + 1) if mes == 12 else (mes + 1, ano)
+    exemplo = SimpleNamespace(fechamento_tipo="dia_fixo", fechamento_dia=body.fechamento_dia or 15)
+    vencimento, interno, limitado = calc_datas_detalhe(body, exemplo, mes, ano)
+    usa_fechamento = body.ancora == "fechamento" or body.interno_modo == "antes_fechamento"
+    return {"mes": mes, "ano": ano, "vencimento": vencimento.isoformat(),
+            "prazo_interno": interno.isoformat(), "interno_limitado": limitado,
+            "fechamento_exemplo": exemplo.fechamento_dia if usa_fechamento else None}
+
+
 @router.post("/gerar")
 def gerar_competencia(
     body: GerarRequest,
@@ -415,6 +443,16 @@ def update_obrigacao(
     # quando é editada, de propósito. Mandar só outros campos segue livre.
     if "setor_id" in dados and not dados["setor_id"]:
         raise HTTPException(status_code=422, detail="Escolha o setor da obrigação.")
+    # Regra própria sem tipo: o PUT pode trazer só o modo, e o tipo que vale é
+    # o que já está no banco. Sem nenhum dos dois, o interno cairia calado no
+    # cálculo antigo enquanto a tela diz "regra própria".
+    modo = dados.get("interno_modo", o.interno_modo)
+    tipo = dados.get("interno_regra_tipo", o.interno_regra_tipo)
+    dia = dados.get("interno_regra_dia", o.interno_regra_dia)
+    try:
+        _regra_com_tipo(modo, tipo, dia)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     for k, v in dados.items():
         setattr(o, k, v)
     _set_empresas(db, o, empresa_ids)

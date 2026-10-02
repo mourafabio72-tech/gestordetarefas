@@ -446,6 +446,15 @@ class Obrigacao(Base):
     ancora_dias_antes = Column(Integer, default=0)
     ancora_tipo_dias = Column(String(10), default="uteis")   # uteis|corridos
 
+    # Prazo interno da equipe (2026-10-02). O N e o tipo dos dias continuam em
+    # `lembrar_dias_antes` e `tipo_dias`; aqui mora só o que faltava:
+    #   antes_vencimento (padrão, o cálculo de sempre) | antes_fechamento | regra
+    # Na regra própria, `interno_regra_tipo` usa os mesmos tipos da regra de
+    # prazo (primeiro_dia_util|ultimo_dia_util|dia_fixo|dia_util).
+    interno_modo = Column(String(20), default="antes_vencimento")
+    interno_regra_tipo = Column(String(20))
+    interno_regra_dia = Column(Integer)
+
     exige_robo = Column(Boolean, default=False)
     # Baixa só pelo e-validador (documento). NULL = deriva de 'identificadores'.
     exige_documento = Column(Boolean, nullable=True)
