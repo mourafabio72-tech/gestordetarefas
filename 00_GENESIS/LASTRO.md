@@ -84,3 +84,26 @@ em `NOTAS_LIDAS.md`. A `genesis-continuar` relê integral as da fase que executa
 - **Tela_Nao_Tem_Manual, Sem_Travessao, Portugues_BR_Acentuacao, Sem_Popup_Nativo,
   Verificacoes_Mecanicas_de_Tela, Protocolo_Revisao_de_Tela, Fechar_Tarefa_Rodar_Verifica.**
 - **Nunca_DELETE_Fisico:** correção de dado é UPDATE pela rota, nunca DELETE.
+
+---
+
+# LASTRO do trabalho de 2026-10-02: datas da obrigação
+
+- **Tipo e regime:** os mesmos (App Online Auth, WEB, segurança obrigatória). Tela: modal de Obrigação.
+- **Como é hoje (medido):** tarefa tem `data_vencimento` (legal) e `data_prazo` (interno; é por ela que vira atrasada). Na obrigação, a regra de prazo dá o vencimento; "Lembrar (dias antes)" + "Tipo dos dias" dão o interno (vencimento menos N, `gerador.py:165`); "Dia não-útil" só ajusta o vencimento; "Sábado é útil" vale para tudo. Ancorada no fechamento: o vencimento sai do fechamento menos `ancora_dias_antes` (`gerador.py:125-153`), e o "Lembrar" recua de novo em cima (recuo duplo). Cálculo das duas datas repetido em `gerador.py:509-511` e `:564-566`. Dia útil = só fim de semana, sem feriado (`gerador.py:64`).
+
+## Decisões do usuário (2026-10-02)
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| 1 | Como se define o prazo interno | **3 modos:** antes do vencimento; antes do fechamento do cliente; regra própria (1º dia útil, último dia útil, dia fixo, N-ésimo dia útil) |
+| 2 | Obrigações existentes | **Mantém o resultado de hoje:** todas em "antes do vencimento" com o N atual |
+| 3 | Vencimento da etapa do fechamento | **A data do fechamento** (ou X dias antes), rotulada "Fechamento do cliente" |
+| 4 | Estilo do seletor de modo | **Tipo 1, multi opções** (precedente do projeto) |
+
+## Regras locais (decisões do principal, declaradas no plano)
+
+- Prazo interno nunca passa do vencimento: regra própria depois dele é limitada a ele, e a prévia avisa.
+- "Antes do fechamento" em empresa sem fechamento cadastrado cai em "antes do vencimento" com o mesmo N.
+- Regra própria do interno sempre antecipa dia não útil.
+- Campos novos de escolha usam `frontend/src/components/SelectBusca.jsx`. Nenhum `<select>` novo.

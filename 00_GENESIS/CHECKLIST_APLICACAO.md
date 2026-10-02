@@ -90,3 +90,20 @@ ou saída de comando colada no LOG).
 - [x] 50.4 suítes, build, travessão. EVIDÊNCIA: provas=43 e 23 sem falha; travessão, hex, popup 0 nas linhas +
 - [x] 51.1 carimbo igual ao HEAD. EVIDÊNCIA: 20260923-1311 = 7944b95
 - [x] 51.2 grupos e overrides de produção conferidos. EVIDÊNCIA: LOG fase=51 producao_lida
+
+## Datas da obrigação (fases 56 a 58)
+
+Decisões: 3 modos de prazo interno; existentes mantêm o resultado de hoje; vencimento da etapa do fechamento = fechamento; seletor tipo 1.
+
+- [ ] 56.1 prova RED `backend/provas/prova_prazo_interno.py` com os itens (a) a (i), RED no LOG pelo motivo certo (TDD_RED_GREEN_REFACTOR)
+- [ ] 56.2 colunas `interno_modo`, `interno_regra_tipo`, `interno_regra_dia` com migração idempotente; N e tipo dos dias reusam as colunas atuais (Escada degrau 2)
+- [ ] 56.3 `calc_datas` única, chamada nas duas gerações; prova (g) verde
+- [ ] 56.4 prévia `POST /api/obrigacoes/previa-prazo`, schema com Literal nos modos e tipos e dia 1 a 31; 401 sem login, 403 sem `obrigacoes: ver` (Padrao_Validacao_de_Input)
+- [ ] 56.5 suíte do backend verde; `grep -rn "—"` nos arquivos tocados vazio
+- [ ] 57.1 a 57.3 três blocos; seletor de modo `role="radiogroup"` + `aria-label`, `<button type="button" role="radio" aria-checked>`, escolhido `border-primary-600 bg-primary-50 text-primary-800`
+      PROIBIDO: sólido no tipo 1, `<select` novo, "Lembrar" como rótulo do prazo interno
+      PROVA: `grep -n "radiogroup" Obrigacoes.jsx` acha o novo; linhas + do diff sem `<select` (Padrao_Toggle_Tipos, Componente_SelectBusca)
+- [ ] 57.4 prévia com "Calculando as datas..." durante a espera; erro dentro do modal; nenhum `alert(` (Padrao_Loading_Estado, Sem_Popup_Nativo)
+- [ ] 57.5 build; provas do front; linhas + sem hex, sem popup, sem travessão; textos acentuados; conferência visual do usuário registrada
+- [ ] 58.1 carimbo igual ao HEAD; obrigação lida em produção com `interno_modo`; prévia sem login 401
+- [ ] 58.2 depreciação e ISS prestado configurados e conferidos pelo usuário em produção

@@ -221,3 +221,18 @@ Linhas novas, todas pendentes.
 | Padrao_Logging_Estruturado | mutação crítica loga; PII nunca | telefone ou e-mail no log | 45 | item (f) da prova | item 4 de prova_evalidador_envia_guia: sem e-mail nem telefone no log | ok |
 | Sem_Travessao / Portugues_BR_Acentuacao / Sistema_de_Estilos | zero travessão, acento completo, cor por token | travessão, texto sem acento, hex | 45 | greps nas linhas `+` | hex 0, popup 0, select 0, travessão rc=1 | ok |
 | Fechar_Tarefa_Rodar_Verifica | "'Pronto' nao e uma palavra que se diz sozinho" | publicar sem prova em produção | 46 | carimbo, bundle, conferência | carimbo 20260921-1744 = 7f4eb2a; bundle com os rótulos; DAS real 'Enviada ao cliente' em 2026-09-21 | ok |
+
+## Datas da obrigação (fases 56 a 58)
+
+| Nota | Regra literal | Proibido | Onde aplica | Prova | Evidência | Status |
+|---|---|---|---|---|---|---|
+| TDD_RED_GREEN_REFACTOR | teste antes do código, RED pelo motivo certo | código antes da prova | fase 56 | RED e GREEN no LOG | | pendente |
+| Padrao_Validacao_de_Input | toda string crua passa por validação tipada | modo, tipo ou dia sem faixa | schemas da obrigação e da prévia | prova item (h) | | pendente |
+| Escada_Preguica_de_Codigo | reusa antes de escrever | coluna duplicada para N e tipo de dias; cálculo repetido | gerador | `grep -n "calc_prazo_interno(" services/gerador.py` só dentro de `calc_datas` | | pendente |
+| Padrao_Toggle_Tipos | tipo 1: radiogroup, button type=button, borda + fundo suave | sólido, hex, aba sublinhada | seletor de modo | `grep -n "radiogroup" Obrigacoes.jsx` | | pendente |
+| Componente_SelectBusca | nunca `<select>` nativo | `<select` em linha nova | regra própria do interno | linhas + do diff sem `<select` | | pendente |
+| Tela_Nao_Tem_Manual | rótulo carrega a informação | parágrafo explicando a seção | três blocos | CONFERENCIA_VISUAL | | pendente |
+| Padrao_Loading_Estado | espera visível com texto descritivo | espera muda ou "Carregando..." | prévia | CONFERENCIA_VISUAL | | pendente |
+| Sem_Popup_Nativo | nunca alert/confirm/prompt | `alert(` | Obrigacoes.jsx | linhas + sem `alert(` | | pendente |
+| Sem_Travessao | nunca o caractere de travessão | travessão em texto ou comentário | arquivos tocados | grep do caractere vazio | | pendente |
+| Portugues_BR_Acentuacao | texto lido com acento completo | "Prazo interno da equipe" sem acento em qualquer palavra | rótulos novos | CONFERENCIA_VISUAL + grep de palavras sem acento | | pendente |

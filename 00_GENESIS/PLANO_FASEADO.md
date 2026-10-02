@@ -282,3 +282,71 @@ Decisões: envio automático só se CNPJ e competência lidos na guia baterem co
 ## Histórico deste trabalho
 
 - **2026-09-23:** fases 52 e 53 entraram por decisão do usuário no chat e foram registradas no LOG, mas não neste plano; escritas aqui em retroativo na retomada de 23/09, junto do status da 51.
+
+## Fases 54 e 55 (retroativo)
+
+- **Status:** done (2026-10-01). Setor não atendido cancela tarefas abertas, setor obrigatório na obrigação, X na planilha de responsáveis. Detalhe no LOG.
+
+---
+
+# Trabalho novo: datas da obrigação (vencimento e prazo interno), aberto em 2026-10-02
+
+Pedido: "a forma de tratar a data de vencimento (legal) e a data interna dentro da
+obrigação me parece confusa". Exemplos do usuário: fechamento do cliente dia 15,
+prazo interno da depreciação dia 05; ISS prestado com prazo interno no primeiro dia útil.
+
+## Fase 0: aprovação do plano
+
+- **Status:** pending
+- **Critério de aceite:** usuário aprova no chat; LOG registra.
+
+## Fase 56: regra própria do prazo interno no servidor
+
+- **Status:** pending | **Duração:** 2h
+- **Notas:** TDD_RED_GREEN_REFACTOR, Escada_Preguica_de_Codigo, Padrao_Validacao_de_Input, Padrao_Logging_Estruturado
+- **Dependências:** Fase 0
+- **Output esperado:** `backend/provas/prova_prazo_interno.py`; `models.py`, `init_db.py`, `schemas.py`, `services/gerador.py`, `routes/obrigacoes.py` alterados.
+
+1. **56.1 RED.** Prova escrita antes do código, com datas de outubro/2026:
+   (a) modo "antes do vencimento" com N e tipo de dias dá a MESMA data de hoje (não-regressão das 78 obrigações);
+   (b) modo "antes do fechamento": fechamento dia 15, 10 corridos antes, cai no dia útil anterior a 05/10;
+   (c) modo "regra própria": primeiro dia útil, último dia útil, dia fixo 5, 3º dia útil;
+   (d) regra própria depois do vencimento é limitada ao vencimento (prazo interno nunca passa do legal);
+   (e) "antes do fechamento" em empresa sem fechamento cadastrado cai em "antes do vencimento" com o mesmo N;
+   (f) obrigação ancorada continua com o vencimento no fechamento (decisão 3);
+   (g) a geração do mês e a geração de empresa nova dão as mesmas datas (as duas chamadas do gerador);
+   (h) entrada inválida dá 422: modo fora da lista, tipo fora da lista, dia fora de 1 a 31, regra própria sem tipo;
+   (i) rota de prévia devolve vencimento e prazo interno do próximo mês de entrega; sem login 401; sem permissão de ver obrigações 403.
+2. **56.2 GREEN.** Três colunas novas em `obrigacoes`: `interno_modo` (antes_vencimento | antes_fechamento | regra, padrão antes_vencimento), `interno_regra_tipo`, `interno_regra_dia`. Migração idempotente em `init_db.migrate()`, sem tocar dado existente (decisão 2: todas ficam em antes_vencimento com o N atual).
+   N e tipo dos dias continuam nas colunas de hoje (`lembrar_dias_antes`, `tipo_dias`): nada de coluna duplicada (escada, degrau 2).
+3. **56.3** Uma função só, `calc_datas(o, empresa, mes, ano)`, devolve (vencimento, prazo interno) e substitui o cálculo repetido nas duas chamadas do gerador. A regra própria reusa `calc_prazo` (sempre antecipando dia não útil, porque prazo interno não posterga).
+4. **56.4** `POST /api/obrigacoes/previa-prazo`: recebe os campos de prazo do formulário (schema tipado, com faixas), mês e ano opcionais e um dia de fechamento de exemplo (padrão 15). Só calcula, não grava; exige `obrigacoes: ver`. Sem ID de recurso, então IDOR não se aplica.
+5. **56.5** Suíte inteira do backend verde; travessão zero.
+
+## Fase 57: tela da seção de prazo
+
+- **Status:** pending | **Duração:** 2h
+- **Notas:** Padrao_Toggle_Tipos, Componente_SelectBusca, Padrao_Formulario, Tela_Nao_Tem_Manual, Portugues_BR_Acentuacao, Sem_Popup_Nativo, Sem_Travessao, Padrao_Loading_Estado, Verificacoes_Mecanicas_de_Tela
+- **Dependências:** Fase 56
+- **Output esperado:** `Obrigacoes.jsx` com três blocos; `payloadObrigacao.js` e a prova dele atualizados.
+
+1. **57.1** Bloco **Quando acontece:** periodicidade, meses e competência (sai do meio do bloco de prazo, sem mudar comportamento).
+2. **57.2** Bloco **Vencimento:** etapa do fechamento (como hoje); regra, dia e "Se cair em dia não útil" juntos; "Sábado é dia útil" aqui, valendo para as duas datas. Ancorada: o bloco diz "Fechamento do cliente", e não "legal".
+3. **57.3** Bloco **Prazo interno da equipe:** seletor tipo 1 com 3 opções (Antes do vencimento / Antes do fechamento / Regra própria). As duas primeiras: N + "dias úteis/corridos antes". A terceira: regra pelo `SelectBusca` do projeto (primeiro dia útil, último dia útil, dia fixo, N-ésimo dia útil) + dia. "Lembrar (dias antes)" deixa de existir com esse nome.
+4. **57.4** Linha de prévia: "Em outubro/2026: vencimento 20/10 (terça), prazo interno 13/10 (terça)". Ancorada ou antes do fechamento: "Exemplo: cliente que fecha dia 15". Chamada com espera curta depois da última digitação e texto "Calculando as datas..." enquanto espera; erro mostra aviso dentro do modal.
+5. **57.5** Gates: build; provas do front; linhas novas sem hex, sem `<select`, sem popup, sem travessão; acentuação; conferência visual pelo usuário na cópia local.
+
+## Fase 58: publicar e conferir
+
+- **Status:** pending | **Duração:** 30min
+- **Dependências:** Fase 57 e conferência visual
+1. **58.1** Commit, push, carimbo igual ao HEAD, migração aplicada (obrigação lida pela API com `interno_modo = antes_vencimento`), rota de prévia sem login 401.
+2. **58.2** Usuário configura a depreciação (dia fixo 5) e o ISS prestado (primeiro dia útil) em produção e confere a prévia.
+
+## Fora de escopo (cortado pela escada)
+
+- Feriados no cálculo de dia útil: o gerador conta só fim de semana desde sempre. Volta se uma data cair em feriado e alguém reclamar; é trabalho próprio (tabela de feriados nacionais e municipais).
+- Recalcular datas de tarefas já geradas: as regras novas valem a partir da próxima geração. Volta se o usuário pedir para outubro.
+- Corrigir o recuo duplo das ancoradas automaticamente: decisão 2 manteve o resultado de hoje; a correção é pela tela, obrigação a obrigação.
+- Ajuste "postergar" no prazo interno: interno sempre antecipa. Volta se aparecer caso real.
+- Trocar os 13 selects nativos legados do modal: só os campos NOVOS seguem o SelectBusca.

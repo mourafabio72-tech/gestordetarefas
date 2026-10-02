@@ -35,3 +35,18 @@
 Dois batedores sonnet em paralelo (tela e estilo; processo e segurança), em
 2026-09-19. Não houve batedor de auth nem de estrutura de UI: o trabalho não
 toca login, menu, tabela nem modal novo. Desvio do "cinco eixos" declarado.
+
+## Trabalho de 2026-10-02 (datas da obrigação)
+
+Batedores sonnet em paralelo (UI e processo/segurança), fichas conferidas pelo principal.
+- `01_Padroes_Gerais/Padrao_Toggle_Tipos.md` : tipo 1 para 3 opções exclusivas; manda perguntar o estilo (perguntado, resposta tipo 1). Fase 57.
+- `01_Padroes_Gerais/Componente_SelectBusca.md` : "Nunca `<select>` nativo". Fase 57.
+- `01_Padroes_Gerais/Padrao_Formulario.md` : controles na mesma altura, label acima. Fase 57.
+- `01_Padroes_Gerais/Padrao_Modal.md` : erro dentro do modal, sem fechar. Fase 57.
+- `01_Padroes_Gerais/Tela_Nao_Tem_Manual.md` : sem parágrafo explicando a seção; a prévia é dado, não manual. Fase 57.
+- `07_Regras_de_Ouro/Portugues_BR_Acentuacao.md`, `Sem_Travessao.md`, `Sem_Popup_Nativo.md`, `Verificacoes_Mecanicas_de_Tela.md` : gates da fase 57.
+- `01_Padroes_Gerais/Padrao_Loading_Estado.md` : espera da prévia com texto descritivo. Fase 57.
+- `08_Processo_Dev/Brainstorming_Socratico_por_Tarefa.md` : 4 perguntas numa rodada, feitas antes do plano.
+- `08_Processo_Dev/TDD_RED_GREEN_REFACTOR.md`, `07_Regras_de_Ouro/Escada_Preguica_de_Codigo.md` : fase 56.
+- `02_Seguranca/Padrao_Validacao_de_Input.md`, `Padrao_Logging_Estruturado.md` : schema tipado nos campos novos e na prévia; edição já loga. Fase 56.
+- Descartadas: `Padrao_Toggle_OnOff` (não há liga/desliga novo); `Padrao_IDOR` (a prévia não recebe ID); `Nunca_DELETE_Fisico` (nada é apagado); `06_Migracao/SQLite_para_PostgreSQL` (não é migração de banco). `Padrao_Texto_e_Linguagem`: não existe na vault.
