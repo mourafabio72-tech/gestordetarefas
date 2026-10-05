@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
+  BookOpen,
 } from 'lucide-react';
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
@@ -210,6 +211,19 @@ export default function Layout() {
               <p className="text-xs text-primary-300 truncate capitalize leading-tight">{grupo}</p>
             </div>
           </div>
+          {/* Manual da equipe: página estática em public/leia-me, abre em outra aba
+              para não tirar a pessoa do que estava fazendo. */}
+          <a
+            href="/leia-me/"
+            target="_blank"
+            rel="noopener"
+            title="Leia-me: o manual do Tareffas"
+            className={`flex items-center gap-2.5 px-3 py-1.5 mb-0.5 rounded-lg text-sm text-white/70 hover:bg-white/10 transition-colors ${
+              colapsado ? 'lg:gap-0 lg:justify-center lg:px-2' : ''}`}
+          >
+            <BookOpen size={16} />
+            <span className={colapsado ? 'lg:hidden' : ''}>Leia-me</span>
+          </a>
           <a
             href={HUB_URL}
             title="Voltar ao Hub"
