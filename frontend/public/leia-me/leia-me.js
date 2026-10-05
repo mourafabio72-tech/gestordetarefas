@@ -388,6 +388,7 @@ document.querySelectorAll('[data-etapa]').forEach(a=>a.addEventListener('click',
 
 /* ---------- Glossário ---------- */
 const G=[['Obrigação','O modelo de algo que se entrega todo período: DCTFWeb, DAS, conciliação bancária.'],['Tarefa','Uma obrigação de uma empresa num mês. É o que a equipe executa.'],
+ ['Pergunte à IA','Caixa no topo do Painel e das Tarefas. Você escreve a pergunta, a IA transforma em filtro e o Tareffas lista as tarefas, só as que você já vê. Confira a linha Entendi.'],
  ['Competência','O mês a que a tarefa se refere (MM/AAAA). Normalmente o mês anterior ao da entrega. É por ela que o e-validador casa o recibo.'],
  ['Mês de entrega','O mês em que a tarefa nasce e é entregue. "Tarefas de outubro" têm, em geral, competência de setembro.'],
  ['Vencimento','A data que gera multa. Vem da lei (prazo legal) ou do fechamento do cliente.'],['Prazo interno','A data da equipe, antes do vencimento. Comanda a cor e os alertas.'],
@@ -414,4 +415,25 @@ $('zoomFechar').onclick=()=>zoom.close();zoom.addEventListener('click',e=>{if(e.
 const links=[...document.querySelectorAll('nav.indice a')];
 const obs=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){links.forEach(l=>l.classList.toggle('ativo',l.getAttribute('href')==='#'+en.target.id));}});},{rootMargin:'-40% 0px -55% 0px'});
 document.querySelectorAll('main>section').forEach(s=>obs.observe(s));
+/* ---------- Demonstração do Pergunte à IA (dados fictícios) ---------- */
+(function(){const chips=$('iaChips'),resp=$('iaResposta'),perg=$('iaPergunta');if(!chips)return;
+ const T=(t,e,st,p,v)=>({t,e,st,p,v});
+ const DEMO=[
+  {q:'O que vence hoje?',ent:'Tarefas que vencem hoje.',lista:[T('DCTFWeb 09/2026','Clínica Sorriso Feliz · Fiscal','pendente','16/10','31/10'),T('Conciliação bancária 09/2026','Padaria Estrela · Contabilidade','em andamento','16/10','20/10')]},
+  {q:'O que está atrasado no Fiscal?',ent:'Tarefas atrasadas do setor "Fiscal".',lista:[T('EFD-Reinf 09/2026','Padaria Estrela · Fiscal','pendente','08/10','15/10')]},
+  {q:'Quantas DCTFWeb faltam?',ent:'Tarefas em aberto de "DCTFWeb".',total:12},
+  {q:'Minhas tarefas desta semana',ent:'Suas tarefas que vencem nos próximos 7 dias.',lista:[T('DCTFWeb 09/2026','Clínica Sorriso Feliz · Fiscal','pendente','16/10','31/10'),T('Guia ISS 09/2026','Padaria Estrela · Fiscal','pendente','18/10','20/10'),T('DAS 09/2026','Clínica Sorriso Feliz · Fiscal','em andamento','17/10','20/10')]},
+  {q:'O que a Padaria Estrela entrega em 09/2026?',ent:'Tarefas da empresa "Padaria Estrela" da competência 09/2026.',lista:[T('Conciliação bancária 09/2026','Padaria Estrela · Contabilidade','em andamento','16/10','20/10'),T('Guia ISS 09/2026','Padaria Estrela · Fiscal','pendente','18/10','20/10'),T('EFD-Reinf 09/2026','Padaria Estrela · Fiscal','pendente','08/10','15/10')]}];
+ const el=(tag,cls,txt)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(txt!=null)x.textContent=txt;return x;};
+ DEMO.forEach((d,i)=>{const b=el('button',null,d.q);b.type='button';b.setAttribute('aria-pressed','false');
+  b.addEventListener('click',()=>{chips.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',String(o===b)));
+   perg.textContent=d.q;perg.classList.add('cheio');resp.innerHTML='';
+   resp.appendChild(el('p','ia-entendi','Entendi: '+d.ent));
+   if(d.total!=null){const p=el('p','ia-total');p.appendChild(el('b',null,String(d.total)));p.appendChild(document.createTextNode('tarefas'));resp.appendChild(p);return;}
+   resp.appendChild(el('p','ia-total',d.lista.length===1?'1 tarefa.':d.lista.length+' tarefas.'));
+   const ul=el('ul','ia-lista');d.lista.forEach(x=>{const li=el('li');const a=el('span');a.appendChild(document.createTextNode(x.t));a.appendChild(el('small',null,x.e+' · '+x.st));
+    const dt=el('span','dt');dt.appendChild(el('span',null,'prazo '+x.p));dt.appendChild(el('small',null,'venc. '+x.v));li.appendChild(a);li.appendChild(dt);ul.appendChild(li);});
+   resp.appendChild(ul);});
+  chips.appendChild(b);});
+})();
 })();

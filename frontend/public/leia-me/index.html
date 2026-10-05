@@ -235,6 +235,22 @@ table.perm th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;col
 .sim-sim{color:var(--verde);font-weight:600}.sim-nao{color:var(--suave)}
 /* Glossário */
 .busca{font:inherit;border:1px solid var(--areia);border-radius:10px;padding:10px 14px;background:var(--papel);color:var(--texto);width:100%;max-width:420px}
+/* Pergunte à IA */
+.ia-caixa{background:var(--papel);border:1px solid var(--areia);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.ia-linha{display:flex;gap:8px;align-items:center}
+.ia-linha output{flex:1;min-width:0;border:1px solid var(--areia);border-radius:9px;padding:8px 12px;background:var(--bg);color:var(--suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ia-linha output.cheio{color:var(--escuro)}
+.ia-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ia-chips button{font:inherit;font-size:.82rem;border:1px solid var(--areia);background:var(--bg);color:var(--texto);border-radius:999px;padding:4px 12px;cursor:pointer}
+.ia-chips button:hover,.ia-chips button[aria-pressed="true"]{border-color:var(--oliva);background:var(--oliva-claro);color:var(--escuro)}
+.ia-entendi{font-size:.85rem;color:var(--suave)}
+.ia-total{font-weight:600;color:var(--escuro)}
+.ia-total b{font-size:1.8rem;margin-right:6px}
+.ia-lista{list-style:none;margin:0;padding:0;border:1px solid var(--areia);border-radius:10px;overflow:hidden;background:var(--bg)}
+.ia-lista li{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--areia);font-size:.9rem}
+.ia-lista li:first-child{border-top:0}
+.ia-lista small{display:block;color:var(--suave);font-size:.8rem}
+.ia-lista .dt{text-align:right;white-space:nowrap;font-size:.8rem;color:var(--suave)}
 .gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
 .gloss .cartao{padding:14px 16px}
 .gloss h4{font-size:1rem;margin-bottom:4px}
@@ -257,6 +273,7 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
   <a href="#ordem">Por onde começar</a>
   <a href="#cadastros">Os cadastros</a>
   <a href="#dia">O dia a dia</a>
+  <a href="#ia">Pergunte à IA</a>
   <a href="#glossario">Glossário</a>
 </nav>
 
@@ -467,6 +484,31 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
       <figure><img src="img/documentos.webp" alt="Tela de Documentos com a lista de arquivos e o filtro de quem baixou" loading="lazy"><figcaption>Documentos.</figcaption></figure>
     </div>
   </div>
+</section>
+
+<!-- PERGUNTE À IA -->
+<section id="ia">
+  <span class="rotulo">Pergunte à IA</span>
+  <h2>Pergunte em português, receba a lista</h2>
+  <p class="lead">No topo do Painel e das Tarefas há uma caixa onde você escreve a pergunta do jeito que falaria com um colega. O Tareffas devolve as tarefas que respondem a ela.</p>
+  <div class="grade">
+    <div class="cartao"><h3>Como perguntar</h3><p style="margin-top:8px">Diga <b>o que</b> (DCTFWeb, Reinf, conciliação), <b>de quem</b> (setor, cliente, "minhas") e <b>quando</b> (hoje, atrasadas, esta semana, até sexta, competência 09/2026). "Quantas" devolve o número; o resto devolve a lista.</p></div>
+    <div class="cartao"><h3>O que aparece</h3><p style="margin-top:8px">Primeiro a linha <b>Entendi</b>, que diz o filtro aplicado. Confira sempre: se a IA entendeu outra coisa, reescreva. Clique numa tarefa da lista e a tela de Tarefas abre filtrada nela.</p></div>
+    <div class="cartao"><h3>O que você vê</h3><p style="margin-top:8px">Só o que você já via antes. A IA não abre porta nenhuma: quem tem acesso às próprias tarefas recebe só as próprias, e o gestor recebe as da equipe.</p></div>
+  </div>
+
+  <div class="ia-caixa" aria-label="Demonstração do Pergunte à IA">
+    <span class="chip" style="align-self:flex-start">Experimente. Dados fictícios</span>
+    <div class="ia-linha"><output id="iaPergunta">Escolha uma pergunta abaixo</output><span class="btn primario" aria-hidden="true">Perguntar</span></div>
+    <div class="ia-chips" id="iaChips"></div>
+    <div aria-live="polite" id="iaResposta"></div>
+  </div>
+
+  <div class="grade">
+    <div class="nota"><b>Seus dados ficam aqui.</b> Para a IA vai só a pergunta e a data de hoje. Nome de cliente, CNPJ e tarefas não saem do Tareffas: a IA devolve um filtro, e quem busca é o próprio Tareffas. Por isso evite escrever dado sensível na pergunta.</div>
+    <div class="nota"><b>Limites.</b> Até 20 perguntas a cada 10 minutos por pessoa, porque cada pergunta é cobrada. A lista mostra as 50 primeiras; o total é sempre o real. Nome de setor, cliente e obrigação é procurado por parte do nome: escreva como está no cadastro.</div>
+  </div>
+  <p class="texto quem">Para o admin: as chaves da OpenAI e da NVIDIA ficam em <b>Configuração › Inteligência artificial</b>, com os botões Testar conexão e Salvar. Sem chave cadastrada, a caixa não aparece para a equipe.</p>
 </section>
 
 <!-- GLOSSÁRIO -->
