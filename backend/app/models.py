@@ -579,3 +579,21 @@ class LoginTentativa(Base):
     origem = Column(String(20), default="sso")   # sso | senha
     sucesso = Column(Boolean, default=False)
     criado_em = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+class LeiameProgresso(Base):
+    """Progresso de cada pessoa no fluxo guiado do Leia-me (/leia-me/).
+
+    Uma linha por usuário. Etapas e erros saem do `estado` gravado, contados no
+    servidor; `concluido_em` marca a primeira conclusão e não volta atrás quando
+    a pessoa refaz o fluxo."""
+    __tablename__ = "leiame_progresso"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    estado = Column(Text, nullable=False, default="[]")   # JSON: [{acao, resp, erros}] x 7
+    liberada = Column(Integer, nullable=False, default=0)
+    etapas = Column(Integer, nullable=False, default=0)
+    erros = Column(Integer, nullable=False, default=0)
+    concluido_em = Column(DateTime, nullable=True)
+    iniciado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+    atualizado_em = Column(DateTime, default=datetime.utcnow, nullable=False)

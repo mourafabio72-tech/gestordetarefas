@@ -214,7 +214,7 @@ export default function Layout() {
           {/* Manual da equipe: página estática em public/leia-me, abre em outra aba
               para não tirar a pessoa do que estava fazendo. */}
           <a
-            href="/leia-me/"
+            href="/leia-me/index.html"
             target="_blank"
             rel="noopener"
             title="Leia-me: o manual do Tareffas"

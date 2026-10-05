@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from .database import engine, Base
 from .seguranca import abrir_contexto, aplicar_headers, ip_cliente, log_event
 from .versao import BUILD
-from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos, painel
+from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigacoes, evalidador, substituicoes, configuracao, modelos, upload_publico, cronograma, grupos, ativar_publico, documentos, painel, leiame
 from .services.scheduler import start_scheduler
 from .init_db import (migrate, criar_indices, seed_admin, ensure_admin_grupo,
                       seed_grupos, alcance_do_alerta,
@@ -129,6 +129,7 @@ app.include_router(grupos.router, prefix="/api")
 app.include_router(ativar_publico.router, prefix="/api")
 app.include_router(documentos.router, prefix="/api")
 app.include_router(painel.router, prefix="/api")
+app.include_router(leiame.router, prefix="/api")
 
 
 @app.on_event("startup")
