@@ -352,7 +352,7 @@ Decisões do usuário (2026-10-04): um ou outro, interno sempre; prazo legal sug
 
 - **Status:** pending | **Duração:** 30min
 - **Dependências:** Fase 57 e conferência visual
-0. **58.0** Com o ok do usuário: prazo interno das etapas contábeis em 3 dias (PUT por obrigação, lista aprovada antes).
+0. **58.0** Com o ok do usuário: prazo interno das etapas contábeis em 3 dias (PUT por obrigação, lista aprovada antes). FEITO em 2026-10-04 (LOG): 20 viraram etapa do fechamento e 25 com interno de 3 dias corridos.
 1. **58.1** Commit, push, carimbo igual ao HEAD, migração aplicada (obrigação lida pela API com `interno_modo = antes_vencimento`), rota de prévia sem login 401.
 2. **58.2** Usuário configura a depreciação (dia fixo 5) e o ISS prestado (primeiro dia útil) em produção e confere a prévia.
 
