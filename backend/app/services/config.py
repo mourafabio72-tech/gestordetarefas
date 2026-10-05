@@ -39,8 +39,15 @@ DEFAULTS = {
     "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
     "openai_model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
     "openai_url": os.getenv("OPENAI_URL", "https://api.openai.com/v1/chat/completions"),
+    # "Pergunte à IA": qual provedor responde. O e-validador continua na OpenAI;
+    # este provedor só traduz pergunta em filtro (routes/ia.py).
+    "ia_provedor": os.getenv("IA_PROVEDOR", "openai"),
+    # NVIDIA NIM fala o mesmo protocolo da OpenAI, então muda endereço e modelo.
+    "nvidia_api_key": os.getenv("NVIDIA_API_KEY", ""),
+    "nvidia_model": os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct"),
+    "nvidia_url": os.getenv("NVIDIA_URL", "https://integrate.api.nvidia.com/v1/chat/completions"),
 }
-SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key"}
+SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key", "nvidia_api_key"}
 
 
 def carregar(db) -> dict:

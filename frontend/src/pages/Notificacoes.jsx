@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { configuracaoAPI, alertasAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { Bell, Mail, MessageCircle, Clock, Save, Send, Sparkles, PlayCircle } from 'lucide-react';
@@ -263,14 +264,10 @@ export default function Notificacoes() {
           <p className="text-xs text-gray-500 mb-3">
             Quando o método por palavra-chave não resolve, a IA lê o texto do documento e identifica CNPJ, competência e a obrigação. Só texto (não escaneado) e só nos casos difíceis.
           </p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">API Key (OpenAI)</label>
-              <input type="password" value={cfg.openai_api_key ?? ''} onChange={(e) => set('openai_api_key', e.target.value)} className="input-field"
-                placeholder={cfg.openai_api_key_set ? '•••••• (guardada, deixe vazio p/ manter)' : 'sk-...'} />
-            </div>
-            <Campo chave="openai_model" label="Modelo" ph="gpt-4o-mini" />
-          </div>
+          <p className="text-sm text-gray-700">
+            Chave da OpenAI: {cfg.openai_api_key_set ? 'guardada' : 'não cadastrada'}. Ela e o modelo ficam em{' '}
+            <Link to="/inteligencia-artificial" className="underline text-primary-700">Configuração &gt; Inteligência artificial</Link>.
+          </p>
           <div className="border-t border-gray-100 mt-4 pt-4 flex items-center gap-3">
             <button onClick={enviarTesteIA} className="btn-secondary flex items-center gap-2">
               <Sparkles size={16} /> Testar IA

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { painelAPI, empresasAPI, setoresAPI, usuariosAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { formatarRazaoSocial } from './razaoSocial';
+import PergunteIA from '../components/PergunteIA';
 import { SITUACOES, DIMENSOES, percentuais, linhasMapa, barras, arcosRosca, diaMes,
   pontualidade, haQuantosDias, roscasPorLinha, urlTarefas, fundoDoTom, corDoSetor, TONS,
   filtrosVazios, paraConsulta, temFiltroAtivo } from './painelDados';
@@ -355,6 +356,8 @@ export default function Dashboard() {
           </button>
         )}
       </div>
+
+      <PergunteIA />
 
       <div className="rounded-xl border border-gray-200 p-3" style={{ background: '#faf7f0' }}>
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2">

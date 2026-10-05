@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, Literal
 from pydantic import BaseModel
 from ..database import get_db
 from ..models import Usuario
@@ -134,3 +134,19 @@ def testar_ia(
 ):
     from ..services import ia as ia_mod
     return ia_mod.testar(cfgmod.carregar(db))
+
+
+class TesteIA(BaseModel):
+    provedor: Literal["openai", "nvidia"]
+
+
+@router.post("/ia/testar")
+def testar_ia_provedor(
+    body: TesteIA,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_admin),
+):
+    """Testa a chave GUARDADA do provedor escolhido. A tela salva antes de
+    testar, então o que se testa é o que vai rodar."""
+    from ..services import ia as ia_mod
+    return ia_mod.testar(cfgmod.carregar(db), body.provedor)

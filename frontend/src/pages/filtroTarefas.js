@@ -174,6 +174,7 @@ export function filtrosDaUrl(params) {
     usuario_id: ler('usuario'),
     status: ler('status'),
     competencia: ler('competencia'),
+    texto: ler('texto'),          // clique num resultado do Pergunte à IA
     alerta: RECORTES[ler('alerta')] ? ler('alerta') : '',
     prioridade: ler('prioridade'),
     multa: ler('multa') === '1',

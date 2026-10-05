@@ -9,6 +9,7 @@ import Tarefas from './pages/Tarefas';
 import Obrigacoes from './pages/Obrigacoes';
 import Substituicoes from './pages/Substituicoes';
 import Notificacoes from './pages/Notificacoes';
+import ConfigIA from './pages/ConfigIA';
 import Grupos from './pages/Grupos';
 import Relatorios from './pages/Relatorios';
 import EValidador from './pages/EValidador';
@@ -54,6 +55,7 @@ function AppRoutes() {
         <Route path="obrigacoes" element={<Obrigacoes />} />
         <Route path="substituicoes" element={<Substituicoes />} />
         <Route path="notificacoes" element={<Notificacoes />} />
+        <Route path="inteligencia-artificial" element={<ConfigIA />} />
         <Route path="grupos" element={<Grupos />} />
         <Route path="relatorios" element={<Relatorios />} />
         <Route path="evalidador" element={<EValidador />} />

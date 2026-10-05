@@ -260,6 +260,7 @@ export const configuracaoAPI = {
   testarEmail: (para) => api.post('/configuracao/notificacoes/testar-email', { para }),
   testarWhatsapp: (para) => api.post('/configuracao/notificacoes/testar-whatsapp', { para }),
   testarIA: () => api.post('/configuracao/notificacoes/testar-ia'),
+  testarProvedorIA: (provedor) => api.post('/configuracao/ia/testar', { provedor }),
   zapUsuarios: () => api.get('/configuracao/notificacoes/zap-usuarios'),
 };
 
@@ -289,3 +290,8 @@ export const alertasAPI = {
 };
 
 export default api;
+
+export const iaAPI = {
+  status: () => api.get('/ia/status'),
+  perguntar: (pergunta) => api.post('/ia/perguntar', { pergunta }),
+};

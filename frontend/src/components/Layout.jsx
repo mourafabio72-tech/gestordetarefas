@@ -23,6 +23,7 @@ import {
   ChevronRight,
   ChevronLeft,
   BookOpen,
+  Sparkles,
 } from 'lucide-react';
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
@@ -65,6 +66,7 @@ const menuGroups = [
       { path: '/substituicoes', label: 'Substituições', icon: UserCog, roles: ['admin', 'gestor'] },
       { path: '/importar-cronograma', label: 'Importar obrigações', icon: CalendarClock, roles: ['admin', 'gestor'] },
       { path: '/notificacoes', label: 'Notificações', icon: Bell, roles: ['admin'] },
+      { path: '/inteligencia-artificial', label: 'Inteligência artificial', icon: Sparkles, roles: ['admin'] },
     ],
   },
 ];
