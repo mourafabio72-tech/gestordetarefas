@@ -19,6 +19,13 @@ def _link(cfg: dict, token: str) -> str:
 
 
 def _msg(usuario, link: str) -> str:
+    # Reenvio para quem já ativou (esqueceu a senha, trocou de máquina): o link
+    # é o mesmo da ativação, e o texto não pode dizer que o acesso "foi criado".
+    if usuario.ativado:
+        return (
+            f"Olá, {usuario.nome}! Segue o link para definir uma nova senha no Tareffas.\n"
+            f"Use este link (válido por alguns dias):\n{link}"
+        )
     return (
         f"Olá, {usuario.nome}! Seu acesso ao Tareffas foi criado.\n"
         f"Defina sua senha e entre por este link (válido por alguns dias):\n{link}"

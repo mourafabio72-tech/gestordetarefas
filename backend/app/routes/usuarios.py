@@ -192,6 +192,9 @@ async def enviar_convite(
     u = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not u:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    if u.bloqueado:
+        # O link não abriria (a ativação recusa bloqueado); não manda e-mail inútil.
+        raise HTTPException(status_code=400, detail="Usuário bloqueado: desbloqueie antes de reenviar o convite.")
     cfg = cfgmod.carregar(db)
     res = await convite_mod.enviar(db, u, cfg)
     db.commit()

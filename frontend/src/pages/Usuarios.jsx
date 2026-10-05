@@ -308,11 +308,16 @@ export default function Usuarios() {
                     </td>
                     <td>
                       <div className="flex justify-end gap-2">
-                        {usuario.ativado === false && !usuario.bloqueado && (
+                        {/* Também para quem já ativou: o link é o mesmo da ativação
+                            e serve para definir uma senha nova. Bloqueado não, porque
+                            a ativação recusa (e o servidor devolve 400). */}
+                        {!usuario.bloqueado && (
                           <button
                             onClick={() => enviarConvite(usuario)}
                             disabled={convidandoId === usuario.id}
-                            title="Enviar convite de primeiro acesso"
+                            title={usuario.ativado === false
+                              ? 'Enviar convite de primeiro acesso'
+                              : 'Reenviar convite: a pessoa recebe um link para definir uma senha nova'}
                             className="p-2 text-primary-700 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
                           >
                             <Send size={16} />

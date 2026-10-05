@@ -1475,7 +1475,8 @@ export default function Tarefas() {
                   onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
                   className="input-field"
                   placeholder="MM/AAAA"
-                  pattern="\\d{2}/\\d{4}"
+                  pattern="(0[1-9]|1[0-2])/[0-9]{4}"
+                  title="Mês e ano no formato MM/AAAA, por exemplo 09/2026"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Mês do fato gerador: julho é <code>07/2026</code>. É por ela que o e-validador
