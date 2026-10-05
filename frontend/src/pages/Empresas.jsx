@@ -517,7 +517,8 @@ export default function Empresas() {
                 <p className="text-xs text-gray-500 mt-1">
                   Quando esta empresa fecha o mês. As obrigações marcadas como etapa do
                   fechamento vencem em relação a esta data: muda aqui e todas se ajustam.
-                  Em branco, cada obrigação usa o próprio prazo legal.
+                  Preencha sempre: em branco, as etapas do fechamento caem numa data de
+                  reserva da obrigação, que não é a deste cliente.
                 </p>
               </div>
               <div>
