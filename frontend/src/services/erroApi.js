@@ -29,6 +29,9 @@ const NOME_DO_CAMPO = {
 
 // Mensagens do Pydantic × português de gente.
 function traduzir(msg) {
+  // Frase escrita por validador do servidor (ValueError) chega com o prefixo
+  // do Pydantic. A frase já é para gente: tira o prefixo e devolve como veio.
+  if (/^value error, /i.test(msg || '')) return msg.replace(/^value error, /i, '');
   const m = (msg || '').toLowerCase();
   if (m.includes('valid integer')) return 'precisa ser um número inteiro';
   if (m.includes('valid number')) return 'precisa ser um número';

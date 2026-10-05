@@ -78,4 +78,18 @@ const erro422 = (lista) => ({ response: { status: 422, data: { detail: lista } }
   ok('mensagem específica da tela prevalece sobre a genérica');
 }
 
+// 8. Mensagem escrita pelos validadores do servidor (ValueError) chega com o
+//    prefixo "Value error, " do Pydantic. A pessoa lê só a frase (fase 57:
+//    a prévia mostrava "Value error, Escolha a regra do prazo interno.").
+{
+  const um = { response: { status: 422, data: { detail: [
+    { loc: ['body'], msg: 'Value error, Escolha a regra do prazo interno.' }] } } };
+  assert.strictEqual(mensagemDeErro(um), 'Escolha a regra do prazo interno.');
+  const campo = { response: { status: 422, data: { detail: [
+    { loc: ['body', 'meses_ativos'], msg: 'Value error, Marque ao menos um mês, de 1 a 12.' }] } } };
+  assert.ok(!mensagemDeErro(campo).includes('Value error'), mensagemDeErro(campo));
+  assert.ok(mensagemDeErro(campo).endsWith('Marque ao menos um mês, de 1 a 12.'));
+  ok('prefixo "Value error, " do Pydantic não chega à tela');
+}
+
 console.log(`\nPROVA OK: ${n} casos`);

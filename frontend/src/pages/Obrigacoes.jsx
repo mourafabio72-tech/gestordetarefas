@@ -4,6 +4,7 @@ import { mensagemDeErro } from '../services/erroApi';
 import { montarPayloadObrigacao } from './payloadObrigacao';
 import { SENTIDOS, sentidoDoForm, mostraIdentificadores, exigeDocumentoMarcado } from './sentidoObrigacao';
 import { PERIODICIDADES, periodicidadeDe, aplicarPeriodicidade, rotuloCompetenciaCalculada, competenciaDiverge, mesesDoCsv, clicarMesNaSerie, aoTrocarSentido } from './periodicidade';
+import { MODOS_INTERNO, REGRAS_DIA, usaDia, rotuloRecuo, corpoPrevia, textoPrevia, prazoDoRegistro, faltaParaPrevia, ORIGENS_PRAZO, origemDe, aplicarOrigem, sugestaoOrigem } from './prazoObrigacao';
 import { Plus, Edit2, Trash2, FileStack, Copy, CopyPlus, Unlink, Info, Upload, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, Ban, Zap, X, Loader2, Building2, ListChecks } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import SelectBusca from '../components/SelectBusca';
@@ -49,6 +50,7 @@ const emptyForm = {
   lembrar_dias_antes: 5, tipo_dias: 'corridos', ajuste_nao_util: 'antecipar',
   sabado_util: false, competencia_ref: 'mes_anterior',
   ancora: '', ancora_dias_antes: 0, ancora_tipo_dias: 'uteis',
+  interno_modo: 'antes_vencimento', interno_regra_tipo: '', interno_regra_dia: '',
   sentido: 'receber',
   exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
   comentario_padrao: '', alvo_modo: 'regra', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
@@ -208,6 +210,27 @@ export default function Obrigacoes() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Prévia das duas datas: pede ao servidor (a conta é a do gerador) um pouco
+  // depois da última mudança nos campos de prazo, e não a cada tecla.
+  const [previa, setPrevia] = useState({ carregando: false, erro: '', texto: null, falta: null });
+  const pedidoPrevia = JSON.stringify(corpoPrevia(form));
+  const faltaPrevia = faltaParaPrevia(form);
+  useEffect(() => {
+    if (!showModal) return undefined;
+    if (faltaPrevia) { setPrevia({ carregando: false, erro: '', texto: null, falta: faltaPrevia }); return undefined; }
+    let vivo = true;
+    setPrevia((p) => ({ ...p, carregando: true, erro: '', falta: null }));
+    const espera = setTimeout(async () => {
+      try {
+        const r = await obrigacoesAPI.previaPrazo(JSON.parse(pedidoPrevia));
+        if (vivo) setPrevia({ carregando: false, erro: '', texto: textoPrevia(r.data), falta: null });
+      } catch (err) {
+        if (vivo) setPrevia({ carregando: false, erro: mensagemDeErro(err, 'Não consegui calcular as datas.'), texto: null, falta: null });
+      }
+    }, 400);
+    return () => { vivo = false; clearTimeout(espera); };
+  }, [showModal, pedidoPrevia, faltaPrevia]);
+
   const loadData = async () => {
     try {
       const [o, e, s, u] = await Promise.all([
@@ -240,7 +263,7 @@ export default function Obrigacoes() {
     setEditing(o);
     setPeriodicidade(periodicidadeDe(o.meses_ativos));
     setForm({
-      ...emptyForm, ...o,
+      ...emptyForm, ...o, ...prazoDoRegistro(o),
       setor_id: o.setor_id || '',
       tempo_previsto_min: o.tempo_previsto_min ?? '', regra_prazo_dia: o.regra_prazo_dia ?? '',
       alvo_modo: o.alvo_modo || 'regra',
@@ -258,7 +281,7 @@ export default function Obrigacoes() {
     setEditing(null);   // cria uma NOVA (POST), não edita a original
     setPeriodicidade(periodicidadeDe(o.meses_ativos));
     setForm({
-      ...emptyForm, ...o,
+      ...emptyForm, ...o, ...prazoDoRegistro(o),
       nome: `${o.nome} (cópia)`,
       setor_id: o.setor_id || '',
       supervisor_id: o.supervisor_id || '',
@@ -278,6 +301,30 @@ export default function Obrigacoes() {
     setExcecoes([]);
     setShowModal(true);
   };
+
+  // Regra + dia do prazo legal.
+  const camposRegra = (rotulo, dica) => (
+    <>
+      <div>
+        <label htmlFor="regra-prazo" className="block text-sm font-medium text-gray-700 mb-1" title={dica}>{rotulo}</label>
+        <select id="regra-prazo" value={form.regra_prazo_tipo} onChange={(e) => set('regra_prazo_tipo', e.target.value)} className="input-field">
+          {REGRAS_DIA.map((r) => <option key={r.valor} value={r.valor}>{r.rotulo}</option>)}
+        </select>
+      </div>
+      {usaDia(form.regra_prazo_tipo) && (
+        <div>
+          <label htmlFor="regra-dia" className="block text-sm font-medium text-gray-700 mb-1">
+            {form.regra_prazo_tipo === 'dia_util' ? 'Qual dia útil' : 'Dia do mês'}
+          </label>
+          <input id="regra-dia" type="number" min="1" max="31" value={form.regra_prazo_dia} onChange={(e) => set('regra_prazo_dia', e.target.value)} className="input-field"
+                 placeholder={form.regra_prazo_tipo === 'dia_util' ? '10' : '20'} />
+        </div>
+      )}
+    </>
+  );
+  // Sugestão de origem do prazo pelo setor (Fiscal e ECD/ECF legal, Contabilidade fechamento). Não trava.
+  const nomeSetor = (setores.find((x) => String(x.id) === String(form.setor_id)) || {}).nome || '';
+  const sugerida = sugestaoOrigem(nomeSetor, form.nome, form.mininome);
 
   const salvar = async (e) => {
     e.preventDefault();
@@ -773,124 +820,9 @@ export default function Obrigacoes() {
                 <button type="button" onClick={() => toggleSecao('recorrencia')} className="w-full flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2">
                   {secoes.recorrencia ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Recorrência e prazo
                 </button>
-                {secoes.recorrencia && (<div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="md:col-span-2 border border-primary-200 bg-primary-50/40 rounded-lg p-3 mb-1">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={form.ancora === 'fechamento'}
-                        onChange={(e) => set('ancora', e.target.checked ? 'fechamento' : '')}
-                      />
-                      Esta obrigação é etapa do fechamento contábil
-                    </label>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Marque só as etapas do processo (lançar notas, conciliar, balancete).
-                      O vencimento sai do <strong>fechamento de cada empresa</strong>, então varia
-                      de cliente para cliente. Obrigação com prazo em lei (SPED, DEFIS, DARF)
-                      deixe desmarcada: o prazo é o mesmo para todos.
-                    </p>
-                    {form.ancora === 'fechamento' && (
-                      <div className="flex items-end gap-2 mt-2">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Vence</label>
-                          <input
-                            type="number" min="0" max="60"
-                            value={form.ancora_dias_antes}
-                            onChange={(e) => set('ancora_dias_antes', e.target.value)}
-                            className="input-field w-20"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">dias</label>
-                          <select value={form.ancora_tipo_dias} onChange={(e) => set('ancora_tipo_dias', e.target.value)} className="input-field w-28">
-                            <option value="uteis">úteis</option>
-                            <option value="corridos">corridos</option>
-                          </select>
-                        </div>
-                        <span className="text-xs text-gray-600 pb-2">
-                          antes do fechamento {Number(form.ancora_dias_antes) === 0 && '(0 = no próprio dia do fechamento)'}
-                        </span>
-                      </div>
-                    )}
-                    {form.ancora === 'fechamento' && (
-                      <p className="text-xs text-gray-600 mt-2 border-t border-primary-200 pt-2">
-                        A data sai do <strong>Fechamento contábil</strong> de cada empresa, no
-                        cadastro dela. Empresa que não tiver esse campo preenchido usa a
-                        <strong> Regra de prazo</strong> ao lado, e assim a tarefa nasce com data
-                        de qualquer jeito, em vez de nascer sem prazo.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Regra de prazo
-                      {form.ancora === 'fechamento' && (
-                        <span className="ml-1 font-normal text-[11px] text-amber-700">
-                          só para empresa sem fechamento definido
-                        </span>
-                      )}
-                    </label>
-                    <select value={form.regra_prazo_tipo} onChange={(e) => set('regra_prazo_tipo', e.target.value)} className="input-field">
-                      <option value="ultimo_dia_util">Último dia útil</option>
-                      <option value="primeiro_dia_util">Primeiro dia útil</option>
-                      <option value="dia_fixo">Dia fixo</option>
-                      <option value="dia_util">N-ésimo dia útil</option>
-                    </select>
-                  </div>
-                  {(form.regra_prazo_tipo === 'dia_fixo' || form.regra_prazo_tipo === 'dia_util') && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {form.regra_prazo_tipo === 'dia_util' ? 'Qual dia útil' : 'Dia do mês'}
-                      </label>
-                      <input type="number" min="1" max="31" value={form.regra_prazo_dia} onChange={(e) => set('regra_prazo_dia', e.target.value)} className="input-field"
-                             placeholder={form.regra_prazo_tipo === 'dia_util' ? '10' : '20'} />
-                      {form.regra_prazo_tipo === 'dia_util' && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Ex.: 10 = 10º dia útil do mês, que muda de data a cada mês.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
-                    {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)) ? (
-                      <>
-                        {/* Anual e trimestral: a competência é o início do
-                            período, que é o que o recibo traz. Não se escolhe. */}
-                        <div className="input-field flex items-center bg-gray-50 text-gray-700">
-                          {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form))}
-                        </div>
-                        {competenciaDiverge(form, periodicidade) && (
-                          <p className="text-xs text-amber-700 mt-1">
-                            A competência gravada é outra.{' '}
-                            <button type="button" className="underline font-semibold"
-                              onClick={() => escolherPeriodicidade(periodicidade)}>
-                              Usar {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)).toLowerCase()}
-                            </button>
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                    <>
-                    <select value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
-                      <option value="mesmo_mes">Mesmo mês</option>
-                      <option value="mes_anterior">Mês anterior</option>
-                      <option value="-2">2 meses antes</option>
-                      <option value="-3">3 meses antes</option>
-                      <option value="-6">6 meses antes</option>
-                      <option value="mes_seguinte">Mês seguinte</option>
-                      <option value="ano_anterior">Ano anterior</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Qual mês a tarefa se refere, contado a partir do mês de entrega.
-                      SPED e EFD-Contribuições são <strong>2 meses antes</strong>: entrega em
-                      setembro, competência de julho.
-                    </p>
-                    </>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-3">
+                {secoes.recorrencia && (<div className="space-y-3">
+                <fieldset className="border border-gray-200 rounded-lg p-3">
+                  <legend className="px-1 text-sm font-semibold text-gray-700">Quando acontece</legend>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Periodicidade</label>
                   <div role="radiogroup" aria-label="Periodicidade"
                     className="inline-flex flex-wrap items-center gap-1 p-[3px] border border-gray-200 rounded-lg bg-white">
@@ -931,33 +863,180 @@ export default function Obrigacoes() {
                   {periodicidade === 'trimestral' && (
                     <p className="text-xs text-gray-500 mt-1">Clique no primeiro mês de entrega: os outros saem de 3 em 3.</p>
                   )}
-                </div>
-                <div className="grid grid-cols-4 gap-4 mt-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Lembrar (dias antes)</label>
-                    <input type="number" value={form.lembrar_dias_antes} onChange={(e) => set('lembrar_dias_antes', e.target.value)} className="input-field" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo dos dias</label>
-                    <select value={form.tipo_dias} onChange={(e) => set('tipo_dias', e.target.value)} className="input-field">
-                      <option value="corridos">Corridos</option>
-                      <option value="uteis">Úteis</option>
+                  <div className="mt-3 md:max-w-sm">
+                    <label htmlFor="competencia-ref" className="block text-sm font-medium text-gray-700 mb-1">Competência referente a</label>
+                    {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)) ? (
+                      <>
+                        {/* Anual e trimestral: a competência é o início do
+                            período, que é o que o recibo traz. Não se escolhe. */}
+                        <div className="input-field flex items-center bg-gray-50 text-gray-700">
+                          {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form))}
+                        </div>
+                        {competenciaDiverge(form, periodicidade) && (
+                          <p className="text-xs text-amber-700 mt-1">
+                            A competência gravada é outra.{' '}
+                            <button type="button" className="underline font-semibold"
+                              onClick={() => escolherPeriodicidade(periodicidade)}>
+                              Usar {rotuloCompetenciaCalculada(periodicidade, sentidoDoForm(form)).toLowerCase()}
+                            </button>
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                    <>
+                    <select id="competencia-ref" value={form.competencia_ref} onChange={(e) => set('competencia_ref', e.target.value)} className="input-field">
+                      <option value="mesmo_mes">Mesmo mês</option>
+                      <option value="mes_anterior">Mês anterior</option>
+                      <option value="-2">2 meses antes</option>
+                      <option value="-3">3 meses antes</option>
+                      <option value="-6">6 meses antes</option>
+                      <option value="mes_seguinte">Mês seguinte</option>
+                      <option value="ano_anterior">Ano anterior</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Contada a partir do mês de entrega. SPED e EFD-Contribuições: <strong>2 meses antes</strong>.
+                    </p>
+                    </>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dia não-útil</label>
-                    <select value={form.ajuste_nao_util} onChange={(e) => set('ajuste_nao_util', e.target.value)} className="input-field">
-                      <option value="antecipar">Antecipar</option>
-                      <option value="postergar">Postergar</option>
-                      <option value="nenhum">Nenhum</option>
-                    </select>
+                </fieldset>
+
+                <fieldset className="border border-gray-200 rounded-lg p-3">
+                  <legend className="px-1 text-sm font-semibold text-gray-700">Fechamento do cliente</legend>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700"
+                    title={ORIGENS_PRAZO[0].dica}>
+                    <input type="checkbox" className="h-4 w-4" checked={origemDe(form) === 'fechamento'}
+                      onChange={(e) => setForm((f) => ({ ...f, ...aplicarOrigem(f, e.target.checked ? 'fechamento' : 'legal') }))} />
+                    Etapa do fechamento contábil
+                  </label>
+                  {sugerida && sugerida !== origemDe(form) && (
+                    <p className="text-xs text-amber-700 mt-1">
+                      No setor {nomeSetor}, o comum é {sugerida === 'fechamento' ? 'marcar' : 'deixar desmarcado'}.{' '}
+                      <button type="button" className="underline font-semibold"
+                        onClick={() => setForm((f) => ({ ...f, ...aplicarOrigem(f, sugerida) }))}>
+                        Usar
+                      </button>
+                    </p>
+                  )}
+                  {origemDe(form) === 'fechamento' && (
+                  <div className="flex flex-wrap items-end gap-2 mt-2">
+                    <div>
+                      <label htmlFor="ancora-dias" className="block text-xs font-medium text-gray-700 mb-1">Vence</label>
+                      <input
+                        id="ancora-dias" type="number" min="0" max="60"
+                        value={form.ancora_dias_antes}
+                        onChange={(e) => set('ancora_dias_antes', e.target.value)}
+                        className="input-field w-20"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="ancora-tipo" className="block text-xs font-medium text-gray-700 mb-1">contados em</label>
+                      <select id="ancora-tipo" value={form.ancora_tipo_dias} onChange={(e) => set('ancora_tipo_dias', e.target.value)} className="input-field w-40">
+                        <option value="uteis">dias úteis</option>
+                        <option value="corridos">dias corridos</option>
+                      </select>
+                    </div>
+                    <span className="text-sm text-gray-600 pb-2">
+                      antes do fechamento {Number(form.ancora_dias_antes) === 0 && '(0 = no próprio dia)'}
+                    </span>
                   </div>
-                  <div className="flex items-end pb-2">
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                      <input type="checkbox" checked={form.sabado_util} onChange={(e) => set('sabado_util', e.target.checked)} className="h-4 w-4" />
-                      Sábado é útil
-                    </label>
+                  )}
+                </fieldset>
+
+                <fieldset className="border border-gray-200 rounded-lg p-3">
+                  <legend className="px-1 text-sm font-semibold text-gray-700">Prazo interno da equipe</legend>
+                  <div role="radiogroup" aria-label="Prazo interno da equipe"
+                    className="inline-flex flex-wrap items-center gap-1 p-[3px] border border-gray-200 rounded-lg bg-white">
+                    {MODOS_INTERNO.map((m) => (
+                      <button key={m.valor} type="button" role="radio"
+                        aria-checked={form.interno_modo === m.valor}
+                        title={m.dica} onClick={() => set('interno_modo', m.valor)}
+                        className={`h-8 px-2.5 rounded-md border text-xs font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ${form.interno_modo === m.valor
+                          ? 'border-primary-600 bg-primary-50 text-primary-800'
+                          : 'border-transparent bg-white text-gray-500 hover:text-primary-600'}`}>
+                        {m.rotulo}
+                      </button>
+                    ))}
                   </div>
+                  {form.interno_modo === 'regra' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                      <div>
+                        <label htmlFor="interno-regra" className="block text-sm font-medium text-gray-700 mb-1">Regra</label>
+                        <SelectBusca
+                          id="interno-regra"
+                          opcoes={REGRAS_DIA}
+                          valor={form.interno_regra_tipo}
+                          onChange={(v) => set('interno_regra_tipo', v)}
+                          placeholder="Escolha a regra"
+                        />
+                      </div>
+                      {usaDia(form.interno_regra_tipo) && (
+                        <div>
+                          <label htmlFor="interno-dia" className="block text-sm font-medium text-gray-700 mb-1">
+                            {form.interno_regra_tipo === 'dia_util' ? 'Qual dia útil' : 'Dia do mês'}
+                          </label>
+                          <input id="interno-dia" type="number" min="1" max="31" value={form.interno_regra_dia}
+                            onChange={(e) => set('interno_regra_dia', e.target.value)} className="input-field"
+                            placeholder={form.interno_regra_tipo === 'dia_util' ? '3' : '5'} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-end gap-2 mt-3">
+                      <div>
+                        <label htmlFor="interno-dias" className="block text-xs font-medium text-gray-700 mb-1">Dias</label>
+                        <input id="interno-dias" type="number" min="0" max="365" value={form.lembrar_dias_antes}
+                          onChange={(e) => set('lembrar_dias_antes', e.target.value)} className="input-field w-20" />
+                      </div>
+                      <div>
+                        <label htmlFor="interno-tipo" className="block text-xs font-medium text-gray-700 mb-1">contados em</label>
+                        <select id="interno-tipo" value={form.tipo_dias} onChange={(e) => set('tipo_dias', e.target.value)} className="input-field w-40">
+                          <option value="uteis">dias úteis</option>
+                          <option value="corridos">dias corridos</option>
+                        </select>
+                      </div>
+                      <span className="text-sm text-gray-600 pb-2">{rotuloRecuo(form.interno_modo)}</span>
+                    </div>
+                  )}
+                </fieldset>
+
+                <fieldset disabled={origemDe(form) === 'fechamento'} className="border border-gray-200 rounded-lg p-3 disabled:opacity-50">
+                  <legend className="px-1 text-sm font-semibold text-gray-700">Prazo legal{origemDe(form) === 'fechamento' && <span className="font-normal text-gray-500"> (não se aplica a etapa do fechamento)</span>}</legend>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {camposRegra('Vence no')}
+                    <div>
+                      <label htmlFor="ajuste-nao-util" className="block text-sm font-medium text-gray-700 mb-1">Se cair em dia não útil</label>
+                      <select id="ajuste-nao-util" value={form.ajuste_nao_util} onChange={(e) => set('ajuste_nao_util', e.target.value)} className="input-field">
+                        <option value="antecipar">Antecipar</option>
+                        <option value="postergar">Postergar</option>
+                        <option value="nenhum">Manter a data</option>
+                      </select>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <label className="flex items-center gap-2 text-sm text-gray-700"
+                  title="Vale para todas as datas desta obrigação: vencimento e prazo interno.">
+                  <input type="checkbox" checked={form.sabado_util} onChange={(e) => set('sabado_util', e.target.checked)} className="h-4 w-4" />
+                  Sábado é dia útil
+                </label>
+
+                <div aria-live="polite" className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm min-h-[2.5rem]">
+                  {previa.carregando ? (
+                    <span className="flex items-center gap-2 text-gray-600">
+                      <Loader2 size={14} className="animate-spin text-primary-600" /> Calculando as datas...
+                    </span>
+                  ) : previa.falta ? (
+                    <span className="text-gray-500">{previa.falta}</span>
+                  ) : previa.erro ? (
+                    <span className="text-amber-700">{previa.erro}</span>
+                  ) : previa.texto ? (
+                    <>
+                      <p className="font-medium text-gray-800">{previa.texto.linha}</p>
+                      {previa.texto.exemplo && <p className="text-xs text-gray-500">{previa.texto.exemplo}</p>}
+                      {previa.texto.aviso && <p className="text-xs text-amber-700">{previa.texto.aviso}</p>}
+                    </>
+                  ) : null}
                 </div>
                 </div>)}
               </div>

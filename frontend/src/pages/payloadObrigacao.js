@@ -4,6 +4,8 @@
 // é a conversão que já errou em silêncio uma vez, e assim ela roda numa prova
 // em Node puro (frontend/provas/prova_payload_obrigacao.js).
 
+import { camposInterno } from './prazoObrigacao.js';
+
 /** Regras de prazo que usam o campo numérico ao lado. */
 const USAM_DIA = ['dia_fixo', 'dia_util'];
 
@@ -36,5 +38,7 @@ export function montarPayloadObrigacao(form) {
     // nenhum, e o cálculo caía no 1º dia útil.
     regra_prazo_dia: USAM_DIA.includes(f.regra_prazo_tipo) ? numero(f.regra_prazo_dia) : null,
     lembrar_dias_antes: numero(f.lembrar_dias_antes) || 0,
+    // Prazo interno (fase 57): tipo e dia só na regra própria, como na prévia.
+    ...camposInterno(f),
   };
 }

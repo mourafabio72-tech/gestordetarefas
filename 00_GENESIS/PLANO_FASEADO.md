@@ -325,7 +325,7 @@ prazo interno da depreciação dia 05; ISS prestado com prazo interno no primeir
 
 ## Fase 57: tela da seção de prazo
 
-- **Status:** pending | **Duração:** 2h
+- **Status:** superada pela 57b (código dos três blocos reaproveitado; desenho reprovado pelo usuário em 2026-10-04) | **Duração:** 2h
 - **Notas:** Padrao_Toggle_Tipos, Componente_SelectBusca, Padrao_Formulario, Tela_Nao_Tem_Manual, Portugues_BR_Acentuacao, Sem_Popup_Nativo, Sem_Travessao, Padrao_Loading_Estado, Verificacoes_Mecanicas_de_Tela
 - **Dependências:** Fase 56
 - **Output esperado:** `Obrigacoes.jsx` com três blocos; `payloadObrigacao.js` e a prova dele atualizados.
@@ -336,10 +336,23 @@ prazo interno da depreciação dia 05; ISS prestado com prazo interno no primeir
 4. **57.4** Linha de prévia: "Em outubro/2026: vencimento 20/10 (terça), prazo interno 13/10 (terça)". Ancorada ou antes do fechamento: "Exemplo: cliente que fecha dia 15". Chamada com espera curta depois da última digitação e texto "Calculando as datas..." enquanto espera; erro mostra aviso dentro do modal.
 5. **57.5** Gates: build; provas do front; linhas novas sem hex, sem `<select`, sem popup, sem travessão; acentuação; conferência visual pelo usuário na cópia local.
 
+## Fase 57b: redesenho da seção de prazo (decidido em 2026-10-04)
+
+- **Status:** done (2026-10-04; versão B, tudo visível, conferida pelo usuário)
+- **Motivo:** o usuário reprovou a tela da fase 57 ("não ficou bom"). Desenho aprovado no chat.
+- **Notas:** as mesmas da fase 57.
+
+1. **57b.1 RED** em `prova_prazo_obrigacao.js`: `ORIGENS_PRAZO` (Fechamento do cliente, Prazo legal); `origemDe(form)` lê `ancora`; `aplicarOrigem(form, origem)` troca só `ancora` (e zera `ancora_dias_antes` ao sair do fechamento); `sugestaoOrigem(setorNome, nome, mininome)`: Fiscal ou nome com ECD/ECF dá `legal`, Contabilidade dá `fechamento`, outro setor dá null (sugere, não trava).
+2. **57b.2** Tela: "Quando acontece" como está; seletor tipo 1 "De onde vem o prazo" com as duas opções e, quando a escolha difere da sugestão do setor, uma linha curta com botão "Usar ..."; bloco **Fechamento do cliente** (vence N dias antes do fechamento; regra de reserva para empresa sem fechamento) ou bloco **Prazo legal** (regra, dia, se cair em dia não útil), um ou outro; bloco **Prazo interno** sempre (os três modos da fase 56); "Sábado é dia útil" fora dos blocos, valendo para todas as datas; prévia.
+3. **57b.3** Gates da fase 57 e conferência visual do usuário.
+
+Decisões do usuário (2026-10-04): um ou outro, interno sempre; prazo legal sugerido pelo setor (Fiscal e ECD), sem trava; interno das etapas contábeis 3 dias; ECD e ECF 45 dias. Dados já gravados em produção no LOG (fechamento das 90 empresas, ECD 214, ECF 45 dias).
+
 ## Fase 58: publicar e conferir
 
 - **Status:** pending | **Duração:** 30min
 - **Dependências:** Fase 57 e conferência visual
+0. **58.0** Com o ok do usuário: prazo interno das etapas contábeis em 3 dias (PUT por obrigação, lista aprovada antes).
 1. **58.1** Commit, push, carimbo igual ao HEAD, migração aplicada (obrigação lida pela API com `interno_modo = antes_vencimento`), rota de prévia sem login 401.
 2. **58.2** Usuário configura a depreciação (dia fixo 5) e o ISS prestado (primeiro dia útil) em produção e confere a prévia.
 

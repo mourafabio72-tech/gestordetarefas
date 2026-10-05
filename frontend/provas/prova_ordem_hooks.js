@@ -10,8 +10,11 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const RAIZ = new URL('../src/', import.meta.url).pathname;
+// fileURLToPath, e nao .pathname: a pasta 'aplicações' tem acento, e o
+// .pathname devolve o caminho com %CC%A7, que o readdirSync nao acha (ENOENT).
+const RAIZ = fileURLToPath(new URL('../src/', import.meta.url));
 
 const arquivos = (dir) => readdirSync(dir).flatMap((nome) => {
   const caminho = join(dir, nome);

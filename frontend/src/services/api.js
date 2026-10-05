@@ -182,6 +182,7 @@ export const obrigacoesAPI = {
   setAtiva: (id, ativa) => api.post(`/obrigacoes/${id}/status`, { ativa }),
   gerar: (mes, ano, obrigacao_ids, empresa_ids) =>
     api.post('/obrigacoes/gerar', { mes, ano, obrigacao_ids, empresa_ids }),
+  previaPrazo: (data) => api.post('/obrigacoes/previa-prazo', data),
   getDetalhes: (id) => api.get(`/obrigacoes/${id}/detalhes-empresa`),
   getExcecoes: (id) => api.get(`/obrigacoes/${id}/excecoes`),
   removerExcecao: (id, excecaoId) => api.delete(`/obrigacoes/${id}/excecoes/${excecaoId}`),

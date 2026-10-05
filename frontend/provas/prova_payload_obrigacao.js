@@ -61,4 +61,34 @@ const base = { nome: 'X', setor_id: '', supervisor_id: '',
   ok('os demais campos numéricos continuam certos');
 }
 
+// 6 a 8. Prazo interno (fase 57): tipo e dia só saem na regra própria, e o
+//        dia só quando a regra usa número. Sem isso, um tipo esquecido de
+//        uma escolha anterior iria gravado numa obrigação "antes do vencimento".
+{
+  const p = montarPayloadObrigacao({ ...base, regra_prazo_tipo: 'ultimo_dia_util',
+    interno_modo: 'regra', interno_regra_tipo: 'dia_fixo', interno_regra_dia: '5' });
+  assert.strictEqual(p.interno_regra_tipo, 'dia_fixo');
+  assert.strictEqual(p.interno_regra_dia, 5);
+  ok('regra própria envia tipo e dia');
+}
+{
+  const p = montarPayloadObrigacao({ ...base, regra_prazo_tipo: 'ultimo_dia_util',
+    interno_modo: 'antes_vencimento', interno_regra_tipo: 'dia_fixo', interno_regra_dia: '5' });
+  assert.strictEqual(p.interno_regra_tipo, null);
+  assert.strictEqual(p.interno_regra_dia, null);
+  ok('fora da regra própria, tipo e dia vão nulos');
+}
+{
+  const p = montarPayloadObrigacao({ ...base, regra_prazo_tipo: 'ultimo_dia_util',
+    interno_modo: 'regra', interno_regra_tipo: 'primeiro_dia_util', interno_regra_dia: '5' });
+  assert.strictEqual(p.interno_regra_dia, null);
+  ok('primeiro dia útil do interno não envia número');
+}
+// 9. Modo vazio vai como o padrão, e nunca como string vazia.
+{
+  const p = montarPayloadObrigacao({ ...base, regra_prazo_tipo: 'ultimo_dia_util', interno_modo: '' });
+  assert.strictEqual(p.interno_modo, 'antes_vencimento');
+  ok('modo vazio vira antes do vencimento');
+}
+
 console.log(`\nPROVA OK: ${n} casos`);
