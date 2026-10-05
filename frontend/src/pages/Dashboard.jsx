@@ -72,12 +72,17 @@ function Donut({ fatias, centro, legenda, tamanho = 84, raio = 42, largura = 16,
         stroke={anel} strokeWidth="3" />}
       <g transform="rotate(-90 60 60)">
         <circle cx="60" cy="60" r={raio} fill="none" stroke="#eee8db" strokeWidth={largura} />
-        {arcos.map((a) => (
+        {/* Fresta de 2 unidades entre as fatias, na cor do fundo: cores vizinhas
+            não encostam e cada fatia lê separada. Só com mais de uma fatia. */}
+        {arcos.map((a) => {
+          const fresta = arcos.length > 1 && a.dash > 4 ? 2 : 0;
+          return (
           <circle key={a.chave} cx="60" cy="60" r={raio} fill="none" stroke={a.cor}
-            strokeWidth={largura} strokeDasharray={`${a.dash} ${a.gap}`} strokeDashoffset={a.offset}>
+            strokeWidth={largura} strokeDasharray={`${a.dash - fresta} ${a.gap + fresta}`} strokeDashoffset={a.offset}>
             <title>{`${a.rotulo}: ${a.valor} (${a.pct}%)`}</title>
           </circle>
-        ))}
+          );
+        })}
       </g>
       <text x="60" y={legenda ? 58 : 66} textAnchor="middle" className="fill-gray-800"
         style={{ fontSize: fonteDoCentro(centro, raio, largura), fontWeight: 700 }}>{centro}</text>
@@ -194,8 +199,9 @@ function GraficoComAbas({ dados }) {
               <div className="flex-1 h-5 rounded bg-[#f3efe6] overflow-hidden">
                 {/* Largura = volume ante o maior; divisão interna = composição. */}
                 <div className="flex h-full rounded overflow-hidden" style={{ width: `${l.largura}%` }}>
-                  {l.segmentos.map((sg) => (
-                    <div key={sg.chave} style={{ width: `${sg.pct}%`, background: sg.cor }}
+                  {l.segmentos.map((sg, i) => (
+                    <div key={sg.chave} style={{ width: `${sg.pct}%`, background: sg.cor,
+                      borderRight: i < l.segmentos.length - 1 ? '2px solid #fffdf9' : 'none' }}
                       title={`${sg.rotulo}: ${sg.valor}`} />
                   ))}
                 </div>

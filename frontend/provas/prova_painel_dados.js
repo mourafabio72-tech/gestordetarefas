@@ -159,8 +159,8 @@ eq('os setores do escritório têm cada um a sua',
   new Set(['Fiscal', 'Contabilidade', 'DP', 'Financeiro', 'Societário', 'Controladoria']
     .map(corDoSetor)).size, 6);
 eq('acento não muda a cor', corDoSetor('Societário'), corDoSetor('societario'));
-eq('Cliente não entra no sorteio: não é setor nosso', corDoSetor('Cliente'), '#a99e88');
-eq('sem setor tem tom apagado', corDoSetor('Sem setor'), '#c3bda9');
+eq('Cliente não entra no sorteio: não é setor nosso', corDoSetor('Cliente'), '#8f9aa3');
+eq('sem setor tem tom apagado', corDoSetor('Sem setor'), '#c3c9cd');
 eq('nome vazio não quebra', typeof corDoSetor(''), 'string');
 
 console.log('\n14) A marca de linha derivada chega à tela');

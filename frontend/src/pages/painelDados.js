@@ -4,11 +4,11 @@
 
 /** As cinco situações, na ordem em que se lê: o que corre primeiro. */
 export const SITUACOES = [
-  { chave: 'atrasada', rotulo: 'Atrasadas', curto: 'Atras.', cor: '#a24a3a' },
-  { chave: 'pendente', rotulo: 'Pendentes', curto: 'Pend.', cor: '#8a6a2e' },
-  { chave: 'em_andamento', rotulo: 'Em andamento', curto: 'Andam.', cor: '#3a7d76' },
-  { chave: 'concluida', rotulo: 'Concluídas', curto: 'Concl.', cor: '#4d8a3f' },
-  { chave: 'cancelada', rotulo: 'Canceladas', curto: 'Canc.', cor: '#a99e88' },
+  { chave: 'atrasada', rotulo: 'Atrasadas', curto: 'Atras.', cor: '#c0392b' },
+  { chave: 'pendente', rotulo: 'Pendentes', curto: 'Pend.', cor: '#e8a317' },
+  { chave: 'em_andamento', rotulo: 'Em andamento', curto: 'Andam.', cor: '#3a5fb5' },
+  { chave: 'concluida', rotulo: 'Concluídas', curto: 'Concl.', cor: '#24896a' },
+  { chave: 'cancelada', rotulo: 'Canceladas', curto: 'Canc.', cor: '#93a0a8' },
 ];
 
 /**
@@ -241,9 +241,11 @@ export function fundoDoTom(tom) {
 // Cores de setor. Não é a paleta das situações: aqui a cor só serve de
 // etiqueta, para o olho achar "Fiscal" sem ler. Por isso são matizes distintos
 // entre si e dessaturados o bastante para não competir com o semáforo.
+// Medidas com o validador de paleta em 2026-10-05: as quatro primeiras passam
+// em todas as checagens entre si (daltonismo ΔE 9,6; visão normal 18,8).
 const PALETA_SETOR = [
-  '#5f7057', '#2f6d78', '#8a5a2e', '#6a5a8a', '#3f7a5a',
-  '#8a4a5a', '#4a6a9a', '#7a7a3a',
+  '#5a48b5', '#1f9ccc', '#9a6a2a', '#cc4f8f', '#6a3d9a',
+  '#2bb3b3', '#a6761d', '#b04c9e',
 ];
 
 // Os setores do escritório têm cor FIXA, não sorteada. O sorteio por hash é
@@ -251,19 +253,19 @@ const PALETA_SETOR = [
 // e dois setores da mesma cor é pior que nenhuma cor. Cliente e "sem setor"
 // ficam em tons apagados de propósito: não são fila de trabalho de ninguém.
 const COR_FIXA = {
-  contabilidade: '#5f7057',
-  contabil: '#5f7057',
-  fiscal: '#2f6d78',
-  dp: '#8a5a2e',
-  'departamento pessoal': '#8a5a2e',
-  'recursos humanos': '#8a5a2e',
-  financeiro: '#6a5a8a',
-  societario: '#3f7a5a',
-  legalizacao: '#4a6a9a',
-  controladoria: '#8a4a5a',
-  paralegal: '#7a7a3a',
-  cliente: '#a99e88',
-  'sem setor': '#c3bda9',
+  contabilidade: '#5a48b5',
+  contabil: '#5a48b5',
+  fiscal: '#1f9ccc',
+  dp: '#9a6a2a',
+  'departamento pessoal': '#9a6a2a',
+  'recursos humanos': '#9a6a2a',
+  financeiro: '#cc4f8f',
+  societario: '#6a3d9a',
+  legalizacao: '#2bb3b3',
+  controladoria: '#b04c9e',
+  paralegal: '#a6761d',
+  cliente: '#8f9aa3',
+  'sem setor': '#c3c9cd',
 };
 
 /** Sem acento e sem caixa, para "Societário" e "societario" caírem na mesma. */
