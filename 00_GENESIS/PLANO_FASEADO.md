@@ -350,7 +350,7 @@ Decisões do usuário (2026-10-04): um ou outro, interno sempre; prazo legal sug
 
 ## Fase 58: publicar e conferir
 
-- **Status:** pending | **Duração:** 30min
+- **Status:** done (2026-10-04; carimbo 20261004-2227, conferido pelo usuário em produção) | **Duração:** 30min
 - **Dependências:** Fase 57 e conferência visual
 0. **58.0** Com o ok do usuário: prazo interno das etapas contábeis em 3 dias (PUT por obrigação, lista aprovada antes). FEITO em 2026-10-04 (LOG): 20 viraram etapa do fechamento e 25 com interno de 3 dias corridos.
 1. **58.1** Commit, push, carimbo igual ao HEAD, migração aplicada (obrigação lida pela API com `interno_modo = antes_vencimento`), rota de prévia sem login 401.
