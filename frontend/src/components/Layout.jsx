@@ -55,6 +55,8 @@ const menuGroups = [
     label: 'Relatórios',
     items: [
       { path: '/relatorios/obrigacoes', label: 'Relação de obrigações', icon: BarChart3, roles: ['admin', 'gestor'] },
+      // Página estática do manual (public/leia-me), aberta direto no quadro de quem fez o fluxo.
+      { path: '/leia-me/index.html#quem', externo: true, label: 'Quem leu o Leia-me', icon: BookOpen, roles: ['admin', 'gestor'] },
     ],
   },
   {
@@ -170,10 +172,15 @@ export default function Layout() {
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
+                    // Item externo (página estática fora do React) abre em nova aba.
+                    const Elemento = item.externo ? 'a' : Link;
+                    const destino = item.externo
+                      ? { href: item.path, target: '_blank', rel: 'noopener' }
+                      : { to: item.path };
                     return (
-                      <Link
+                      <Elemento
                         key={item.path}
-                        to={item.path}
+                        {...destino}
                         onClick={() => setSidebarOpen(false)}
                         title={item.label}
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg mb-0.5 text-sm transition-colors ${
@@ -184,7 +191,7 @@ export default function Layout() {
                       >
                         <Icon size={16} />
                         <span className={colapsado ? 'lg:hidden' : ''}>{item.label}</span>
-                      </Link>
+                      </Elemento>
                     );
                   })}
                 </div>

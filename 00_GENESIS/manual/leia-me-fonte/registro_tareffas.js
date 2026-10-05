@@ -22,7 +22,7 @@ function registra(){if(!reg.ok)return;const corpo={estado:estado.map(s=>({acao:!
    else{estado=ETAPAS.map(()=>({acao:false,resp:false,erros:0}));liberada=0;}
    salvaLocal();mostra(liberada);}
   msgReg('Seu progresso fica registrado no Tareffas.');
-  if(['admin','gestor'].includes(eu.grupo)){reg.gestor=true;$('painelQuem').hidden=false;carregaQuadro();setInterval(carregaQuadro,30000);}
+  if(['admin','gestor'].includes(eu.grupo)){reg.gestor=true;$('painelQuem').hidden=false;$('navQuem').hidden=false;if(location.hash==='#quem'||location.hash==='#painelQuem')$('painelQuem').scrollIntoView();carregaQuadro();setInterval(carregaQuadro,30000);}
  }catch(e){msgReg('');}})();
 async function carregaQuadro(){try{
  const r=await fetch('/api/leiame/conclusoes',{headers:cabec()});if(!r.ok){$('quemResumo').textContent='Não consegui ler o registro agora.';return;}

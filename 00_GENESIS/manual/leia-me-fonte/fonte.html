@@ -247,6 +247,7 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
 <nav class="indice" aria-label="Índice">
   <div class="marca">Tareffas</div>
   <a href="#inicio">Introdução</a>
+  <a href="#painelQuem" id="navQuem" hidden>Quem fez o fluxo</a>
   <a href="#passeio">Como funciona em 1 minuto</a>
   <a href="#fluxo">O fluxo do processo</a>
   <a href="#datas">Como nascem as datas</a>
@@ -283,6 +284,19 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
 </section>
 
 
+<!-- QUEM FEZ (só admin, gestor ou editor da página) -->
+<section id="painelQuem" hidden>
+  <span class="rotulo">Só para quem edita esta página</span>
+  <h2>Quem fez o fluxo</h2>
+  <div class="cartao" style="display:flex;flex-direction:column;gap:12px">
+    <p id="quemResumo">Carregando o registro...</p>
+    <div class="rolar"><table class="ad" style="min-width:560px">
+      <thead><tr><th>Pessoa</th><th>Etapas</th><th>Situação</th><th>Quando</th><th>Respostas erradas</th></tr></thead>
+      <tbody id="quemLinhas"></tbody>
+    </table></div>
+  </div>
+</section>
+
 <section id="passeio">
   <span class="rotulo">Como funciona em 1 minuto</span>
   <h2>A viagem de uma tarefa</h2>
@@ -293,8 +307,8 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
       <path id="estradaFeita" class="estrada-feita" d="M 60 250 C 160 250 150 90 260 90 S 380 250 480 250 S 600 90 700 90 S 830 250 940 250"/>
       <g id="paradas"></g>
       <g id="token" class="token">
-        <rect x="-34" y="-22" width="68" height="44" rx="7"/>
-        <path d="M 22 -22 L 34 -10 L 22 -10 Z" class="dobra"/>
+        <rect x="-46" y="-22" width="92" height="44" rx="7"/>
+        <path d="M 34 -22 L 46 -10 L 34 -10 Z" class="dobra"/>
         <text x="0" y="5" text-anchor="middle">DCTFWeb</text>
       </g>
     </svg>
@@ -336,15 +350,6 @@ dialog.zoom button{position:absolute;top:8px;right:8px}
     <div class="controles"><a class="btn primario" href="#datas">Continuar: como nascem as datas</a><button class="btn" type="button" id="recomecar">Refazer o fluxo</button></div>
   </div>
   <p class="quem" id="regStatus"></p>
-  <div class="cartao" id="painelQuem" hidden>
-    <span class="rotulo">Só para quem edita esta página</span>
-    <h3>Quem fez o fluxo</h3>
-    <p id="quemResumo">Carregando o registro...</p>
-    <div class="rolar"><table class="ad" style="min-width:560px">
-      <thead><tr><th>Pessoa</th><th>Etapas</th><th>Situação</th><th>Quando</th><th>Respostas erradas</th></tr></thead>
-      <tbody id="quemLinhas"></tbody>
-    </table></div>
-  </div>
 </section>
 
 <!-- DATAS -->
@@ -658,7 +663,7 @@ function msgReg(t){const el=$('regStatus');if(el)el.textContent=t;}
  if(await user.canEdit())montaQuadro(db,user);
 }catch(e){msgReg('');}})();
 
-function montaQuadro(db,user){const q=$('painelQuem');q.hidden=false;
+function montaQuadro(db,user){const q=$('painelQuem');q.hidden=false;$('navQuem').hidden=false;if(location.hash==='#quem'||location.hash==='#painelQuem')q.scrollIntoView();
  db.collection('conclusoes').onSnapshot(async snap=>{
   const docs=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
   const ps=await user.profiles(docs.map(d=>d.id));
