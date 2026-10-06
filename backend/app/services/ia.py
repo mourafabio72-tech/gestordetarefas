@@ -19,7 +19,7 @@ PROVEDORES = {
     "openai": ("OpenAI", "openai_api_key", "openai_model", "openai_url",
                "gpt-4o-mini", "https://api.openai.com/v1/chat/completions"),
     "nvidia": ("NVIDIA", "nvidia_api_key", "nvidia_model", "nvidia_url",
-               "nvidia/llama-3.1-nemotron-70b-instruct", "https://integrate.api.nvidia.com/v1/chat/completions"),
+               "google/gemma-4-31b-it", "https://integrate.api.nvidia.com/v1/chat/completions"),
 }
 
 
@@ -39,9 +39,12 @@ def credenciais(cfg: dict, provedor: str):
 
 def _erro_http(nome: str, status: int, modelo: str) -> str:
     """Mensagem para a tela. Sem o corpo da resposta: ele pode ecoar o pedido."""
-    if status in (404, 410):
-        return (f"A {nome} respondeu HTTP {status}: o modelo {modelo} saiu do catálogo. "
+    if status == 410:
+        return (f"A {nome} respondeu HTTP 410: o modelo {modelo} saiu do catálogo. "
                 "Troque o modelo em Configuração > Inteligência artificial.")
+    if status == 404:
+        return (f"A {nome} respondeu HTTP 404: o modelo {modelo} não está liberado para "
+                "esta chave. Troque o modelo em Configuração > Inteligência artificial.")
     return f"A {nome} respondeu HTTP {status}."
 
 

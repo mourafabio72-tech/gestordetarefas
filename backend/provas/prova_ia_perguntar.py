@@ -2,7 +2,10 @@
 
 Itens 25 a 30 (2026-10-06): a NVIDIA tirou meta/llama-3.3-70b-instruct do
 catálogo e passou a responder HTTP 410. Padrão novo, troca do nome antigo
-guardado no banco, e 404/410 viram mensagem que manda trocar o modelo.
+guardado no banco, e 404/410 viram mensagem que manda trocar o modelo. O
+padrão é google/gemma-4-31b-it: o nemotron-70b existe no catálogo, mas a conta
+do Fábio recebe 404 nele (apurado no FinHub). 410 = saiu do catálogo; 404 =
+não liberado para a chave.
 
 A IA só traduz a pergunta em filtro. Quem consulta o banco é o Tareffas, dentro
 do escopo de quem perguntou. Para a IA vai a pergunta e a data de hoje, e nada
@@ -154,7 +157,7 @@ checa(4, "chaves gravadas e mascaradas na resposta",
       and "segredo" not in r.text, r.text[:200])
 
 # 5. Salvar com a chave vazia mantém a guardada.
-client.put(CFG, json={"nvidia_api_key": "", "nvidia_model": "nvidia/llama-3.1-nemotron-70b-instruct"},
+client.put(CFG, json={"nvidia_api_key": "", "nvidia_model": "google/gemma-4-31b-it"},
            headers=cab("admin@x.com"))
 r = client.get(CFG, headers=cab("admin@x.com"))
 checa(5, "chave vazia no salvar mantém a guardada", r.json().get("nvidia_api_key_set") is True, r.text[:200])
@@ -284,10 +287,10 @@ checa(24, "limite da Ana não trava o Bruno", r.status_code == 200, f"{r.status_
 from app.services import config as cfgmod                 # noqa: E402
 
 ANTIGO = "meta/llama-3.3-70b-instruct"
-NOVO = "nvidia/llama-3.1-nemotron-70b-instruct"
+NOVO = "google/gemma-4-31b-it"
 
 # 25. O padrão da NVIDIA é o modelo que está no catálogo.
-checa(25, "padrão da NVIDIA é o nemotron, no código e na configuração",
+checa(25, "padrão da NVIDIA é o gemma-4-31b-it, no código e na configuração",
       ia_mod.PROVEDORES["nvidia"][4] == NOVO
       and (os.getenv("NVIDIA_MODEL") or cfgmod.DEFAULTS["nvidia_model"] == NOVO),
       f"{ia_mod.PROVEDORES['nvidia'][4]} {cfgmod.DEFAULTS['nvidia_model']}")
@@ -312,8 +315,8 @@ checa(27, "modelo fora da lista de retirados não é trocado",
 resposta_ia["status"] = 410
 r = client.post("/api/configuracao/ia/testar", json={"provedor": "nvidia"}, headers=cab("admin@x.com"))
 erro = r.json().get("erro", "")
-checa(28, "testar com HTTP 410: manda trocar o modelo, sem corpo nem chave",
-      r.json().get("ok") is False and "410" in erro and "modelo" in erro.lower()
+checa(28, "testar com HTTP 410: saiu do catálogo, manda trocar o modelo, sem corpo nem chave",
+      r.json().get("ok") is False and "410" in erro and "saiu do catálogo" in erro
       and "configura" in erro.lower() and "erro do provedor" not in r.text and "segredo" not in r.text,
       r.text[:200])
 
@@ -322,15 +325,16 @@ ia_rota._uso.clear()
 r = client.post(PERG, json={"pergunta": "vence hoje"}, headers=cab("admin@x.com"))
 det = r.json().get("detail", "") if r.status_code == 502 else ""
 checa(29, "perguntar com HTTP 410: 502 que manda trocar o modelo",
-      "410" in det and "modelo" in det.lower() and "configura" in det.lower()
+      "410" in det and "saiu do catálogo" in det and "configura" in det.lower()
       and "erro do provedor" not in r.text and "segredo" not in r.text, f"{r.status_code} {r.text[:200]}")
 
-# 30. 404 tem o mesmo tratamento.
+# 30. 404 é outro motivo: o modelo existe, mas a chave não tem acesso a ele.
 resposta_ia["status"] = 404
 r = client.post("/api/configuracao/ia/testar", json={"provedor": "nvidia"}, headers=cab("admin@x.com"))
 erro = r.json().get("erro", "")
-checa(30, "testar com HTTP 404: mesma orientação, sem corpo",
-      "404" in erro and "modelo" in erro.lower() and "erro do provedor" not in r.text, r.text[:200])
+checa(30, "testar com HTTP 404: modelo não liberado para a chave, manda trocar, sem corpo",
+      "404" in erro and "não está liberado" in erro and "saiu do catálogo" not in erro
+      and "configura" in erro.lower() and "erro do provedor" not in r.text, r.text[:200])
 resposta_ia["status"] = 200
 
 print()

@@ -44,7 +44,9 @@ DEFAULTS = {
     "ia_provedor": os.getenv("IA_PROVEDOR", "openai"),
     # NVIDIA NIM fala o mesmo protocolo da OpenAI, então muda endereço e modelo.
     "nvidia_api_key": os.getenv("NVIDIA_API_KEY", ""),
-    "nvidia_model": os.getenv("NVIDIA_MODEL", "nvidia/llama-3.1-nemotron-70b-instruct"),
+    # gemma-4-31b-it: o único que a conta do Fábio libera (testado no FinHub em
+    # 2026-10-06). O nemotron-70b está no catálogo, mas dá 404 com esta chave.
+    "nvidia_model": os.getenv("NVIDIA_MODEL", "google/gemma-4-31b-it"),
     "nvidia_url": os.getenv("NVIDIA_URL", "https://integrate.api.nvidia.com/v1/chat/completions"),
 }
 SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key", "nvidia_api_key"}
@@ -52,7 +54,7 @@ SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key", "nvidia_api_key"}
 # Modelo que o provedor tirou do catálogo (ele responde HTTP 410) -> substituto.
 # A configuração salva no banco pode guardar o nome antigo; carregar() troca.
 MODELOS_RETIRADOS = {
-    "meta/llama-3.3-70b-instruct": "nvidia/llama-3.1-nemotron-70b-instruct",   # 410 em 2026-10-06
+    "meta/llama-3.3-70b-instruct": "google/gemma-4-31b-it",   # 410 em 2026-10-06
 }
 
 
