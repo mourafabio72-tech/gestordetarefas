@@ -19,7 +19,7 @@ PROVEDORES = {
     "openai": ("OpenAI", "openai_api_key", "openai_model", "openai_url",
                "gpt-4o-mini", "https://api.openai.com/v1/chat/completions"),
     "nvidia": ("NVIDIA", "nvidia_api_key", "nvidia_model", "nvidia_url",
-               "meta/llama-3.3-70b-instruct", "https://integrate.api.nvidia.com/v1/chat/completions"),
+               "nvidia/llama-3.1-nemotron-70b-instruct", "https://integrate.api.nvidia.com/v1/chat/completions"),
 }
 
 
@@ -31,9 +31,18 @@ def provedor_escolhido(cfg: dict) -> str:
 def credenciais(cfg: dict, provedor: str):
     """(nome, chave, modelo, url) do provedor. Chave vazia = não configurado."""
     nome, k_chave, k_modelo, k_url, modelo_pad, url_pad = PROVEDORES[provedor]
+    modelo = (cfg.get(k_modelo) or "").strip() or modelo_pad
     return (nome, (cfg.get(k_chave) or "").strip(),
-            (cfg.get(k_modelo) or "").strip() or modelo_pad,
+            cfgmod.MODELOS_RETIRADOS.get(modelo, modelo),
             (cfg.get(k_url) or "").strip() or url_pad)
+
+
+def _erro_http(nome: str, status: int, modelo: str) -> str:
+    """Mensagem para a tela. Sem o corpo da resposta: ele pode ecoar o pedido."""
+    if status in (404, 410):
+        return (f"A {nome} respondeu HTTP {status}: o modelo {modelo} saiu do catálogo. "
+                "Troque o modelo em Configuração > Inteligência artificial.")
+    return f"A {nome} respondeu HTTP {status}."
 
 
 def pergunta_disponivel(cfg: dict) -> bool:
@@ -52,6 +61,8 @@ def testar(cfg: dict, provedor: str = "openai") -> dict:
                                      "Content-Type": "application/json"},
                        json=payload, timeout=30.0)
         if r.status_code != 200:
+            if r.status_code in (404, 410):
+                return {"ok": False, "erro": _erro_http(nome, r.status_code, modelo)}
             return {"ok": False, "erro": f"HTTP {r.status_code}: {r.text[:180]}"}
         resp = r.json()["choices"][0]["message"]["content"].strip()
         return {"ok": True, "modelo": modelo, "resposta": resp}
@@ -174,7 +185,7 @@ def interpretar(pergunta: str, hoje, cfg: dict) -> dict:
                                      "Content-Type": "application/json"},
                        json=payload, timeout=30.0)
         if r.status_code != 200:
-            return {"erro": f"A {nome} respondeu HTTP {r.status_code}.", "provedor": provedor}
+            return {"erro": _erro_http(nome, r.status_code, modelo), "provedor": provedor}
         conteudo = r.json()["choices"][0]["message"]["content"]
     except Exception:
         return {"erro": f"Não consegui falar com a {nome} agora.", "provedor": provedor}

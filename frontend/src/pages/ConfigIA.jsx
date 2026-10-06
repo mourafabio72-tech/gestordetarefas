@@ -10,7 +10,7 @@ const PROVEDORES = [
   { id: 'openai', nome: 'OpenAI', chave: 'openai_api_key', modelo: 'openai_model',
     phChave: 'sk-...', phModelo: 'gpt-4o-mini', onde: 'platform.openai.com, em API keys' },
   { id: 'nvidia', nome: 'NVIDIA', chave: 'nvidia_api_key', modelo: 'nvidia_model',
-    phChave: 'nvapi-...', phModelo: 'meta/llama-3.3-70b-instruct', onde: 'build.nvidia.com, em Get API Key' },
+    phChave: 'nvapi-...', phModelo: 'nvidia/llama-3.1-nemotron-70b-instruct', onde: 'build.nvidia.com, em Get API Key' },
 ];
 const CAMPOS = ['ia_provedor', 'openai_api_key', 'openai_model', 'nvidia_api_key', 'nvidia_model'];
 

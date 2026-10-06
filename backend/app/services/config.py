@@ -44,10 +44,16 @@ DEFAULTS = {
     "ia_provedor": os.getenv("IA_PROVEDOR", "openai"),
     # NVIDIA NIM fala o mesmo protocolo da OpenAI, então muda endereço e modelo.
     "nvidia_api_key": os.getenv("NVIDIA_API_KEY", ""),
-    "nvidia_model": os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct"),
+    "nvidia_model": os.getenv("NVIDIA_MODEL", "nvidia/llama-3.1-nemotron-70b-instruct"),
     "nvidia_url": os.getenv("NVIDIA_URL", "https://integrate.api.nvidia.com/v1/chat/completions"),
 }
 SEGREDOS = {"smtp_pass", "zap_api_key", "openai_api_key", "nvidia_api_key"}
+
+# Modelo que o provedor tirou do catálogo (ele responde HTTP 410) -> substituto.
+# A configuração salva no banco pode guardar o nome antigo; carregar() troca.
+MODELOS_RETIRADOS = {
+    "meta/llama-3.3-70b-instruct": "nvidia/llama-3.1-nemotron-70b-instruct",   # 410 em 2026-10-06
+}
 
 
 def carregar(db) -> dict:
@@ -55,6 +61,9 @@ def carregar(db) -> dict:
     for row in db.query(Configuracao).all():
         if row.chave in DEFAULTS:
             cfg[row.chave] = row.valor
+    for k in ("openai_model", "nvidia_model"):
+        m = (cfg.get(k) or "").strip()
+        cfg[k] = MODELOS_RETIRADOS.get(m, cfg.get(k))
     return cfg
 
 
