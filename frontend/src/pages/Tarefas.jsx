@@ -13,8 +13,6 @@ import { agruparTarefas, AGRUPAMENTOS } from './agruparTarefas';
 import { alertaDaTarefa, fundoDoAlerta } from './alertaPrazo';
 import { formatarRazaoSocial } from './razaoSocial';
 import SeletorResponsaveis from '../components/SeletorResponsaveis';
-import PergunteIA from '../components/PergunteIA';
-import { filtroDaTarefa } from './pergunteIA.js';
 
 const REGIMES_COPY = [
   { value: '', label: 'Todos os regimes' },
@@ -815,11 +813,6 @@ export default function Tarefas() {
         </div>
       </div>
 
-      {/* Aqui mudar a URL não refaz o filtro (ele nasce dela uma vez só), então
-          o clique num resultado aplica o filtro direto. */}
-      <div className="mb-3">
-        <PergunteIA aoEscolher={(t) => setFiltros(filtroDaTarefa(t))} />
-      </div>
 
       {/* Filtros, painel em duas faixas: em cima O QUE se procura, embaixo
           QUANDO vence. Antes era uma fita única de doze controles com rolagem
