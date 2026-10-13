@@ -294,4 +294,5 @@ export default api;
 export const iaAPI = {
   status: () => api.get('/ia/status'),
   perguntar: (pergunta) => api.post('/ia/perguntar', { pergunta }),
+  conversar: (pergunta, historico) => api.post('/ia/conversar', { pergunta, historico }),
 };

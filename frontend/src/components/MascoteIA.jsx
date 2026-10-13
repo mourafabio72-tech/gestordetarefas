@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { X, SendHorizontal, ChevronRight, Sparkles } from 'lucide-react';
+import { X, SendHorizontal } from 'lucide-react';
 import { iaAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { EXEMPLOS, linkDaTarefa, resumoDaResposta, dataCurta } from '../pages/pergunteIA.js';
+import { EXEMPLOS } from '../pages/pergunteIA.js';
 import logoBps4 from '../assets/bps4-logo.png';
 import './mascote.css';
 
 // O MASCOTE DO PERGUNTE À IA (2026-10-13). O mesmo robô do TeamHub, pela nota
 // "Mascote do assistente - robo com logo BPS4" (B03 Resources, CLAUDE_FABIO).
 // Fica no canto de toda tela logada; o clique abre uma janela lateral de
-// conversa, como a do TeamHub e a do FinHub (pedido do Fábio, 2026-10-13: "faz
-// o mesmo no tareffas"). A pergunta vai ao mesmo /ia/perguntar da caixa antiga:
-// a IA só traduz em filtro, e a lista vem do Tareffas, no escopo de quem
-// pergunta. Só existe com a IA disponível: sem chave, nada aparece (o aviso
-// para o admin cadastrar a chave continua no Painel).
+// conversa, como a do TeamHub e a do FinHub. Desde 2026-10-14 (o modelo do
+// FinControl) a janela conversa em texto pelo /ia/conversar: o Tareffas monta
+// os números das tarefas no escopo de quem pergunta, com empresa e pessoa em
+// código (X01, P01), e a IA responde. Só existe com a IA disponível: sem chave,
+// nada aparece (o aviso para o admin cadastrar a chave continua no Painel).
 // Cores e movimento em mascote.css; nenhuma cor mora aqui.
 
 const CHAVE_SAUDOU = 'tareffas-ia-saudou';
@@ -55,51 +54,7 @@ export function Robo({ corpo = false, className = '' }) {
   );
 }
 
-const SITUACAO = {
-  pendente: 'pendente', em_andamento: 'em andamento', concluida: 'concluída',
-  atrasada: 'atrasada', cancelada: 'cancelada',
-};
-
-// Uma resposta da IA na conversa: o "Entendi", a contagem ou o resumo, e a
-// lista clicável. Todo texto entra como texto do React (nunca HTML).
-function Resposta({ resp, aoEscolher }) {
-  return (
-    <>
-      <p className="ia-entendi"><span className="ia-tag"><Sparkles size={11} aria-hidden="true" /> IA</span> {resp.entendi}</p>
-      {resp.ignorados?.length > 0 && (
-        <p className="ia-msg-sub">Parte da pergunta não virou filtro. Se faltar algo, pergunte de outro jeito.</p>
-      )}
-      {resp.contar ? (
-        <p className="ia-contagem"><strong>{resp.total}</strong> {resp.total === 1 ? 'tarefa' : 'tarefas'}</p>
-      ) : (
-        <p className="ia-resumo">{resumoDaResposta(resp)}</p>
-      )}
-      {resp.tarefas?.length > 0 && (
-        <ul className="ia-lista">
-          {resp.tarefas.map((t) => (
-            <li key={t.id}>
-              <button type="button" onClick={() => aoEscolher(t)}>
-                <span className="ia-lista-txt">
-                  <span className="ia-lista-titulo">{t.titulo}</span>
-                  <span className="ia-lista-sub">{[t.empresa, t.setor, SITUACAO[t.status]].filter(Boolean).join(' · ')}</span>
-                </span>
-                <span className="ia-lista-data">
-                  {t.data_prazo && <span>prazo {dataCurta(t.data_prazo)}</span>}
-                  {t.data_vencimento && <span className="ia-lista-venc">venc. {dataCurta(t.data_vencimento)}</span>}
-                </span>
-                <ChevronRight size={15} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
-}
-
 export default function MascoteIA() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [disponivel, setDisponivel] = useState(false);
   const [aberto, setAberto] = useState(false);
   const [saudando, setSaudando] = useState(false);
@@ -147,26 +102,19 @@ export default function MascoteIA() {
     const p = (pergunta ?? texto).trim();
     if (!p || carregando) return;
     setTexto('');
+    const historico = mensagens.filter((m) => m.texto).slice(-4)
+      .map((m) => ({ papel: m.papel === 'pessoa' ? 'usuario' : 'assistente', texto: m.texto }));
     setMensagens((m) => [...m, { papel: 'pessoa', texto: p }]);
     setCarregando(true);
     try {
-      const { data } = await iaAPI.perguntar(p);
-      setMensagens((m) => [...m, { papel: 'ia', resp: data }]);
+      const { data } = await iaAPI.conversar(p, historico);
+      setMensagens((m) => [...m, { papel: 'ia', texto: data.resposta }]);
     } catch (e) {
       setMensagens((m) => [...m, { papel: 'ia', erro: mensagemDeErro(e, 'Não consegui responder agora.') }]);
     } finally {
       setCarregando(false);
       campoRef.current?.focus();
     }
-  };
-
-  // Na própria tela de Tarefas o filtro nasce da URL só na montagem, então ali
-  // a troca de endereço recarrega a página; nas outras, navega normal. A
-  // janela fica aberta, com a conversa, para a pessoa seguir perguntando.
-  const escolher = (t) => {
-    const link = linkDaTarefa(t);
-    if (location.pathname === '/tarefas') window.location.assign(link);
-    else navigate(link);
   };
 
   const cabeca = <Robo />;
@@ -178,7 +126,7 @@ export default function MascoteIA() {
           <div className="ia-janela-cab">
             <div>
               <h2 id="iaJanelaTitulo"><Robo className="rb-cab" /> Pergunte à IA</h2>
-              <span className="ia-janela-sub">A IA traduz sua pergunta em filtro. A lista vem do Tareffas, no que você pode ver.</span>
+              <span className="ia-janela-sub">Pergunte sobre tarefas, prazos, atrasos, setores e responsáveis, no que você pode ver.</span>
             </div>
             <button type="button" onClick={() => setAberto(false)} aria-label="Fechar" className="ia-janela-x">
               <X size={18} />
@@ -199,7 +147,9 @@ export default function MascoteIA() {
               <div key={i} className="ia-linha">
                 {cabeca}
                 <div className={`ia-msg ia-msg-ia${m.erro ? ' ia-msg-erro' : ''}`}>
-                  {m.erro ? m.erro : <Resposta resp={m.resp} aoEscolher={escolher} />}
+                  {m.erro ? m.erro : String(m.texto).split('\n').map((linha, j) => (
+                    <span key={j}>{j > 0 && <br />}{linha}</span>
+                  ))}
                 </div>
               </div>
             )))}
@@ -220,7 +170,7 @@ export default function MascoteIA() {
               <SendHorizontal size={18} />
             </button>
           </form>
-          <p className="ia-janela-nota">Clique numa tarefa para abri-la. A conversa fica aqui enquanto a página estiver aberta.</p>
+          <p className="ia-janela-nota">Empresas e pessoas vão para a IA como código (X01, P01), nunca pelo nome. As respostas podem errar; confira na tela de Tarefas.</p>
         </aside>
       )}
       {!aberto && (

@@ -180,7 +180,7 @@ Atenção: **o EasyPanel descarta variável cujo valor começa com ponto.**
 | E-mail | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_TLS` |
 | Alertas | `ALERT_DAYS_BEFORE`, `ALERT_GESTOR_NIVEIS`, `TEAMS_WEBHOOK_URL` |
 | Links públicos | `PUBLIC_URL`, `UPLOAD_DIR` |
-| IA (opcional) | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_URL` |
+| IA (opcional) | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_URL`. A janela do mascote conversa em texto pelo `/api/ia/conversar` (`services/ia_conversa.py`, 2026-10-14): manda as contagens e listas de tarefas do escopo de quem pergunta, com empresa em código X01 e pessoa em P01 (nunca o nome nem o CNPJ), modelo `gpt-4.1-mini` na OpenAI (ou `OPENAI_MODEL`), temperatura 0. O `/api/ia/perguntar` segue. Prova: `provas/prova_ia_conversa.py` |
 | Entrada pelo Hub | `ZOARIA_SSO_SECRET` (mesmo valor aqui e no Hub; vazio desliga o SSO) |
 | CORS | `CORS_ORIGINS` (lista por vírgula; vazio usa o padrão do código) |
 | Frontend (build) | `VITE_HUB_URL` (volta para o Hub; padrão `https://zoaria.com.br`) |

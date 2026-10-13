@@ -23,7 +23,7 @@ from ..database import get_db
 from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..permissoes import eh_cliente
 from ..seguranca import log_event
-from ..services import config as cfgmod, ia as ia_mod
+from ..services import config as cfgmod, ia as ia_mod, ia_conversa
 from .tarefas import _aplicar_escopo
 
 router = APIRouter(prefix="/ia", tags=["ia"])
@@ -271,3 +271,44 @@ def perguntar(body: PerguntaIn, db: Session = Depends(get_db), user: Usuario = D
         "total": len(achadas),
         "tarefas": [_item(t) for t in achadas[:MAX_LISTA]],
     }
+
+
+class ConversaIn(BaseModel):
+    pergunta: str
+    historico: list = []
+
+    @field_validator("pergunta")
+    @classmethod
+    def _tamanho_pergunta(cls, v):
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Escreva a pergunta.")
+        return v[:300]
+
+    @field_validator("historico")
+    @classmethod
+    def _so_dicionarios(cls, v):
+        return [h for h in (v or []) if isinstance(h, dict)][-ia_conversa.MAX_HISTORICO:]
+
+
+@router.post("/conversar")
+def conversar(body: ConversaIn, db: Session = Depends(get_db), user: Usuario = Depends(_colaborador)):
+    """A janela do mascote (2026-10-14): a IA responde em texto, com as tarefas do
+    escopo de quem pergunta e os nomes em código (ver services/ia_conversa.py).
+    Mesma cota e mesma checagem de chave do /perguntar."""
+    cfg = cfgmod.carregar(db)
+    if not ia_mod.pergunta_disponivel(cfg):
+        raise HTTPException(status_code=409,
+                            detail="A IA não está configurada. Peça ao admin para cadastrar a chave em Configuração > Inteligência artificial.")
+    _consome_cota(user.id)
+    tarefas = (_aplicar_escopo(db.query(Tarefa), db, user)
+               .filter(Tarefa.status != StatusTarefa.CANCELADA)
+               .options(joinedload(Tarefa.obrigacao), joinedload(Tarefa.setor),
+                        joinedload(Tarefa.empresa), selectinload(Tarefa.responsaveis))
+               .all())
+    r = ia_conversa.conversar(body.pergunta, body.historico, tarefas, _hoje(), user, cfg)
+    if "erro" in r:
+        log_event("IA_CONVERSA", level="WARN", resultado="erro")
+        raise HTTPException(status_code=502, detail=r["erro"])
+    log_event("IA_CONVERSA", resultado="ok", tarefas=len(tarefas))
+    return {"resposta": r["resposta"]}
