@@ -15,7 +15,9 @@ const SITUACAO = {
 // pergunta em filtro; a lista vem do Tareffas, no escopo de quem perguntou.
 // `aoEscolher` troca a navegação: na própria tela de Tarefas, mudar a URL não
 // refaz o filtro, então ela aplica direto.
-export default function PergunteIA({ aoEscolher }) {
+// `soAviso` (Painel, desde 2026-10-13): a pergunta mora na janela do mascote,
+// e aqui sobra só o aviso ao admin de que falta cadastrar a chave.
+export default function PergunteIA({ aoEscolher, soAviso = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [status, setStatus] = useState(null);
@@ -40,6 +42,8 @@ export default function PergunteIA({ aoEscolher }) {
       </p>
     );
   }
+
+  if (soAviso) return null;
 
   const perguntar = async (pergunta) => {
     const p = (pergunta ?? texto).trim();

@@ -357,7 +357,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <PergunteIA />
+      <PergunteIA soAviso />
 
       <div className="rounded-xl border border-gray-200 p-3" style={{ background: '#faf7f0' }}>
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
