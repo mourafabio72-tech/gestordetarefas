@@ -28,6 +28,7 @@ import {
 
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
 import { useState, useRef, useEffect } from 'react';
+import MascoteIA from './MascoteIA';
 
 const menuGroups = [
   {
@@ -266,6 +267,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <MascoteIA />
     </div>
   );
 }

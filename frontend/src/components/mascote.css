@@ -1,0 +1,70 @@
+/* mascote.css: o robô do Pergunte à IA (2026-10-13), o mesmo do TeamHub e do
+   FinHub. Cores fixas do padrão Sage & Creme; movimento desligado com
+   prefers-reduced-motion. */
+:root {
+  --mascote-cor: #6e7f63;
+  --mascote-cor-escura: #414b3b;
+  --mascote-sombra: rgba(110, 127, 99, .28);
+}
+
+.rb { display: block; overflow: visible; }
+.rb-cabeca { fill: var(--mascote-cor); }
+.rb-orelha, .rb-visor, .rb-braco, .rb-pescoco { fill: var(--mascote-cor-escura); }
+.rb-haste { stroke: var(--mascote-cor-escura); stroke-width: 2.5; stroke-linecap: round; }
+.rb-luz { fill: #c9a77f; }
+.rb-brilho { fill: #fff; opacity: .35; }
+.rb-olho { fill: #f4f7f2; }
+.rb-boca { fill: none; stroke: #f4f7f2; stroke-width: 2.2; stroke-linecap: round; }
+.rb-bochecha { fill: #e8a6a0; opacity: .7; }
+.rb-peito { fill: #f6f3ea; }
+.rb-chao { fill: #000; opacity: .12; }
+
+.rb-olhos { transform-box: fill-box; transform-origin: center; animation: rb-piscar 4.5s infinite; }
+@keyframes rb-piscar { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+.rb-luz { animation: rb-luz 2.4s ease-in-out infinite; }
+@keyframes rb-luz { 50% { opacity: .45; } }
+.rb-braco-d { transform-box: fill-box; transform-origin: 50% 10%; animation: rb-acena 6s ease-in-out infinite; }
+@keyframes rb-acena { 0%, 80%, 100% { transform: rotate(0); } 85%, 95% { transform: rotate(-28deg); } 90% { transform: rotate(-12deg); } }
+.rb-flutua .rb-todo { animation: rb-flutua 3.2s ease-in-out infinite; }
+.rb-flutua .rb-chao { transform-box: fill-box; transform-origin: center; animation: rb-sombra 3.2s ease-in-out infinite; }
+@keyframes rb-flutua { 50% { transform: translateY(-4px); } }
+@keyframes rb-sombra { 50% { transform: scaleX(.8); opacity: .07; } }
+
+.ia-mascote { position: fixed; right: 22px; bottom: 22px; z-index: 40;
+  display: flex; align-items: flex-end; gap: 10px; }
+.ia-mascote-botao { display: block; width: 92px; height: 141px; padding: 0; border: 0; background: none; cursor: pointer;
+  filter: drop-shadow(0 8px 10px var(--mascote-sombra)) drop-shadow(0 2px 3px rgba(0, 0, 0, .18));
+  transition: transform .2s ease; }
+.ia-mascote-botao:hover { transform: translateY(-3px) scale(1.04); }
+.ia-mascote-botao:focus-visible { outline: 3px solid var(--mascote-cor); outline-offset: 4px; border-radius: 16px; }
+.ia-mascote-botao .rb { width: 100%; height: 100%; }
+
+.ia-saudacao { position: relative; margin-bottom: 70px; max-width: 220px; padding: 10px 14px;
+  border: 1px solid #d9d2bf; border-radius: 14px 14px 4px 14px; cursor: pointer;
+  background: #fffdf9; color: #2f3b2f; font: inherit; font-size: 13.5px; text-align: left;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .14); animation: ia-entra .35s ease-out; }
+.ia-saudacao:hover { border-color: var(--mascote-cor); }
+@keyframes ia-entra { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+
+/* O painel que o clique abre, com a mesma caixa Pergunte à IA do Painel. */
+.ia-painel-flutuante { position: fixed; right: 22px; bottom: 22px; z-index: 50;
+  width: min(440px, calc(100vw - 24px)); max-height: calc(100vh - 44px); overflow-y: auto;
+  padding: 12px; border: 1px solid #d9d2bf; border-radius: 16px; background: #faf7f0;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .18); animation: ia-entra .25s ease-out; }
+.ia-painel-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ia-painel-cab h2 { flex: 1; margin: 0; font-size: 15px; font-weight: 600; color: #2f3b2f; }
+.ia-painel-cab .rb { width: 30px; height: 30px; flex: none; }
+.ia-painel-cab .rb-luz { animation: none; }
+.ia-painel-x { padding: 4px; border: 0; background: none; color: #6b7280; cursor: pointer; border-radius: 6px; }
+.ia-painel-x:hover { color: #1f2937; background: #f3eedf; }
+
+@media (max-width: 640px) {
+  .ia-mascote { right: 10px; bottom: 10px; }
+  .ia-mascote-botao { width: 68px; height: 104px; }
+  .ia-painel-flutuante { right: 12px; bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rb-olhos, .rb-luz, .rb-flutua, .rb-flutua *, .rb-braco-d, .ia-saudacao, .ia-painel-flutuante { animation: none !important; }
+  .ia-mascote-botao { transition: none; }
+}
+@media print { .ia-mascote, .ia-painel-flutuante { display: none !important; } }
