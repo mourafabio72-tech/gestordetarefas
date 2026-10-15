@@ -216,12 +216,16 @@ def set_responsaveis_setor(
     db.flush()
     canceladas = gerador.cancelar_fora_dos_setores(
         db, gerador.fora_dos_setores_atendidos(db, empresa_id), current_user.id)
+    # E o caminho inverso: tarefa aberta que nasceu sem dono, antes de a
+    # matriz ter gente, recebe quem acabou de ser cadastrado.
+    atribuidas = gerador.atribuir_sem_dono(
+        db, gerador.sem_dono_com_responsavel(db, empresa_id))
     db.commit()
     log_event("EDICAO_REGISTRO_CRITICO", tabela="empresa_setor_responsavel",
               empresa_id=empresa_id, user_id=current_user.id,
               ip=ip_cliente(request), setores=len(body.itens), responsaveis=total,
-              tarefas_canceladas=canceladas)
-    return {"ok": True, "tarefas_canceladas": canceladas}
+              tarefas_canceladas=canceladas, tarefas_atribuidas=atribuidas)
+    return {"ok": True, "tarefas_canceladas": canceladas, "tarefas_atribuidas": atribuidas}
 
 
 class AplicarSetoresBody(BaseModel):
@@ -254,6 +258,33 @@ def aplicar_setores_atendidos(
               acao="aplicar_setores_atendidos", user_id=current_user.id,
               ip=ip_cliente(request), tarefas_canceladas=n)
     return {"ensaio": False, "tarefas_canceladas": n, "tarefas": lista}
+
+
+@router.post("/aplicar-responsaveis")
+def aplicar_responsaveis(
+    request: Request,
+    body: Optional[AplicarSetoresBody] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_admin),
+):
+    """Põe o responsável da matriz ATUAL nas tarefas abertas que nasceram sem
+    dono, em todas as empresas. Sem corpo, ou com `ensaio`, só lista."""
+    ensaio = body is None or body.ensaio
+    pares = gerador.sem_dono_com_responsavel(db)
+    nomes = dict(db.query(Setor.id, Setor.nome).all())
+    lista = [{"tarefa_id": t.id, "empresa": t.empresa.razao_social if t.empresa else None,
+              "setor": nomes.get(t.setor_id), "titulo": t.titulo,
+              "competencia": t.competencia, "status": t.status.value,
+              "responsaveis": [u.nome for u in resps]}
+             for t, resps in pares]
+    if ensaio:
+        return {"ensaio": True, "tarefas_atribuidas": 0, "tarefas": lista}
+    n = gerador.atribuir_sem_dono(db, pares)
+    db.commit()
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="tarefa", lote=True,
+              acao="aplicar_responsaveis", user_id=current_user.id,
+              ip=ip_cliente(request), tarefas_atribuidas=n)
+    return {"ensaio": False, "tarefas_atribuidas": n, "tarefas": lista}
 
 
 @router.get("/modelo-importacao")

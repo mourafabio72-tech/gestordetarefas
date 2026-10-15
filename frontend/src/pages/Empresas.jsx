@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { empresasAPI, usuariosAPI, setoresAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Lock, Unlock, Upload, Download, X, UserCheck } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { formatarRazaoSocial } from './razaoSocial';
 import SeletorResponsaveis from '../components/SeletorResponsaveis';
 import { POPOVER_FECHADO, reduzirPopover } from './seletorResponsaveis';
@@ -60,6 +61,28 @@ export default function Empresas() {
   const noPopover = (evento) => setPopover((e) => reduzirPopover(e, evento));
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const { user } = useAuth();
+  // Tarefa aberta que nasceu antes de a matriz ter gente fica sem analista.
+  // A janela mostra a prévia (ensaio) e só grava no clique.
+  const [semDono, setSemDono] = useState(null);   // { carregando, tarefas, gravando, feito, erro }
+  const abrirSemDono = async () => {
+    setSemDono({ carregando: true, tarefas: [] });
+    try {
+      const { data } = await empresasAPI.aplicarResponsaveis(true);
+      setSemDono({ carregando: false, tarefas: data.tarefas || [] });
+    } catch (err) {
+      setSemDono({ carregando: false, tarefas: [], erro: mensagemDeErro(err, 'Erro ao buscar as tarefas sem analista.') });
+    }
+  };
+  const gravarSemDono = async () => {
+    setSemDono((s) => ({ ...s, gravando: true, erro: null }));
+    try {
+      const { data } = await empresasAPI.aplicarResponsaveis(false);
+      setSemDono((s) => ({ ...s, gravando: false, feito: data.tarefas_atribuidas }));
+    } catch (err) {
+      setSemDono((s) => ({ ...s, gravando: false, erro: mensagemDeErro(err, 'Erro ao preencher os analistas.') }));
+    }
+  };
   // O popover morre junto com o modal, e num ponto só. O `setor_id` é o mesmo
   // em todas as empresas, então um popover que sobrevive ao fechamento reabre
   // sozinho na PRÓXIMA empresa, já com a busca da anterior dentro.
@@ -267,6 +290,12 @@ export default function Empresas() {
             <Upload size={16} /> {importandoResp ? 'Importando…' : 'Importar resp.'}
             <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportResp} />
           </label>
+          {user?.grupo === 'admin' && (
+            <button onClick={abrirSemDono} className="btn-secondary flex items-center gap-2"
+              title="Tarefas em aberto sem analista que já têm responsável no cadastro da empresa">
+              <UserCheck size={16} /> Tarefas sem analista
+            </button>
+          )}
           <button
             onClick={() => {
               setEditingEmpresa(null);
@@ -588,6 +617,79 @@ export default function Empresas() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {semDono && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-[96vw] md:w-[89vw] max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Tarefas sem analista</h2>
+              <button type="button" aria-label="Fechar" onClick={() => setSemDono(null)}
+                className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3">
+              {semDono.carregando ? (
+                <p className="text-sm text-gray-500">Carregando…</p>
+              ) : semDono.feito !== undefined ? (
+                <div className="px-3 py-2 rounded-lg text-sm bg-green-50 text-green-800">
+                  {semDono.feito} tarefa(s) receberam o analista do cadastro da empresa.
+                </div>
+              ) : semDono.tarefas.length === 0 ? (
+                <p className="text-sm text-gray-600">
+                  Nenhuma tarefa em aberto sem analista com responsável no cadastro. Se ainda há tarefa
+                  com Analista vazio, falta escolher o responsável daquele setor na empresa.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {semDono.tarefas.length} tarefa(s) em aberto nasceram antes de a empresa ter responsável
+                    no setor. Elas vão receber quem está no cadastro hoje. Tarefa que já tem analista não muda.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs uppercase text-gray-500 border-b">
+                          <th className="py-2 pr-3">Tarefa</th>
+                          <th className="py-2 pr-3">Competência</th>
+                          <th className="py-2 pr-3">Empresa</th>
+                          <th className="py-2 pr-3">Setor</th>
+                          <th className="py-2">Vai para</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {semDono.tarefas.map((t) => (
+                          <tr key={t.tarefa_id} className="border-b border-gray-100">
+                            <td className="py-1.5 pr-3">{t.titulo}</td>
+                            <td className="py-1.5 pr-3">{t.competencia}</td>
+                            <td className="py-1.5 pr-3">{t.empresa}</td>
+                            <td className="py-1.5 pr-3">{t.setor}</td>
+                            <td className="py-1.5">{(t.responsaveis || []).join(', ')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              {semDono.erro && (
+                <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-700">{semDono.erro}</div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
+              {semDono.feito !== undefined || !semDono.tarefas.length ? (
+                <button type="button" onClick={() => setSemDono(null)} className="btn-secondary">Fechar</button>
+              ) : (
+                <>
+                  <button type="button" onClick={() => setSemDono(null)} className="btn-secondary">Cancelar</button>
+                  <button type="button" onClick={gravarSemDono} disabled={semDono.gravando}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-40">
+                    <UserCheck size={16} />
+                    {semDono.gravando ? 'Gravando…' : `Preencher ${semDono.tarefas.length} tarefa(s)`}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

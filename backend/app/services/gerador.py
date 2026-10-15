@@ -363,6 +363,45 @@ def cancelar_fora_dos_setores(db: Session, tarefas: list, usuario_id) -> int:
     return len(tarefas)
 
 
+def sem_dono_com_responsavel(db: Session, empresa_id=None) -> list:
+    """Tarefas EM ABERTO, geradas por obrigação, SEM DONO, cujo par (empresa,
+    setor) já tem responsável na matriz. Devolve pares (tarefa, responsáveis).
+
+    O gerador copia a matriz só quando cria a tarefa: a que nasceu antes de a
+    matriz ser preenchida ficava sem analista para sempre (Bergamo, 15/10/2026).
+    Só preenche vazio: tarefa que já tem dono é decisão de alguém e não se
+    reatribui por aqui. Avulsa não entra, como em `fora_dos_setores_atendidos`.
+    `empresa_id` None varre todas."""
+    q = (db.query(Tarefa)
+         .filter(Tarefa.obrigacao_id.isnot(None),
+                 Tarefa.setor_id.isnot(None),
+                 Tarefa.responsavel_id.is_(None),
+                 Tarefa.status.in_(ABERTAS)))
+    if empresa_id is not None:
+        q = q.filter(Tarefa.empresa_id == empresa_id)
+    pares, cache = [], {}
+    for t in q.order_by(Tarefa.id).all():
+        if t.responsaveis:            # principal vazio, mas a lista tem gente
+            continue
+        chave = (t.empresa_id, t.setor_id)
+        if chave not in cache:
+            cache[chave] = _resp_do_setor(db, *chave)
+        if cache[chave]:
+            pares.append((t, cache[chave]))
+    return pares
+
+
+def atribuir_sem_dono(db: Session, pares: list) -> int:
+    """Grava os responsáveis de `sem_dono_com_responsavel`, pela mesma regra do
+    gerador: principal = primeiro da lista, supervisor = gestor dele. Sem gestor,
+    o supervisor que a tarefa já tinha fica. Sem commit."""
+    for t, resps in pares:
+        t.responsaveis = list(resps)
+        t.responsavel_id = resps[0].id
+        t.supervisor_id = resps[0].gestor_id or t.supervisor_id
+    return len(pares)
+
+
 def empresas_alvo(db: Session, o: Obrigacao):
     """Empresas que esta obrigação alcança.
 

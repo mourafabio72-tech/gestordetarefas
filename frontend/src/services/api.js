@@ -71,6 +71,8 @@ export const empresasAPI = {
   bloquear: (id, bloqueado) => api.post(`/empresas/${id}/bloquear`, { bloqueado }),
   getResponsaveisSetor: (id) => api.get(`/empresas/${id}/responsaveis-setor`),
   setResponsaveisSetor: (id, itens) => api.put(`/empresas/${id}/responsaveis-setor`, { itens }),
+  // Põe o responsável da matriz nas tarefas abertas que nasceram sem dono (admin).
+  aplicarResponsaveis: (ensaio) => api.post('/empresas/aplicar-responsaveis', { ensaio }),
   importarResponsaveis: (file) => {
     const fd = new FormData();
     fd.append('arquivo', file);

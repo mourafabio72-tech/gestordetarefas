@@ -150,11 +150,15 @@ def importar(db, nome_arquivo: str, conteudo: bytes, usuario_id=None) -> dict:
     # O mesmo efeito do PUT da tela: setor desmarcado fecha o que já nasceu
     # dele. Só nas empresas da planilha, que são as que alguém mexeu agora.
     db.flush()
-    canceladas = 0
+    canceladas = atribuidas = 0
     for emp_id in dict.fromkeys(tocadas):
         canceladas += gerador.cancelar_fora_dos_setores(
             db, gerador.fora_dos_setores_atendidos(db, emp_id), usuario_id)
+        # e a tarefa aberta que nasceu sem dono recebe quem entrou agora
+        atribuidas += gerador.atribuir_sem_dono(
+            db, gerador.sem_dono_com_responsavel(db, emp_id))
     db.commit()
     return {"resumo": {"empresas": empresas_ok, "marcados": marcados, "desmarcados": desmarcados,
-                       "erros": erros, "tarefas_canceladas": canceladas},
+                       "erros": erros, "tarefas_canceladas": canceladas,
+                       "tarefas_atribuidas": atribuidas},
             "detalhes": detalhes}
