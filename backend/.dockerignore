@@ -14,3 +14,7 @@ data
 *.log
 Dockerfile
 .dockerignore
+provas
+00_GENESIS
+graphify-out
+.DS_Store

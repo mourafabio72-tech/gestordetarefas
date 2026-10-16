@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Usuario sem privilegio. O processo do app roda como ele, nunca como root.
+RUN groupadd -g 1000 app && useradd -u 1000 -g 1000 -M -d /app -s /usr/sbin/nologin app
+
 WORKDIR /app
 
 # SEM apt-get de gcc e libpq-dev, de proposito: o requirements usa
@@ -14,6 +17,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Codigo de dono root, so leitura para o processo. O carimbo (app/versao.py)
+# sai do mtime, que o COPY preserva.
 COPY . .
 
+# Entrada fora do /app e de dono root: o usuario app nao consegue reescrever
+# o script que roda como root no proximo start. O volume monta por cima do
+# /app/data; quem ja tem dado nele recebe o dono certo do entrypoint.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh && mkdir -p /app/data/uploads && chown -R app:app /app/data
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
