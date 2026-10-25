@@ -12,8 +12,8 @@ registro de quem concluiu feito pela API do Tareffas (registro_tareffas.js).
 Claude: um arquivo só, prints embutidos, Poppins do Google, registro pelo
 `db` da página (o bloco que já está em fonte.html).
 
-Equipe: a do Claude sem registro (só leitura, avisa que o registro é pelo
-Leia-me do Tareffas) e sem nomes de cliente, para mandar por e-mail ou WhatsApp."""
+Equipe: só um aviso (desde 2026-10-25) mandando fazer a trilha pelo Leia-me
+do Tareffas. A cópia completa não registrava o progresso e confundia a equipe."""
 import base64
 import os
 import re
@@ -77,22 +77,49 @@ def generico(s):
                  "ex:'Um grupo que não contratou a Contabilidade da BPS4 fica com o setor desmarcado nas suas empresas, e nenhuma etapa contábil nem a ECD nasce para elas.',")
 
 
+TAREFFAS = "https://gestordetarefas.zoaria.com.br"
+
+AVISO_EQUIPE = """<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tareffas: faça a trilha pelo sistema</title>
+<style>
+:root{--bg:#FBF6EC;--papel:#FFFDF9;--areia:#DCCDB6;--oliva:#55614E;--escuro:#2F3B2F;--texto:#3D4A38;--suave:#66705E}
+@media (prefers-color-scheme:dark){:root{--bg:#1C221B;--papel:#242C23;--areia:#3E4A3B;--oliva:#A9BC98;--escuro:#EEF0E6;--texto:#D8DECF;--suave:#A6AF9B}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--bg);color:var(--texto);
+ font-family:'Poppins',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;line-height:1.6}
+main{max-width:560px;width:100%;background:var(--papel);border:1px solid var(--areia);border-radius:16px;padding:28px}
+h1{margin:0 0 8px;font-size:1.4rem;color:var(--escuro)}
+ol{padding-left:1.2em;margin:16px 0}
+li{margin:6px 0}
+.btn{display:inline-block;margin-top:8px;padding:10px 18px;border-radius:10px;background:var(--oliva);color:var(--bg);
+ text-decoration:none;font-weight:600}
+.nota{margin-top:18px;font-size:.9rem;color:var(--suave)}
+</style></head>
+<body><main>
+<h1>A trilha do Tareffas mudou de lugar</h1>
+<p>Esta cópia avulsa não guarda o seu progresso. Para a trilha valer e você aparecer
+como concluído, faça-a dentro do Tareffas:</p>
+<ol>
+<li>Entre no Tareffas com o seu login.</li>
+<li>No menu da esquerda, clique em <strong>Leia-me</strong>.</li>
+<li>Faça a trilha até o fim. O progresso fica salvo na sua conta.</li>
+</ol>
+<a class="btn" href="__URL__/">Abrir o Tareffas</a>
+<p class="nota">Já fez a trilha por esta cópia? Ela não foi registrada.
+Refaça pelo botão Leia-me do Tareffas.</p>
+</main></body></html>
+"""
+
+
 def equipe(fonte, destino):
-    s = generico(fonte)
-    i, j = s.index(INICIO_REG), s.index(FIM_REG) + len(FIM_REG)
-    s = s[:i] + ("/* Cópia para a equipe: o registro de quem concluiu só existe no Tareffas. */\n"
-                 "function registra(){}\n"
-                 "function msgReg(t){const el=$('regStatus');if(el)el.textContent=t;}\n"
-                 "msgReg('Esta é uma cópia para leitura. Para registrar que você concluiu o fluxo, faça-o pelo botão Leia-me, no menu do Tareffas.');\n") + s[j:]
-    s = troca(s, "body{background:var(--bg);", "body{margin:0;background:var(--bg);")
-    # Confere antes de embutir os prints: o base64 pode conter "BSM" por acaso.
-    for proibido in NOMES + ("claude.use",):
-        assert proibido not in s, f"sobrou '{proibido}' na cópia da equipe"
-    s = re.sub(r"\{\{img:([a-z\-]+)\}\}", lambda m: "data:image/webp;base64," + base64.b64encode(
-        open(os.path.join(IMG, m.group(1) + ".webp"), "rb").read()).decode(), s)
-    assert "{{img" not in s
-    cab = '<!doctype html>\n<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-    open(destino, "w", encoding="utf-8").write(cab + s + "\n</html>\n")
+    """A cópia avulsa virou um aviso (2026-10-25). Fazendo a trilha por ela, o
+    progresso ficava só no navegador e nunca chegava ao quadro 'Quem leu o
+    Leia-me': a equipe fazia a trilha e o controle não andava. `fonte` fica
+    na assinatura para a chamada continuar igual."""
+    s = AVISO_EQUIPE.replace("__URL__", TAREFFAS)
+    assert "—" not in s and "–" not in s, "travessão no aviso"
+    open(destino, "w", encoding="utf-8").write(s)
     return destino
 
 
