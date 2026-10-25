@@ -38,6 +38,9 @@ services:
       UPLOAD_DIR: /app/data/uploads
       PUBLIC_URL: ${PUBLIC_URL:-https://gestordetarefas.zoaria.com.br}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Leitura das empresas pelo Tracker (GET /api/integracao/empresas). Vazio
+      # deixa a rota em 404. O mesmo valor vai no TAREFFAS_TOKEN do Tracker.
+      INTEGRACAO_EMPRESAS_TOKEN: ${INTEGRACAO_EMPRESAS_TOKEN:-}
     volumes:
       - uploads:/app/data
     depends_on:
