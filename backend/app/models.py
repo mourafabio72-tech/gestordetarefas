@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Text, Boolean, Enum, Table, UniqueConstraint
+from sqlalchemy import event
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -120,6 +121,18 @@ class Empresa(Base):
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
     supervisor = relationship("Usuario", foreign_keys=[supervisor_id])
     setor_responsaveis = relationship("EmpresaSetorResponsavel", cascade="all, delete-orphan")
+
+
+@event.listens_for(Empresa, "before_insert")
+@event.listens_for(Empresa, "before_update")
+def _razao_social_formatada(_mapper, _conexao, empresa):
+    """A razão social é GRAVADA com só a inicial maiúscula (Fábio, 2026-10-26):
+    "3 EMPTOR PART. E INVEST. LTDA." vira "3 Emptor Part. e Invest. Ltda.". Um
+    lugar só, no modelo, para valer na tela, nas duas importações e em qualquer
+    caminho novo que crie empresa. Nome que já tem minúscula passa intacto."""
+    from .services.razao_social import formatar
+    if empresa.razao_social:
+        empresa.razao_social = formatar(empresa.razao_social)
 
 
 class EmpresaSetorResponsavel(Base):

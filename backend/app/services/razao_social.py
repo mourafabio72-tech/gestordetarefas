@@ -1,4 +1,13 @@
-"""Uniformiza a razão social na EXIBIÇÃO, não mexe no cadastro.
+"""Uniformiza a razão social: na EXIBIÇÃO e, desde 2026-10-26, também no CADASTRO.
+
+MUDOU EM 2026-10-26, a pedido do Fábio: a razão social passa a ser GRAVADA já
+formatada (`models.py`, eventos `before_insert`/`before_update` da Empresa, e
+`init_db.formatar_razoes_gravadas` para as que já existiam). O que impedia era o
+importador de cronograma, que achava a empresa pelo texto EXATO da razão social;
+ele passou a comparar pela `chave()` abaixo, sem maiúscula, acento nem
+pontuação, e por isso "GNILEB PARTICIPACOES LTDA." na planilha ainda acha a
+"Gnileb Participacoes Ltda" do cadastro. A formatação na tela continua, e é
+inofensiva sobre nome já formatado.
 
 Porte do `frontend/src/pages/razaoSocial.js`. Existe em dois lugares porque a
 mesma razão social aparece na tela e na mensagem que vai para o cliente, e a
@@ -9,6 +18,7 @@ Os dois arquivos precisam andar juntos; a prova compara a saída dos dois nos
 mesmos casos, para uma correção num lado não passar despercebida no outro.
 """
 import re
+import unicodedata
 
 # Vão em minúscula quando não são a primeira palavra.
 ATONAS = {"de", "da", "do", "das", "dos", "e", "em", "a", "o", "as", "os", "à", "às"}
@@ -78,3 +88,13 @@ def formatar(nome) -> str:
             primeiro = False
         saida.append("".join(partes))
     return " ".join(saida)
+
+
+def chave(nome) -> str:
+    """A razão social sem maiúscula, acento nem pontuação, para COMPARAR.
+
+    "GNILEB PARTICIPAÇÕES LTDA." e "Gnileb Participacoes Ltda" dão a mesma chave.
+    """
+    s = unicodedata.normalize("NFKD", str(nome or ""))
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", s).split())

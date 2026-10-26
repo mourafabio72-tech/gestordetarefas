@@ -208,7 +208,13 @@ def analisar(conteudo: bytes) -> dict:
 
 
 def _get_or_create_empresa(db, codigo: str, grupo: str):
-    e = db.query(Empresa).filter(Empresa.razao_social == codigo).first()
+    # Pela CHAVE, e nao pelo texto exato: desde 2026-10-26 a razao social e
+    # gravada formatada ("Gnileb Ltda"), e a planilha continua vindo como o
+    # cliente escreveu ("GNILEB LTDA."). Comparar o texto cru criaria a empresa
+    # de novo a cada importacao.
+    from .razao_social import chave
+    alvo = chave(codigo)
+    e = next((x for x in db.query(Empresa).all() if chave(x.razao_social) == alvo), None)
     if not e:
         e = Empresa(razao_social=codigo, grupo=grupo, ativo=True)
         db.add(e)

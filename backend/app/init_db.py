@@ -355,3 +355,24 @@ def seed_grupos():
         permissoes.carregar_do_banco(db)
     finally:
         db.close()
+
+
+def formatar_razoes_gravadas():
+    """Passa as razões sociais JÁ gravadas pela mesma formatação dos eventos do
+    modelo (2026-10-26). Idempotente: nome já formatado, ou que já tem
+    minúscula, não muda, e o boot seguinte não toca em nada."""
+    from .models import Empresa
+    from .services.razao_social import formatar
+    db = SessionLocal()
+    try:
+        mudadas = 0
+        for empresa in db.query(Empresa).all():
+            novo = formatar(empresa.razao_social)
+            if novo and novo != empresa.razao_social:
+                empresa.razao_social = novo
+                mudadas += 1
+        if mudadas:
+            db.commit()
+            print(f"{mudadas} razão(ões) social(is) formatada(s).")
+    finally:
+        db.close()

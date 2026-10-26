@@ -46,11 +46,11 @@ def checa(n, descricao, cond, extra=""):
 
 db = SessionLocal()
 db.add_all([
-    Empresa(razao_social="MARKBUILDING PARTICIPACOES LTDA", nome_fantasia="MKB",
+    Empresa(razao_social="Markbuilding Participacoes Ltda", nome_fantasia="MKB",
             cnpj="11.222.333/0001-81", email="x@y.com", telefone="1199", endereco="Rua A",
             grupo="Markbuilding", ativo=True, bloqueado=False),
-    Empresa(razao_social="EMPRESA INATIVA SA", cnpj="22.333.444/0001-55", ativo=False),
-    Empresa(razao_social="EMPRESA BLOQUEADA ME", cnpj="33.444.555/0001-66", ativo=True,
+    Empresa(razao_social="Empresa Inativa S.A.", cnpj="22.333.444/0001-55", ativo=False),
+    Empresa(razao_social="Empresa Bloqueada ME", cnpj="33.444.555/0001-66", ativo=True,
             bloqueado=True),
 ])
 if not db.query(Usuario).filter(Usuario.email == "prova-integ@x.com").first():
@@ -79,13 +79,13 @@ checa(6, "token certo: 200", r.status_code == 200, r.status_code)
 lista = r.json().get("empresas", []) if r.status_code == 200 else []
 por_nome = {e["razao_social"]: e for e in lista}
 checa(7, "as três empresas, inativa e bloqueada incluídas", len(lista) == 3, len(lista))
-mkb = por_nome.get("MARKBUILDING PARTICIPACOES LTDA", {})
+mkb = por_nome.get("Markbuilding Participacoes Ltda", {})
 checa(8, "fantasia, CNPJ e grupo saem",
       (mkb.get("nome_fantasia"), mkb.get("cnpj"), mkb.get("grupo"))
       == ("MKB", "11.222.333/0001-81", "Markbuilding"), mkb)
 checa(9, "o estado de cada uma sai",
-      (por_nome.get("EMPRESA INATIVA SA", {}).get("ativo"),
-       por_nome.get("EMPRESA BLOQUEADA ME", {}).get("bloqueado")) == (False, True))
+      (por_nome.get("Empresa Inativa S.A.", {}).get("ativo"),
+       por_nome.get("Empresa Bloqueada ME", {}).get("bloqueado")) == (False, True))
 campos = set().union(*[set(e) for e in lista]) if lista else set()
 checa(10, "só os campos combinados",
       campos == {"id", "razao_social", "nome_fantasia", "cnpj", "grupo", "ativo", "bloqueado"},

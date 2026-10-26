@@ -10,7 +10,7 @@ from .routes import auth, usuarios, empresas, setores, tarefas, alertas, obrigac
 from .services.scheduler import start_scheduler
 from .init_db import (migrate, criar_indices, seed_admin, ensure_admin_grupo,
                       seed_grupos, alcance_do_alerta,
-                      horarios_por_faixa)
+                      horarios_por_faixa, formatar_razoes_gravadas)
 
 Base.metadata.create_all(bind=engine)
 migrate()
@@ -20,6 +20,7 @@ horarios_por_faixa()
 seed_admin()
 ensure_admin_grupo()
 seed_grupos()
+formatar_razoes_gravadas()
 
 app = FastAPI(
     title="Gestor de Tarefas API",

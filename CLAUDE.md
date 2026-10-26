@@ -211,6 +211,13 @@ supervisor  = gestor do principal > gestor do setor > supervisor da obrigação
 
 ## Quirks que já custaram tempo
 
+- **A razão social é GRAVADA formatada** (só a inicial maiúscula, desde
+  2026-10-26, pedido do Fábio): eventos `before_insert`/`before_update` da
+  `Empresa` em `models.py`, e `init_db.formatar_razoes_gravadas` no boot para as
+  antigas. Quem procura empresa por NOME compara pela `chave()` de
+  `services/razao_social.py` (sem maiúscula, acento nem pontuação), nunca pelo
+  texto exato: o importador de cronograma comparava exato e criaria empresa
+  repetida. Prova: `provas/prova_razao_social_gravada.py`
 - `redirect_slashes=False` no FastAPI. A rota tem que bater exatamente, com ou sem
   barra final. Chamada com a barra errada devolve 404, não redireciona.
 - `Base.metadata.create_all`, `migrate()` e os seeds rodam **no import** de
