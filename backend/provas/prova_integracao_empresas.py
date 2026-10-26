@@ -1,4 +1,4 @@
-"""Prova da rota de integração das empresas (2026-10-25, para o Tracker).
+"""Prova da rota de integração das empresas (2026-10-25, para o Workforce).
 
 O que ela trava:
   - sem INTEGRACAO_EMPRESAS_TOKEN no servidor, a rota responde 404 (fechada);

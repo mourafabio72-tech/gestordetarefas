@@ -1,6 +1,6 @@
 """Leitura das empresas por outro app do ecossistema Zoaria (2026-10-25).
 
-O Tracker (produtividade.zoaria.com.br) mede horas por cliente e precisa da lista
+O Workforce (produtividade.zoaria.com.br) mede horas por cliente e precisa da lista
 de clientes do escritório. Em vez de cadastrar tudo de novo lá, ele lê daqui, por
 esta rota SÓ DE LEITURA.
 
@@ -10,7 +10,7 @@ responde 404, como se não existisse: integração não configurada fica fechada
 não aberta. A comparação é em tempo constante.
 
 O QUE SAI: id, razão social, nome fantasia, CNPJ, grupo, ativo e bloqueado. Nada
-de responsável, e-mail, telefone ou endereço: o Tracker só precisa reconhecer a
+de responsável, e-mail, telefone ou endereço: o Workforce só precisa reconhecer a
 empresa.
 """
 

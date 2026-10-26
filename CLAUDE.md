@@ -181,7 +181,7 @@ Atenção: **o EasyPanel descarta variável cujo valor começa com ponto.**
 | Alertas | `ALERT_DAYS_BEFORE`, `ALERT_GESTOR_NIVEIS`, `TEAMS_WEBHOOK_URL` |
 | Links públicos | `PUBLIC_URL`, `UPLOAD_DIR` |
 | IA (opcional) | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_URL`. A janela do mascote conversa em texto pelo `/api/ia/conversar` (`services/ia_conversa.py`, 2026-10-14): manda as contagens e listas de tarefas do escopo de quem pergunta, com empresa em código X01 e pessoa em P01 (nunca o nome nem o CNPJ), modelo `gpt-4.1-mini` na OpenAI (ou `OPENAI_MODEL`), temperatura 0. O `/api/ia/perguntar` segue. Prova: `provas/prova_ia_conversa.py` |
-| Integração (opcional) | `INTEGRACAO_EMPRESAS_TOKEN`: o Tracker lê a lista de empresas por `GET /api/integracao/empresas`, com este token em `Authorization: Bearer` (o mesmo valor do `TAREFFAS_TOKEN` de lá). Só leitura; sai id, razão social, fantasia, CNPJ, grupo, ativo e bloqueado. Vazio deixa a rota em 404. Prova: `provas/prova_integracao_empresas.py` |
+| Integração (opcional) | `INTEGRACAO_EMPRESAS_TOKEN`: o Workforce lê a lista de empresas por `GET /api/integracao/empresas`, com este token em `Authorization: Bearer` (o mesmo valor do `TAREFFAS_TOKEN` de lá). Só leitura; sai id, razão social, fantasia, CNPJ, grupo, ativo e bloqueado. Vazio deixa a rota em 404. Prova: `provas/prova_integracao_empresas.py` |
 | Entrada pelo Hub | `ZOARIA_SSO_SECRET` (mesmo valor aqui e no Hub; vazio desliga o SSO) |
 | CORS | `CORS_ORIGINS` (lista por vírgula; vazio usa o padrão do código) |
 | Frontend (build) | `VITE_HUB_URL` (volta para o Hub; padrão `https://zoaria.com.br`) |
