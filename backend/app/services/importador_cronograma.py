@@ -66,7 +66,12 @@ FIELD_ALIASES = {
     "nome": ["descricao da tarefa", "descricao das tarefas", "descricao das tarefa",
              "descricao", "descrição", "tarefa", "atividade", "obrigacao", "obrigação"],
     "competencia": ["competencia", "competência"],
-    "vencimento": ["vencimento", "prazo", "transicao", "transição", "meta", "data prevista", "data"],
+    "vencimento": ["vencimento", "prazo", "prazo legal", "transicao", "transição", "meta",
+                   "data prevista", "data"],
+    # Prazo da equipe, quando difere do vencimento (2026-10-26, fluxo do DP).
+    "interno": ["prazo interno", "prazo interno bps4", "interno"],
+    "sentido": ["sentido"],
+    "comentario": ["comentario", "comentário", "observacao", "observação", "roteiro"],
     "empresa": ["empresa", "empresas", "entidade", "entidades"],
     "cnpj": ["cnpj", "cnpj/cpf", "cnpj cpf"],
     "multa": ["gera multa", "multa", "passivel de multa", "passível de multa"],
@@ -99,15 +104,23 @@ def map_competencia(cel) -> str:
 
 def parse_vencimento(cel):
     """Devolve (regra_prazo_tipo, regra_prazo_dia, label) de uma data OU de texto
-    ('5º dia útil', 'último dia útil')."""
+    ('5º dia útil', 'último dia útil', 'Dia 12', 'Até dia 15') OU de um número (12)."""
     if isinstance(cel, datetime):
         n = nth_dia_util(cel.date())
         return "dia_util", n, f"{n}º dia útil"
+    if isinstance(cel, (int, float)) and not isinstance(cel, bool) and 1 <= int(cel) <= 31:
+        return "dia_fixo", int(cel), f"Dia {int(cel)}"
     t = _norm(cel)
     m = re.search(r"(\d+)\s*[ºo°]?\s*dia\s*util", t)
     if m:
         n = int(m.group(1))
         return "dia_util", n, f"{n}º dia útil"
+    # "Dia 12", "Até dia 15", "12": dia do mês. Antes caía no fallback de
+    # último dia útil, calado, e o prazo da folha ia parar no fim do mês.
+    m = re.fullmatch(r"(?:ate\s+)?(?:o\s+)?(?:dia\s*)?(\d{1,2})", t)
+    if m and 1 <= int(m.group(1)) <= 31:
+        n = int(m.group(1))
+        return "dia_fixo", n, f"Dia {n}"
     if "ultimo dia" in t:
         return "ultimo_dia_util", None, "último dia útil"
     if "primeiro dia" in t:
@@ -129,6 +142,25 @@ def mapear_setor(cel) -> str:
     if any(k in t for k in ["pagar", "receber", "tesouraria", "faturamento", "financ", "caixa"]):
         return "Financeiro"
     return ""
+
+
+SENTIDOS = ("receber", "entregar", "transmitir", "interna")
+TIPOS_PRAZO = ("ultimo_dia_util", "primeiro_dia_util", "dia_fixo", "dia_util")
+
+
+def map_sentido(cel):
+    """Texto da coluna Sentido -> um dos quatro, ou None (fica o padrão do modelo)."""
+    t = _norm(cel)
+    return t if t in SENTIDOS else None
+
+
+def _dia(v):
+    """Dia de 1 a 31, ou None. O item volta do navegador: não se confia nele."""
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return None
+    return n if 1 <= n <= 31 else None
 
 
 def parse_multa(cel) -> bool:
@@ -170,7 +202,9 @@ def analisar(conteudo: bytes) -> dict:
         nome = str(nome_cel).strip()
         if nome not in grupos:
             grupos[nome] = {"ents": set(), "cnpjs": set(), "setor": None, "setor_raw": None,
-                            "comp": None, "tipo": None, "dia": None, "label": None, "multa": False}
+                            "comp": None, "tipo": None, "dia": None, "label": None, "multa": False,
+                            "i_tipo": None, "i_dia": None, "i_label": None, "sentido": None,
+                            "comentario": None}
             ordem.append(nome)
         g = grupos[nome]
         g["ents"].update(parse_entidades(cel(r, "empresa")))
@@ -189,6 +223,14 @@ def analisar(conteudo: bytes) -> dict:
             g["tipo"], g["dia"], g["label"] = parse_vencimento(v)
         if parse_multa(cel(r, "multa")):
             g["multa"] = True
+        vi = cel(r, "interno")
+        if g["i_tipo"] is None and vi not in (None, ""):
+            g["i_tipo"], g["i_dia"], g["i_label"] = parse_vencimento(vi)
+        if g["sentido"] is None:
+            g["sentido"] = map_sentido(cel(r, "sentido"))
+        cm = cel(r, "comentario")
+        if g["comentario"] is None and cm not in (None, ""):
+            g["comentario"] = str(cm).strip()
 
     itens, entidades = [], set()
     for nome in ordem:
@@ -202,6 +244,9 @@ def analisar(conteudo: bytes) -> dict:
             "regra_prazo_tipo": g["tipo"] or "ultimo_dia_util",
             "regra_prazo_dia": g["dia"], "prazo_label": g["label"] or "-",
             "gera_multa": g["multa"],
+            "interno_regra_tipo": g["i_tipo"], "interno_regra_dia": g["i_dia"],
+            "interno_label": g["i_label"], "sentido": g["sentido"],
+            "comentario": g["comentario"],
         })
     itens.sort(key=lambda x: (x["regra_prazo_dia"] or 99, x["nome"]))
     return {"itens": itens, "entidades": sorted(entidades), "total": len(itens)}
@@ -288,16 +333,34 @@ def importar(db, grupo: str, itens: list, mapa: dict = None, para_todas: bool = 
                 o.aplica_segmentos = None
             atualizadas += 1
         else:
+            # O item volta do navegador: tipo, dia e sentido fora da lista não
+            # entram (antes, qualquer texto virava regra_prazo_tipo).
+            tipo = it.get("regra_prazo_tipo")
+            tipo = tipo if tipo in TIPOS_PRAZO else "ultimo_dia_util"
+            dia = _dia(it.get("regra_prazo_dia")) if tipo in ("dia_fixo", "dia_util") else None
+            if tipo in ("dia_fixo", "dia_util") and dia is None:
+                tipo = "ultimo_dia_util"
+            comp = it.get("competencia_ref")
             o = Obrigacao(
                 nome=nome,
                 setor_id=setor.id if setor else None,
-                competencia_ref=it.get("competencia_ref") or "mes_anterior",
-                regra_prazo_tipo=it.get("regra_prazo_tipo") or "ultimo_dia_util",
-                regra_prazo_dia=it.get("regra_prazo_dia"),
+                competencia_ref=comp if comp in set(COMPETENCIAS.values()) else "mes_anterior",
+                regra_prazo_tipo=tipo,
+                regra_prazo_dia=dia,
                 meses_ativos=MESES_TODOS,
                 passivel_multa=bool(it.get("gera_multa")),
                 ativa=True,
             )
+            i_tipo = it.get("interno_regra_tipo")
+            i_dia = _dia(it.get("interno_regra_dia"))
+            if i_tipo in TIPOS_PRAZO and (i_dia is not None or i_tipo in ("ultimo_dia_util", "primeiro_dia_util")):
+                o.interno_modo = "regra"
+                o.interno_regra_tipo = i_tipo
+                o.interno_regra_dia = i_dia if i_tipo in ("dia_fixo", "dia_util") else None
+            if it.get("sentido") in SENTIDOS:
+                o.sentido = it["sentido"]
+            if (it.get("comentario") or "").strip():
+                o.comentario_padrao = str(it["comentario"]).strip()[:2000]
             o.empresas = emps
             db.add(o)
             criadas += 1
