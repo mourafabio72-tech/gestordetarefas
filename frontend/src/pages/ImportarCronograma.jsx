@@ -228,7 +228,10 @@ export default function ImportarCronograma() {
                       </div>
                     </td>
                     )}
-                    <td className="pr-3 text-gray-600 text-xs whitespace-nowrap">{it.prazo_label}</td>
+                    <td className="pr-3 text-gray-600 text-xs whitespace-nowrap">
+                      {it.prazo_label}
+                      {it.interno_label && <div className="text-gray-400">interno: {it.interno_label}</div>}
+                    </td>
                     <td className="pr-3 text-gray-400 text-xs whitespace-nowrap">
                       {it.competencia_ref === 'mes_anterior' ? 'mês anterior' : 'mesmo mês'}
                     </td>
