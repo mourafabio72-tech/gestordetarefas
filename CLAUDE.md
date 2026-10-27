@@ -218,6 +218,10 @@ supervisor  = gestor do principal > gestor do setor > supervisor da obrigação
   `services/razao_social.py` (sem maiúscula, acento nem pontuação), nunca pelo
   texto exato: o importador de cronograma comparava exato e criaria empresa
   repetida. Prova: `provas/prova_razao_social_gravada.py`
+- **Um push por vez no `main`** (2026-10-27): push no `main` e no branch de
+  trabalho no mesmo segundo gerou duas entregas do webhook, as duas aceitas, e o
+  EasyPanel não publicou nenhuma. O branch de trabalho vai só depois que o
+  `/api/health` mostrar o build novo.
 - `redirect_slashes=False` no FastAPI. A rota tem que bater exatamente, com ou sem
   barra final. Chamada com a barra errada devolve 404, não redireciona.
 - `Base.metadata.create_all`, `migrate()` e os seeds rodam **no import** de
