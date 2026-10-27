@@ -29,45 +29,46 @@ import {
 const HUB_URL = import.meta.env.VITE_HUB_URL || 'https://zoaria.com.br';
 import { useState, useRef, useEffect } from 'react';
 import MascoteIA from './MascoteIA';
+import { itemVisivel } from './menuVisivel';
 
 const menuGroups = [
   {
     label: 'Operacional',
     items: [
-      { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'gestor', 'usuario'] },
-      { path: '/tarefas', label: 'Tarefas', icon: ListTodo, roles: ['admin', 'gestor', 'usuario'] },
-      { path: '/evalidador', label: 'e-validador', icon: FileCheck2, roles: ['admin', 'gestor'] },
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard, acesso: { todos: true } },
+      { path: '/tarefas', label: 'Tarefas', icon: ListTodo, acesso: { perm: ['tarefas', 'ver'] } },
+      { path: '/evalidador', label: 'e-validador', icon: FileCheck2, acesso: { perm: ['evalidador', 'editar'] } },
       // Consulta do acervo. Fica no Operacional, junto de Tarefas: é ali que se
       // procura comprovante no dia a dia, e não em Relatórios.
-      { path: '/documentos', label: 'Documentos', icon: FileArchive, roles: ['admin', 'gestor', 'usuario'] },
+      { path: '/documentos', label: 'Documentos', icon: FileArchive, acesso: { todos: true } },
     ],
   },
   {
     label: 'Cadastro',
     items: [
-      { path: '/obrigacoes', label: 'Obrigações', icon: FileStack, roles: ['admin', 'gestor'] },
-      { path: '/modelos', label: 'Modelos', icon: Library, roles: ['admin', 'gestor'] },
-      { path: '/setores', label: 'Setores', icon: FolderOpen, roles: ['admin', 'gestor'] },
-      { path: '/empresas', label: 'Empresas', icon: Building2, roles: ['admin', 'gestor'] },
-      { path: '/usuarios', label: 'Usuários', icon: Users, roles: ['admin', 'gestor'] },
-      { path: '/grupos', label: 'Grupo de usuários', icon: ShieldCheck, roles: ['admin'] },
+      { path: '/obrigacoes', label: 'Obrigações', icon: FileStack, acesso: { perm: ['obrigacoes', 'editar'] } },
+      { path: '/modelos', label: 'Modelos', icon: Library, acesso: { perm: ['evalidador', 'editar'] } },
+      { path: '/setores', label: 'Setores', icon: FolderOpen, acesso: { perm: ['setores', 'editar'] } },
+      { path: '/empresas', label: 'Empresas', icon: Building2, acesso: { perm: ['empresas', 'editar'] } },
+      { path: '/usuarios', label: 'Usuários', icon: Users, acesso: { grupos: ['admin', 'gestor'] } },
+      { path: '/grupos', label: 'Grupo de usuários', icon: ShieldCheck, acesso: { grupos: ['admin'] } },
     ],
   },
   {
     label: 'Relatórios',
     items: [
-      { path: '/relatorios/obrigacoes', label: 'Relação de obrigações', icon: BarChart3, roles: ['admin', 'gestor'] },
+      { path: '/relatorios/obrigacoes', label: 'Relação de obrigações', icon: BarChart3, acesso: { perm: ['obrigacoes', 'ver'] } },
       // Página estática do manual (public/leia-me), aberta direto no quadro de quem fez o fluxo.
-      { path: '/leia-me/index.html#quem', externo: true, label: 'Quem leu o Leia-me', icon: BookOpen, roles: ['admin', 'gestor'] },
+      { path: '/leia-me/index.html#quem', externo: true, label: 'Quem leu o Leia-me', icon: BookOpen, acesso: { grupos: ['admin', 'gestor'] } },
     ],
   },
   {
     label: 'Configuração',
     items: [
-      { path: '/substituicoes', label: 'Substituições', icon: UserCog, roles: ['admin', 'gestor'] },
-      { path: '/importar-cronograma', label: 'Importar obrigações', icon: CalendarClock, roles: ['admin', 'gestor'] },
-      { path: '/notificacoes', label: 'Notificações', icon: Bell, roles: ['admin'] },
-      { path: '/inteligencia-artificial', label: 'Inteligência artificial', icon: Sparkles, roles: ['admin'] },
+      { path: '/substituicoes', label: 'Substituições', icon: UserCog, acesso: { grupos: ['admin', 'gestor'] } },
+      { path: '/importar-cronograma', label: 'Importar obrigações', icon: CalendarClock, acesso: { perm: ['obrigacoes', 'editar'] } },
+      { path: '/notificacoes', label: 'Notificações', icon: Bell, acesso: { grupos: ['admin'] } },
+      { path: '/inteligencia-artificial', label: 'Inteligência artificial', icon: Sparkles, acesso: { grupos: ['admin'] } },
     ],
   },
 ];
@@ -158,7 +159,7 @@ export default function Layout() {
             blocos terminariam em pontos diferentes. */}
         <nav className="px-2 py-3 flex-1 overflow-y-auto rolagem-invisivel">
           {menuGroups.map((group) => {
-            const visibleItems = group.items.filter((item) => item.roles.includes(grupo));
+            const visibleItems = group.items.filter((item) => itemVisivel(item, user));
             if (visibleItems.length === 0) return null;
             const recolhido = recolhidos[group.label];
             return (
