@@ -14,6 +14,14 @@ WORKDIR /app
 # Se um dia entrar dependencia que precise compilar, o build vai falhar dizendo
 # qual e, e ai a linha volta so para ela.
 
+# OCR do e-validador (2026-10-28): guia em imagem (PNG, JPG, PDF escaneado) e
+# lida AQUI, e nao pela IA, para o documento do cliente nao sair do servidor.
+# Pacote pronto do Debian, sem compilar nada: nao e o caso do gcc acima.
+# --no-install-recommends deixa de fora os idiomas e extras que nao usamos.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-por \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

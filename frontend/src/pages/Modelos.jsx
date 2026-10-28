@@ -221,8 +221,8 @@ export default function Modelos() {
           <span className="text-sm text-gray-600 block">
             {busy ? 'Lendo os documentos…' : 'Arraste os arquivos aqui ou clique para selecionar'}
           </span>
-          <span className="text-xs text-gray-400">Aceita PDF, XLSX e XLS · vários de uma vez</span>
-          <input type="file" accept=".pdf,.xlsx,.xls" multiple className="hidden"
+          <span className="text-xs text-gray-400">Aceita PDF, XLSX, XLS, PNG e JPG · vários de uma vez</span>
+          <input type="file" accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg" multiple className="hidden"
             onChange={(e) => processar(e.target.files)} />
         </label>
       </div>

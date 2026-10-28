@@ -43,7 +43,8 @@ export async function enviarComDivisao(remessa, enviar, aoProgredir = () => {}) 
 }
 
 /** Extensões que o leitor do servidor entende. */
-export const EXTENSOES_ACEITAS = ['pdf', 'xlsx', 'xls'];
+// png, jpg e jpeg desde 2026-10-28: o servidor lê a imagem pelo OCR.
+export const EXTENSOES_ACEITAS = ['pdf', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'];
 
 /**
  * Separa o que dá para enviar do que não dá.

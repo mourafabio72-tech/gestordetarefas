@@ -14,11 +14,12 @@ const arq = (nome) => ({ name: nome });
 
 console.log('\n1) O que o servidor sabe ler, e o que precisa ser dito');
 const { aceitos, recusados } = separarAceitos(
-  ['a.pdf', 'b.PDF', 'c.xlsx', 'd.xls', 'e.docx', 'f.png', 'sem-extensao'].map(arq));
-eq('aceita pdf, xlsx e xls', aceitos.map((f) => f.name), ['a.pdf', 'b.PDF', 'c.xlsx', 'd.xls']);
+  ['a.pdf', 'b.PDF', 'c.xlsx', 'd.xls', 'e.docx', 'f.png', 'g.JPG', 'sem-extensao'].map(arq));
+// PNG e JPG passaram a ser aceitos em 2026-10-28 (OCR no servidor).
+eq('aceita pdf, xlsx, xls, png e jpg', aceitos.map((f) => f.name), ['a.pdf', 'b.PDF', 'c.xlsx', 'd.xls', 'f.png', 'g.JPG']);
 eq('maiúscula na extensão não atrapalha', aceitos.some((f) => f.name === 'b.PDF'), true);
 eq('o resto volta para ser AVISADO, não descartado calado',
-   recusados.map((f) => f.name), ['e.docx', 'f.png', 'sem-extensao']);
+   recusados.map((f) => f.name), ['e.docx', 'sem-extensao']);
 eq('lista vazia não quebra', separarAceitos([]).aceitos, []);
 eq('nula também', separarAceitos(null).recusados, []);
 

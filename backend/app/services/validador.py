@@ -36,6 +36,11 @@ def ler_pdf(conteudo: bytes) -> str:
     autor e "Guia de Recolhimento de ISS" no título (2026-10-27)."""
     r = pypdf.PdfReader(io.BytesIO(conteudo))
     texto = "\n".join((p.extract_text() or "") for p in r.pages)
+    # Página escaneada não tem texto: lê a imagem pelo OCR do servidor
+    # (2026-10-28). PDF com texto não passa por aqui, que é o caso comum.
+    if not texto.strip():
+        from . import ocr
+        texto = ocr.ler_imagens_do_pdf(r)
     # Com rótulo, para a tela Modelos saber o que é título (sugestão de
     # palavra-chave) e o que é autor (razão social).
     try:
@@ -82,9 +87,15 @@ def _ler_xls(conteudo: bytes) -> str:
     return "\n".join(linhas)
 
 
+EXT_IMAGEM = (".png", ".jpg", ".jpeg")
+
+
 def ler_arquivo(nome: str, conteudo: bytes) -> str:
-    """Extrai o texto do comprovante: PDF, XLSX ou XLS."""
+    """Extrai o texto do comprovante: PDF, XLSX, XLS ou imagem (PNG, JPG, pelo OCR)."""
     n = (nome or "").lower()
+    if n.endswith(EXT_IMAGEM):
+        from . import ocr
+        return ocr.ler_imagem(conteudo)
     if n.endswith(".xlsx"):
         return _ler_xlsx(conteudo)
     if n.endswith(".xls"):
@@ -188,6 +199,15 @@ def extrair_dados(texto: str) -> dict:
                                   t[i.end():])
                     if m:
                         d["competencia"] = f"{_MES_POR_NOME[m.group(1)]:02d}/{m.group(2)}"
+
+    # Rótulo "Competência" com o valor na mesma linha ou logo abaixo, como no
+    # DARM do Rio lido pelo OCR ("04. COMPETÊNCIA" ... "CNPJ: ... 09/2026").
+    # MM/AAAA solto: o mês de uma data dd/mm/aaaa (vencimento) não conta.
+    if not d["competencia"]:
+        m = re.search(r"compet[eê]ncia\s*:?[^\n]*\n?[^\n]{0,80}?(?<![\d/])(0[1-9]|1[0-2])/(20\d{2})(?![\d/])",
+                      texto, re.IGNORECASE)
+        if m:
+            d["competencia"] = f"{m.group(1)}/{m.group(2)}"
 
     # Relatório de apuração: "APURAÇÃO SETEMBRO DE 2026", "Apuração de
     # dezembro/2025". Só mês POR EXTENSO logo depois da palavra, para não

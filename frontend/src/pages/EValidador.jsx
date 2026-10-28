@@ -19,8 +19,9 @@ const STATUS = {
   cancelada: { label: 'Cancelada', cls: 'bg-gray-100 text-gray-600', Icon: Ban },
 };
 
-const ACEITA = '.pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
-const EXT_OK = /\.(pdf|xlsx|xls)$/i;
+// PNG e JPG desde 2026-10-28: o servidor lê a imagem pelo OCR (tesseract).
+const ACEITA = '.pdf,.xlsx,.xls,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/png,image/jpeg';
+const EXT_OK = /\.(pdf|xlsx|xls|png|jpe?g)$/i;
 
 export default function EValidador() {
   const [files, setFiles] = useState([]);
@@ -58,7 +59,7 @@ export default function EValidador() {
 
       <div className="card mb-6">
         <p className="text-sm text-gray-600 mb-4">
-          Envie os <strong>comprovantes de entrega</strong> (PDF ou Excel). O e-validador extrai
+          Envie os <strong>comprovantes de entrega</strong> (PDF, Excel ou imagem). O e-validador extrai
           CNPJ, competência e o tipo de obrigação, e dá baixa na tarefa correspondente.
         </p>
         <div className="flex items-center gap-4">
@@ -75,7 +76,7 @@ export default function EValidador() {
                 ? `${files.length} arquivo(s) selecionado(s)`
                 : 'Arraste os arquivos aqui ou clique para selecionar'}
             </span>
-            <span className="text-xs text-gray-400">Aceita PDF, XLSX e XLS · vários de uma vez</span>
+            <span className="text-xs text-gray-400">Aceita PDF, XLSX, XLS, PNG e JPG · vários de uma vez</span>
             <input type="file" accept={ACEITA} multiple className="hidden"
               onChange={(e) => adicionar(e.target.files)} />
           </label>
