@@ -29,8 +29,33 @@ def _so_digitos(s: str) -> str:
 
 
 def ler_pdf(conteudo: bytes) -> str:
+    """Texto das páginas e, no fim, os dados do arquivo (autor, título, assunto).
+
+    Guia em PDF de imagem não tem texto nenhum, mas há emissor que grava o que
+    importa nos dados do arquivo: a Prefeitura do Rio põe "RAZÃO, CNPJ ..." no
+    autor e "Guia de Recolhimento de ISS" no título (2026-10-27)."""
     r = pypdf.PdfReader(io.BytesIO(conteudo))
-    return "\n".join((p.extract_text() or "") for p in r.pages)
+    texto = "\n".join((p.extract_text() or "") for p in r.pages)
+    try:
+        meta = r.metadata or {}
+        extras = [str(meta.get(k) or "").strip() for k in ("/Title", "/Subject", "/Author", "/Keywords")]
+    except Exception:
+        extras = []
+    extras = [e for e in extras if e]
+    return texto + ("\n" + "\n".join(extras) if extras else "")
+
+
+def competencia_do_nome(nome: str):
+    """Competência MM/AAAA tirada do nome do arquivo ("ISS 09.2026 VENC ..."),
+    ou None. Data completa (06.10.2026) não conta: o "10.2026" de dentro dela
+    é o mês do vencimento, não a competência."""
+    nome = str(nome or "")
+    for m in re.finditer(r"(?<!\d)(0[1-9]|1[0-2])[._/ -](20\d{2})(?!\d)", nome):
+        i = m.start()
+        if i >= 2 and nome[i - 1] in "._/- " and nome[i - 2].isdigit():
+            continue                      # é o mês de uma data dd.mm.aaaa
+        return f"{m.group(1)}/{m.group(2)}"
+    return None
 
 
 def _ler_xlsx(conteudo: bytes) -> str:
@@ -544,6 +569,13 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     dados = extrair_dados(texto)
     obrigacoes = identificar_obrigacao(db, texto)
     usou_ia = False
+    # Documento sem competência legível (guia em imagem): vale a do nome do
+    # arquivo, convenção do escritório, antes da IA. Não conta como LIDA na
+    # guia: `conferir_saida` relê o texto, e a guia de "entregar" espera alguém.
+    origem_comp = "documento" if dados["competencia"] else None
+    if not dados["competencia"]:
+        dados["competencia"] = competencia_do_nome(nome_arquivo)
+        origem_comp = "nome do arquivo" if dados["competencia"] else None
 
     # Reforço por IA só quando o método atual não resolveu.
     if (not dados["cnpj"]) or (not dados["competencia"]) or (len(obrigacoes) != 1):
@@ -562,7 +594,9 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
                     if o:
                         obrigacoes = [o]
 
-    res = {"arquivo": nome_arquivo, **dados, "ia": usou_ia,
+    if origem_comp is None and dados["competencia"]:
+        origem_comp = "IA"
+    res = {"arquivo": nome_arquivo, **dados, "ia": usou_ia, "competencia_origem": origem_comp,
            "status": None, "detalhe": None, "tarefa_id": None}
 
     if not dados["cnpj"]:
