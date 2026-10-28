@@ -1086,6 +1086,19 @@ export default function Tarefas() {
                     ) : (
                       <p className="text-xs text-gray-500">Nenhum documento anexado ainda.</p>
                     )}
+                    {/* Vão junto da guia, pelo mesmo link (2026-10-28). */}
+                    {entrega.ensaio?.complementares?.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500">Vão junto ({entrega.ensaio.complementares.length}):</p>
+                        <ul className="text-sm text-gray-700 mt-0.5 space-y-0.5">
+                          {entrega.ensaio.complementares.map((n, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <Paperclip size={12} className="text-gray-400" /> {n}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <label className="btn-secondary inline-flex items-center gap-2 mt-2 cursor-pointer text-sm">
                       <Upload size={15} />
                       {entrega.ensaio?.arquivo ? 'Trocar documento' : 'Anexar documento'}

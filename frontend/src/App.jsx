@@ -16,6 +16,7 @@ import EValidador from './pages/EValidador';
 import Documentos from './pages/Documentos';
 import Modelos from './pages/Modelos';
 import EnviarComprovante from './pages/EnviarComprovante';
+import ReceberDocumentos from './pages/ReceberDocumentos';
 import AtivarAcesso from './pages/AtivarAcesso';
 import ImportarCronograma from './pages/ImportarCronograma';
 import RelacaoObrigacoes from './pages/RelacaoObrigacoes';
@@ -38,6 +39,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
       <Route path="/enviar/:token" element={<EnviarComprovante />} />
+      <Route path="/receber/:token" element={<ReceberDocumentos />} />
       <Route path="/ativar/:token" element={<AtivarAcesso />} />
       <Route
         path="/"

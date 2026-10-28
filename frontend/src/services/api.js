@@ -30,6 +30,8 @@ api.interceptors.response.use(
 const apiPublico = axios.create({ baseURL: '/api' });
 export const publicoAPI = {
   contexto: (token) => apiPublico.get(`/publico/tarefa/${token}`),
+  // Guia + complementares que o cliente recebe por um link só (2026-10-28).
+  documentos: (token) => apiPublico.get(`/publico/documentos/${token}`),
   enviar: (token, file) => {
     const fd = new FormData();
     fd.append('arquivo', file);

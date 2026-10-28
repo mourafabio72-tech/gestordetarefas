@@ -52,19 +52,27 @@ def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
     # Mensagem ao cliente da obrigação (2026-10-28): quando preenchida, toma o
     # lugar da frase padrão. Saudação, vencimento, link e assinatura ficam.
     propria = ((obr.mensagem_cliente or "").strip() if obr else "")
+    # Complementares (2026-10-28): o link abre a página com todos os arquivos.
+    n_compl = len(getattr(tarefa, "complementares", None) or [])
+    rotulo = "Baixar os documentos" if n_compl else "Baixar a guia"
+    junto = (f"Junto vão {n_compl} documento(s) complementar(es)." if n_compl else "")
 
     assunto = f"BPS4 | {nome}, {comp}, {empresa}" if comp else f"BPS4 | {nome}, {empresa}"
     linhas = [f"Olá, {empresa}.", "",
               propria or (f"Sua guia {nome}" + (f" da competência {comp}" if comp else "") + " está disponível.")]
     if venc:
         linhas.append(f"Vencimento: {venc}.")
-    linhas += ["", f"Baixar a guia: {link}", "",
+    if junto:
+        linhas.append(junto)
+    linhas += ["", f"{rotulo}: {link}", "",
                "O link é exclusivo desta mensagem. Qualquer dúvida, é só responder.", "",
                "BPS4 Contabilidade"]
     texto = "\n".join(linhas)
 
     e = html_mod.escape
     venc_html = f'<p style="margin:0 0 20px">Vencimento: <strong>{e(venc)}</strong>.</p>' if venc else ""
+    if junto:
+        venc_html += f'<p style="margin:0 0 20px">{e(junto)}</p>'
     comp_html = f" da competência <strong>{e(comp)}</strong>" if comp else ""
     corpo_html = ("<br>".join(e(l) for l in propria.splitlines()) if propria
                   else f"Sua guia <strong>{e(nome)}</strong>{comp_html} está disponível.")
@@ -77,7 +85,7 @@ def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
 <p style="margin:0 0 16px">Olá, {e(empresa)}.</p>
 <p style="margin:0 0 8px">{corpo_html}</p>
 {venc_html}
-<p style="margin:0 0 24px"><a href="{e(link)}" style="display:inline-block;background:{_COR};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px">Baixar a guia</a></p>
+<p style="margin:0 0 24px"><a href="{e(link)}" style="display:inline-block;background:{_COR};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px">{e(rotulo)}</a></p>
 <p style="margin:0 0 4px;font-size:13px;color:#6b7266">O link é exclusivo desta mensagem. Qualquer dúvida, é só responder.</p>
 <p style="margin:16px 0 0;font-size:13px;color:#6b7266">BPS4 Contabilidade</p>
 </td></tr></table></td></tr></table></body></html>"""
@@ -138,6 +146,7 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
         except Exception:
             pass                     # best-effort: não ler não impede o envio
         return {"ensaio": True, "arquivo": up.nome_de_exibicao(tarefa.saida_nome),
+                "complementares": [up.nome_de_exibicao(c.arquivo) for c in tarefa.complementares],
                 "destinatarios": destinos, "conferencia": conferencia}
 
     cfg = cfgmod.carregar(db)
@@ -162,7 +171,10 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
                             enviado_por=enviado_por)
         db.add(envio)
         db.flush()          # garante o id sem fechar a transação
-        link = f"{base}/api/publico/baixar/{envio.token}"
+        # Com complementar, o link abre a página com todos os arquivos; sem,
+        # continua abrindo a guia direto, como sempre.
+        link = (f"{base}/receber/{envio.token}" if tarefa.complementares
+                else f"{base}/api/publico/baixar/{envio.token}")
         msg = montar_mensagem(tarefa, empresa, link)
 
         # Exceção de rede de UM destinatário não derruba os outros nem apaga o

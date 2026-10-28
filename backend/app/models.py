@@ -223,6 +223,26 @@ class SaidaAcesso(Base):
     # fica registrado para auditoria; só o que é abertura de gente conta.
     contado = Column(Boolean, default=True)
     quando = Column(DateTime(timezone=True), server_default=func.now())
+    # Qual arquivo: NULL é a guia; um id é o complementar baixado. Sem FK de
+    # propósito: o complementar sai quando a guia é trocada, e o acesso fica
+    # como auditoria do que foi baixado na época.
+    complementar_id = Column(Integer, nullable=True)
+
+
+class TarefaComplementar(Base):
+    """Documento que vai ao cliente JUNTO da guia da tarefa (2026-10-28).
+
+    Memória de cálculo, relatório, extrato: não dá baixa em nada, acompanha a
+    guia. Entra pelo lote do e-validador (mesmo CNPJ e competência da guia) e
+    sai quando a guia é trocada, porque complementa a guia antiga.
+    """
+    __tablename__ = "tarefa_complementares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tarefa_id = Column(Integer, ForeignKey("tarefas.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    arquivo = Column(String(300), nullable=False)    # nome no volume
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class TarefaEnvio(Base):
@@ -379,6 +399,9 @@ class Tarefa(Base):
     # quase sempre alcança alguma já entregue.
     envios = relationship("TarefaEnvio", cascade="all, delete-orphan")
     acessos = relationship("SaidaAcesso", cascade="all, delete-orphan")
+    # Documentos que vão ao cliente JUNTO da guia (2026-10-28).
+    complementares = relationship("TarefaComplementar", cascade="all, delete-orphan",
+                                  order_by="TarefaComplementar.id")
 
     @property
     def exige_documento(self) -> bool:

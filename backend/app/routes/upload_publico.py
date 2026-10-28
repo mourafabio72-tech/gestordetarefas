@@ -61,6 +61,66 @@ _ABRE_NO_NAVEGADOR = {".pdf": "application/pdf", ".png": "image/png",
                       ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 
 
+def _saida_por_token(db: Session, token: str):
+    """(envio, tarefa) do link de entrega, ou 404.
+
+    O token pode ser de um DESTINATÁRIO (o normal, desde que cada um passou a
+    receber o seu) ou da tarefa (links emitidos antes disso). Procurar nos
+    dois mantém de pé a guia que já está na mão do cliente.
+    """
+    envio = db.query(TarefaEnvio).filter(TarefaEnvio.token == token).first()
+    tarefa = (db.query(Tarefa).filter(Tarefa.id == envio.tarefa_id).first() if envio
+              else db.query(Tarefa).filter(Tarefa.saida_token == token).first())
+    if not tarefa or not tarefa.saida_nome:
+        raise HTTPException(status_code=404, detail="Documento não encontrado ou link expirado.")
+    return envio, tarefa
+
+
+def _registrar_acesso(db: Session, request: Request, tarefa, envio, complementar_id=None) -> None:
+    """Registra a batida no link ANTES de servir: se o download falhar no meio,
+    o acesso aconteceu do mesmo jeito, e é o acesso que se quer saber."""
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
+        or (request.client.host if request.client else "")
+    ua = (request.headers.get("user-agent") or "")[:300]
+
+    # Quanto faz desde a última vez que ESTE ip pegou ESTE documento. O
+    # WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
+    # visualizador de PDF pede o arquivo em partes: as duas coisas inflavam o
+    # contador e faziam "abriu 2×" onde houve uma abertura só.
+    # Só acessos que CONTARAM entram na janela. Sem este filtro, a prévia do
+    # WhatsApp (que chega segundos antes) engoliria a primeira abertura de
+    # verdade sempre que as duas saíssem do mesmo IP, como acontece numa rede
+    # corporativa. A janela é por ARQUIVO: baixar o complementar logo depois
+    # da guia não engole nenhum dos dois.
+    ultimo = (db.query(SaidaAcesso)
+              .filter(SaidaAcesso.tarefa_id == tarefa.id, SaidaAcesso.ip == ip[:60],
+                      SaidaAcesso.contado == True,
+                      SaidaAcesso.complementar_id == complementar_id
+                      if complementar_id is not None else SaidaAcesso.complementar_id.is_(None))
+              .order_by(SaidaAcesso.id.desc()).first())
+    segundos = None
+    if ultimo is not None and ultimo.quando is not None:
+        agora = datetime.now(ultimo.quando.tzinfo) if ultimo.quando.tzinfo else datetime.utcnow()
+        segundos = (agora - ultimo.quando).total_seconds()
+
+    conta = up.conta_como_abertura(ua, segundos)
+    db.add(SaidaAcesso(tarefa_id=tarefa.id, envio_id=envio.id if envio else None,
+                       ip=ip[:60], user_agent=ua, contado=conta,
+                       complementar_id=complementar_id))
+    # O contador da tarefa é da GUIA: é ele que responde "o cliente pegou?".
+    if conta and complementar_id is None:
+        tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
+        tarefa.saida_baixada_em = datetime.utcnow()
+    db.commit()
+
+
+def _servir(caminho: str, nome: str):
+    ext = os.path.splitext(nome)[1].lower()
+    tipo = _ABRE_NO_NAVEGADOR.get(ext, "application/octet-stream")
+    return FileResponse(caminho, media_type=tipo, filename=nome,
+                        content_disposition_type="inline" if ext in _ABRE_NO_NAVEGADOR else "attachment")
+
+
 @router.get("/baixar/{token}")
 def baixar_documento(
     token: str,
@@ -78,51 +138,57 @@ def baixar_documento(
     quais clientes ainda não pegaram a guia. Um anexo de e-mail sai do nosso
     alcance no instante do envio; um link é uma requisição aqui.
     """
-    # O token pode ser de um DESTINATÁRIO (o normal, desde que cada um passou a
-    # receber o seu) ou da tarefa (links emitidos antes disso). Procurar nos
-    # dois mantém de pé a guia que já está na mão do cliente.
-    envio = db.query(TarefaEnvio).filter(TarefaEnvio.token == token).first()
-    tarefa = (db.query(Tarefa).filter(Tarefa.id == envio.tarefa_id).first() if envio
-              else db.query(Tarefa).filter(Tarefa.saida_token == token).first())
-    if not tarefa or not tarefa.saida_nome:
-        raise HTTPException(status_code=404, detail="Documento não encontrado ou link expirado.")
+    envio, tarefa = _saida_por_token(db, token)
     caminho = up.caminho_do_anexo(tarefa.saida_nome)
     if not caminho:
         raise HTTPException(status_code=410, detail="O arquivo não está mais disponível.")
+    _registrar_acesso(db, request, tarefa, envio)
+    return _servir(caminho, up.nome_de_exibicao(tarefa.saida_nome))
 
-    # Registra ANTES de servir: se o download falhar no meio, o acesso
-    # aconteceu do mesmo jeito, e é o acesso que se quer saber.
-    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() \
-        or (request.client.host if request.client else "")
-    ua = (request.headers.get("user-agent") or "")[:300]
 
-    # Quanto faz desde a última vez que ESTE ip pegou ESTE documento. O
-    # WhatsApp busca o link para montar a prévia antes de alguém clicar, e o
-    # visualizador de PDF pede o arquivo em partes: as duas coisas inflavam o
-    # contador e faziam "abriu 2×" onde houve uma abertura só.
-    # Só acessos que CONTARAM entram na janela. Sem este filtro, a prévia do
-    # WhatsApp (que chega segundos antes) engoliria a primeira abertura de
-    # verdade sempre que as duas saíssem do mesmo IP, como acontece numa rede
-    # corporativa.
-    ultimo = (db.query(SaidaAcesso)
-              .filter(SaidaAcesso.tarefa_id == tarefa.id, SaidaAcesso.ip == ip[:60],
-                      SaidaAcesso.contado == True)
-              .order_by(SaidaAcesso.id.desc()).first())
-    segundos = None
-    if ultimo is not None and ultimo.quando is not None:
-        agora = datetime.now(ultimo.quando.tzinfo) if ultimo.quando.tzinfo else datetime.utcnow()
-        segundos = (agora - ultimo.quando).total_seconds()
+@router.get("/baixar/{token}/complementar/{complementar_id}")
+def baixar_complementar(
+    token: str,
+    complementar_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Um documento complementar, pelo mesmo link da guia (2026-10-28).
 
-    conta = up.conta_como_abertura(ua, segundos)
-    db.add(SaidaAcesso(tarefa_id=tarefa.id, envio_id=envio.id if envio else None,
-                       ip=ip[:60], user_agent=ua, contado=conta))
-    if conta:
-        tarefa.saida_downloads = (tarefa.saida_downloads or 0) + 1
-        tarefa.saida_baixada_em = datetime.utcnow()
-    db.commit()
+    O id só vale DENTRO da tarefa do token: com o link de um cliente não se
+    alcança o complementar de outro trocando o número.
+    """
+    envio, tarefa = _saida_por_token(db, token)
+    c = next((c for c in tarefa.complementares if c.id == complementar_id), None)
+    if not c:
+        raise HTTPException(status_code=404, detail="Documento não encontrado ou link expirado.")
+    caminho = up.caminho_do_anexo(c.arquivo)
+    if not caminho:
+        raise HTTPException(status_code=410, detail="O arquivo não está mais disponível.")
+    _registrar_acesso(db, request, tarefa, envio, complementar_id=c.id)
+    return _servir(caminho, up.nome_de_exibicao(c.arquivo))
 
-    nome = up.nome_de_exibicao(tarefa.saida_nome)
-    ext = os.path.splitext(nome)[1].lower()
-    tipo = _ABRE_NO_NAVEGADOR.get(ext, "application/octet-stream")
-    return FileResponse(caminho, media_type=tipo, filename=nome,
-                        content_disposition_type="inline" if ext in _ABRE_NO_NAVEGADOR else "attachment")
+
+@router.get("/documentos/{token}")
+def documentos_do_link(token: str, db: Session = Depends(get_db)):
+    """O que a página do cliente lista: a guia e os complementares.
+
+    Só o necessário para o cliente reconhecer o que baixa. Abrir a página não
+    conta como acesso: quem conta é cada download.
+    """
+    from ..services.entrega_cliente import _competencia_por_extenso
+    from ..services.razao_social import formatar as formatar_razao
+    _envio, tarefa = _saida_por_token(db, token)
+    obr = tarefa.obrigacao
+    nome = ((obr.mininome or "").strip() or obr.nome) if obr else tarefa.titulo
+    base = f"/api/publico/baixar/{token}"
+    arquivos = [{"nome": up.nome_de_exibicao(tarefa.saida_nome), "tipo": "guia", "url": base}]
+    arquivos += [{"nome": up.nome_de_exibicao(c.arquivo), "tipo": "complementar",
+                  "url": f"{base}/complementar/{c.id}"} for c in tarefa.complementares]
+    return {
+        "empresa": formatar_razao(tarefa.empresa.razao_social) if tarefa.empresa else None,
+        "guia": nome,
+        "competencia": _competencia_por_extenso(tarefa.competencia),
+        "vencimento": tarefa.data_vencimento.strftime("%d/%m/%Y") if tarefa.data_vencimento else None,
+        "arquivos": arquivos,
+    }

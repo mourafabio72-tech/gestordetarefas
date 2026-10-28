@@ -4,7 +4,6 @@ from typing import List
 from ..database import get_db
 from ..models import Usuario
 from ..auth import require_perm
-from ..services.validador import processar
 
 router = APIRouter(prefix="/evalidador", tags=["evalidador"])
 
@@ -38,19 +37,15 @@ async def processar_comprovantes(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_perm("evalidador", "editar")),
 ):
-    """Recebe comprovantes de entrega (PDF), extrai as chaves e baixa as tarefas."""
-    resultados = []
-    for arq in arquivos:
-        conteudo = await arq.read()
-        try:
-            res = processar(db, arq.filename, conteudo)
-        except Exception as e:
-            resultados.append({"arquivo": arq.filename, "status": "erro",
-                               "detalhe": f"Falha ao ler o PDF: {e}"})
-            continue
-        if res.get("status") == "pronta_para_envio":
-            res.update(await _enviar_guia(db, res["tarefa_id"], current_user.id))
-        resultados.append(res)
+    """Recebe comprovantes de entrega (PDF), extrai as chaves e baixa as tarefas.
+
+    Complementar da guia (mesmo CNPJ e competência, sem obrigação própria)
+    vai junto dela ao cliente: ver services/complementares.py.
+    """
+    from ..services.complementares import processar_lote
+    lidos = [(arq.filename, await arq.read()) for arq in arquivos]
+    resultados = await processar_lote(
+        db, lidos, lambda db_, tid: _enviar_guia(db_, tid, current_user.id))
     resumo = {}
     for r in resultados:
         resumo[r["status"]] = resumo.get(r["status"], 0) + 1

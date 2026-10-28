@@ -99,6 +99,10 @@ def nome_de_exibicao(nome: str) -> str:
     tarefa existir, deixa qualquer um substituir o comprovante.
     """
     base = os.path.basename(nome or "")
+    # Complementar é "compl_{id}_{sorteio}_{arquivo}": três partes a descartar.
+    if base.startswith("compl_"):
+        partes = base.split("_", 3)
+        return partes[3] if len(partes) == 4 else base
     # Documento de saída é "saida_{id}_{arquivo}": duas partes a descartar, não
     # uma. Cortar só a primeira deixaria o id da tarefa colado no nome.
     if base.startswith("saida_"):
@@ -176,6 +180,35 @@ def salvar_saida(tarefa_id: int, filename: str, conteudo: bytes) -> str:
     return nome
 
 
+def salvar_complementar(db, tarefa, filename: str, conteudo: bytes):
+    """Guarda um documento que vai ao cliente junto da guia da tarefa.
+
+    O sorteio no nome deixa dois complementares de mesmo nome (dois
+    "relatorio.pdf") existirem lado a lado, em vez de um apagar o outro.
+    """
+    from ..models import TarefaComplementar
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    nome = f"compl_{tarefa.id}_{secrets.token_hex(4)}_{_seguro(filename)}"
+    with open(os.path.join(UPLOAD_DIR, nome), "wb") as f:
+        f.write(conteudo)
+    c = TarefaComplementar(tarefa_id=tarefa.id, arquivo=nome)
+    db.add(c)
+    db.flush()
+    return c
+
+
+def limpar_complementares(db, tarefa) -> int:
+    """Tira os complementares da tarefa, do banco e do volume."""
+    from ..models import TarefaComplementar
+    antigos = db.query(TarefaComplementar).filter(TarefaComplementar.tarefa_id == tarefa.id).all()
+    nomes = [c.arquivo for c in antigos]
+    for c in antigos:
+        db.delete(c)
+    db.flush()
+    db.expire(tarefa, ["complementares"])
+    return remover_arquivos(nomes)
+
+
 def trocar_saida(db, tarefa, filename: str, conteudo: bytes) -> str:
     """Grava o documento de SAÍDA da tarefa, trocando o anterior se houver.
 
@@ -187,6 +220,9 @@ def trocar_saida(db, tarefa, filename: str, conteudo: bytes) -> str:
     trocou = bool(tarefa.saida_nome)
     if tarefa.saida_nome:
         remover_arquivo(tarefa.saida_nome)
+    # Guia nova leva os complementares da antiga junto: eles acompanhavam a
+    # guia que saiu de cena. Os da guia nova entram depois desta chamada.
+    limpar_complementares(db, tarefa)
     tarefa.saida_nome = salvar_saida(tarefa.id, filename, conteudo)
     if trocou:
         # Token novo REVOGA o link já enviado. Sem isso, a guia retificada

@@ -70,6 +70,7 @@ MIGRACOES = [
     ("mensagem_cliente", "ALTER TABLE obrigacoes ADD COLUMN mensagem_cliente TEXT"),
     # A ficha da empresa aceita mais de um e-mail; 100 cabia um só.
     ("empresa_email_maior", "ALTER TABLE empresas ALTER COLUMN email TYPE VARCHAR(300)"),
+    ("acesso_complementar", "ALTER TABLE saida_acessos ADD COLUMN complementar_id INTEGER"),
 ]
 
 _ADD = re.compile(r"ALTER TABLE (\w+) ADD COLUMN (\w+)", re.I)

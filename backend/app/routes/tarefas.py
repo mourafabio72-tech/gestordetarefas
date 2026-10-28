@@ -482,6 +482,7 @@ def excluir_documento(
     removido = up.remover_arquivo(nome)
     if entregue:
         tarefa.saida_nome = None
+        up.limpar_complementares(db, tarefa)   # acompanhavam a guia que saiu
         tarefa.saida_token = None
         tarefa.saida_downloads = 0
         tarefa.saida_baixada_em = None
@@ -846,6 +847,7 @@ def delete_tarefa(
         # commit: apagar primeiro deixaria a tarefa sem arquivo se o banco
         # recusasse a exclusão.
         arquivo, saida = db_tarefa.anexo_nome, db_tarefa.saida_nome
+        compl = [c.arquivo for c in db_tarefa.complementares]
         db_tarefa.responsaveis = []          # solta a associação antes
         db.delete(db_tarefa)
         db.commit()
@@ -853,7 +855,7 @@ def delete_tarefa(
         # acha. O documento de saída ficava para trás, e toda guia entregue ao
         # cliente virava órfã.
         removido = up.remover_arquivo(arquivo)
-        removidos = int(removido) + up.remover_arquivos([saida])
+        removidos = int(removido) + up.remover_arquivos([saida] + compl)
         return {"message": "Tarefa excluída definitivamente.",
                 "excluida": True, "anexo_removido": removido,
                 "arquivos_removidos": removidos}
@@ -893,7 +895,7 @@ def excluir_tarefas_competencia(
     arquivos = []
     n = 0
     for t in tarefas:
-        arquivos.extend([t.anexo_nome, t.saida_nome])
+        arquivos.extend([t.anexo_nome, t.saida_nome] + [c.arquivo for c in t.complementares])
         t.responsaveis = []
         db.delete(t)
         n += 1

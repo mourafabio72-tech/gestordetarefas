@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { evalidadorAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
-import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock, Send, Ban } from 'lucide-react';
+import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock, Send, Ban, Paperclip } from 'lucide-react';
 
 const STATUS = {
   baixada: { label: 'Baixada', cls: 'bg-green-100 text-green-700', Icon: CheckCircle2 },
@@ -17,6 +17,8 @@ const STATUS = {
   sem_destinatario: { label: 'Sem destinatário', cls: 'bg-orange-100 text-orange-700', Icon: AlertTriangle },
   // Existia no servidor desde a fase 35 e caía em "Erro" aqui.
   cancelada: { label: 'Cancelada', cls: 'bg-gray-100 text-gray-600', Icon: Ban },
+  // Vai ao cliente junto da guia do mesmo lote (2026-10-28).
+  complementar: { label: 'Complementar', cls: 'bg-green-100 text-green-700', Icon: Paperclip },
 };
 
 // PNG e JPG desde 2026-10-28: o servidor lê a imagem pelo OCR (tesseract).
@@ -61,6 +63,11 @@ export default function EValidador() {
         <p className="text-sm text-gray-600 mb-4">
           Envie os <strong>comprovantes de entrega</strong> (PDF, Excel ou imagem). O e-validador extrai
           CNPJ, competência e o tipo de obrigação, e dá baixa na tarefa correspondente.
+        </p>
+        <p className="text-sm text-gray-600 mb-4">
+          Documento <strong>complementar</strong> (memória de cálculo, relatório) vai junto da guia: solte no
+          mesmo lote. O arquivo que não é de nenhuma obrigação, mas tem o CNPJ e a competência da guia, segue
+          com ela para o cliente.
         </p>
         <div className="flex items-center gap-4">
           <label

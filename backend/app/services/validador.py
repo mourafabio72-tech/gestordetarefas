@@ -683,6 +683,8 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         lido = dados["cnpj"] or dados["raizes"][0]
         res.update(status="erro", detalhe=f"Empresa com CNPJ {_formata_cnpj(lido)} não cadastrada")
         return res
+    # O lote do e-validador usa isto para casar complementar com guia.
+    res["empresa_ids"] = [c.id for c in candidatas]
     # Raiz de matriz e filiais: a empresa sai da TAREFA, mais abaixo.
     empresa = candidatas[0] if len(candidatas) == 1 else None
     if empresa:
@@ -690,7 +692,9 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         res["empresa"] = empresa.razao_social
 
     if not obrigacoes:
-        res.update(status="erro", detalhe="Nenhuma obrigação reconhecida (ajuste os identificadores ou ative a IA)")
+        # `sem_obrigacao`: pode ser complementar de uma guia do mesmo lote.
+        res.update(status="erro", sem_obrigacao=True,
+                   detalhe="Nenhuma obrigação reconhecida (ajuste os identificadores ou ative a IA)")
         return res
     if len(obrigacoes) > 1:
         res.update(status="ambiguo",
