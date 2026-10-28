@@ -119,12 +119,15 @@ def conferir_saida(texto: str, cnpj_empresa: str, competencia_tarefa: str) -> di
     quando algo lido CONTRADIZ o cadastro, não quando falta.
     """
     lido = extrair_dados(texto or "")
-    cnpj_doc = _so_digitos(lido.get("cnpj") or "")
+    # Completo ou, na falta dele, a raiz (8 dígitos) que o documento traz.
+    cnpj_doc = _so_digitos(lido.get("cnpj") or "") or ((lido.get("raizes") or [""])[0])
     comp_doc = lido.get("competencia")
     alertas = []
 
     cnpj_cad = _so_digitos(cnpj_empresa or "")
-    if cnpj_doc and cnpj_cad and cnpj_doc != cnpj_cad:
+    # A mesma RAIZ conta como certo (2026-10-28): matriz e filial são a mesma
+    # empresa, e guia federal traz só os 8 primeiros dígitos.
+    if cnpj_doc and cnpj_cad and cnpj_doc[:8] != cnpj_cad[:8]:
         alertas.append(f"O documento é do CNPJ {_formata_cnpj(cnpj_doc)}, "
                        f"e a empresa da tarefa é {_formata_cnpj(cnpj_cad)}.")
     if comp_doc and competencia_tarefa and comp_doc != competencia_tarefa:
@@ -140,6 +143,8 @@ def conferir_saida(texto: str, cnpj_empresa: str, competencia_tarefa: str) -> di
 
 def _formata_cnpj(d: str) -> str:
     d = _so_digitos(d or "")
+    if len(d) == 8:
+        return f"{d[:2]}.{d[2:5]}.{d[5:]}"
     if len(d) != 14:
         return d
     return f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
@@ -151,19 +156,28 @@ _MES_POR_NOME = {n: i for i, n in enumerate(
 
 
 def extrair_dados(texto: str) -> dict:
-    d = {"cnpj": None, "cnpjs": [], "competencia": None, "protocolo": None, "data_entrega": None}
+    d = {"cnpj": None, "cnpjs": [], "raizes": [], "competencia": None, "protocolo": None,
+         "data_entrega": None}
 
     # TODOS os CNPJs, com o que tem rótulo ("CNPJ: ...") na frente. Relatório
     # com relação de prestadores sai do PDF com a tabela antes do cabeçalho, e
     # o primeiro CNPJ do texto era o de um prestador (caso de 2026-10-27). Quem
     # escolhe entre eles, olhando o cadastro, é `empresa_do_documento`.
     formato = r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}"
-    rotulados = re.findall(r"CNPJ(?:\s*/\s*CPF)?\s*:?\s*(" + formato + ")", texto, re.IGNORECASE)
+    rotulo = r"CNPJ(?:\s*/\s*CPF)?\s*:?\s*"
+    rotulados = re.findall(rotulo + "(" + formato + r"|\d{14}(?!\d))", texto, re.IGNORECASE)
     for c in rotulados + re.findall(formato, texto):
         c = _so_digitos(c)
         if c not in d["cnpjs"]:
             d["cnpjs"].append(c)
     d["cnpj"] = d["cnpjs"][0] if d["cnpjs"] else None
+    # Só a RAIZ ("CNPJ: 11.222.333", comum em recibo federal), com rótulo e
+    # sem a barra da filial depois. Quem casa com o cadastro é
+    # `empresas_do_documento` (2026-10-28).
+    for r in re.findall(rotulo + r"(\d{2}\.\d{3}\.\d{3})(?![\d/.])", texto, re.IGNORECASE):
+        r = _so_digitos(r)
+        if r not in d["raizes"]:
+            d["raizes"].append(r)
 
     # Período de apuração: "01/05/2026 a 31/05/2026" -> competência 05/2026 (mês/ano do início)
     m = re.search(r"(\d{2})/(\d{2})/(\d{4})\s*a\s*\d{2}/\d{2}/\d{4}", texto)
@@ -396,17 +410,35 @@ def identificar_obrigacao(db: Session, texto: str):
             if not any(engolida(minhas, outras) for p, outras in casadas if p is not o)]
 
 
-def empresa_do_documento(db: Session, dados: dict):
-    """A empresa do documento: o primeiro CNPJ da lista (rotulado na frente)
-    que é de empresa cadastrada. CNPJ de prestador numa relação não é cliente
-    e fica de fora; se for cliente também, o rótulo do cabeçalho decide."""
+def empresas_do_documento(db: Session, dados: dict) -> list:
+    """As empresas que o documento pode ser, pelo CNPJ.
+
+    1. O primeiro CNPJ completo da lista (rotulado na frente) que é de empresa
+       cadastrada: uma só. CNPJ de prestador numa relação não é cliente e fica
+       de fora; se for cliente também, o rótulo do cabeçalho decide.
+    2. Sem completo cadastrado, a RAIZ (8 dígitos), tirada dos completos lidos
+       e depois das raízes soltas (2026-10-28). Raiz de matriz e filiais
+       devolve todas, e quem desempata é a tarefa (`processar`).
+    """
+    empresas = db.query(Empresa).filter(Empresa.cnpj != None).order_by(Empresa.cnpj).all()
     cad = {}
-    for e in db.query(Empresa).filter(Empresa.cnpj != None).all():
+    for e in empresas:
         cad.setdefault(_so_digitos(e.cnpj), e)
-    for c in dados.get("cnpjs") or ([dados["cnpj"]] if dados.get("cnpj") else []):
+    cnpjs = dados.get("cnpjs") or ([dados["cnpj"]] if dados.get("cnpj") else [])
+    for c in cnpjs:
         if c in cad:
-            return cad[c]
-    return None
+            return [cad[c]]
+    for raiz in [c[:8] for c in cnpjs] + list(dados.get("raizes") or []):
+        achadas = [e for e in empresas if _so_digitos(e.cnpj)[:8] == raiz]
+        if achadas:
+            return achadas
+    return []
+
+
+def empresa_do_documento(db: Session, dados: dict):
+    """A empresa do documento, quando o CNPJ (ou a raiz) aponta UMA só."""
+    achadas = empresas_do_documento(db, dados)
+    return achadas[0] if len(achadas) == 1 else None
 
 
 def analisar_para_repositorio(db: Session, nome: str, conteudo: bytes) -> dict:
@@ -620,7 +652,7 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         origem_comp = "nome do arquivo" if dados["competencia"] else None
 
     # Reforço por IA só quando o método atual não resolveu.
-    if (not dados["cnpj"]) or (not dados["competencia"]) or (len(obrigacoes) != 1):
+    if (not (dados["cnpj"] or dados["raizes"])) or (not dados["competencia"]) or (len(obrigacoes) != 1):
         cfg = cfgmod.carregar(db)
         if ia_mod.disponivel(cfg):
             ativas = db.query(Obrigacao).filter(Obrigacao.ativa == True).all()
@@ -641,18 +673,21 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     res = {"arquivo": nome_arquivo, **dados, "ia": usou_ia, "competencia_origem": origem_comp,
            "status": None, "detalhe": None, "tarefa_id": None}
 
-    if not dados["cnpj"]:
+    if not (dados["cnpj"] or dados["raizes"]):
         res.update(status="erro", detalhe="CNPJ não encontrado no documento")
         return res
     if dados["cnpj"] and dados["cnpj"] not in dados["cnpjs"]:
         dados["cnpjs"].append(dados["cnpj"])        # veio da IA
-    empresa = empresa_do_documento(db, dados)
+    candidatas = empresas_do_documento(db, dados)
+    if not candidatas:
+        lido = dados["cnpj"] or dados["raizes"][0]
+        res.update(status="erro", detalhe=f"Empresa com CNPJ {_formata_cnpj(lido)} não cadastrada")
+        return res
+    # Raiz de matriz e filiais: a empresa sai da TAREFA, mais abaixo.
+    empresa = candidatas[0] if len(candidatas) == 1 else None
     if empresa:
         dados["cnpj"] = res["cnpj"] = _so_digitos(empresa.cnpj)
-    if not empresa:
-        res.update(status="erro", detalhe=f"Empresa com CNPJ {dados['cnpj']} não cadastrada")
-        return res
-    res["empresa"] = empresa.razao_social
+        res["empresa"] = empresa.razao_social
 
     if not obrigacoes:
         res.update(status="erro", detalhe="Nenhuma obrigação reconhecida (ajuste os identificadores ou ative a IA)")
@@ -668,16 +703,36 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         res.update(status="erro", detalhe="Competência (período de apuração) não encontrada")
         return res
 
-    tarefa = (db.query(Tarefa)
-              .filter(Tarefa.empresa_id == empresa.id,
-                      Tarefa.obrigacao_id == obrigacao.id,
-                      Tarefa.competencia == dados["competencia"])
-              .first())
+    tarefas = (db.query(Tarefa)
+               .filter(Tarefa.empresa_id.in_([c.id for c in candidatas]),
+                       Tarefa.obrigacao_id == obrigacao.id,
+                       Tarefa.competencia == dados["competencia"])
+               .order_by(Tarefa.id).all())
+    if empresa is None and len(tarefas) > 1:
+        # Só a raiz casou e mais de uma empresa do grupo tem a tarefa: vale a
+        # única ainda aberta; com duas abertas não se chuta.
+        abertas = [t for t in tarefas
+                   if t.status not in (StatusTarefa.CONCLUIDA, StatusTarefa.CANCELADA)]
+        if len(abertas) == 1:
+            tarefas = abertas
+        else:
+            nomes = ", ".join(sorted({t.empresa.razao_social for t in (abertas or tarefas)}))
+            res.update(status="ambiguo",
+                       detalhe=f"A raiz do CNPJ {_formata_cnpj(dados['raizes'][0] if dados['raizes'] else dados['cnpj'][:8])} "
+                               f"é de mais de uma empresa com esta tarefa: {nomes}. "
+                               f"Envie o documento com o CNPJ completo ou dê baixa na tela.")
+            return res
+    tarefa = tarefas[0] if tarefas else None
     if not tarefa:
+        quem = empresa.razao_social if empresa else ", ".join(c.razao_social for c in candidatas)
         res.update(status="sem_tarefa",
                    detalhe=f"Sem tarefa de {obrigacao.mininome or obrigacao.nome} "
-                           f"para {empresa.razao_social} na competência {dados['competencia']}")
+                           f"para {quem} na competência {dados['competencia']}")
         return res
+    if empresa is None:
+        empresa = tarefa.empresa
+        dados["cnpj"] = res["cnpj"] = _so_digitos(empresa.cnpj)
+        res["empresa"] = empresa.razao_social
 
     res["tarefa_id"] = tarefa.id
     if tarefa.status == StatusTarefa.CONCLUIDA:
