@@ -125,7 +125,8 @@ export default function EValidador() {
                     <p className="text-sm text-gray-600 mt-0.5">{r.detalhe}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {r.cnpj && <>CNPJ {r.cnpj} · </>}
-                      {r.competencia && <>Competência {r.competencia} · </>}
+                      {r.competencia && <>Competência {r.competencia}
+                        {r.competencia_origem && r.competencia_origem !== 'documento' && ` (do ${r.competencia_origem === 'IA' ? 'palpite da IA' : 'nome do arquivo'})`} · </>}
                       {r.protocolo && <>Protocolo {String(r.protocolo).slice(0, 16)}…</>}
                     </p>
                   </div>

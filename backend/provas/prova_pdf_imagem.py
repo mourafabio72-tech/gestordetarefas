@@ -96,6 +96,9 @@ r = validador.processar(db, "CLIENTE GUIA ISS 09.2026 VENC 06.10.2026.PDF", GUIA
 checa(8, "acha a tarefa 09/2026 e anexa a guia", r.get("tarefa_id") == tid and r.get("competencia") == "09/2026", r)
 checa(9, "competencia do nome nao conta como lida: guia espera conferencia, nao sai sozinha",
       r.get("status") == "aguardando_conferencia", r.get("status"))
+checa(17, "a mensagem diz que so a competencia faltou, e que veio do nome do arquivo",
+      "competência" in (r.get("detalhe") or "") and "nome do arquivo" in (r.get("detalhe") or "")
+      and "CNPJ e competência não foram lidos" not in (r.get("detalhe") or ""), r.get("detalhe"))
 checa(10, "a resposta diz de onde veio a competencia",
       r.get("competencia_origem") == "nome do arquivo", r.get("competencia_origem"))
 r = validador.processar(db, "guia iss sem data.pdf", GUIA)
@@ -121,4 +124,4 @@ db.close()
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 16 checagens verdes")
+print("\nPROVA OK: 17 checagens verdes")

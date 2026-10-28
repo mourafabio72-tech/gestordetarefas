@@ -681,9 +681,17 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
             res.update(status="pronta_para_envio",
                        detalhe=f"Guia anexada à tarefa #{tarefa.id}.")
         else:
+            # Diz o que FALTOU, e de onde veio o que não foi lido na guia:
+            # "CNPJ e competência não foram lidos" aparecia mesmo com o CNPJ
+            # lido dos dados do arquivo (guia de ISS em imagem, 2026-10-27).
+            nao_lidos = []
+            if not conf["cnpj_lido"]:
+                nao_lidos.append("o CNPJ" + (" (veio da IA)" if usou_ia else ""))
+            if not conf["competencia_lida"]:
+                de_onde = {"nome do arquivo": " (veio do nome do arquivo)", "IA": " (veio da IA)"}
+                nao_lidos.append("a competência" + de_onde.get(origem_comp, ""))
             falta = conf["alertas"] or [
-                "CNPJ e competência não foram lidos na própria guia"
-                + (" (vieram da IA)" if usou_ia else "") + "."]
+                "Não foi lido na própria guia: " + " e ".join(nao_lidos) + "."]
             res.update(status="aguardando_conferencia",
                        detalhe=f"Guia anexada à tarefa #{tarefa.id}, sem envio: "
                                + " ".join(falta)
