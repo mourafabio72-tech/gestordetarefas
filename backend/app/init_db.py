@@ -67,6 +67,9 @@ MIGRACOES = [
     ("interno_modo", "ALTER TABLE obrigacoes ADD COLUMN interno_modo VARCHAR(20) DEFAULT 'antes_vencimento'"),
     ("interno_regra_tipo", "ALTER TABLE obrigacoes ADD COLUMN interno_regra_tipo VARCHAR(20)"),
     ("interno_regra_dia", "ALTER TABLE obrigacoes ADD COLUMN interno_regra_dia INTEGER"),
+    ("mensagem_cliente", "ALTER TABLE obrigacoes ADD COLUMN mensagem_cliente TEXT"),
+    # A ficha da empresa aceita mais de um e-mail; 100 cabia um só.
+    ("empresa_email_maior", "ALTER TABLE empresas ALTER COLUMN email TYPE VARCHAR(300)"),
 ]
 
 _ADD = re.compile(r"ALTER TABLE (\w+) ADD COLUMN (\w+)", re.I)

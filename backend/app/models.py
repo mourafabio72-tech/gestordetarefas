@@ -96,7 +96,7 @@ class Empresa(Base):
     razao_social = Column(String(200), nullable=False)
     cnpj = Column(String(20), unique=True, index=True)
     nome_fantasia = Column(String(100))
-    email = Column(String(100))
+    email = Column(String(300))   # um ou mais, separados por ; (2026-10-28)
     telefone = Column(String(20))
     endereco = Column(Text)
     regime_tributario = Column(String(30), default="indefinido")  # indefinido|lucro_real|lucro_presumido|mei|simples_nacional|terceiro_setor|imune|isento
@@ -484,6 +484,9 @@ class Obrigacao(Base):
     alerta_guia_nao_lida = Column(Boolean, default=False)
     ativa = Column(Boolean, default=True)
     comentario_padrao = Column(Text)
+    # Frase que o CLIENTE lê no WhatsApp e no e-mail da guia, no lugar de
+    # "Sua guia X está disponível." Vazio mantém a frase padrão (2026-10-28).
+    mensagem_cliente = Column(Text)
 
     # Como a obrigação encontra as empresas:
     #   'regra'      (padrão) empresas que casam regime/segmento UNIÃO as vinculadas

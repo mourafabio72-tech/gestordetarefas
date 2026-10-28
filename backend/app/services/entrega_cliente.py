@@ -49,9 +49,13 @@ def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
     comp = _competencia_por_extenso(tarefa.competencia)
     venc = tarefa.data_vencimento.strftime("%d/%m/%Y") if tarefa.data_vencimento else None
 
+    # Mensagem ao cliente da obrigação (2026-10-28): quando preenchida, toma o
+    # lugar da frase padrão. Saudação, vencimento, link e assinatura ficam.
+    propria = ((obr.mensagem_cliente or "").strip() if obr else "")
+
     assunto = f"BPS4 | {nome}, {comp}, {empresa}" if comp else f"BPS4 | {nome}, {empresa}"
     linhas = [f"Olá, {empresa}.", "",
-              f"Sua guia {nome}" + (f" da competência {comp}" if comp else "") + " está disponível."]
+              propria or (f"Sua guia {nome}" + (f" da competência {comp}" if comp else "") + " está disponível.")]
     if venc:
         linhas.append(f"Vencimento: {venc}.")
     linhas += ["", f"Baixar a guia: {link}", "",
@@ -62,6 +66,8 @@ def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
     e = html_mod.escape
     venc_html = f'<p style="margin:0 0 20px">Vencimento: <strong>{e(venc)}</strong>.</p>' if venc else ""
     comp_html = f" da competência <strong>{e(comp)}</strong>" if comp else ""
+    corpo_html = ("<br>".join(e(l) for l in propria.splitlines()) if propria
+                  else f"Sua guia <strong>{e(nome)}</strong>{comp_html} está disponível.")
     html = f"""<!doctype html><html><body style="margin:0;background:#f6f3ec">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f3ec;padding:24px 0">
 <tr><td align="center">
@@ -69,7 +75,7 @@ def montar_mensagem(tarefa, empresa: str, link: str) -> dict:
 <tr><td style="padding:28px 32px 8px"><img src="cid:logo-bps4" width="120" alt="BPS4" style="display:block;border:0"></td></tr>
 <tr><td style="padding:8px 32px 28px;font-size:15px;line-height:1.55">
 <p style="margin:0 0 16px">Olá, {e(empresa)}.</p>
-<p style="margin:0 0 8px">Sua guia <strong>{e(nome)}</strong>{comp_html} está disponível.</p>
+<p style="margin:0 0 8px">{corpo_html}</p>
 {venc_html}
 <p style="margin:0 0 24px"><a href="{e(link)}" style="display:inline-block;background:{_COR};color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px">Baixar a guia</a></p>
 <p style="margin:0 0 4px;font-size:13px;color:#6b7266">O link é exclusivo desta mensagem. Qualquer dúvida, é só responder.</p>

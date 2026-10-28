@@ -252,6 +252,18 @@ async def send_whatsapp_document(phone: str, nome: str, conteudo: bytes, legenda
         return {"success": False, "error": str(e)}
 
 
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def separar_emails(valor) -> list:
+    """"a@x; b@y, " vira ["a@x", "b@y"]. O que não parece e-mail fica de fora.
+
+    A ficha da empresa com dois endereços ia inteira para o campo "Para", com o
+    ponto e vírgula e o espaço, e o servidor de e-mail recusava (2026-10-28).
+    """
+    return [p.strip() for p in re.split(r"[;,\s]+", valor or "") if _EMAIL.match(p.strip())]
+
+
 def destinatarios_cliente(db, tarefa) -> list:
     """Para quem o escritório entrega o documento daquela tarefa.
 
@@ -277,11 +289,13 @@ def destinatarios_cliente(db, tarefa) -> list:
 
     nome_empresa = formatar_razao(empresa.razao_social)
     juntar(nome_empresa, "whatsapp", normalizar_telefone(empresa.telefone))
-    juntar(nome_empresa, "email", empresa.email)
+    for em in separar_emails(empresa.email):
+        juntar(nome_empresa, "email", em)
     for u in db.query(U).filter(U.empresa_id == empresa.id, U.tipo == "cliente",
                                 U.bloqueado != True, U.ativo == True).all():
         juntar(u.nome, "whatsapp", normalizar_telefone(u.telefone))
-        juntar(u.nome, "email", u.email)
+        for em in separar_emails(u.email):
+            juntar(u.nome, "email", em)
     return dest
 
 

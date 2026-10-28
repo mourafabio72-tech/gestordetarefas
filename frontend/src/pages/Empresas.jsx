@@ -469,8 +469,13 @@ export default function Empresas() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                {/* Texto, e não type="email": a ficha aceita mais de um
+                    endereço, e cada um recebe a guia (2026-10-28). */}
                 <input
-                  type="email"
+                  type="text"
+                  inputMode="email"
+                  maxLength={300}
+                  placeholder="financeiro@cliente.com.br; socio@cliente.com.br"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="input-field"

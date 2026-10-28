@@ -1062,7 +1062,11 @@ export default function Tarefas() {
                         <span className={r.enviado ? 'text-gray-700' : 'text-red-700 line-through'}>
                           {r.nome} · {r.endereco}
                         </span>
-                        {!r.enviado && <span className="text-red-700">falhou</span>}
+                        {!r.enviado && (
+                          <span className="text-red-700">
+                            falhou{r.detalhe?.error ? `: ${r.detalhe.error}` : ''}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>

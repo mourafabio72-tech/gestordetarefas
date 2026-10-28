@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime, date
 from enum import Enum
@@ -288,6 +288,7 @@ class ObrigacaoBase(BaseModel):
     alerta_guia_nao_lida: bool = False
     ativa: bool = True
     comentario_padrao: Optional[str] = None
+    mensagem_cliente: Optional[str] = Field(None, max_length=2000)
     aplica_regimes: Optional[str] = None
     aplica_segmentos: Optional[str] = None
 
@@ -448,6 +449,7 @@ class ObrigacaoUpdate(BaseModel):
     alerta_guia_nao_lida: Optional[bool] = None
     ativa: Optional[bool] = None
     comentario_padrao: Optional[str] = None
+    mensagem_cliente: Optional[str] = Field(None, max_length=2000)
     aplica_regimes: Optional[str] = None
     aplica_segmentos: Optional[str] = None
     empresa_ids: Optional[List[int]] = None

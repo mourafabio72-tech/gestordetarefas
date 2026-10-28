@@ -53,7 +53,7 @@ const emptyForm = {
   interno_modo: 'antes_vencimento', interno_regra_tipo: '', interno_regra_dia: '',
   sentido: 'receber',
   exige_robo: false, exige_documento: null, passivel_multa: false, alerta_guia_nao_lida: false, ativa: true,
-  comentario_padrao: '', alvo_modo: 'regra', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
+  comentario_padrao: '', mensagem_cliente: '', alvo_modo: 'regra', aplica_regimes: '', aplica_segmentos: '', empresa_ids: [],
 };
 
 const csvToSet = (s) => new Set((s || '').split(',').map((x) => x.trim()).filter(Boolean));
@@ -1289,6 +1289,19 @@ export default function Obrigacoes() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Comentário padrão</label>
                 <textarea value={form.comentario_padrao} onChange={(e) => set('comentario_padrao', e.target.value)} className="input-field" rows={2} />
+              </div>
+
+              {/* O cliente lê este texto no WhatsApp e no e-mail da guia, no
+                  lugar da frase padrão (2026-10-28). */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem ao cliente</label>
+                <textarea value={form.mensagem_cliente || ''} onChange={(e) => set('mensagem_cliente', e.target.value)}
+                  className="input-field" rows={3} maxLength={2000}
+                  placeholder="Ex.: Segue a folha do mês para conferência. Qualquer ajuste, é só responder." />
+                <p className="text-xs text-gray-500 mt-1">
+                  Sai no WhatsApp e no e-mail enviados ao cliente, no lugar de "Sua guia ... está disponível".
+                  Saudação, vencimento e link continuam. Em branco, fica a frase padrão.
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
