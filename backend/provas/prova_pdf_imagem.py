@@ -112,6 +112,14 @@ ens = asyncio.run(entrega_cliente.entregar_saida(db, db.get(Tarefa, tid), ensaio
 conf = ens.get("conferencia") or {}
 checa(18, "o ensaio do envio traz a conferencia: CNPJ lido, competencia nao lida, sem contradicao",
       conf.get("ok") and conf.get("cnpj_lido") == "11222333000181" and not conf.get("competencia_lida"), ens)
+# "Ja baixada" mostrava a data crua e em UTC ("2026-10-28 13:23:25.392285")
+from datetime import datetime                                      # noqa: E402
+tb = db.get(Tarefa, tid)
+tb.status, tb.data_conclusao, tb.data_entrega = StatusTarefa.CONCLUIDA, datetime(2026, 10, 28, 13, 23, 25), None
+db.commit()
+rj = validador.processar(db, "CLIENTE GUIA ISS 09.2026 VENC 06.10.2026.PDF", GUIA)
+checa(19, "'Ja baixada' mostra a data no horario de Brasilia: 28/10/2026 as 10:23",
+      rj.get("status") == "ja_baixada" and "28/10/2026 às 10:23" in (rj.get("detalhe") or ""), rj.get("detalhe"))
 r = validador.processar(db, "guia iss sem data.pdf", GUIA)
 checa(11, "sem competencia no documento nem no nome, erro claro",
       r.get("status") == "erro" and "ompet" in (r.get("detalhe") or ""), r)
@@ -135,4 +143,4 @@ db.close()
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 18 checagens verdes")
+print("\nPROVA OK: 19 checagens verdes")

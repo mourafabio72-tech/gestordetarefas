@@ -570,6 +570,19 @@ def atualizar_modelo(db: Session, modelo_id: int, dados: dict):
     return m
 
 
+def _quando_br(dt) -> str:
+    """'28/10/2026 às 10:23' no horário de Brasília. A conclusão é gravada em
+    UTC (utcnow), e a mensagem mostrava '2026-10-28 13:23:25.392285'. Data sem
+    fuso é tratada como UTC, que é como o app grava."""
+    if not dt:
+        return "data não registrada"
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y às %H:%M")
+
+
 def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     """Extrai, casa e (se único) baixa a tarefa. Retorna um relatório.
     Se o método regex/palavra-chave não resolver e a IA estiver ativa, usa a IA
@@ -649,7 +662,8 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     res["tarefa_id"] = tarefa.id
     if tarefa.status == StatusTarefa.CONCLUIDA:
         res.update(status="ja_baixada",
-                   detalhe=f"Tarefa já estava baixada em {tarefa.data_entrega or tarefa.data_conclusao}")
+                   detalhe=f"Tarefa já estava baixada em "
+                           f"{_quando_br(tarefa.data_conclusao or tarefa.data_entrega)}.")
         return res
     # Tarefa cancelada não recebe baixa automática. Vale sobretudo para a que
     # alguém marcou como "não se aplica a esta empresa": um documento chegando
