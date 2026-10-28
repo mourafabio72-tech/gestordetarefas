@@ -120,8 +120,19 @@ async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tel
             "A empresa não tem e-mail nem telefone, e não há usuário do tipo "
             "cliente vinculado a ela. Sem isso não há para onde enviar.")
     if ensaio:
+        # A conferência vai junto do ensaio: a guia que o e-validador anexou
+        # abria a janela de envio sem faixa nenhuma, porque a conferência só
+        # era calculada no anexo feito pela própria janela (2026-10-27).
+        conferencia = {"ok": True, "alertas": [], "leu_algo": False}
+        try:
+            from . import validador
+            conferencia = validador.conferir_saida(
+                validador.ler_arquivo(tarefa.saida_nome, conteudo),
+                tarefa.empresa.cnpj if tarefa.empresa else None, tarefa.competencia)
+        except Exception:
+            pass                     # best-effort: não ler não impede o envio
         return {"ensaio": True, "arquivo": up.nome_de_exibicao(tarefa.saida_nome),
-                "destinatarios": destinos}
+                "destinatarios": destinos, "conferencia": conferencia}
 
     cfg = cfgmod.carregar(db)
     nome_arquivo = up.nome_de_exibicao(tarefa.saida_nome)

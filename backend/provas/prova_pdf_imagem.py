@@ -101,6 +101,17 @@ checa(17, "a mensagem diz que so a competencia faltou, e que veio do nome do arq
       and "CNPJ e competência não foram lidos" not in (r.get("detalhe") or ""), r.get("detalhe"))
 checa(10, "a resposta diz de onde veio a competencia",
       r.get("competencia_origem") == "nome do arquivo", r.get("competencia_origem"))
+# a janela de envio confere a guia que o e-validador anexou (antes so conferia
+# a anexada pela propria janela, e a #34558 abria sem faixa nenhuma)
+import asyncio                                                     # noqa: E402
+from app.services import entrega_cliente                           # noqa: E402
+emp_db = db.get(Empresa, emp.id)
+emp_db.email = "cliente@ficticio.com.br"
+db.commit()
+ens = asyncio.run(entrega_cliente.entregar_saida(db, db.get(Tarefa, tid), ensaio=True))
+conf = ens.get("conferencia") or {}
+checa(18, "o ensaio do envio traz a conferencia: CNPJ lido, competencia nao lida, sem contradicao",
+      conf.get("ok") and conf.get("cnpj_lido") == "11222333000181" and not conf.get("competencia_lida"), ens)
 r = validador.processar(db, "guia iss sem data.pdf", GUIA)
 checa(11, "sem competencia no documento nem no nome, erro claro",
       r.get("status") == "erro" and "ompet" in (r.get("detalhe") or ""), r)
@@ -124,4 +135,4 @@ db.close()
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 17 checagens verdes")
+print("\nPROVA OK: 18 checagens verdes")

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { evalidadorAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
 import { FileCheck2, Upload, CheckCircle2, AlertTriangle, XCircle, Clock, Send, Ban } from 'lucide-react';
@@ -123,6 +124,12 @@ export default function EValidador() {
                       {r.ia && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700">✨ IA</span>}
                     </div>
                     <p className="text-sm text-gray-600 mt-0.5">{r.detalhe}</p>
+                    {r.status === 'aguardando_conferencia' && r.tarefa_id && (
+                      <Link to={`/tarefas?entregar=${r.tarefa_id}`}
+                        className="inline-flex items-center gap-1.5 mt-2 btn-primary text-sm py-1">
+                        <Send size={14} /> Conferir e enviar ao cliente
+                      </Link>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">
                       {r.cnpj && <>CNPJ {r.cnpj} · </>}
                       {r.competencia && <>Competência {r.competencia}

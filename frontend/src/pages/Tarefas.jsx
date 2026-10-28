@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { textoConferencia } from './conferenciaTexto';
 import { useAuth } from '../contexts/AuthContext';
 import { tarefasAPI, empresasAPI, setoresAPI, usuariosAPI, obrigacoesAPI } from '../services/api';
 import { mensagemDeErro } from '../services/erroApi';
@@ -481,13 +482,28 @@ export default function Tarefas() {
     setEntrega({ tarefa, ensaio: null, enviando: false, resultado: null, erro: null });
     try {
       const { data } = await tarefasAPI.enviarCliente(tarefa.id, true);
-      setEntrega((e) => (e && e.tarefa.id === tarefa.id ? { ...e, ensaio: data } : e));
+      setEntrega((e) => (e && e.tarefa.id === tarefa.id
+        ? { ...e, ensaio: data, conferencia: data?.conferencia || e.conferencia || null } : e));
     } catch (error) {
       // Sem documento anexado ou empresa sem contato: o backend explica o quê.
       setEntrega((e) => (e && e.tarefa.id === tarefa.id
         ? { ...e, erro: mensagemDeErro(error, 'Não foi possível preparar o envio') } : e));
     }
   };
+
+  // Vindo do e-validador ("Conferir e enviar"): /tarefas?entregar=<id> abre a
+  // janela de envio daquela tarefa direto, uma vez só por endereço.
+  const entregarDaUrl = useRef(null);
+  useEffect(() => {
+    const id = Number(searchParams.get('entregar'));
+    if (!id || entregarDaUrl.current === id) return;
+    entregarDaUrl.current = id;
+    tarefasAPI.get(id)
+      .then(({ data }) => abrirEntrega(data))
+      .catch((error) => setEntrega({ tarefa: { id, titulo: `Tarefa #${id}` }, ensaio: null,
+        enviando: false, resultado: null,
+        erro: mensagemDeErro(error, 'Não foi possível abrir a tarefa para envio.') }));
+  }, [searchParams]);
 
   const anexarSaida = async (arquivo) => {
     if (!arquivo || !entrega) return;
@@ -1024,17 +1040,13 @@ export default function Tarefas() {
                   )}
                 </div>
               )}
-              {entrega.conferencia?.ok && entrega.conferencia.leu_algo && (
-                <div className="px-3 py-2 rounded-lg text-xs bg-green-50 text-green-800">
-                  ✓ O documento confere: CNPJ e competência batem com a tarefa.
-                </div>
-              )}
-              {entrega.conferencia && !entrega.conferencia.leu_algo && (
-                <div className="px-3 py-2 rounded-lg text-xs bg-gray-100 text-gray-600">
-                  Não consegui ler CNPJ nem competência neste arquivo (escaneado ou sem texto).
-                  Confira você antes de enviar.
-                </div>
-              )}
+              {(() => {
+                const f = textoConferencia(entrega.conferencia);
+                if (!f || f.tipo === 'contradiz') return null;
+                const cor = { ok: 'bg-green-50 text-green-800', parcial: 'bg-amber-50 text-amber-800',
+                              nada: 'bg-gray-100 text-gray-600' }[f.tipo];
+                return <div className={`px-3 py-2 rounded-lg text-xs ${cor}`}>{f.texto}</div>;
+              })()}
 
               {entrega.resultado ? (
                 <>
