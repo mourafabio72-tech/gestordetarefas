@@ -111,11 +111,19 @@ _MES_POR_NOME = {n: i for i, n in enumerate(
 
 
 def extrair_dados(texto: str) -> dict:
-    d = {"cnpj": None, "competencia": None, "protocolo": None, "data_entrega": None}
+    d = {"cnpj": None, "cnpjs": [], "competencia": None, "protocolo": None, "data_entrega": None}
 
-    m = re.search(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", texto)
-    if m:
-        d["cnpj"] = _so_digitos(m.group(0))
+    # TODOS os CNPJs, com o que tem rótulo ("CNPJ: ...") na frente. Relatório
+    # com relação de prestadores sai do PDF com a tabela antes do cabeçalho, e
+    # o primeiro CNPJ do texto era o de um prestador (caso de 2026-10-27). Quem
+    # escolhe entre eles, olhando o cadastro, é `empresa_do_documento`.
+    formato = r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}"
+    rotulados = re.findall(r"CNPJ(?:\s*/\s*CPF)?\s*:?\s*(" + formato + ")", texto, re.IGNORECASE)
+    for c in rotulados + re.findall(formato, texto):
+        c = _so_digitos(c)
+        if c not in d["cnpjs"]:
+            d["cnpjs"].append(c)
+    d["cnpj"] = d["cnpjs"][0] if d["cnpjs"] else None
 
     # Período de apuração: "01/05/2026 a 31/05/2026" -> competência 05/2026 (mês/ano do início)
     m = re.search(r"(\d{2})/(\d{2})/(\d{4})\s*a\s*\d{2}/\d{2}/\d{4}", texto)
@@ -151,6 +159,15 @@ def extrair_dados(texto: str) -> dict:
                                   t[i.end():])
                     if m:
                         d["competencia"] = f"{_MES_POR_NOME[m.group(1)]:02d}/{m.group(2)}"
+
+    # Relatório de apuração: "APURAÇÃO SETEMBRO DE 2026", "Apuração de
+    # dezembro/2025". Só mês POR EXTENSO logo depois da palavra, para não
+    # pegar data nem título de outro mês no meio do caminho.
+    if not d["competencia"]:
+        m = re.search(r"apuracao\s+(?:de\s+)?(" + "|".join(_MES_POR_NOME) + r")\s*(?:/|de)?\s*(\d{4})",
+                      _norm(texto))
+        if m:
+            d["competencia"] = f"{_MES_POR_NOME[m.group(1)]:02d}/{m.group(2)}"
 
     # Protocolo/hash do arquivo
     m = re.search(r"(?:Identifica[cç][aã]o do arquivo|Hash do Arquivo|N[uú]mero do Recibo)\s*:?\s*([0-9A-Fa-f]{16,})", texto)
@@ -325,13 +342,16 @@ def identificar_obrigacao(db: Session, texto: str):
             if not any(engolida(minhas, outras) for p, outras in casadas if p is not o)]
 
 
-def casar_empresa_por_cnpj(db: Session, cnpj: str):
-    """Empresa cadastrada cujo CNPJ (só dígitos) bate com o informado."""
-    if not cnpj:
-        return None
+def empresa_do_documento(db: Session, dados: dict):
+    """A empresa do documento: o primeiro CNPJ da lista (rotulado na frente)
+    que é de empresa cadastrada. CNPJ de prestador numa relação não é cliente
+    e fica de fora; se for cliente também, o rótulo do cabeçalho decide."""
+    cad = {}
     for e in db.query(Empresa).filter(Empresa.cnpj != None).all():
-        if _so_digitos(e.cnpj) == _so_digitos(cnpj):
-            return e
+        cad.setdefault(_so_digitos(e.cnpj), e)
+    for c in dados.get("cnpjs") or ([dados["cnpj"]] if dados.get("cnpj") else []):
+        if c in cad:
+            return cad[c]
     return None
 
 
@@ -341,7 +361,9 @@ def analisar_para_repositorio(db: Session, nome: str, conteudo: bytes) -> dict:
     identificador e a obrigação já reconhecida (se algum identificador atual casar)."""
     texto = ler_arquivo(nome, conteudo)
     dados = extrair_dados(texto)
-    empresa = casar_empresa_por_cnpj(db, dados["cnpj"])
+    empresa = empresa_do_documento(db, dados)
+    if empresa:
+        dados["cnpj"] = _so_digitos(empresa.cnpj)
     razao = extrair_razao_social(texto)
 
     # colisão dos candidatos com identificadores já existentes
@@ -546,8 +568,11 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     if not dados["cnpj"]:
         res.update(status="erro", detalhe="CNPJ não encontrado no documento")
         return res
-    empresa = db.query(Empresa).filter(Empresa.cnpj != None).all()
-    empresa = next((e for e in empresa if _so_digitos(e.cnpj) == dados["cnpj"]), None)
+    if dados["cnpj"] and dados["cnpj"] not in dados["cnpjs"]:
+        dados["cnpjs"].append(dados["cnpj"])        # veio da IA
+    empresa = empresa_do_documento(db, dados)
+    if empresa:
+        dados["cnpj"] = res["cnpj"] = _so_digitos(empresa.cnpj)
     if not empresa:
         res.update(status="erro", detalhe=f"Empresa com CNPJ {dados['cnpj']} não cadastrada")
         return res
