@@ -101,9 +101,24 @@ checa(10, "a resposta diz de onde veio a competencia",
 r = validador.processar(db, "guia iss sem data.pdf", GUIA)
 checa(11, "sem competencia no documento nem no nome, erro claro",
       r.get("status") == "erro" and "ompet" in (r.get("detalhe") or ""), r)
+
+# ------------------------------------------------------------ tela Modelos
+print("\ntela Modelos (analisar para o repositorio)")
+nome = "CLIENTE GUIA ISS 09.2026 VENC 06.10.2026.PDF"
+a = validador.analisar_para_repositorio(db, nome, GUIA)
+cands = [c["texto"] for c in a.get("candidatos", [])]
+checa(12, "o titulo do arquivo vira sugestao de palavra-chave", "Guia de Recolhimento de ISS" in cands, cands)
+checa(13, "a empresa e casada pelo CNPJ do autor", a.get("empresa_id") == emp.id, a.get("empresa_id"))
+checa(14, "competencia de exemplo sai do nome do arquivo", a.get("competencia_exemplo") == "09/2026",
+      a.get("competencia_exemplo"))
+checa(15, "razao social sai limpa, sem o resto do autor",
+      a.get("razao_social_extraida") == "CLIENTE FICTICIO LTDA", a.get("razao_social_extraida"))
+m = validador.analisar_modelo(db, nome, GUIA)
+checa(16, "analisar_modelo (tela Obrigacoes) tambem sugere o titulo e a competencia",
+      "Guia de Recolhimento de ISS" in [c["texto"] for c in m["candidatos"]] and m["competencia"] == "09/2026", m)
 db.close()
 
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 11 checagens verdes")
+print("\nPROVA OK: 16 checagens verdes")

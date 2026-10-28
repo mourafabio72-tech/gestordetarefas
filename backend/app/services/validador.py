@@ -36,12 +36,16 @@ def ler_pdf(conteudo: bytes) -> str:
     autor e "Guia de Recolhimento de ISS" no título (2026-10-27)."""
     r = pypdf.PdfReader(io.BytesIO(conteudo))
     texto = "\n".join((p.extract_text() or "") for p in r.pages)
+    # Com rótulo, para a tela Modelos saber o que é título (sugestão de
+    # palavra-chave) e o que é autor (razão social).
     try:
         meta = r.metadata or {}
-        extras = [str(meta.get(k) or "").strip() for k in ("/Title", "/Subject", "/Author", "/Keywords")]
+        extras = [f"{rotulo} do arquivo: {str(meta.get(k)).strip()}"
+                  for k, rotulo in (("/Title", "Título"), ("/Subject", "Assunto"),
+                                    ("/Author", "Autor"), ("/Keywords", "Palavras-chave"))
+                  if str(meta.get(k) or "").strip()]
     except Exception:
         extras = []
-    extras = [e for e in extras if e]
     return texto + ("\n" + "\n".join(extras) if extras else "")
 
 
@@ -213,13 +217,14 @@ def extrair_razao_social(texto: str) -> str:
     """Tenta ler o nome da empresa no documento (por rótulo ou linha vizinha ao CNPJ)."""
     # 1) por rótulo explícito
     m = re.search(
-        r"(?:Raz[aã]o\s+Social|Nome\s+Empresarial|Contribuinte|Nome/Nome\s+Empresarial|Empresa)\s*:?\s*"
+        r"(?:Raz[aã]o\s+Social|Nome\s+Empresarial|Contribuinte|Nome/Nome\s+Empresarial|Empresa"
+        r"|Autor\s+do\s+arquivo)\s*:?\s*"
         r"([^\n]{4,120})",
         texto, re.IGNORECASE)
     if m:
         nome = m.group(1).strip(" .:-\t")
         # corta se vier "CNPJ:" grudado na mesma linha
-        nome = re.split(r"\s+CNPJ", nome, flags=re.IGNORECASE)[0].strip()
+        nome = re.split(r",?\s+CNPJ", nome, flags=re.IGNORECASE)[0].strip(" ,")
         if 4 <= len(nome) <= 120:
             return nome
     # 2) linha imediatamente antes/depois do CNPJ, se parecer nome de empresa
@@ -295,6 +300,10 @@ def candidatos_identificador(texto: str) -> list:
             vistos.add(k)
             cands.append(t)
 
+    # 0) título e assunto gravados no arquivo (ler_pdf): numa guia em imagem
+    # são o único texto que diz o tipo do documento.
+    for m in re.finditer(r"(?:T[ií]tulo|Assunto) do arquivo:\s*([^\n]+)", texto):
+        add(m.group(1))
     # 1) "Versão <nome>:", costuma ser o identificador mais limpo (ex.: EFD-Contribuições, Sped Fiscal)
     for m in re.finditer(r"Vers[aã]o\s+([^\n:]{3,45}?)\s*:", texto):
         add(m.group(1))
@@ -323,7 +332,7 @@ def analisar_modelo(db: Session, nome: str, conteudo: bytes) -> dict:
         candidatos.append({"texto": cnd, "colide_com": colide})
     return {
         "cnpj": dados["cnpj"],
-        "competencia": dados["competencia"],
+        "competencia": dados["competencia"] or competencia_do_nome(nome),
         "candidatos": candidatos,
     }
 
@@ -415,7 +424,7 @@ def analisar_para_repositorio(db: Session, nome: str, conteudo: bytes) -> dict:
         "empresa_id": empresa.id if empresa else None,
         "empresa_nome": empresa.razao_social if empresa else None,
         "tipo_documento": classificar_tipo(texto),
-        "competencia_exemplo": dados["competencia"],
+        "competencia_exemplo": dados["competencia"] or competencia_do_nome(nome),
         "protocolo_exemplo": dados["protocolo"],
         "candidatos": candidatos,
         "obrigacao_sugerida_id": obrig_sugerida.id if obrig_sugerida else None,
