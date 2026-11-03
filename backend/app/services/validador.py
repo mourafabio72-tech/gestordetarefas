@@ -36,15 +36,19 @@ def ler_pdf(conteudo: bytes) -> str:
     autor e "Guia de Recolhimento de ISS" no título (2026-10-27)."""
     r = pypdf.PdfReader(io.BytesIO(conteudo))
     texto = "\n".join((p.extract_text() or "") for p in r.pages)
-    # Página escaneada não tem texto: lê a imagem pelo OCR do servidor
-    # (2026-10-28). PDF com texto não passa por aqui, que é o caso comum.
+    # Página escaneada ou desenhada em traços não tem texto: vai para o OCR do
+    # servidor (2026-10-28). PDF com texto não passa por aqui, o caso comum.
     if not texto.strip():
         from . import ocr
-        texto = ocr.ler_imagens_do_pdf(r)
+        texto = ocr.ler_paginas_do_pdf(conteudo)
     # Com rótulo, para a tela Modelos saber o que é título (sugestão de
     # palavra-chave) e o que é autor (razão social).
     try:
         meta = r.metadata or {}
+        # No Print to PDF, autor é quem imprimiu e título é o trabalho de
+        # impressão: nada disso é dado da guia (2026-11-03).
+        if "print to pdf" in str(meta.get("/Producer") or "").lower():
+            return texto
         extras = [f"{rotulo} do arquivo: {str(meta.get(k)).strip()}"
                   for k, rotulo in (("/Title", "Título"), ("/Subject", "Assunto"),
                                     ("/Author", "Autor"), ("/Keywords", "Palavras-chave"))

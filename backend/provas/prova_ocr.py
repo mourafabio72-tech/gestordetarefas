@@ -61,9 +61,9 @@ BANCOS E CASAS LOTÉRICAS NÃO ESTÃO AUTORIZADOS A RECEBER ESTE DOCUMENTO APÓS
 06/10/2026
 """
 chamadas = []
-ocr_original = (ocr.ler_imagem, ocr.ler_imagens_do_pdf)
+ocr_original = (ocr.ler_imagem, ocr.ler_paginas_do_pdf)
 ocr.ler_imagem = lambda conteudo: (chamadas.append("imagem"), OCR_GUIA)[1]
-ocr.ler_imagens_do_pdf = lambda reader: (chamadas.append("pdf"), OCR_GUIA)[1]
+ocr.ler_paginas_do_pdf = lambda conteudo: (chamadas.append("pdf"), OCR_GUIA)[1]
 
 
 def pdf(texto_pagina=False, autor=""):
@@ -115,7 +115,7 @@ checa(9, "'Competência: 03/2026' na mesma linha", d["competencia"] == "03/2026"
 
 # ------------------------------------------------------------ (d)
 print("\n(d) sem tesseract")
-ocr.ler_imagem, ocr.ler_imagens_do_pdf = ocr_original
+ocr.ler_imagem, ocr.ler_paginas_do_pdf = ocr_original
 orig_which = ocr.shutil.which
 ocr.shutil.which = lambda nome: None
 checa(10, "sem o programa, OCR devolve vazio e nao quebra",

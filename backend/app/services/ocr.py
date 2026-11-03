@@ -19,7 +19,7 @@ MAX_PIXELS = 50_000_000
 # disso só gasta tempo. Lado maior limitado a este tamanho.
 MAX_LADO = 3500
 TIMEOUT = 40          # segundos por imagem
-MAX_IMAGENS_PDF = 4   # páginas escaneadas lidas por PDF
+MAX_PAGINAS_PDF = 4   # páginas sem texto lidas por PDF
 
 
 def disponivel() -> bool:
@@ -49,19 +49,32 @@ def ler_imagem(conteudo: bytes) -> str:
         return ""
 
 
-def ler_imagens_do_pdf(reader) -> str:
-    """Texto das imagens de um PDF que não tem texto (página escaneada)."""
-    if not disponivel():
+def ler_paginas_do_pdf(conteudo: bytes) -> str:
+    """Texto de um PDF sem texto, lendo cada PÁGINA desenhada como imagem.
+
+    Página inteira, e não as imagens embutidas: o "Microsoft Print to PDF" grava
+    o texto da guia como traços vetoriais, e as imagens do arquivo são o logo e
+    o QR Code (DAS de 2026-11-03). Desenhar a página cobre esse caso e o escaneado.
+    """
+    if not conteudo or not disponivel():
         return ""
     partes = []
     try:
-        lidas = 0
-        for pagina in reader.pages:
-            for imagem in pagina.images:
-                if lidas >= MAX_IMAGENS_PDF:
-                    break
-                partes.append(ler_imagem(imagem.data))
-                lidas += 1
+        import pypdfium2
+        pdf = pypdfium2.PdfDocument(conteudo)
+        try:
+            for i in range(min(len(pdf), MAX_PAGINAS_PDF)):
+                pagina = pdf[i]
+                largura, altura = pagina.get_size()
+                # 300 dpi, sem passar do lado máximo (o PDF é de 72 pontos por
+                # polegada). Página gigante não vira imagem gigante na memória.
+                escala = min(300 / 72, MAX_LADO / max(largura, altura, 1))
+                img = pagina.render(scale=escala, grayscale=True).to_pil()
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                partes.append(ler_imagem(buf.getvalue()))
+        finally:
+            pdf.close()
     except Exception:
         pass
     return "\n".join(p for p in partes if p)
@@ -73,7 +86,6 @@ if __name__ == "__main__":
     caminho = sys.argv[1]
     dados = open(caminho, "rb").read()
     if caminho.lower().endswith(".pdf"):
-        import pypdf
-        print(ler_imagens_do_pdf(pypdf.PdfReader(io.BytesIO(dados))))
+        print(ler_paginas_do_pdf(dados))
     else:
         print(ler_imagem(dados))
