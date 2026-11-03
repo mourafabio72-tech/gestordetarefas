@@ -191,13 +191,13 @@ def extrair_dados(texto: str) -> dict:
         # DARF: "Período de Apuração 31/03/2026", data única e ÚLTIMO dia do
         # período -> 03/2026. Só quando não há período de/a (decisão de
         # 2026-09-19): até aqui toda guia saía com a competência em branco.
-        m = re.search(r"per[ií]odo\s+de\s+apura[cç][aã]o\s*:?\s*\d{2}/(\d{2})/(\d{4})",
+        m = re.search(r"per[ií]odo\s+d[ea]\s+apura[cç][aã]o\s*:?\s*\d{2}/(\d{2})/(\d{4})",
                       texto, re.IGNORECASE)
         if m:
             d["competencia"] = f"{m.group(1)}/{m.group(2)}"
         else:
             # DAS: só mês e ano, "Agosto/2026", "08/2026" ou "dezembro de 2025".
-            m = re.search(r"per[ií]odo\s+de\s+apura[cç][aã]o\s*:?\s*"
+            m = re.search(r"per[ií]odo\s+d[ea]\s+apura[cç][aã]o\s*:?\s*"
                           r"(\d{2}|[a-zç]+)\s*(?:/|de)\s*(\d{4})", texto, re.IGNORECASE)
             if m:
                 mes = m.group(1)
@@ -211,7 +211,7 @@ def extrair_dados(texto: str) -> dict:
                 # Depois do rótulo, vale o primeiro mês POR EXTENSO: datas
                 # dd/mm/aaaa no caminho (vencimento) não contam.
                 t = _norm(texto)
-                i = re.search(r"periodo\s+de\s+apuracao", t)
+                i = re.search(r"periodo\s+d[ea]\s+apuracao", t)
                 if i:
                     m = re.search(r"(?<![a-z])(" + "|".join(_MES_POR_NOME) + r")\s*(?:/|de)\s*(\d{4})",
                                   t[i.end():])
@@ -745,7 +745,7 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
     res["tarefa_id"] = tarefa.id
     if tarefa.status == StatusTarefa.CONCLUIDA:
         res.update(status="ja_baixada",
-                   detalhe=f"Tarefa já estava baixada em "
+                   detalhe=f"Tarefa de {obrigacao.mininome or obrigacao.nome} já estava baixada em "
                            f"{_quando_br(tarefa.data_conclusao or tarefa.data_entrega)}.")
         return res
     # Tarefa cancelada não recebe baixa automática. Vale sobretudo para a que
