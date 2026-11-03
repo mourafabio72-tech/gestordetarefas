@@ -265,7 +265,12 @@ def separar_emails(valor) -> list:
 
 
 def destinatarios_cliente(db, tarefa) -> list:
-    """Para quem o escritório entrega o documento daquela tarefa.
+    """Para quem o escritório entrega o documento daquela tarefa."""
+    return destinatarios_da_empresa(db, tarefa.empresa) if tarefa.empresa else []
+
+
+def destinatarios_da_empresa(db, empresa) -> list:
+    """Para quem o escritório entrega documento daquela empresa.
 
     Os contatos da EMPRESA e os USUÁRIOS do tipo cliente vinculados a ela. Os
     dois, porque empresa que só tem o contato geral precisa funcionar e empresa
@@ -276,9 +281,6 @@ def destinatarios_cliente(db, tarefa) -> list:
     parece defeito.
     """
     from ..models import Usuario as U
-    empresa = tarefa.empresa
-    if not empresa:
-        return []
     dest, vistos = [], set()
 
     def juntar(nome, canal, endereco):

@@ -164,6 +164,7 @@ export const tarefasAPI = {
   enviarCliente: (id, ensaio) => api.post(`/tarefas/${id}/enviar-cliente`, null,
     { params: ensaio ? { ensaio: true } : {} }),
   envios: (id) => api.get(`/tarefas/${id}/envios`),
+  entregueFora: (id, como) => api.post(`/tarefas/${id}/entregue-fora`, { como }),
   acessos: (id) => api.get(`/tarefas/${id}/acessos`),
   // Exige a flag `apagar_anexo`, decidida no cadastro de Grupos.
   excluirDocumento: (id, tipo) => api.delete(`/tarefas/${id}/documento`, { params: { tipo } }),
@@ -192,6 +193,7 @@ export const obrigacoesAPI = {
   removerExcecao: (id, excecaoId) => api.delete(`/obrigacoes/${id}/excecoes/${excecaoId}`),
   setDetalhes: (id, itens) => api.put(`/obrigacoes/${id}/detalhes-empresa`, { itens }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
+  semContato: () => api.get('/obrigacoes/sem-contato'),
   baixarRelatorio: async () => {
     const { data } = await api.get('/obrigacoes/relatorio', { responseType: 'blob' });
     const url = URL.createObjectURL(data);

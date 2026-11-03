@@ -541,6 +541,19 @@ export default function Tarefas() {
     }
   };
 
+  // A guia já foi ao cliente por fora: registra e conclui, sem enviar nada.
+  const registrarFora = async () => {
+    setEntrega((e) => ({ ...e, enviando: true, erro: null }));
+    try {
+      const { data } = await tarefasAPI.entregueFora(entrega.tarefa.id, entrega.como);
+      setEntrega((e) => ({ ...e, enviando: false, resultado: data }));
+      loadData();
+    } catch (error) {
+      setEntrega((e) => ({ ...e, enviando: false,
+        erro: mensagemDeErro(error, 'Não foi possível registrar o envio') }));
+    }
+  };
+
   const handleCopiarLink = async (tarefa) => {
     try {
       const { data } = await tarefasAPI.linkEnvio(tarefa.id);
@@ -691,6 +704,7 @@ export default function Tarefas() {
               <Send size={10} />
               {tarefa.saida_downloads
                 ? `cliente baixou${tarefa.saida_baixada_em ? ' ' + tarefa.saida_baixada_em.slice(8, 10) + '/' + tarefa.saida_baixada_em.slice(5, 7) : ''}`
+                : tarefa.status === 'concluida' && tarefa.saida_nome ? 'guia entregue'
                 : tarefa.saida_nome ? 'guia anexada, não enviada' : 'guia a anexar'}
             </p>
           )}
@@ -1149,6 +1163,34 @@ export default function Tarefas() {
                       </button>
                     )}
                   </div>
+
+                  {/* Guia enviada por e-mail próprio: sem isto a tarefa ficava
+                      aberta para sempre (2026-11-03). Exige a guia anexada. */}
+                  {(entrega.tarefa.saida_nome || entrega.ensaio?.arquivo) && (
+                    <div className="border-t border-gray-200 pt-3">
+                      {entrega.como === undefined ? (
+                        <button type="button" onClick={() => setEntrega((e) => ({ ...e, como: '' }))}
+                          className="text-sm text-primary-700 underline">
+                          Já enviei esta guia por fora do Tareffas
+                        </button>
+                      ) : (
+                        <>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Como a guia foi enviada?</label>
+                          <input className="input-field" maxLength={500} value={entrega.como}
+                            placeholder="Ex.: por e-mail do analista em 01/10"
+                            onChange={(ev) => setEntrega((e) => ({ ...e, como: ev.target.value }))} />
+                          <p className="text-[11px] text-gray-500 mt-1">
+                            Conclui a tarefa e não manda nada ao cliente. Seu nome fica no histórico.
+                          </p>
+                          <button type="button" onClick={registrarFora}
+                            disabled={entrega.enviando || !entrega.como.trim()}
+                            className="btn-secondary w-full mt-2 disabled:opacity-40">
+                            {entrega.enviando ? 'Registrando…' : 'Registrar e concluir a tarefa'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

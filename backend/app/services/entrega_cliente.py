@@ -104,6 +104,40 @@ class SemDestinatario(Exception):
     pass
 
 
+class EstadoInvalido(Exception):
+    pass
+
+
+def registrar_entrega_fora(db, tarefa, usuario_id, como: str) -> dict:
+    """A guia já chegou ao cliente por fora do Tareffas: conclui sem enviar nada.
+
+    A baixa manual é bloqueada, e o envio só conclui se alguém recebeu por aqui,
+    então a guia mandada por e-mail próprio deixava a tarefa aberta para sempre
+    (2026-11-03). É uma DECLARAÇÃO de quem clicou: fica no histórico como canal
+    "fora", com quem declarou e como foi, e não vira prova de recebimento.
+    """
+    como = (como or "").strip()
+    if tarefa.status in (StatusTarefa.CONCLUIDA, StatusTarefa.CANCELADA):
+        raise EstadoInvalido("Esta tarefa já está encerrada.")
+    if not tarefa.saida_nome:
+        raise SemDocumento("Anexe a guia antes de registrar o envio.")
+    if not como:
+        raise ValueError("Diga como a guia foi enviada.")
+    from . import upload as up
+    agora = datetime.utcnow()
+    db.add(TarefaEnvio(tarefa_id=tarefa.id, arquivo=up.nome_de_exibicao(tarefa.saida_nome),
+                       canal="fora", destinatario="Fora do Tareffas", detalhe=como[:500],
+                       sucesso=True, enviado_por=usuario_id))
+    tarefa.status = StatusTarefa.CONCLUIDA
+    tarefa.data_conclusao = agora
+    tarefa.data_entrega = tarefa.data_entrega or agora
+    db.commit()
+    log_event("EDICAO_REGISTRO_CRITICO", tabela="tarefa", alvo_id=tarefa.id,
+              acao="envio_fora_do_sistema")
+    return {"concluiu": True, "message": "Envio por fora registrado. Tarefa concluída.",
+            "resultados": []}
+
+
 async def entregar_saida(db, tarefa, enviado_por=None, ensaio=False, origem="tela") -> dict:
     """Entrega o documento anexado ao cliente e conclui a tarefa.
 

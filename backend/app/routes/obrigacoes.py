@@ -177,6 +177,16 @@ def list_obrigacoes(
     return db.query(Obrigacao).order_by(Obrigacao.nome.asc()).all()
 
 
+@router.get("/sem-contato")
+def obrigacoes_sem_contato(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "ver")),
+):
+    """Empresas sem para onde enviar, com as obrigações de envio que as alcançam."""
+    from ..services.sem_contato import empresas_sem_contato
+    return empresas_sem_contato(db)
+
+
 @router.get("/relatorio")
 def relatorio_obrigacoes(
     db: Session = Depends(get_db),

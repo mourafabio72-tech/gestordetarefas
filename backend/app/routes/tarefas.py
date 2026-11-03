@@ -684,6 +684,28 @@ async def enviar_ao_cliente(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class EntregaForaRequest(BaseModel):
+    como: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/{tarefa_id}/entregue-fora")
+def entregue_fora(
+    tarefa_id: int,
+    body: EntregaForaRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("tarefas", "editar")),
+):
+    """A guia foi ao cliente por fora do Tareffas: registra e conclui."""
+    from ..services import entrega_cliente as ec
+    tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
+    try:
+        return ec.registrar_entrega_fora(db, tarefa, current_user.id, body.como)
+    except ec.EstadoInvalido as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except (ec.SemDocumento, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/copiar")
 def copiar_tarefas(
     body: CopiarTarefasRequest,
