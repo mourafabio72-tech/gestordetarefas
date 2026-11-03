@@ -32,6 +32,7 @@ from app.database import Base, engine, SessionLocal                # noqa: E402
 from app.models import Empresa, Obrigacao, StatusTarefa, Tarefa    # noqa: E402
 from app.schemas import ObrigacaoCreate, ObrigacaoUpdate           # noqa: E402
 from app.services import entrega_cliente                           # noqa: E402
+from app.services import whatsapp                                  # noqa: E402
 from app.services.whatsapp import destinatarios_cliente            # noqa: E402
 import app.main                                                    # noqa: E402,F401
 
@@ -109,9 +110,15 @@ emp_db.email = "isto nao e email"
 db.commit()
 emails = [x["endereco"] for x in destinatarios_cliente(db, db.get(Tarefa, t.id)) if x["canal"] == "email"]
 checa(12, "texto que nao e e-mail nao vira destinatario", emails == [], emails)
+emp_db.email = " um@ficticio.com.br ; dois@ficticio.com.br, invalido"
+db.commit()
+al = whatsapp.destinatarios_alerta(db.get(Tarefa, t.id), incluir_cliente=True)
+emails = [x["endereco"] for x in al if x["canal"] == "email"]
+checa(13, "o aviso de prazo a empresa separa os e-mails como o envio da guia",
+      emails == ["um@ficticio.com.br", "dois@ficticio.com.br"], emails)
 db.close()
 
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 12 checagens verdes")
+print("\nPROVA OK: 13 checagens verdes")

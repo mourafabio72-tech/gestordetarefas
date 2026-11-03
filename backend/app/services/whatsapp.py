@@ -682,10 +682,11 @@ def destinatarios_alerta(tarefa: Tarefa, subs_map: dict = None, niveis: int = 0,
             vistos.add(f"whatsapp:{tel}:")
             dest.append({"papel": "empresa", "nome": formatar_razao(empresa.razao_social),
                          "canal": "whatsapp", "endereco": tel})
-        if empresa.email and f"email:{empresa.email}:" not in vistos:
-            vistos.add(f"email:{empresa.email}:")
-            dest.append({"papel": "empresa", "nome": formatar_razao(empresa.razao_social),
-                         "canal": "email", "endereco": empresa.email})
+        for em in separar_emails(empresa.email):
+            if f"email:{em}:" not in vistos:
+                vistos.add(f"email:{em}:")
+                dest.append({"papel": "empresa", "nome": formatar_razao(empresa.razao_social),
+                             "canal": "email", "endereco": em})
     return dest
 
 
