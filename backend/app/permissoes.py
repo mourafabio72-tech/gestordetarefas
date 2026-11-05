@@ -12,7 +12,8 @@ RECURSOS = ("empresas", "setores", "tarefas", "obrigacoes",
             "usuarios", "relatorios", "evalidador")
 ESCOPOS = ("proprias", "setor", "todas")
 FLAGS = ("alterar_prazo_legal", "alterar_prazo_tecnico", "dispensar_demanda",
-         "apagar_anexo", "alocar_obrigacao", "disparar_emails", "transferir_tarefa")
+         "apagar_anexo", "alocar_obrigacao", "disparar_emails", "transferir_tarefa",
+         "copiar_tarefas")
 
 # Todas as chaves válidas de uma permissão efetiva
 CHAVES = set(RECURSOS) | {"escopo_tarefas"} | set(FLAGS)
@@ -24,7 +25,7 @@ PRESETS = {
         "evalidador": "editar", "escopo_tarefas": "todas",
         "alterar_prazo_legal": True, "alterar_prazo_tecnico": True,
         "dispensar_demanda": True, "apagar_anexo": True,
-        "alocar_obrigacao": True, "transferir_tarefa": True, "disparar_emails": True,
+        "alocar_obrigacao": True, "transferir_tarefa": True, "copiar_tarefas": True, "disparar_emails": True,
     },
     "gestor": {
         "empresas": "editar", "setores": "editar", "tarefas": "editar",
@@ -32,7 +33,7 @@ PRESETS = {
         "evalidador": "editar", "escopo_tarefas": "todas",
         "alterar_prazo_legal": True, "alterar_prazo_tecnico": True,
         "dispensar_demanda": True, "apagar_anexo": False,
-        "alocar_obrigacao": True, "transferir_tarefa": True, "disparar_emails": True,
+        "alocar_obrigacao": True, "transferir_tarefa": True, "copiar_tarefas": True, "disparar_emails": True,
     },
     "analista": {
         "empresas": "ver", "setores": "ver", "tarefas": "editar",
@@ -40,7 +41,7 @@ PRESETS = {
         "evalidador": "ver", "escopo_tarefas": "proprias",
         "alterar_prazo_legal": False, "alterar_prazo_tecnico": True,
         "dispensar_demanda": False, "apagar_anexo": False,
-        "alocar_obrigacao": False, "transferir_tarefa": False, "disparar_emails": True,
+        "alocar_obrigacao": False, "transferir_tarefa": True, "copiar_tarefas": True, "disparar_emails": True,
     },
     "estagiario": {
         # Mais restrito que analista: edita só as próprias tarefas, sem mexer em prazos.
@@ -49,7 +50,7 @@ PRESETS = {
         "evalidador": "nenhum", "escopo_tarefas": "proprias",
         "alterar_prazo_legal": False, "alterar_prazo_tecnico": False,
         "dispensar_demanda": False, "apagar_anexo": False,
-        "alocar_obrigacao": False, "transferir_tarefa": False, "disparar_emails": False,
+        "alocar_obrigacao": False, "transferir_tarefa": False, "copiar_tarefas": False, "disparar_emails": False,
     },
     "consulta": {
         "empresas": "ver", "setores": "ver", "tarefas": "ver",
@@ -57,7 +58,7 @@ PRESETS = {
         "evalidador": "nenhum", "escopo_tarefas": "todas",
         "alterar_prazo_legal": False, "alterar_prazo_tecnico": False,
         "dispensar_demanda": False, "apagar_anexo": False,
-        "alocar_obrigacao": False, "transferir_tarefa": False, "disparar_emails": False,
+        "alocar_obrigacao": False, "transferir_tarefa": False, "copiar_tarefas": False, "disparar_emails": False,
     },
 }
 
@@ -70,7 +71,7 @@ PRESETS["usuario"] = {
     "evalidador": "nenhum", "escopo_tarefas": "todas",
     "alterar_prazo_legal": False, "alterar_prazo_tecnico": False,
     "dispensar_demanda": False, "apagar_anexo": False,
-    "alocar_obrigacao": False, "transferir_tarefa": False, "disparar_emails": False,
+    "alocar_obrigacao": False, "transferir_tarefa": False, "copiar_tarefas": False, "disparar_emails": False,
 }
 
 PAPEIS = tuple(PRESETS.keys())

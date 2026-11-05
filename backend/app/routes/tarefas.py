@@ -725,7 +725,7 @@ def entregue_fora(
 def copiar_tarefas(
     body: CopiarTarefasRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_flag("alocar_obrigacao"))
+    current_user: Usuario = Depends(require_flag("copiar_tarefas"))
 ):
     if body.origem_empresa_id == body.destino_empresa_id:
         raise HTTPException(status_code=400, detail="Origem e destino devem ser empresas diferentes")

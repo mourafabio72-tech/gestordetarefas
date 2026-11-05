@@ -3,7 +3,8 @@
 Pedido de 2026-11-05, e a regra é do Fábio: transferência é entre COLABORADORES,
 com a tarefa sempre na mesma empresa. E corrigir os furos que a leitura achou:
 
-  (a) transferir olha a permissão `transferir_tarefa`, e não o nome do grupo;
+  (a) transferir olha a permissão `transferir_tarefa`, e não o nome do grupo.
+      O analista transfere e copia, por decisão do Fábio, no alcance dele;
   (b) o novo responsável tem de ser colaborador ativo e desbloqueado; a empresa
       da tarefa não muda;
   (c) editar responsáveis não aceita cliente de OUTRA empresa;
@@ -74,8 +75,9 @@ ausente = pessoa("ausente", ativo=False)
 travada = pessoa("travada", bloqueado=True)
 cli_outro = pessoa("clioutro", tipo="cliente", empresa_id=destino.id)
 cli_mesmo = pessoa("climesmo", tipo="cliente", empresa_id=origem.id)
-com_flag = pessoa("comflag", "analista", permissoes=json.dumps({"transferir_tarefa": True, "escopo_tarefas": "todas"}))
-copiador = pessoa("copiador", "analista", permissoes=json.dumps({"alocar_obrigacao": True}))
+com_flag = pessoa("comflag", "estagiario", permissoes=json.dumps({"transferir_tarefa": True, "escopo_tarefas": "todas"}))
+copiador = pessoa("copiador", "analista")
+estag = pessoa("estag", "estagiario", permissoes=json.dumps({"escopo_tarefas": "todas"}))
 db.flush()
 v = EmpresaSetorResponsavel(empresa_id=destino.id, setor_id=fiscal.id)
 db.add(v)
@@ -113,9 +115,13 @@ def copiar(quem, de=None, para=None):
 
 
 print("\n(a) quem transfere")
-checa(1, "analista comum nao transfere", transferir("ana", "bia").status_code == 403)
+checa(1, "estagiario nao transfere", transferir("estag", "bia").status_code == 403)
 r = transferir("comflag", "bia")
-checa(2, "analista com a permissao ligada transfere", r.status_code == 200, (r.status_code, r.text[:120]))
+checa(2, "grupo sem o preset, com a permissao ligada, transfere", r.status_code == 200, (r.status_code, r.text[:120]))
+r = transferir("bia", "ana")
+checa(23, "analista transfere a tarefa dele", r.status_code == 200, (r.status_code, r.text[:120]))
+r = transferir("bia", "ana")
+checa(24, "analista nao transfere a tarefa de outro (fora do alcance)", r.status_code == 404, r.status_code)
 checa(3, "gestor transfere pelo preset", transferir("gestor", "ana").status_code == 200)
 
 print("\n(b) para quem")
@@ -135,11 +141,15 @@ r = cli.put(f"/api/tarefas/{tid}", json={"responsavel_ids": [ids["climesmo"]]}, 
 checa(10, "cliente da mesma empresa continua aceito", r.status_code == 200, (r.status_code, r.text[:100]))
 r = cli.put(f"/api/tarefas/{tid}", json={"responsavel_ids": [ids["bia"]]}, headers=h("comflag"))
 checa(11, "editar responsaveis segue a mesma permissao de transferir", r.status_code == 200, r.status_code)
-r = cli.put(f"/api/tarefas/{tid}", json={"responsavel_ids": [ids["ana"]]}, headers=h("bia"))
+r = cli.put(f"/api/tarefas/{tid}", json={"responsavel_ids": [ids["ana"]]}, headers=h("estag"))
 checa(12, "quem nao tem a permissao nao troca", r.status_code == 403, r.status_code)
 
 print("\n(d) e (f) copiar: acesso")
-checa(13, "sem a permissao de alocar: 403", copiar("ana").status_code == 403)
+checa(13, "estagiario nao copia: 403", copiar("estag").status_code == 403)
+from app.permissoes import resolver                                # noqa: E402
+pa = resolver("analista")
+checa(25, "analista copia e transfere, sem ganhar nao-se-aplica nem desvincular",
+      pa.get("copiar_tarefas") and pa.get("transferir_tarefa") and not pa.get("alocar_obrigacao"), pa)
 r = copiar("admin", para=ep)
 checa(14, "destino bloqueado e recusado", r.status_code == 400, (r.status_code, r.text[:100]))
 r = copiar("copiador")
@@ -172,4 +182,4 @@ db.close()
 if falhou:
     print(f"\nPROVA FALHOU nos itens: {falhou}")
     sys.exit(1)
-print("\nPROVA OK: 22 checagens verdes")
+print("\nPROVA OK: 25 checagens verdes")

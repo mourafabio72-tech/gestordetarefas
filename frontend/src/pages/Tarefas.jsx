@@ -154,7 +154,7 @@ export default function Tarefas() {
   // recusa sem ela; aqui só não se oferece o que vai ser recusado.
   const podeDesvincular = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
   // Mesma regra do servidor: a flag da matriz, e não o nome do grupo.
-  const podeCopiar = podeDesvincular;
+  const podeCopiar = Boolean(user?.permissoes_efetivas?.copiar_tarefas);
   const podeTransferir = Boolean(user?.permissoes_efetivas?.transferir_tarefa);
   // Cancelar e excluir exigem `dispensar_demanda` no servidor (só admin e
   // gestor por padrão). Sem a flag o item aparecia e o clique dava 403.
