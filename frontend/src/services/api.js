@@ -80,6 +80,13 @@ export const empresasAPI = {
     fd.append('arquivo', file);
     return api.post('/empresas/importar-responsaveis', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  baixarRelatorioEquipe: async () => {
+    const { data } = await api.get('/empresas/relatorio-equipe', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'empresas_equipe_por_setor.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  },
   baixarModeloResponsaveis: async () => {
     const { data } = await api.get('/empresas/modelo-responsaveis', { responseType: 'blob' });
     const url = URL.createObjectURL(data);

@@ -92,6 +92,18 @@ class RespSetorBody(BaseModel):
     itens: List[RespSetorItem]             # SOMENTE os setores que a empresa ATENDE
 
 
+@router.get("/relatorio-equipe")
+def relatorio_equipe(db: Session = Depends(get_db),
+                     current_user: Usuario = Depends(require_perm("empresas", "ver"))):
+    """Excel: empresas ativas, forma de tributação e equipe por setor."""
+    from ..services.relatorio_empresas import gerar
+    return Response(
+        content=gerar(db),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=empresas_equipe_por_setor.xlsx"},
+    )
+
+
 @router.get("/modelo-responsaveis")
 def modelo_responsaveis(db: Session = Depends(get_db),
                         current_user: Usuario = Depends(require_perm("empresas", "editar"))):
