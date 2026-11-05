@@ -30,6 +30,7 @@ export const FLAGS = [
   ['apagar_anexo', 'Apagar anexos'],
   ['alocar_obrigacao', 'Alocar obrigação em empresa'],
   ['disparar_emails', 'Disparar e-mails agendados'],
+  ['transferir_tarefa', 'Transferir tarefa entre colaboradores'],
 ];
 
 export const PRESETS = {
@@ -37,37 +38,37 @@ export const PRESETS = {
     empresas: 'editar', setores: 'editar', tarefas: 'editar', obrigacoes: 'editar',
     usuarios: 'editar', relatorios: 'editar', evalidador: 'editar', escopo_tarefas: 'todas',
     alterar_prazo_legal: true, alterar_prazo_tecnico: true, dispensar_demanda: true,
-    apagar_anexo: true, alocar_obrigacao: true, disparar_emails: true,
+    apagar_anexo: true, alocar_obrigacao: true, transferir_tarefa: true, disparar_emails: true,
   },
   gestor: {
     empresas: 'editar', setores: 'editar', tarefas: 'editar', obrigacoes: 'editar',
     usuarios: 'ver', relatorios: 'ver', evalidador: 'editar', escopo_tarefas: 'todas',
     alterar_prazo_legal: true, alterar_prazo_tecnico: true, dispensar_demanda: true,
-    apagar_anexo: false, alocar_obrigacao: true, disparar_emails: true,
+    apagar_anexo: false, alocar_obrigacao: true, transferir_tarefa: true, disparar_emails: true,
   },
   analista: {
     empresas: 'ver', setores: 'ver', tarefas: 'editar', obrigacoes: 'nenhum',
     usuarios: 'nenhum', relatorios: 'ver', evalidador: 'ver', escopo_tarefas: 'proprias',
     alterar_prazo_legal: false, alterar_prazo_tecnico: true, dispensar_demanda: false,
-    apagar_anexo: false, alocar_obrigacao: false, disparar_emails: true,
+    apagar_anexo: false, alocar_obrigacao: false, transferir_tarefa: false, disparar_emails: true,
   },
   estagiario: {
     empresas: 'ver', setores: 'ver', tarefas: 'editar', obrigacoes: 'nenhum',
     usuarios: 'nenhum', relatorios: 'ver', evalidador: 'nenhum', escopo_tarefas: 'proprias',
     alterar_prazo_legal: false, alterar_prazo_tecnico: false, dispensar_demanda: false,
-    apagar_anexo: false, alocar_obrigacao: false, disparar_emails: false,
+    apagar_anexo: false, alocar_obrigacao: false, transferir_tarefa: false, disparar_emails: false,
   },
   consulta: {
     empresas: 'ver', setores: 'ver', tarefas: 'ver', obrigacoes: 'ver',
     usuarios: 'nenhum', relatorios: 'ver', evalidador: 'nenhum', escopo_tarefas: 'todas',
     alterar_prazo_legal: false, alterar_prazo_tecnico: false, dispensar_demanda: false,
-    apagar_anexo: false, alocar_obrigacao: false, disparar_emails: false,
+    apagar_anexo: false, alocar_obrigacao: false, transferir_tarefa: false, disparar_emails: false,
   },
   usuario: {
     empresas: 'ver', setores: 'ver', tarefas: 'ver', obrigacoes: 'ver',
     usuarios: 'nenhum', relatorios: 'ver', evalidador: 'nenhum', escopo_tarefas: 'todas',
     alterar_prazo_legal: false, alterar_prazo_tecnico: false, dispensar_demanda: false,
-    apagar_anexo: false, alocar_obrigacao: false, disparar_emails: false,
+    apagar_anexo: false, alocar_obrigacao: false, transferir_tarefa: false, disparar_emails: false,
   },
 };
 

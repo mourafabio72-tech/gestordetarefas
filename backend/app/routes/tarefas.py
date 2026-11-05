@@ -12,7 +12,7 @@ from ..models import Tarefa, Empresa, Setor, Usuario, StatusTarefa
 from ..schemas import TarefaCreate, TarefaUpdate, TarefaResponse
 from ..auth import (get_current_user, require_perm, require_flag,
                     require_admin, permissao_efetiva)
-from ..permissoes import eh_cliente
+from ..permissoes import eh_cliente, tem_flag
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
@@ -103,6 +103,19 @@ def _aplicar_responsaveis(db: Session, db_tarefa: Tarefa, responsavel_ids):
              if responsavel_ids else [])
     db_tarefa.responsaveis = users
     db_tarefa.responsavel_id = users[0].id if users else None
+
+
+def _recusar_cliente_de_outra_empresa(db: Session, empresa_id: int, ids) -> None:
+    """Usuário cliente só responde por tarefa da PRÓPRIA empresa: a tarefa, com o
+    documento dela, não pode cair na tela do cliente de outra (2026-11-05)."""
+    if not ids:
+        return
+    fora = db.query(Usuario.id).filter(Usuario.id.in_(ids), Usuario.tipo == "cliente",
+                                       or_(Usuario.empresa_id != empresa_id,
+                                           Usuario.empresa_id.is_(None))).first()
+    if fora:
+        raise HTTPException(status_code=400,
+                            detail="Usuário cliente só pode responder por tarefa da própria empresa.")
 
 
 class TransferirRequest(BaseModel):
@@ -316,6 +329,7 @@ def create_tarefa(
                 status_code=403,
                 detail="Você só pode criar tarefa para quem está no seu alcance.")
 
+    _recusar_cliente_de_outra_empresa(db, tarefa.empresa_id, responsavel_ids)
     dados = tarefa.model_dump(exclude={"responsavel_ids"})
     db_tarefa = Tarefa(**dados)
     _aplicar_responsaveis(db, db_tarefa, responsavel_ids)
@@ -371,8 +385,9 @@ def update_tarefa(
     if "responsavel_ids" in update_data:
         novos = set(update_data.get("responsavel_ids") or [])
         atuais = {u.id for u in db_tarefa.responsaveis}
-        if novos != atuais and current_user.grupo not in ("admin", "gestor"):
-            raise HTTPException(status_code=403, detail="Apenas gestor ou admin pode trocar o responsável.")
+        if novos != atuais and not tem_flag(perm, "transferir_tarefa"):
+            raise HTTPException(status_code=403, detail="Sem permissão para trocar o responsável.")
+        _recusar_cliente_de_outra_empresa(db, db_tarefa.empresa_id, novos - atuais)
         _aplicar_responsaveis(db, db_tarefa, update_data.pop("responsavel_ids"))
 
     for key, value in update_data.items():
@@ -719,34 +734,19 @@ def copiar_tarefas(
     if not destino:
         raise HTTPException(status_code=404, detail="Empresa de destino não encontrada")
 
-    origem_tarefas = db.query(Tarefa).filter(
+    if not destino.ativo or destino.bloqueado:
+        raise HTTPException(status_code=400, detail="A empresa de destino está inativa ou bloqueada.")
+
+    # Só o que quem copia alcança: sem o escopo, a flag abria a tarefa de
+    # qualquer empresa para quem nem a enxerga na tela (2026-11-05).
+    origem_tarefas = _aplicar_escopo(db.query(Tarefa), db, current_user).filter(
         Tarefa.empresa_id == body.origem_empresa_id,
         Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO])
     ).all()
 
-    copiadas = 0
-    for t in origem_tarefas:
-        # Copia como modelo: sem datas; setor interno é mantido.
-        nova = Tarefa(
-            titulo=t.titulo,
-            descricao=t.descricao,
-            empresa_id=body.destino_empresa_id,
-            setor_id=t.setor_id,
-            responsavel_id=t.responsavel_id,
-            supervisor_id=t.supervisor_id,
-            prioridade=t.prioridade,
-            gera_multa=t.gera_multa,
-            observacoes=t.observacoes,
-            status=StatusTarefa.PENDENTE,
-            data_prazo=None,
-            data_vencimento=None,
-        )
-        nova.responsaveis = list(t.responsaveis)
-        db.add(nova)
-        copiadas += 1
-
-    db.commit()
-    return {"message": f"{copiadas} tarefa(s) copiada(s) como modelo (defina os prazos depois).", "copiadas": copiadas}
+    from ..services.gerador import copiar_para_empresa
+    r = copiar_para_empresa(db, origem_tarefas, destino)
+    return {"message": f"{r['copiadas']} tarefa(s) copiada(s), {r['puladas']} pulada(s).", **r}
 
 
 class NaoSeAplicaRequest(BaseModel):
@@ -829,18 +829,21 @@ def transferir_tarefa(
     tarefa_id: int,
     body: TransferirRequest,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_perm("tarefas", "editar"))
+    current_user: Usuario = Depends(require_flag("transferir_tarefa"))
 ):
-    if current_user.grupo not in ("admin", "gestor"):
-        raise HTTPException(status_code=403, detail="Apenas gestor ou admin pode trocar o responsável.")
-    # O grupo sozinho não bastava: o preset de gestor tem escopo `todas`, mas
+    """Troca o responsável, entre colaboradores. A empresa da tarefa não muda:
+    decisão do usuário de 2026-11-05, e mover guia e histórico de cliente não existe."""
+    # A flag sozinha não basta: o preset de gestor tem escopo `todas`, mas
     # o app permite reduzir isso por override, e aí um gestor de setor
     # transferia tarefa que nem enxerga na própria tela.
     db_tarefa = _tarefa_no_escopo(db, current_user, tarefa_id)
 
-    novo_resp = db.query(Usuario).filter(Usuario.id == body.responsavel_id, Usuario.ativo == True).first()
+    novo_resp = db.query(Usuario).filter(Usuario.id == body.responsavel_id).first()
     if not novo_resp:
         raise HTTPException(status_code=404, detail="Novo responsável não encontrado")
+    if eh_cliente(novo_resp) or not novo_resp.ativo or novo_resp.bloqueado:
+        raise HTTPException(status_code=400,
+                            detail="A transferência é só para colaborador ativo e sem bloqueio.")
 
     db_tarefa.responsaveis = [novo_resp]
     db_tarefa.responsavel_id = novo_resp.id

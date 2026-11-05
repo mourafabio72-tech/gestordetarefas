@@ -153,6 +153,9 @@ export default function Tarefas() {
   // meses seguintes, e por isso é a mesma flag do Desvincular. O servidor
   // recusa sem ela; aqui só não se oferece o que vai ser recusado.
   const podeDesvincular = Boolean(user?.permissoes_efetivas?.alocar_obrigacao);
+  // Mesma regra do servidor: a flag da matriz, e não o nome do grupo.
+  const podeCopiar = podeDesvincular;
+  const podeTransferir = Boolean(user?.permissoes_efetivas?.transferir_tarefa);
   // Cancelar e excluir exigem `dispensar_demanda` no servidor (só admin e
   // gestor por padrão). Sem a flag o item aparecia e o clique dava 403.
   const podeCancelar = Boolean(user?.permissoes_efetivas?.dispensar_demanda);
@@ -408,10 +411,13 @@ export default function Tarefas() {
   const handleCopiar = async () => {
     if (!copyOrigem || copyDestinos.length === 0) return;
     try {
+      let copiadas = 0, puladas = 0;
       for (const dest of copyDestinos) {
-        await tarefasAPI.copiar(parseInt(copyOrigem), parseInt(dest));
+        const { data } = await tarefasAPI.copiar(parseInt(copyOrigem), parseInt(dest));
+        copiadas += data.copiadas || 0;
+        puladas += data.puladas || 0;
       }
-      alert(`Tarefas copiadas para ${copyDestinos.length} empresa(s).`);
+      alert(`${copiadas} tarefa(s) copiada(s) para ${copyDestinos.length} empresa(s), ${puladas} pulada(s).`);
       setShowCopy(false);
       setCopyOrigem(''); setCopyDestinos([]); setCopyBusca(''); setCopyRegime(''); setCopyGrupo('');
       loadData();
@@ -776,7 +782,7 @@ export default function Tarefas() {
                     Copiar link de envio
                   </ItemMenu>
                 )}
-                {ativa && (
+                {ativa && podeTransferir && (
                   <ItemMenu icone={ArrowRightLeft} onClick={() => { setMenuAberto(null); setShowTransfer(tarefa); setTransferResp(''); }}>
                     Transferir
                   </ItemMenu>
@@ -822,13 +828,15 @@ export default function Tarefas() {
               Excluir tarefas do mês
             </button>
           )}
-          <button
-            onClick={() => { setShowCopy(true); }}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Copy size={18} />
-            Copiar tarefas
-          </button>
+          {podeCopiar && (
+            <button
+              onClick={() => { setShowCopy(true); }}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Copy size={18} />
+              Copiar tarefas
+            </button>
+          )}
           <button
             onClick={() => {
               setEditingTarefa(null);
@@ -1246,7 +1254,9 @@ export default function Tarefas() {
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">Copiar tarefas</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Copia as tarefas em aberto de uma empresa para outra, como modelo (sem datas).
+                Copia as tarefas em aberto que você alcança para outra empresa, com a equipe dela. As originais
+                ficam onde estão. Tarefa de obrigação leva as datas da empresa de destino; avulsa vai sem datas.
+                A que já existe no destino é pulada.
               </p>
             </div>
             <div className="p-4 space-y-3">
@@ -1408,14 +1418,15 @@ export default function Tarefas() {
             </div>
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Novo responsável *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Novo responsável (colaborador) *</label>
                 <select
                   value={transferResp}
                   onChange={(e) => setTransferResp(e.target.value)}
                   className="input-field"
                 >
                   <option value="">Selecione</option>
-                  {usuarios.filter(u => u.id !== showTransfer.responsavel_id).map(u => (
+                  {usuarios.filter(u => u.id !== showTransfer.responsavel_id && u.tipo !== 'cliente'
+                    && !u.bloqueado && u.ativo !== false).map(u => (
                     <option key={u.id} value={u.id}>{u.nome}</option>
                   ))}
                 </select>

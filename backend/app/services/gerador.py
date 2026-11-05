@@ -554,6 +554,70 @@ def _criar_tarefa_se_nova(db: Session, o: Obrigacao, emp: Empresa,
     return True
 
 
+def _mes_de_entrega(competencia: str, ref) -> tuple:
+    """(mês, ano) de entrega de uma competência: o caminho contrário de calc_competencia."""
+    mes, ano = (int(x) for x in competencia.split("/"))
+    a, m = divmod(ano * 12 + (mes - 1) - deslocamento_competencia(ref), 12)
+    return m + 1, a
+
+
+def copiar_para_empresa(db: Session, tarefas: list, destino: Empresa) -> dict:
+    """Copia tarefas para outra empresa, com a equipe e as datas DELA (2026-11-05).
+
+    A original fica onde está. Antes a cópia saía sem obrigação e sem datas, com
+    os responsáveis da origem: o e-validador não achava a tarefa, e só o admin
+    podia preencher a data que faltava. Tarefa de obrigação agora nasce como se
+    tivesse sido gerada na empresa, pelo mesmo caminho e sem repetir. Avulsa não
+    tem regra de prazo, e segue sem datas.
+    """
+    copiadas, puladas = 0, 0
+    for t in tarefas:
+        o = t.obrigacao
+        if o and t.competencia:
+            try:
+                mes, ano = _mes_de_entrega(t.competencia, o.competencia_ref)
+            except ValueError:
+                puladas += 1
+                continue
+            # Exceção é decisão escrita: copiar não a desfaz.
+            if destino.id in excecoes_da(db, o):
+                puladas += 1
+                continue
+            vencimento, prazo = calc_datas(o, destino, mes, ano)
+            fechamento = calc_marco_fechamento(destino, mes, ano, bool(o.sabado_util))
+            if _criar_tarefa_se_nova(db, o, destino, t.competencia, prazo, vencimento, fechamento):
+                copiadas += 1
+            else:
+                puladas += 1
+            continue
+        if not _empresa_atende(db, destino.id, t.setor_id):
+            puladas += 1
+            continue
+        repetida = (db.query(Tarefa)
+                    .filter(Tarefa.empresa_id == destino.id, Tarefa.titulo == t.titulo,
+                            Tarefa.competencia == t.competencia, Tarefa.setor_id == t.setor_id,
+                            Tarefa.status.in_([StatusTarefa.PENDENTE, StatusTarefa.EM_ANDAMENTO]))
+                    .first())
+        if repetida:
+            puladas += 1
+            continue
+        resps = _resp_do_setor(db, destino.id, t.setor_id)
+        resp = resps[0] if resps else None
+        nova = Tarefa(titulo=t.titulo, descricao=t.descricao, empresa_id=destino.id,
+                      setor_id=t.setor_id, obrigacao_id=t.obrigacao_id, competencia=t.competencia,
+                      responsavel_id=resp.id if resp else None,
+                      supervisor_id=((resp.gestor_id if resp else None)
+                                     or _gestor_do_setor(db, t.setor_id)),
+                      prioridade=t.prioridade, gera_multa=t.gera_multa,
+                      observacoes=t.observacoes, status=StatusTarefa.PENDENTE)
+        nova.responsaveis = list(resps)
+        db.add(nova)
+        db.flush()   # a próxima volta do laço precisa enxergar esta na checagem
+        copiadas += 1
+    db.commit()
+    return {"copiadas": copiadas, "puladas": puladas}
+
+
 def gerar_tarefas(db: Session, mes_entrega: int, ano_entrega: int, obrigacao_ids: list = None,
                  empresa_ids: list = None) -> dict:
     criadas, puladas, por_obrigacao = 0, 0, []
