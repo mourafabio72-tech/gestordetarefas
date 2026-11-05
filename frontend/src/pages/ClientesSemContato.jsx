@@ -10,10 +10,14 @@ export default function ClientesSemContato() {
   const [linhas, setLinhas] = useState(null);
   const [erro, setErro] = useState('');
   const [busca, setBusca] = useState('');
+  const [cnpjs, setCnpjs] = useState(null);
 
   useEffect(() => {
     obrigacoesAPI.semContato()
       .then((r) => setLinhas(r.data))
+      .catch((e) => setErro(mensagemDeErro(e, 'Não foi possível carregar o relatório.')));
+    obrigacoesAPI.cnpjInvalido()
+      .then((r) => setCnpjs(r.data))
       .catch((e) => setErro(mensagemDeErro(e, 'Não foi possível carregar o relatório.')));
   }, []);
 
@@ -24,23 +28,74 @@ export default function ClientesSemContato() {
       `${l.razao_social} ${l.cnpj || ''} ${l.obrigacoes.join(' ')}`.toLowerCase().includes(q));
   }, [linhas, busca]);
 
+  const listaCnpj = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return cnpjs || [];
+    return (cnpjs || []).filter((l) => `${l.razao_social} ${l.cnpj || ''}`.toLowerCase().includes(q));
+  }, [cnpjs, busca]);
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
         <UserX className="text-primary-700" />
-        <h1 className="text-2xl font-bold text-gray-800">Clientes sem contato</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Pendências de cadastro</h1>
       </div>
-      <p className="text-sm text-gray-600 mb-4">
-        Empresas alcançadas por uma obrigação de envio ao cliente, sem e-mail ou telefone válido na ficha
-        e sem usuário do tipo cliente. A guia delas não tem para onde sair.
-      </p>
 
-      <div className="card mb-4">
+      <div className="card mb-4 mt-4">
         <input className="input-field" placeholder="Buscar por empresa, CNPJ ou obrigação"
           value={busca} onChange={(e) => setBusca(e.target.value)} />
       </div>
 
+      <div className="card mb-4">
+        <h2 className="font-semibold text-gray-800 mb-1">CNPJ inválido ou vazio</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          Empresas ativas com CNPJ que não serve: o e-validador não casa as guias delas, e a ficha só salva
+          depois de corrigir o número.
+        </p>
+        {!erro && !cnpjs && (
+          <p className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 size={15} className="animate-spin" /> Carregando…
+          </p>
+        )}
+        {cnpjs && (
+          <>
+            <p className="text-sm text-gray-500 mb-3">{listaCnpj.length} empresa(s)</p>
+            {listaCnpj.length === 0 ? (
+              <p className="text-gray-500 text-center py-6">Nenhuma empresa nesta situação.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table-app">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <th className="pr-3 font-medium">Empresa</th>
+                      <th className="pr-3 font-medium">CNPJ gravado</th>
+                      <th className="pr-3 font-medium">Problema</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listaCnpj.map((l) => (
+                      <tr key={l.empresa_id} className="border-b border-gray-100">
+                        <td className="pr-3 text-gray-800">
+                          <Link to="/empresas" className="underline">{l.razao_social}</Link>
+                        </td>
+                        <td className="pr-3 text-gray-600 whitespace-nowrap">{l.cnpj || '-'}</td>
+                        <td className="pr-3 text-gray-600">{l.motivo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       <div className="card">
+        <h2 className="font-semibold text-gray-800 mb-1">Sem contato</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          Empresas alcançadas por uma obrigação de envio ao cliente, sem e-mail ou telefone válido na ficha
+          e sem usuário do tipo cliente. A guia delas não tem para onde sair.
+        </p>
         {erro && <p className="text-sm text-red-600">{erro}</p>}
         {!erro && !linhas && (
           <p className="flex items-center gap-2 text-sm text-gray-500">

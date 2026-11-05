@@ -194,6 +194,7 @@ export const obrigacoesAPI = {
   setDetalhes: (id, itens) => api.put(`/obrigacoes/${id}/detalhes-empresa`, { itens }),
   excluirLote: (ids, definitivo = true) => api.post('/obrigacoes/excluir-lote', { ids, definitivo }),
   semContato: () => api.get('/obrigacoes/sem-contato'),
+  cnpjInvalido: () => api.get('/obrigacoes/cnpj-invalido'),
   baixarRelatorio: async () => {
     const { data } = await api.get('/obrigacoes/relatorio', { responseType: 'blob' });
     const url = URL.createObjectURL(data);

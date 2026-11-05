@@ -187,6 +187,16 @@ def obrigacoes_sem_contato(
     return empresas_sem_contato(db)
 
 
+@router.get("/cnpj-invalido")
+def obrigacoes_cnpj_invalido(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_perm("obrigacoes", "ver")),
+):
+    """Empresas ativas com CNPJ vazio ou que não passa nos dígitos verificadores."""
+    from ..services.sem_contato import empresas_cnpj_invalido
+    return empresas_cnpj_invalido(db)
+
+
 @router.get("/relatorio")
 def relatorio_obrigacoes(
     db: Session = Depends(get_db),

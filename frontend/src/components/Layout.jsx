@@ -58,7 +58,7 @@ const menuGroups = [
     label: 'Relatórios',
     items: [
       { path: '/relatorios/obrigacoes', label: 'Relação de obrigações', icon: BarChart3, acesso: { perm: ['obrigacoes', 'ver'] } },
-      { path: '/relatorios/sem-contato', label: 'Clientes sem contato', icon: BarChart3, acesso: { perm: ['obrigacoes', 'ver'] } },
+      { path: '/relatorios/sem-contato', label: 'Pendências de cadastro', icon: BarChart3, acesso: { perm: ['obrigacoes', 'ver'] } },
       // Página estática do manual (public/leia-me), aberta direto no quadro de quem fez o fluxo.
       { path: '/leia-me/index.html#quem', externo: true, label: 'Quem leu o Leia-me', icon: BookOpen, acesso: { grupos: ['admin', 'gestor'] } },
     ],
