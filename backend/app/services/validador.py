@@ -9,7 +9,7 @@ Chaves (ver OBRIGACOES_SPEC.md):
 import io
 import re
 import unicodedata
-from datetime import datetime
+from datetime import date, datetime
 import pypdf
 from sqlalchemy.orm import Session
 from ..models import Empresa, Obrigacao, Tarefa, StatusTarefa
@@ -68,6 +68,52 @@ def competencia_do_nome(nome: str):
         if i >= 2 and nome[i - 1] in "._/- " and nome[i - 2].isdigit():
             continue                      # é o mês de uma data dd.mm.aaaa
         return f"{m.group(1)}/{m.group(2)}"
+    return None
+
+
+# Rótulo de vencimento, no texto já sem acento e minúsculo (`_norm`).
+_ROTULO_VENC = re.compile(
+    r"(vencimento|pagar (?:este documento )?ate|pagavel ate|valido (?:para pagamento )?ate)"
+    r"[^0-9]{0,40}(\d{2})[./](\d{2})[./](20\d{2})")
+
+
+def _data(d, m, a):
+    try:
+        return date(int(a), int(m), int(d))
+    except ValueError:
+        return None
+
+
+def vencimento_lido(texto: str):
+    """Vencimento escrito na guia, ou None. Só conta data logo depois de um
+    rótulo de vencimento; havendo mais de uma, vale a MAIS NOVA, porque a guia
+    recalculada traz o vencimento original e o novo "pagar até"."""
+    datas = [_data(*m.groups()[1:]) for m in _ROTULO_VENC.finditer(_norm(texto))]
+    datas = [d for d in datas if d]
+    return max(datas) if datas else None
+
+
+def vencimento_do_nome(nome: str):
+    """"ISS 09.2026 VENC 06.10.2026.pdf" -> 06/10/2026, ou None."""
+    m = re.search(r"venc\w*[ ._-]*(\d{2})[._/-](\d{2})[._/-](20\d{2})", _norm(nome))
+    return _data(*m.groups()) if m else None
+
+
+def _hoje():
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("America/Sao_Paulo")).date()
+
+
+def guia_vencida(texto: str, nome_arquivo: str, tarefa):
+    """(vencimento, de onde veio) se a guia já venceu; None se não venceu ou se
+    não há vencimento conhecido. Ordem: a guia, o nome do arquivo, a tarefa."""
+    venc, origem = vencimento_lido(texto), "lido na guia"
+    if not venc:
+        venc, origem = vencimento_do_nome(nome_arquivo), "do nome do arquivo"
+    if not venc and tarefa.data_vencimento:
+        venc, origem = tarefa.data_vencimento.date(), "da tarefa"
+    if venc and venc < _hoje():
+        return venc, origem
     return None
 
 
@@ -774,7 +820,17 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
         up.trocar_saida(db, tarefa, nome_arquivo, conteudo)
         db.commit()
         conf = conferir_saida(texto, empresa.cnpj, tarefa.competencia)
-        if conf["ok"] and conf["cnpj_lido"] and conf["competencia_lida"]:
+        # Guia vencida não sai sozinha (2026-11-05): o cliente receberia um
+        # boleto que não paga mais. Quem conferir decide no "Enviar ao cliente".
+        vencida = guia_vencida(texto, nome_arquivo, tarefa)
+        aviso_venc = (f"Guia vencida em {vencida[0].strftime('%d/%m/%Y')} ({vencida[1]})."
+                      if vencida else "")
+        if conf["ok"] and conf["cnpj_lido"] and conf["competencia_lida"] and vencida:
+            res.update(status="aguardando_conferencia",
+                       detalhe=f"Guia anexada à tarefa #{tarefa.id}, sem envio: {aviso_venc} "
+                               f"Se ainda vale, use \"Enviar ao cliente\" na tarefa; "
+                               f"se não, troque pela guia atualizada.")
+        elif conf["ok"] and conf["cnpj_lido"] and conf["competencia_lida"]:
             res.update(status="pronta_para_envio",
                        detalhe=f"Guia anexada à tarefa #{tarefa.id}.")
         else:
@@ -791,7 +847,7 @@ def processar(db: Session, nome_arquivo: str, conteudo: bytes) -> dict:
                 "Não foi lido na própria guia: " + " e ".join(nao_lidos) + "."]
             res.update(status="aguardando_conferencia",
                        detalhe=f"Guia anexada à tarefa #{tarefa.id}, sem envio: "
-                               + " ".join(falta)
+                               + " ".join(falta + ([aviso_venc] if aviso_venc else []))
                                + " Confira e use \"Enviar ao cliente\" na tarefa.")
         return res
 
