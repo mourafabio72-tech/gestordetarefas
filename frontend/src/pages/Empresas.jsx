@@ -272,11 +272,6 @@ export default function Empresas() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Empresas</h1>
         <div className="flex items-center gap-2">
-          <button onClick={() => empresasAPI.baixarRelatorioEquipe().catch(() => alert('Não foi possível gerar o relatório.'))}
-            className="btn-secondary flex items-center gap-2"
-            title="Excel com as empresas ativas, a forma de tributação e a equipe de cada setor">
-            <Download size={16} /> Relatório de equipe
-          </button>
           <button onClick={() => empresasAPI.baixarModelo()} className="btn-secondary flex items-center gap-2">
             <Download size={16} />
             Baixar modelo

@@ -21,6 +21,7 @@ import AtivarAcesso from './pages/AtivarAcesso';
 import ImportarCronograma from './pages/ImportarCronograma';
 import RelacaoObrigacoes from './pages/RelacaoObrigacoes';
 import ClientesSemContato from './pages/ClientesSemContato';
+import RelatorioEquipe from './pages/RelatorioEquipe';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }) {
@@ -67,6 +68,7 @@ function AppRoutes() {
         <Route path="importar-cronograma" element={<ImportarCronograma />} />
         <Route path="relatorios/obrigacoes" element={<RelacaoObrigacoes />} />
         <Route path="relatorios/sem-contato" element={<ClientesSemContato />} />
+        <Route path="relatorios/equipe" element={<RelatorioEquipe />} />
       </Route>
     </Routes>
   );
