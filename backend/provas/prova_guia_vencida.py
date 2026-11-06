@@ -40,7 +40,7 @@ from app.services import validador, whatsapp, email as email_mod       # noqa: E
 
 Base.metadata.create_all(bind=engine)
 client = TestClient(app, raise_server_exceptions=False)
-TOTAL = 10
+TOTAL = 12
 falhou = []
 
 
@@ -168,6 +168,17 @@ checa(9, f"Enviar ao cliente manual: {r.status_code}, saiu {SAIU}",
 # 10. Unidade: datas soltas que não são vencimento não contam.
 v = validador.vencimento_lido("Período de Apuração 30/09/2026 Data de emissão 01/10/2026")
 checa(10, f"sem rótulo de vencimento, nada lido: {v}", v is None)
+
+# 11. DAS no OCR: linha dos rótulos, depois a dos valores (2026-11-06, guia real).
+tab = ("periodo de apuracao data de vencimento numero do documento pagar este documento ate\n"
+       "setembro/2026 20/10/2026 07.20.26274.7536370-9\n\n20/10/2026")
+v = validador.vencimento_lido(tab)
+checa(11, f"DAS em tabela: {v}", v == date(2026, 10, 20))
+
+# 12. DARF em tabela: a apuração cai na janela, mas vale a data mais nova.
+tab = "periodo de apuracao data de vencimento\n30/09/2026 23/10/2026"
+v = validador.vencimento_lido(tab)
+checa(12, f"DARF em tabela, apuração não vira vencimento: {v}", v == date(2026, 10, 23))
 
 db.close()
 print()

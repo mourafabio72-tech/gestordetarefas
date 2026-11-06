@@ -73,8 +73,11 @@ def competencia_do_nome(nome: str):
 
 # Rótulo de vencimento, no texto já sem acento e minúsculo (`_norm`).
 _ROTULO_VENC = re.compile(
-    r"(vencimento|pagar (?:este documento )?ate|pagavel ate|valido (?:para pagamento )?ate)"
-    r"[^0-9]{0,40}(\d{2})[./](\d{2})[./](20\d{2})")
+    r"vencimento|pagar (?:este documento )?ate|pagavel ate|valido (?:para pagamento )?ate")
+_DATA = re.compile(r"(?<!\d)(\d{2})[./](\d{2})[./](20\d{2})(?!\d)")
+# Quanto texto depois do rótulo pode ter a data. Guia em tabela (DAS no OCR)
+# põe a linha dos rótulos e só depois a dos valores, com outros números entre.
+_JANELA_VENC = 160
 
 
 def _data(d, m, a):
@@ -85,10 +88,15 @@ def _data(d, m, a):
 
 
 def vencimento_lido(texto: str):
-    """Vencimento escrito na guia, ou None. Só conta data logo depois de um
-    rótulo de vencimento; havendo mais de uma, vale a MAIS NOVA, porque a guia
-    recalculada traz o vencimento original e o novo "pagar até"."""
-    datas = [_data(*m.groups()[1:]) for m in _ROTULO_VENC.finditer(_norm(texto))]
+    """Vencimento escrito na guia, ou None. Conta data completa até
+    `_JANELA_VENC` caracteres depois de um rótulo de vencimento; vale a MAIS
+    NOVA. Assim a data de apuração que cai na janela perde para o vencimento,
+    e a guia recalculada vale pelo "pagar até" novo."""
+    n = _norm(texto)
+    datas = []
+    for r in _ROTULO_VENC.finditer(n):
+        trecho = n[r.end():r.end() + _JANELA_VENC]
+        datas += [_data(*m.groups()) for m in _DATA.finditer(trecho)]
     datas = [d for d in datas if d]
     return max(datas) if datas else None
 
