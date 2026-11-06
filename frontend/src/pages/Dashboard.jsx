@@ -305,6 +305,9 @@ export default function Dashboard() {
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  // Próximas do vencimento abre com 10 e cresce de 10 em 10. Filtro novo
+  // volta para 10: a lista mudou, e a pessoa recomeça pelo topo.
+  const [vistas, setVistas] = useState(10);
 
   useEffect(() => {
     (async () => {
@@ -322,6 +325,7 @@ export default function Dashboard() {
     try {
       const { data } = await painelAPI.get(paraConsulta(f));
       setDados(data);
+      setVistas(10);
     } catch (err) {
       setErro(mensagemDeErro(err, 'Não foi possível carregar o painel'));
     }
@@ -455,7 +459,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {dados.proximas.map((t) => (
+                {dados.proximas.slice(0, vistas).map((t) => (
                   <tr key={t.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                     <td className="py-1.5 pr-2 text-gray-700">
                       <span className="flex items-center gap-1">
@@ -498,12 +502,30 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
-            {dados.abertas_total > dados.proximas.length && (
-              <p className="text-[10px] text-gray-400 mt-1.5">
-                Mostrando as {dados.proximas.length} de prazo mais curto, de {dados.abertas_total}.{' '}
-                <Link to={link({ alerta: 'aberta' })} className="underline">Ver todas em Tarefas</Link>
+            <div className="flex items-center gap-3 mt-1.5">
+              <p className="text-[10px] text-gray-400">
+                Mostrando {Math.min(vistas, dados.proximas.length)} de {dados.abertas_total}, as de prazo mais curto.
+                {dados.abertas_total > 10 && (
+                  <>{' '}<Link to={link({ alerta: 'aberta' })} className="underline">Ver todas em Tarefas</Link></>
+                )}
               </p>
-            )}
+              {dados.proximas.length > 10 && (
+                <span className="ml-auto flex items-center gap-3">
+                  {vistas < dados.proximas.length && (
+                    <button onClick={() => setVistas(vistas + 10)}
+                      className="text-[11px] text-gray-500 underline hover:text-gray-700">
+                      Mostrar mais
+                    </button>
+                  )}
+                  {vistas > 10 && (
+                    <button onClick={() => setVistas(10)}
+                      className="text-[11px] text-gray-500 underline hover:text-gray-700">
+                      Só as 10 primeiras
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
